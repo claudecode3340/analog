@@ -5,11 +5,39 @@
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Region } from '../physics';
+import { formatSI } from '../practice/units';
 
 export type DrawStyle = 'symbol' | 'box';
 export const DrawStyleContext = createContext<DrawStyle>('symbol');
 /** Ids of elements to emphasise (signal path, the device a step talks about). */
 export const HighlightContext = createContext<ReadonlySet<string>>(new Set());
+
+/** Live state of one transistor, shown by the schematic inspector (see schematic.tsx). */
+export interface DevState {
+  name: string;
+  kind: 'n' | 'p';
+  /** Step B role: "input (CS)", "cascode", "current source", "diode", "mirror copy", … */
+  role?: string;
+  region: Region;
+  /** Drain current (magnitude), A. */
+  id: number;
+  vg?: number;
+  vs?: number;
+  vd?: number;
+  vth?: number;
+  gm?: number;
+  rO?: number;
+}
+
+export interface InspectCtx {
+  states: Record<string, DevState>;
+  hover?: string;
+  setHover: (id?: string) => void;
+  /** 'full' = name + region + current; 'region' = name + region; 'name' = name only. */
+  annotate: 'full' | 'region' | 'name';
+}
+/** Provided by <Schematic>: devices read their live state from here and report hover/focus. */
+export const InspectContext = createContext<InspectCtx | null>(null);
 
 const INK = 'var(--ink)';
 const HL = 'var(--signal)';
@@ -328,8 +356,8 @@ export function CurrentSource({ x, y1, y2, label, value, id, up = false, labelSi
       <line x1={x} y1={mid + (up ? 7 : -7)} x2={x} y2={mid + (up ? -7 : 7)} {...stroke(hl)} />
       <polyline points={up ? `${x - 4},${mid - 3} ${x},${mid - 8} ${x + 4},${mid - 3}` : `${x - 4},${mid + 3} ${x},${mid + 8} ${x + 4},${mid + 3}`} fill="none" {...stroke(hl)} />
       <line x1={x} y1={mid + r} x2={x} y2={y2} {...stroke(hl)} />
-      {label && <Label x={tx} y={mid - (value ? 2 : -4)} text={label} anchor={anchor} />}
-      {value && <Label x={tx} y={mid + 13} text={value} anchor={anchor} mono size={12} color="var(--ink-2)" />}
+      {label && <Label x={tx} y={mid - (value ? 6 : -4)} text={label} anchor={anchor} />}
+      {value && <Label x={tx} y={mid + 16} text={value} anchor={anchor} mono size={12} color="var(--ink-2)" />}
     </g>
   );
 }
@@ -449,11 +477,38 @@ function MosAnnotations({ x, y, name, flip, region, current, kind }: MosProps & 
   );
 }
 
-export function Nmos(p: MosProps) {
+/** Fill region/current from the schematic's live state and make the device hoverable/focusable. */
+function useInspect(p: MosProps): { props: MosProps; handlers: React.SVGProps<SVGGElement> } {
+  const ctx = useContext(InspectContext);
+  const st = ctx && p.id ? ctx.states[p.id] : undefined;
+  if (!ctx || !st || !p.id) return { props: p, handlers: {} };
+  const id = p.id;
+  const region = ctx.annotate === 'name' ? undefined : (p.region ?? st.region);
+  const current = ctx.annotate === 'full' ? (p.current ?? (st.id > 0 ? formatSI(st.id, 'A') : undefined)) : undefined;
+  return {
+    props: { ...p, name: p.name ?? st.name, region, current },
+    handlers: {
+      tabIndex: 0,
+      role: 'button',
+      'aria-label': `${st.name}: ${REGION_WORD[st.region]}, ${formatSI(st.id, 'A')}. Show details`,
+      onMouseEnter: () => ctx.setHover(id),
+      onFocus: () => ctx.setHover(id),
+      onClick: () => ctx.setHover(id),
+      style: { cursor: 'pointer', outline: 'none' },
+      className: 'mos-hit',
+    },
+  };
+}
+
+const REGION_WORD: Record<Region, string> = { off: 'off', triode: 'triode', saturation: 'saturated' };
+
+export function Nmos(raw: MosProps) {
+  const { props: p, handlers } = useInspect(raw);
   const hl = useHL(p.id);
   const s = p.flip ? -1 : 1;
   return (
-    <g data-id={p.id}>
+    <g data-id={p.id} {...handlers}>
+      {handlers.tabIndex !== undefined && <rect x={p.x - 34} y={p.y - 30} width={68} height={60} fill="transparent" />}
       <MosBody x={p.x} y={p.y} kind="n" hl={hl} flip={p.flip} />
       {p.diode && <polyline points={`${p.x - s * 30},${p.y} ${p.x - s * 30},${p.y - 24} ${p.x},${p.y - 24}`} fill="none" {...stroke(hl)} />}
       {p.diode && <Dot x={p.x} y={p.y - 24} />}
@@ -462,11 +517,13 @@ export function Nmos(p: MosProps) {
   );
 }
 
-export function Pmos(p: MosProps) {
+export function Pmos(raw: MosProps) {
+  const { props: p, handlers } = useInspect(raw);
   const hl = useHL(p.id);
   const s = p.flip ? -1 : 1;
   return (
-    <g data-id={p.id}>
+    <g data-id={p.id} {...handlers}>
+      {handlers.tabIndex !== undefined && <rect x={p.x - 34} y={p.y - 30} width={68} height={60} fill="transparent" />}
       <MosBody x={p.x} y={p.y} kind="p" hl={hl} flip={p.flip} />
       {p.diode && <polyline points={`${p.x - s * 30},${p.y} ${p.x - s * 30},${p.y + 24} ${p.x},${p.y + 24}`} fill="none" {...stroke(hl)} />}
       {p.diode && <Dot x={p.x} y={p.y + 24} />}

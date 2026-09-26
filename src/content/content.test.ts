@@ -7,7 +7,8 @@ import { wordCount } from '../ui/RichText';
 import { GLOSSARY } from './glossary';
 import { BANK_BY_ID, GENERATOR_BY_ID, LESSONS, UNITS } from './index';
 
-const WIDGETS = ['nodeWalk', 'parallelSplit', 'tap', 'channel', 'family', 'recipeMini', 'pmosFlip', 'tangent', 'roSlope', 'csTransfer'];
+import { WIDGETS as WIDGET_MAP } from '../learn/widgets';
+const WIDGETS = Object.keys(WIDGET_MAP);
 /** Symbols that are NOT the course notation (§6): Razavi's V_OD/V_TH, Sedra's V_t, k'n. */
 const FORBIDDEN = [/V_\{?OD\}?/, /V_\{?TH\}?(?![a-z])/, /\bVOD\b/, /\bVTH\b/, /k'n/, /k′n/];
 

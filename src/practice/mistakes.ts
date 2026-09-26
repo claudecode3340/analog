@@ -76,6 +76,30 @@ export const MISTAKES: Record<MistakeId, { title: string; hint: string }> = {
     title: 'Added resistances that are in parallel',
     hint: 'Both resistors connect the same two nodes, so they are in parallel: R1R2/(R1 + R2), smaller than either.',
   },
+  forgotDegeneration: {
+    title: 'Ignored the source resistor (degeneration)',
+    hint: 'With RS under the source the input device is weaker: Gm = gm/(1 + gm·RS). Ratio rule: |Av| = RD/(1/gm + RS).',
+  },
+  ratioInverted: {
+    title: 'Ratio upside down',
+    hint: 'A mirror copies in proportion to size: Iout = IREF × (W/L)out ÷ (W/L)ref. The output device is on top.',
+  },
+  wrongTerminalRule: {
+    title: 'Used the wrong impedance rule',
+    hint: 'Gate = ∞. Drain = big (rO, and ×gm·rO with RS under it). Source = small (≈ 1/gm). Look at WHICH terminal you are looking into.',
+  },
+  issNotHalf: {
+    title: 'Used ISS where each device carries ISS/2',
+    hint: 'The tail current splits between the two input devices at balance: each carries ID = ISS/2. Use ISS/2 in gm, Vov and rO.',
+  },
+  dbConversion: {
+    title: 'dB conversion slip',
+    hint: 'Voltage ratios use 20·log10 (not 10·log10). 1000 V/V = 60 dB; 74 dB ≈ 5000 V/V.',
+  },
+  vovNotVgs: {
+    title: 'Used Vov where the full VGS was needed',
+    hint: 'A node voltage drop across a gate-source junction is the whole VGS = Vth + Vov, not just Vov. Only stacked drain-source headroom costs Vov.',
+  },
 };
 
 /**

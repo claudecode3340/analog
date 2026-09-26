@@ -1469,3 +1469,175 @@ kbd {
     padding: var(--s6);
   }
 }
+
+/* ─── Schematic engine: inspector, device chips, lab extras ─── */
+.schematic-inspector {
+  margin-top: var(--s3);
+  display: grid;
+  gap: var(--s2);
+}
+.schematic-verdict {
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  justify-self: start;
+}
+.schematic-verdict.ok {
+  color: var(--ok);
+  background: var(--ok-bg);
+}
+.schematic-verdict.bad {
+  color: var(--bad);
+  background: var(--bad-bg);
+}
+.device-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.device-chip {
+  font: 600 13px var(--font-mono);
+  padding: 4px 10px;
+  min-height: 30px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  position: relative;
+  padding-left: 22px;
+}
+.device-chip::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.device-chip.triode::before,
+.device-chip.off::before {
+  background: var(--bad);
+}
+.device-chip.nmos {
+  border-color: color-mix(in srgb, var(--nmos) 45%, var(--line));
+}
+.device-chip.pmos {
+  border-color: color-mix(in srgb, var(--pmos) 45%, var(--line));
+}
+.device-chip.on,
+.device-chip:hover {
+  background: var(--signal-bg);
+  border-color: var(--signal);
+}
+.device-chip:focus-visible,
+.mos-hit:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.device-hint {
+  margin: 0;
+}
+.device-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--nmos);
+  border-radius: var(--radius);
+  padding: var(--s2) var(--s3);
+}
+.device-card.pmos {
+  border-left-color: var(--pmos);
+}
+.device-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+.device-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 2px var(--s3);
+  margin: 6px 0 0;
+}
+.device-card-grid dt {
+  color: var(--muted);
+  float: left;
+  margin-right: 6px;
+}
+.device-card-grid dd {
+  margin: 0;
+  font-weight: 600;
+}
+.device-card-fence {
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+}
+.device-card-fence.ok {
+  color: var(--ok);
+}
+.device-card-fence.bad {
+  color: var(--bad);
+}
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  margin-bottom: var(--s3);
+}
+.seg button {
+  font: 600 13px var(--font-sans);
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  padding: 6px 12px;
+  min-height: 32px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.seg button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+.seg button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+.formula-strip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--s2) var(--s3);
+  margin: var(--s2) 0;
+  overflow-x: auto;
+}
+.lab-figures-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .lab-figures-row {
+    grid-template-columns: 1fr;
+  }
+}
+label.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: var(--s2) 0;
+  cursor: pointer;
+}
+label.check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--signal);
+}

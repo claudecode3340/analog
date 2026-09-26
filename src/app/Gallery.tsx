@@ -15,7 +15,16 @@ import {
   TransferCurve,
   WaterAnalogy,
 } from '../circuits/figures';
+import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from '../circuits/figures2';
 import { DrawStyleContext } from '../circuits/primitives';
+import { VoltageLadder } from '../circuits/schematic';
+import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from '../circuits/figures3';
+import { EX_9_7, ex97, fiveTOtaQuiz, QUIZ1_C, SET_B, tut1Q1, tut1Q4 } from '../physics';
+
+const E97 = ex97();
+const T1 = tut1Q1();
+const T4 = tut1Q4();
+const EXAM = fiveTOtaQuiz(QUIZ1_C);
 
 export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactElement }> = [
   { id: 'water', title: 'Water analogy', el: <WaterAnalogy /> },
@@ -32,6 +41,63 @@ export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactEl
   { id: 'ssm', title: 'Small-signal model', el: <SmallSignalModel /> },
   { id: 'cs-ss', title: 'CS small signal', el: <CsSmallSignal /> },
   { id: 'transfer', title: 'CS transfer curve', el: <TransferCurve vdd={1.8} vth={0.4} kp={200e-6} wl={10} rd={10e3} vinQ={0.7} /> },
+  { id: 'imp-gate', title: 'Into the gate', el: <ImpedanceFig terminal="gate" r={Infinity} /> },
+  { id: 'imp-drain', title: 'Into the drain (degenerated)', el: <ImpedanceFig terminal="drain" rs={2e3} r={1.2e6} /> },
+  { id: 'imp-source', title: 'Into the source (RD on drain)', el: <ImpedanceFig terminal="source" rd={10e3} r={1.8e3} /> },
+  { id: 'mirror', title: 'Current mirror', el: <MirrorFig iref={20e-6} wlRef={10} wlOut={20} iout={40e-6} vgs={0.6} /> },
+  ...(['resistor', 'diode', 'current', 'triode', 'active', 'degenerated'] as const).map((load) => ({
+    id: `cs-${load}`,
+    title: `CS, ${load} load`,
+    el: <CsLoadFig load={load} vin={0.62} vout={0.9} id={90e-6} rd={10e3} rs={2e3} />,
+  })),
+  { id: 'follower', title: 'Source follower', el: <FollowerFig vin={1.2} vout={0.5} i={100e-6} /> },
+  { id: 'cg', title: 'Common gate', el: <CommonGateFig vb={1} vout={1.2} vs={0.4} i={100e-6} rd={6e3} /> },
+  ...(['resistor', 'current', 'cascode'] as const).map((load) => ({
+    id: `cascode-${load}`,
+    title: `Cascode, ${load} load`,
+    el: <CascodeFig load={load} proc={SET_B} id={100e-6} wl={20} vb1={1.0} vout={1.1} rd={7e3} />,
+  })),
+  { id: 'telescopic', title: 'Telescopic (Ex 9.7)', el: <TelescopicFig proc={EX_9_7} iss={3e-3} wlN={E97.wlN} wlP={E97.wlP} wl9={E97.wl9} vinCm={E97.vinCm} vb1={E97.vb1} vb2={E97.vb2} vout={1.65} /> },
+  {
+    id: 'ladder',
+    title: 'Voltage ladder (Ex 9.7)',
+    el: (
+      <VoltageLadder
+        vmax={3}
+        nodes={[
+          { label: 'VDD', v: 3 },
+          { label: 'Vb2', v: E97.vb2 },
+          { label: 'Vout,max', v: E97.voutMax, tone: 'ok' },
+          { label: 'Vb1', v: E97.vb1 },
+          { label: 'Vin,CM', v: E97.vinCm, tone: 'signal' },
+          { label: 'Vout,min', v: E97.voutMin, tone: 'ok' },
+          { label: 'X', v: 0.7 },
+          { label: 'P', v: 0.5 },
+        ]}
+        bands={[
+          { from: 3, to: 2.7, label: '|Vov7| 0.3', kind: 'p' },
+          { from: 2.7, to: 2.4, label: '|Vov5| 0.3', kind: 'p' },
+          { from: 2.4, to: 0.9, label: 'swing 1.5 V', kind: 'swing' },
+          { from: 0.9, to: 0.7, label: 'Vov3', kind: 'n' },
+          { from: 0.7, to: 0.5, label: 'Vov1', kind: 'n' },
+          { from: 0.5, to: 0, label: 'VISS 0.5', kind: 'tail' },
+        ]}
+      />
+    ),
+  },
+  { id: 'dp-t1q1', title: 'Diff pair, mirror tail (Tut 1 Q1)', el: <DiffPairFig vdd={0.9} vss={-0.9} iss={0.2e-3} kp={400e-6} wl={T1.wl12} vth={0.35} vin1={0} vin2={0} rd={T1.rd} tail="mirror" wlTail={T1.wl3} r={T1.r} names={['Q1', 'Q2', 'Q3', 'Q4']} /> },
+  { id: 'dp-t1q4', title: 'Diff pair, RSS tail (Tut 1 Q4)', el: <DiffPairFig vdd={5} iss={1e-3} kp={2.5e-3} wl={1} vth={0.7} vin1={T4.vcm} vin2={T4.vcm} rd={T4.rd} tail="rss" rss={1e3} names={['Q1', 'Q2']} /> },
+  { id: 'dp-diode', title: 'Diff pair, diode loads (Tut 1 Q2)', el: <DiffPairFig vdd={1.8} iss={200e-6} kp={400e-6} wl={12.5} vth={0.5} vin1={0.9} vin2={0.9} load="diode" kpp={100e-6} wlp={50} vthp={0.5} names={['Q1', 'Q2', 'Q3', 'Q4']} /> },
+  { id: 'dp-current', title: 'Diff pair, current-source loads (Tut 1 Q3)', el: <DiffPairFig vdd={1.8} iss={200e-6} kp={400e-6} wl={12.5} vth={0.5} vin1={0.9} vin2={0.9} load="current" kpp={100e-6} wlp={50} vthp={0.5} names={['Q1', 'Q2', 'Q3', 'Q4']} /> },
+  { id: 'dp-steered', title: 'Diff pair, steered', el: <DiffPairFig vdd={1.8} iss={200e-6} kp={200e-6} wl={20} vth={0.4} vin1={1.0} vin2={0.9} rd={5e3} /> },
+  { id: 'half-dm', title: 'DM half circuit', el: <HalfCircuitFig mode="dm" rd={3.2e3} /> },
+  { id: 'half-cm', title: 'CM half circuit', el: <HalfCircuitFig mode="cm" rd={3.2e3} rss={1e3} /> },
+  { id: 'ota-exam', title: '5-T OTA (exam, with bias)', el: <FiveTOtaFig proc={SET_B} iss={QUIZ1_C.iRef} wl12={EXAM.design.wl12} wl34={EXAM.design.wl34} wlTail={QUIZ1_C.wlTail} vinCm={1.1} bias cl={4e-12} /> },
+  { id: 'ota-signal', title: '5-T OTA signal currents', el: <FiveTOtaFig proc={SET_B} iss={QUIZ1_C.iRef} wl12={EXAM.design.wl12} wl34={EXAM.design.wl34} wlTail={QUIZ1_C.wlTail} vinCm={1.1} signal cl={4e-12} /> },
+  { id: 'ota-buffer', title: '5-T OTA buffer', el: <FiveTOtaFig proc={SET_B} iss={QUIZ1_C.iRef} wl12={EXAM.design.wl12} wl34={EXAM.design.wl34} wlTail={QUIZ1_C.wlTail} vinCm={1.1} buffer /> },
+  { id: 'steering', title: 'Steering curve', el: <SteeringPlot kp={200e-6} wl={20} iss={200e-6} dvin={0.1} /> },
+  { id: 'bode', title: 'Bode with 1/β', el: <BodePlot a0={1000} f0={1e5} beta={0.1} /> },
+  { id: 'step', title: 'Step, slewing then settling', el: <StepPlot vstep={1} tau={5e-9} eps={0.01} sr={100e6} /> },
 ];
 
 export function Gallery() {

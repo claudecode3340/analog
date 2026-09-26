@@ -461,26 +461,3 @@ export function TransferCurve({ vdd, vth, kp, wl, rd, vinQ }: { vdd: number; vth
     />
   );
 }
-
-// ─── Registry for FigureSpec (problems and lesson steps) ───────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const FIGURES: Record<string, (props: any) => React.ReactElement> = {
-  water: WaterAnalogy,
-  resStack: ResStack,
-  parallelPair: ParallelPair,
-  mosBias: MosBias,
-  channel: ChannelCrossSection,
-  idvds: IdVdsFamily,
-  nmosRd: NmosRd,
-  pmosRd: PmosRd,
-  smallSignalModel: SmallSignalModel,
-  csSmallSignal: CsSmallSignal,
-  transfer: TransferCurve,
-};
-
-export function Figure({ kind, props, highlight }: { kind: string; props?: Record<string, unknown>; highlight?: string[] }) {
-  const C = FIGURES[kind];
-  if (!C) return <p className="callout bad">Missing figure: {kind}</p>;
-  return <C {...(props ?? {})} highlight={highlight} />;
-}

@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { checkAnswer } from './checker';
 import { discardLog, generate, traceDisagreement } from './generate';
 import { FOUNDATION_GENERATORS } from './generators/foundations';
+import { ALL_GENERATORS } from './generators';
+import { renderToString } from 'react-dom/server';
+import { createElement } from 'react';
+import { FIGURES } from '../circuits/registry';
 import { FIXED_BANK } from './bank';
 import { formatSI } from './units';
 
-describe.each(FOUNDATION_GENERATORS.map((g) => [g.id, g] as const))('generator %s', (_id, gen) => {
+describe.each(ALL_GENERATORS.map((g) => [g.id, g] as const))('generator %s', (_id, gen) => {
   it('produces 300 valid problems whose two solves agree', () => {
     const before = discardLog.length;
     for (let seed = 1; seed <= 300; seed++) {
@@ -17,6 +21,7 @@ describe.each(FOUNDATION_GENERATORS.map((g) => [g.id, g] as const))('generator %
         if (u.choices) expect(v).toBeLessThan(u.choices.length);
       }
       expect(p.hints).toHaveLength(4);
+      if (p.figure) expect(FIGURES, p.figure.kind).toHaveProperty(p.figure.kind);
       expect(p.statement.length).toBeGreaterThan(20);
     }
     const discarded = discardLog.slice(before).filter((d) => d.generator === gen.id);
@@ -43,6 +48,18 @@ describe.each(FOUNDATION_GENERATORS.map((g) => [g.id, g] as const))('generator %
           expect(rw.mistake).toBeDefined();
         }
       }
+    }
+  });
+});
+
+describe.each(ALL_GENERATORS.map((g) => [g.id, g] as const))('figure of %s', (_id, gen) => {
+  it('renders without throwing for 20 seeds', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const p = generate(gen, seed);
+      if (!p.figure) continue;
+      const html = renderToString(createElement(FIGURES[p.figure.kind], p.figure.props ?? {}));
+      expect(html).toContain('<svg');
+      expect(html).not.toContain('NaN');
     }
   });
 });

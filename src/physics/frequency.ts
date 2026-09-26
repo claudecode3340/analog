@@ -90,3 +90,35 @@ export function stepResponse(final: number, tau: number, t: number): number {
 export function slewRate(i: number, cl: number): number {
   return i / cl;
 }
+
+/** 20·log10 of a magnitude. */
+export function db(x: number): number {
+  return 20 * Math.log10(Math.abs(x));
+}
+
+/** Magnitude of a single-pole response A0/(1 + jω/ω0). */
+export function singlePoleMag(a0: number, omega0: number, omega: number): number {
+  return a0 / Math.sqrt(1 + (omega / omega0) ** 2);
+}
+
+/** Closed-loop single-pole system: DC gain A0/(1+βA0), pole (1+βA0)ω0. */
+export function closedLoopPole(a0: number, omega0: number, beta: number): { gain: number; omega: number } {
+  return { gain: a0 / (1 + beta * a0), omega: (1 + beta * a0) * omega0 };
+}
+
+/**
+ * Large step with slewing (Razavi §9.1.4): while the linear response would need a slope above SR, the
+ * output ramps at SR; once the remaining error is SR·τ it finishes exponentially with τ.
+ * Returns the output at time t for a step of height vstep (starting at 0).
+ */
+export function stepWithSlew(vstep: number, tau: number, sr: number, t: number): number {
+  if (!(sr > 0) || vstep / tau <= sr) return stepResponse(vstep, tau, t);
+  const tSlew = (vstep - sr * tau) / sr;
+  if (t <= tSlew) return sr * t;
+  return vstep - sr * tau * Math.exp(-(t - tSlew) / tau);
+}
+
+/** Time spent slewing before linear settling takes over (0 if the step is small enough). */
+export function slewTime(vstep: number, tau: number, sr: number): number {
+  return vstep / tau <= sr ? 0 : (vstep - sr * tau) / sr;
+}

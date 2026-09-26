@@ -14,6 +14,7 @@ import {
   TransferCurve,
 } from '../circuits/figures';
 import { Plot } from '../circuits/Plot';
+import { WIDGETS2 } from './widgets2';
 import {
   currentDivider,
   drainCurrent,
@@ -295,4 +296,5 @@ export const WIDGETS: Record<string, (p: any) => React.ReactElement> = {
   tangent: Tangent,
   roSlope: RoSlope,
   csTransfer: CsTransfer,
+  ...WIDGETS2,
 };

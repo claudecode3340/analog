@@ -95,3 +95,13 @@ export function cascodeRoutApprox(gm: number, ro: number, rBelow: number): numbe
 export function cascodeGain(p: { gm1: number; rCascode: number; rLoad: number }): number {
   return -p.gm1 * parallel(p.rCascode, p.rLoad);
 }
+
+/** Current mirror (λ = 0): Iout = IREF · (W/L)out / (W/L)ref. */
+export function mirrorCurrent(iref: number, wlOut: number, wlRef: number): number {
+  return (iref * wlOut) / wlRef;
+}
+
+/** A diode-connected device costs a full |VGS| = |Vth| + |Vov| of headroom. */
+export function diodeDrop(vth: number, vov: number): number {
+  return vth + vov;
+}

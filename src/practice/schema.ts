@@ -59,7 +59,13 @@ export type MistakeId =
   | 'lnValues'
   | 'signFlip'
   | 'wrongDrop'
-  | 'parallelAsSeries';
+  | 'parallelAsSeries'
+  | 'forgotDegeneration'
+  | 'ratioInverted'
+  | 'wrongTerminalRule'
+  | 'issNotHalf'
+  | 'dbConversion'
+  | 'vovNotVgs';
 
 export interface WrongAnswer {
   mistake: MistakeId;

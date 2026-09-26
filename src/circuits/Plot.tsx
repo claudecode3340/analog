@@ -58,6 +58,8 @@ export interface PlotProps {
   guides?: Guide[];
   shades?: Shade[];
   children?: (sx: (x: number) => number, sy: (y: number) => number) => ReactNode;
+  /** Drag inside the plot to pick a point (data coordinates). A slider should offer the same control. */
+  onPick?: (x: number, y: number) => void;
 }
 
 export function ticks(lo: number, hi: number, n = 5): number[] {
@@ -85,6 +87,16 @@ export function Plot(p: PlotProps) {
   const yt = p.yTicks ?? ticks(y0, y1);
   const xf = p.xFmt ?? ((v: number) => String(v));
   const yf = p.yFmt ?? ((v: number) => String(v));
+  const pick = (e: React.PointerEvent<SVGRectElement>) => {
+    if (!p.onPick) return;
+    const svg = e.currentTarget.ownerSVGElement;
+    const ctm = svg?.getScreenCTM();
+    if (!svg || !ctm) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+    const x = x0 + ((pt.x - m.l) / iw) * (x1 - x0);
+    const y = y0 + ((m.t + ih - pt.y) / ih) * (y1 - y0);
+    p.onPick(Math.max(x0, Math.min(x1, x)), Math.max(y0, Math.min(y1, y)));
+  };
   return (
     <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={p.title} style={{ width: '100%', maxWidth: w * 1.3, height: 'auto', display: 'block' }}>
       <title>{p.title}</title>
@@ -113,7 +125,7 @@ export function Plot(p: PlotProps) {
       {yt.map((v) => (
         <g key={`yt${v}`}>
           <line x1={m.l - 4} x2={m.l} y1={sy(v)} y2={sy(v)} stroke="var(--ink)" />
-          {!(v === y0 && xt.includes(x0)) && <Label x={m.l - 6} y={sy(v) + 4} text={yf(v)} anchor="end" size={11} mono color="var(--ink-2)" />}
+          {!(v === y0 && xt.some((t) => Math.abs(sx(t) - m.l) < 24)) && <Label x={m.l - 6} y={sy(v) + 4} text={yf(v)} anchor="end" size={11} mono color="var(--ink-2)" />}
         </g>
       ))}
       <Label x={m.l + iw / 2} y={h - 6} text={p.xLabel} anchor="middle" size={12} weight={600} color="var(--ink-2)" />
@@ -162,7 +174,8 @@ export function Plot(p: PlotProps) {
         if (!s.label || s.points.length === 0) return null;
         const [lx, ly] = s.labelAt === 'start' ? s.points[0] : s.points[s.points.length - 1];
         if (ly > y1 || ly < y0) return null;
-        return <Label key={`sl${i}`} x={sx(lx) - 4} y={sy(ly) - 6} text={s.label} anchor="end" size={11} mono color={s.color ?? 'var(--ink)'} bg weight={600} />;
+        const atStart = s.labelAt === 'start';
+        return <Label key={`sl${i}`} x={sx(lx) + (atStart ? 6 : -4)} y={sy(ly) - 6} text={s.label} anchor={atStart ? 'start' : 'end'} size={11} mono color={s.color ?? 'var(--ink)'} bg weight={600} />;
       })}
       {p.markers?.map((mk, i) => {
         const cx = sx(mk.x);
@@ -179,6 +192,23 @@ export function Plot(p: PlotProps) {
         );
       })}
       {p.children?.(sx, sy)}
+      {p.onPick && (
+        <rect
+          x={m.l}
+          y={m.t}
+          width={iw}
+          height={ih}
+          fill="transparent"
+          style={{ cursor: 'ew-resize', touchAction: 'none' }}
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            pick(e);
+          }}
+          onPointerMove={(e) => {
+            if (e.buttons) pick(e);
+          }}
+        />
+      )}
     </svg>
   );
 }

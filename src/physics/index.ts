@@ -7,3 +7,6 @@ export * from './opamps';
 export * from './process';
 export * from './cmfb';
 export * from './solvers';
+export * from './transfer';
+export * from './nodes';
+export * from './nodes.helpers';

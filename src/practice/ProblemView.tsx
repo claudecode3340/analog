@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Figure } from '../circuits/figures';
+import { Figure } from '../circuits/registry';
 import { logMistake, recordPractice, useProgress } from '../app/store';
 import { Tex } from '../ui/Tex';
 import { checkAnswer, type CheckResult } from './checker';

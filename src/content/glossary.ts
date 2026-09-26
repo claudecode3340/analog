@@ -36,5 +36,9 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   Av: { tex: 'A_v', name: 'voltage gain', def: 'vout/vin for small signals. Negative means the stage inverts.', unit: 'V/V', firstIn: 'u5-cs' },
   Gm: { tex: 'G_m', name: 'stage transconductance', def: 'Output short-circuit current per input volt, for a whole stage.', unit: 'S', firstIn: 'u5-cs' },
   Rout: { tex: 'R_{out}', name: 'output resistance', def: 'Resistance seen looking into the output node with the input grounded.', unit: 'Ω', firstIn: 'u5-cs' },
+  RS: { tex: 'R_S', name: 'source resistor', def: 'A resistor under the source (degeneration). It fights back: raises Rout (up multiplies) and lowers Gm.', unit: 'Ω', firstIn: 'u6-rules' },
+  Rdown: { tex: 'R_{down}', name: 'resistance looking down', def: 'From the output node down into the NMOS stack. For a cascode ≈ gm·rO·rO.', unit: 'Ω', firstIn: 'u9-cascode' },
+  Rup: { tex: 'R_{up}', name: 'resistance looking up', def: 'From the output node up into the PMOS load. rO for a simple source, ≈ gm·rO² for a cascoded one.', unit: 'Ω', firstIn: 'u9-cascode' },
+  VISS: { tex: 'V_{ISS}', name: 'tail headroom', def: 'The voltage the tail current source needs across it to stay saturated (its Vov for a transistor tail). Not a supply.', unit: 'V', firstIn: 'u9-telescopic' },
   RD: { tex: 'R_D', name: 'drain resistor', def: 'Load resistor from VDD to the drain.', unit: 'Ω', firstIn: 'u3-recipe' },
 };

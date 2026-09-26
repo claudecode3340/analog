@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Figure } from '../circuits/figures';
+import { Figure } from '../circuits/registry';
 import { BANK_BY_ID, GENERATOR_BY_ID, LESSON_BY_ID, UNIT_BY_ID } from '../content';
 import type { Lesson } from '../content/types';
 import { MASTERY, recordCheck, recordLessonStep, useProgress } from '../app/store';

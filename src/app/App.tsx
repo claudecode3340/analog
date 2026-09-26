@@ -5,6 +5,7 @@ import { LearnIndex } from '../learn/LearnIndex';
 import { DcStepper } from '../labs/DcStepper';
 import { LabsIndex } from '../labs/LabsIndex';
 import { MosfetLab } from '../labs/MosfetLab';
+import { CascodeLab, CsLab, ImpedanceLab } from '../labs/M2Labs';
 import { PracticeView } from '../practice/PracticeView';
 import { ReviewView } from '../review/ReviewView';
 import { Gallery } from './Gallery';
@@ -69,7 +70,11 @@ export function App() {
       view = arg ? <LessonView id={arg} /> : <LearnIndex />;
       break;
     case 'labs':
-      view = arg === 'mosfet' ? <MosfetLab /> : arg === 'dc' ? <DcStepper /> : <LabsIndex />;
+      {
+        const LAB: Record<string, () => React.ReactElement> = { mosfet: MosfetLab, dc: DcStepper, impedance: ImpedanceLab, cs: CsLab, cascode: CascodeLab };
+        const L = arg ? LAB[arg] : undefined;
+        view = L ? <L /> : <LabsIndex />;
+      }
       break;
     case 'practice':
       view = <PracticeView />;
