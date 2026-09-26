@@ -15,6 +15,7 @@ import {
 } from '../circuits/figures';
 import { Plot } from '../circuits/Plot';
 import { WIDGETS2 } from './widgets2';
+import { WIDGETS3 } from './widgets3';
 import {
   currentDivider,
   drainCurrent,
@@ -297,4 +298,5 @@ export const WIDGETS: Record<string, (p: any) => React.ReactElement> = {
   roSlope: RoSlope,
   csTransfer: CsTransfer,
   ...WIDGETS2,
+  ...WIDGETS3,
 };

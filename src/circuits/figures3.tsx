@@ -137,10 +137,10 @@ export function DiffPairFig(p: DiffPairFigProps) {
       <Nmos x={xR} y={y1} id="m2" flip />
       <Wire points={[[xL - 30, y1], [90, y1]]} id="in1" />
       <Terminal x={90} y={y1} />
-      <Label x={90} y={y1 - 14} text={`Vin1 ${V(p.vin1)}`} anchor="middle" weight={600} size={12} />
+      <Label x={96} y={y1 - 12} text={`Vin1 ${V(p.vin1)}`} weight={600} size={12} />
       <Wire points={[[xR + 30, y1], [430, y1]]} id="in2" />
       <Terminal x={430} y={y1} />
-      <Label x={430} y={y1 - 14} text={`Vin2 ${V(p.vin2)}`} anchor="middle" weight={600} size={12} />
+      <Label x={424} y={y1 - 12} text={`Vin2 ${V(p.vin2)}`} anchor="end" weight={600} size={12} />
       <Wire points={[[xL, y1 + 30], [xL, yP], [xR, yP], [xR, y1 + 30]]} />
       <Dot x={xm} y={yP} id="p" />
       <VoltageTag x={xm} y={yP - 16} v={`P ${V(n.vP)}`} anchor="middle" id="p" />
@@ -312,8 +312,8 @@ export function FiveTOtaFig(p: FiveTFigProps) {
       <FlowDots points={stackFlow(xm, yP, bottom, [{ y: y5 }])} strength={flowStrength(p.iss)} />
       {p.signal && (
         <>
-          <SignalTag x={xL - 12} y={y1 + 30} text="+i" anchor="end" />
-          <SignalTag x={xL - 12} y={yP3 + 30} text="+i" anchor="end" />
+          <SignalTag x={xL + 12} y={y1 + 40} text="+i" />
+          <SignalTag x={xL + 12} y={yD + 6} text="+i" />
           <SignalTag x={xR + 12} y={yP3 + 30} text="+i (copy)" />
           <SignalTag x={xR + 12} y={y1 + 30} text="−i" />
           <SignalTag x={492} y={yD + 18} text="2i → CL" anchor="middle" />
@@ -446,7 +446,7 @@ export function StepPlot({ vstep, tau, eps, sr, h = 260 }: { vstep: number; tau:
       yLabel="Vout (V)"
       h={h}
       xFmt={(v) => v.toFixed(v < 10 ? 1 : 0)}
-      yFmt={(v) => v.toFixed(2)}
+      yFmt={(v) => String(Number(v.toPrecision(3)))}
       series={series}
       guides={[
         ...(ts > 0 ? [{ axis: 'x' as const, at: ts * 1e9, label: 'slewing ends', color: 'var(--pmos)' }] : []),

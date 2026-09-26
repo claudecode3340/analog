@@ -20,7 +20,7 @@ export function traceDisagreement(p: Problem, relTol = 1e-9): string | undefined
     if (!s.produces || s.value === undefined) continue;
     const a = p.answers[s.produces];
     const b = s.value;
-    const ok = a === b || Math.abs(a - b) <= Math.abs(a) * relTol;
+    const ok = a === b || Math.abs(a - b) <= Math.max(Math.abs(a) * relTol, 1e-15);
     if (!ok) return `${s.produces}: direct ${a} vs traced ${b}`;
   }
   for (const u of p.unknowns) {
