@@ -13,13 +13,13 @@ Tags such as **[U4]** or **[L2]** give the curriculum unit each item belongs to 
 | Conversation text | ✅ complete | 4,723 lines, 22 turns |
 | Conversation **diagrams** (~130 widgets) | ❌ **lost in export** | Every diagram became the placeholder `[Claude used visualize:show_widget]`, so no SVG came through. The diagrams will be redrawn from the surrounding text, your lecture notes and Razavi's figures (§5). |
 | Conversation **quizzes** (`quiz_display`) | ❌ lost | Only the "20 things to answer cold" audit and the Problem Set 1 statements survive. New check questions will be written per lesson. |
-| Conversation images (your photos) | ❌ lost | Replaced by the PDFs you uploaded separately (below). |
+| Conversation images (your photos) | ✅ recovered in the second export | 40 files in `source/conversation/images/`: lecture-note screenshots, **the exam paper** (`1789657566261_image.png`), tutorial sheets and **your Tutorial 1 handwritten solutions** (`20260820_*.jpg`). |
 | Razavi 2nd ed. PDF | ✅ | `source/razavi.pdf`, 801 pages, text-searchable |
 | Lecture notes 1–4, 6–12 | ✅ | vector handwriting, readable at 300 dpi. **There is no Lecture 5 file**; please check whether one exists. |
 | Settling-time example | ✅ | Razavi Ex 9.2 worked out by hand |
 | Current-mirror handout | ✅ | typed, 8 pp.: cascode mirror, low-voltage cascode, generating Vb |
 | Tutorials 1–6 | ✅ | question sheets, typed, with vector figures |
-| Tutorial 1 handwritten solutions | ⚠️ not uploaded | The conversation confirms your key for Q1, Q2 and Q4, and the engine reproduces it. |
+| Tutorial 1 handwritten solutions | ✅ | In the conversation images; the engine reproduces your key. |
 | Quiz 1 key (Parts A, B, C) | ✅ | **Part C is the "exam question"** (same numbers); question sheet not uploaded |
 | Quiz 2 key (Parts A, B, C) | ✅ | triode-sensing CMFB on a telescopic; question sheet and figure not uploaded |
 | Course handout | ✅ | lecture plan and evaluation dates |
@@ -55,7 +55,7 @@ Tags such as **[U4]** or **[L2]** give the curriculum unit each item belongs to 
    - Tut 6 (slew rate, 3 questions) is **not Razavi**.
    - **Tut 1 is Sedra–Smith style** (k′n, |V′A|, Q1…Q4 naming), not Razavi.
 
-3. **The exam question is Quiz 1 Part C.** The Quiz 1 key uses (W/L)5,6 = **30**, which settles the cut-off-scan flag in §11. The exam is still flagged in the UI because the question sheet itself was never uploaded.
+3. **The exam question is Quiz 1 Part C.** The exam paper (now recovered) and the Quiz 1 key both give (W/L)5,6 = **30**, so the cut-off-scan flag in §11 is resolved.
 
 4. **Buffer bandwidth, three accepted answers.** For Exam Q1(e) the key gives **31.95 MHz** from 1/(2πCL(1/gm2 ‖ rO4)) and **32.19 MHz** from f3dB·(1 + βA). The conversation's 1/gm gives **31.8 MHz**. The app will teach 1/gm as the fast route and accept all three, explaining the difference.
 
