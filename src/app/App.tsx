@@ -36,9 +36,17 @@ export function App() {
   const [, section, arg] = hash.split('/');
 
   useEffect(() => {
+    // Only touch data-theme if the app set it; a host page may set its own.
     const root = document.documentElement;
-    if (p.settings.theme === 'auto') root.removeAttribute('data-theme');
-    else root.setAttribute('data-theme', p.settings.theme);
+    if (p.settings.theme === 'auto') {
+      if (root.hasAttribute('data-app-theme')) {
+        root.removeAttribute('data-theme');
+        root.removeAttribute('data-app-theme');
+      }
+    } else {
+      root.setAttribute('data-theme', p.settings.theme);
+      root.setAttribute('data-app-theme', '');
+    }
   }, [p.settings.theme]);
 
   useEffect(() => {

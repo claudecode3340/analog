@@ -12,7 +12,7 @@
 }
 .topbar {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 5;
   display: flex;
   align-items: center;
@@ -750,4 +750,16 @@
   .problem {
     padding: var(--s3);
   }
+}
+
+.json-box {
+  width: 100%;
+  min-height: 160px;
+  margin-top: var(--s3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink-2);
+  border-radius: var(--radius);
 }
