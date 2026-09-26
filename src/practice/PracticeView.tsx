@@ -7,6 +7,20 @@ import { ProblemView } from './ProblemView';
 import { newSeed } from './rng';
 import type { Problem } from './schema';
 
+/** Group the fixed bank by where each problem comes from. */
+function bankGroup(p: Problem): string {
+  const s = p.source;
+  if (/^Mid-sem|^Quiz/.test(s)) return 'Exam and quizzes';
+  if (/^Tutorial (\d)/.test(s)) return `Tutorial ${s.match(/^Tutorial (\d)/)![1]}`;
+  if (/^Problem Set/.test(s)) return 'Problem Set 1 (chat)';
+  if (/^Razavi/.test(s)) return 'Razavi examples';
+  if (/^Lab/.test(s)) return 'Lab sheets (calculations)';
+  if (/chat|conversation/i.test(s)) return 'Questions from our chat';
+  return 'Worked examples';
+}
+const GROUP_ORDER = ['Exam and quizzes', 'Tutorial 1', 'Tutorial 2', 'Tutorial 3', 'Tutorial 4', 'Tutorial 5', 'Tutorial 6', 'Problem Set 1 (chat)', 'Razavi examples', 'Lab sheets (calculations)', 'Questions from our chat', 'Worked examples'];
+const BANK_GROUPS: Array<[string, Problem[]]> = GROUP_ORDER.map((g) => [g, BANK.filter((b) => bankGroup(b) === g)] as [string, Problem[]]).filter(([, xs]) => xs.length > 0);
+
 type Source = { kind: 'gen'; id: string } | { kind: 'mix' } | { kind: 'bank'; id: string };
 
 export function PracticeView() {
@@ -54,13 +68,19 @@ export function PracticeView() {
             );
           })}
           <div className="eyebrow">Fixed bank</div>
-          {BANK.map((b) => (
-            <button key={b.id} type="button" className={`menu-item ${source.kind === 'bank' && source.id === b.id ? 'active' : ''}`} onClick={() => setSource({ kind: 'bank', id: b.id })}>
-              <span className="menu-unit">★</span>
-              <span>{b.title}</span>
-            </button>
+          {BANK_GROUPS.map(([group, items]) => (
+            <details key={group} className="bank-group" open={items.some((b) => source.kind === 'bank' && source.id === b.id)}>
+              <summary>
+                {group} <span className="badge">{items.length}</span>
+              </summary>
+              {items.map((b) => (
+                <button key={b.id} type="button" className={`menu-item ${source.kind === 'bank' && source.id === b.id ? 'active' : ''}`} onClick={() => setSource({ kind: 'bank', id: b.id })}>
+                  <span className="menu-unit">★</span>
+                  <span>{b.title}</span>
+                </button>
+              ))}
+            </details>
           ))}
-          <p className="small muted menu-note">Tutorials 1–3, the exam question and Problem Set 1 join the bank in Milestones 3–4; their answers are already verified in the engine.</p>
         </aside>
         <div>
           <ProblemView key={problem.id} problem={problem} />

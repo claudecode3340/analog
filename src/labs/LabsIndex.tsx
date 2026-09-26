@@ -6,6 +6,7 @@ const LABS = [
   { id: 'impedance', title: 'Impedance explorer', desc: 'Click a terminal: ∞, rO, 1/gm, and why the device fights back.', ready: true, m: 2 },
   { id: 'cs', title: 'CS amplifier lab', desc: 'Every load, a transfer curve with a draggable Q, Gm·Rout.', ready: true, m: 2 },
   { id: 'cascode', title: 'Cascode lab', desc: 'Telescopic and folded, the bias ladder, Rout comparison.', ready: true, m: 2 },
+  { id: 'folded', title: 'Folded-cascode lab', desc: 'Eleven live transistors, the current divider at the folding node, input CM below ground.', ready: true, m: 4 },
   { id: 'headroom', title: 'Headroom stack', desc: 'Stacked overdrives, VISS, diode costs: the swing left over.', ready: true, m: 3 },
   { id: 'diffpair', title: 'Differential pair lab', desc: 'Current steering, ±√2·Vov, DM and CM half circuits.', ready: true, m: 3 },
   { id: 'ota', title: 'Five-transistor OTA lab', desc: 'Signal currents through the mirror, CM range, swing, buffer.', ready: true, m: 3 },

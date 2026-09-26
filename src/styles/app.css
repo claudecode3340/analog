@@ -1641,3 +1641,59 @@ label.check input {
   height: 18px;
   accent-color: var(--signal);
 }
+.bank-group summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  list-style: none;
+}
+.bank-group summary::-webkit-details-marker {
+  display: none;
+}
+.bank-group summary::before {
+  content: '▸ ';
+  color: var(--muted);
+}
+.bank-group[open] summary::before {
+  content: '▾ ';
+}
+.bank-group summary:hover {
+  background: var(--surface-2);
+}
+.exam-bar {
+  position: sticky;
+  top: 72px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s4);
+}
+.exam-bar strong {
+  flex: 1;
+}
+.exam-clock {
+  font-size: 22px;
+  font-weight: 600;
+}
+.exam-clock.bad {
+  color: var(--bad);
+}
+.exam-q {
+  margin-bottom: var(--s5);
+}
+.exam-card {
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.exam-solution summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: var(--s3);
+}

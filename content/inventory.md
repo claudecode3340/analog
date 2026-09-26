@@ -71,6 +71,8 @@ Tags such as **[U4]** or **[L2]** give the curriculum unit each item belongs to 
 
 10. **Notation clash: Sedra vs Razavi.** Tutorial 1 uses k′n(W/L), |V′A| and Vt, while your notes use µnCox(W/L), λ and Vth. The app uses your notes' symbols (§6) and shows a one-line translation on Tutorial 1 problems (k′n = µnCox, VA = 1/λ = |V′A|·L).
 
+11. **Problem Set 1 P5 (from our chat) has a hidden triode device.** With (W/L)5–8 = 100/0.5 in Set A, each PMOS diode costs |VGS| = 1.161 V, so the diode stack puts M3's drain at 3 − 2(1.161) = 0.678 V, *below* M3's source VX = 0.707 V: M3 is in triode, not saturation. The chat's key (VX 0.707 V, Vout 0.900–1.478 V) assumes every device is saturated. The formulas and numbers are right *given* that assumption, but the circuit as sized can't hold it: the PMOS need W/L ≥ 417 (|Vov| ≤ 0.25 V). This is exactly the trap Tutorial 2 Q2(a) asks about. The app keeps the key's numbers, shows M3 red in the figure, and explains why.
+
 ---
 
 ## 2. Curriculum map with sources

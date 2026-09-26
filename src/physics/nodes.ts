@@ -208,3 +208,175 @@ export function cascodeNodes(p: CascodeNodesInput) {
   }
   return { vgs1, vX, vY, devices };
 }
+
+// ─── Folded cascode, PMOS input, fully differential (Razavi Fig. 9.15 numbering) ──
+// M1,2 PMOS input (tail M11 from VDD), M3,4 NMOS cascodes, M5,6 NMOS sources (ISS/2 + I),
+// M7,8 PMOS cascodes, M9,10 PMOS sources (I).
+
+export interface FoldedNodesInput {
+  proc: Process;
+  iss: number;
+  i: number;
+  wl1: number;
+  wl3: number;
+  wl5: number;
+  wl7: number;
+  wl9: number;
+  wl11: number;
+  vinCm: number;
+  vout: number;
+  /** NMOS cascode gate; default puts M5 exactly at its edge (VX = Vov5). */
+  vbn?: number;
+  /** PMOS cascode gate; default puts M9 exactly at its edge. */
+  vbp?: number;
+}
+
+export function foldedNodes(p: FoldedNodesInput) {
+  const { proc } = p;
+  const id1 = p.iss / 2, id5 = p.iss / 2 + p.i;
+  const vgs1 = vgsFor(id1, proc.kpp, p.wl1, proc.vthp);
+  const vgs3 = vgsFor(p.i, proc.kpn, p.wl3, proc.vthn);
+  const vgs5 = vgsFor(id5, proc.kpn, p.wl5, proc.vthn);
+  const vgs7 = vgsFor(p.i, proc.kpp, p.wl7, proc.vthp);
+  const vgs9 = vgsFor(p.i, proc.kpp, p.wl9, proc.vthp);
+  const vgs11 = vgsFor(p.iss, proc.kpp, p.wl11, proc.vthp);
+  const vov5 = vgs5 - proc.vthn, vov9 = vgs9 - proc.vthp;
+  const vbn = p.vbn ?? vov5 + vgs3;
+  const vbp = p.vbp ?? proc.vdd - vov9 - vgs7;
+  const vX = vbn - vgs3;
+  const vT = vbp + vgs7; // drain of M9 = source of M7
+  const vP = p.vinCm + vgs1;
+  return {
+    vX,
+    vT,
+    vP,
+    vbn,
+    vbp,
+    vb5: vgs5,
+    vb9: proc.vdd - vgs9,
+    vb11: proc.vdd - vgs11,
+    devices: {
+      m1: pDev(proc, id1, p.wl1, p.vinCm, vP, vX),
+      m2: pDev(proc, id1, p.wl1, p.vinCm, vP, vX),
+      m3: nDev(proc, p.i, p.wl3, vbn, vX, p.vout),
+      m4: nDev(proc, p.i, p.wl3, vbn, vX, p.vout),
+      m5: nDev(proc, id5, p.wl5, vgs5, 0, vX),
+      m6: nDev(proc, id5, p.wl5, vgs5, 0, vX),
+      m7: pDev(proc, p.i, p.wl7, vbp, vT, p.vout),
+      m8: pDev(proc, p.i, p.wl7, vbp, vT, p.vout),
+      m9: pDev(proc, p.i, p.wl9, proc.vdd - vgs9, proc.vdd, vT),
+      m10: pDev(proc, p.i, p.wl9, proc.vdd - vgs9, proc.vdd, vT),
+      m11: pDev(proc, p.iss, p.wl11, proc.vdd - vgs11, proc.vdd, vP),
+    },
+  };
+}
+
+// ─── Single-ended telescopic with a cascode PMOS mirror (Razavi Fig. 9.9 / 9.21b) ──
+// M1,2 input; M3,4 NMOS cascodes (Vb1); M5,6 PMOS cascodes; M7,8 PMOS sources.
+// bias 'diodes' (Fig 9.9): M7 and M5 diode-connected on the left.
+// bias 'vb2' (Fig 9.21b): M5,6 gates at Vb2; M7,8 gates tied to the left output node D3.
+
+export interface MirrorTeleInput {
+  proc: Process;
+  iss: number;
+  wlN: number;
+  wlP: number;
+  vinCm: number;
+  vb1: number;
+  vout: number;
+  bias: 'diodes' | 'vb2';
+  vb2?: number;
+  /** Unity-gain buffer: M2's gate is Vout. */
+  buffer?: boolean;
+  /** Tail device size (default: sized for a 0.2 V overdrive). */
+  wl9?: number;
+}
+
+export function mirrorTeleNodes(p: MirrorTeleInput) {
+  const { proc } = p;
+  const id = p.iss / 2;
+  const vgsN = vgsFor(id, proc.kpn, p.wlN, proc.vthn);
+  const vgsP = vgsFor(id, proc.kpp, p.wlP, proc.vthp);
+  const wl9 = p.wl9 ?? (2 * p.iss) / (proc.kpn * 0.2 * 0.2);
+  const vgs9 = vgsFor(p.iss, proc.kpn, wl9, proc.vthn);
+  const vin2 = p.buffer ? p.vout : p.vinCm;
+  const vinC = p.buffer ? p.vout : p.vinCm;
+  const vP = vinC - vgsN;
+  const vX = p.vb1 - vgsN; // sources of M3, M4
+  let vD3: number, vA: number, vg56: number, vg78: number;
+  if (p.bias === 'diodes') {
+    vA = proc.vdd - vgsP; // M7 diode: drain = gate
+    vD3 = vA - vgsP; // M5 diode
+    vg56 = vD3;
+    vg78 = vA;
+  } else {
+    vD3 = proc.vdd - vgsP; // M7,8 gates on D3 carry ID
+    vg78 = vD3;
+    vg56 = p.vb2 ?? proc.vdd - (vgsP - proc.vthp) - vgsP;
+    vA = vg56 + vgsP; // sources of M5, M6
+  }
+  return {
+    vP,
+    vX,
+    vD3,
+    vA,
+    vg56,
+    vg78,
+    vb9: vgs9,
+    devices: {
+      m1: nDev(proc, id, p.wlN, vinC, vP, vX),
+      m2: nDev(proc, id, p.wlN, vin2, vP, vX),
+      m3: nDev(proc, id, p.wlN, p.vb1, vX, vD3),
+      m4: nDev(proc, id, p.wlN, p.vb1, vX, p.vout),
+      m5: pDev(proc, id, p.wlP, vg56, vA, vD3),
+      m6: pDev(proc, id, p.wlP, vg56, vA, p.vout),
+      m7: pDev(proc, id, p.wlP, vg78, proc.vdd, vA),
+      m8: pDev(proc, id, p.wlP, vg78, proc.vdd, vA),
+      m9: nDev(proc, p.iss, wl9, vgs9, 0, vP),
+    },
+  };
+}
+
+// ─── Two-stage op amp (Razavi Fig. 9.23 numbering) ─────────────────────────
+// Stage 1: M1,2 input, M3,4 PMOS loads (gate Vb1), tail ISS. Stage 2: M5,6 PMOS CS devices driven by
+// X, Y, loaded by NMOS current sources M7,8 (gate Vb2).
+
+export interface TwoStageInput {
+  proc: Process;
+  iss: number;
+  id2: number;
+  wl: number;
+  vinCm: number;
+  vout: number;
+  wl9?: number;
+}
+
+export function twoStageNodes(p: TwoStageInput) {
+  const { proc } = p;
+  const id1 = p.iss / 2;
+  const vgs5 = vgsFor(p.id2, proc.kpp, p.wl, proc.vthp);
+  const vXY = proc.vdd - vgs5; // X, Y must sit here for M5,6 to carry id2
+  const vgs1 = vgsFor(id1, proc.kpn, p.wl, proc.vthn);
+  const vgs3 = vgsFor(id1, proc.kpp, p.wl, proc.vthp);
+  const vgs7 = vgsFor(p.id2, proc.kpn, p.wl, proc.vthn);
+  const wl9 = p.wl9 ?? (2 * p.iss) / (proc.kpn * 0.2 * 0.2);
+  const vgs9 = vgsFor(p.iss, proc.kpn, wl9, proc.vthn);
+  const vP = p.vinCm - vgs1;
+  return {
+    vXY,
+    vP,
+    vb1: proc.vdd - vgs3,
+    vb2: vgs7,
+    devices: {
+      m1: nDev(proc, id1, p.wl, p.vinCm, vP, vXY),
+      m2: nDev(proc, id1, p.wl, p.vinCm, vP, vXY),
+      m3: pDev(proc, id1, p.wl, proc.vdd - vgs3, proc.vdd, vXY),
+      m4: pDev(proc, id1, p.wl, proc.vdd - vgs3, proc.vdd, vXY),
+      m5: pDev(proc, p.id2, p.wl, vXY, proc.vdd, p.vout),
+      m6: pDev(proc, p.id2, p.wl, vXY, proc.vdd, p.vout),
+      m7: nDev(proc, p.id2, p.wl, vgs7, 0, p.vout),
+      m8: nDev(proc, p.id2, p.wl, vgs7, 0, p.vout),
+      m9: nDev(proc, p.iss, wl9, vgs9, 0, vP),
+    },
+  };
+}

@@ -51,5 +51,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   eps: { tex: '\\varepsilon', name: 'error', def: 'The fraction still missing: gain error 1/(1 + βA), or the settling band (0.01 = 1%).', firstIn: 'u12-settling' },
   beta: { tex: '\\beta', name: 'feedback factor', def: 'The fraction of the output fed back to the input. A divider R2/(R1 + R2); 1 for a buffer.', firstIn: 'u12-settling' },
   SR: { tex: 'SR', name: 'slew rate', def: 'The fastest the output can move: SR = ISS/CL for a one-stage OTA.', unit: 'V/s', firstIn: 'u12-settling' },
+  Aopen: { tex: 'A_{open}', name: 'open-loop gain', def: 'The op amp’s own gain, with no feedback. Huge but sloppy: it changes with temperature and process.', firstIn: 'l1-gain' },
+  Aclosed: { tex: 'A_{closed}', name: 'closed-loop gain', def: 'The gain with feedback: A/(1 + βA) ≈ 1/β, set by resistors.', firstIn: 'l1-gain' },
   RD: { tex: 'R_D', name: 'drain resistor', def: 'Load resistor from VDD to the drain.', unit: 'Ω', firstIn: 'u3-recipe' },
 };

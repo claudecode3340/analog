@@ -19,12 +19,15 @@ import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, Mirror
 import { DrawStyleContext } from '../circuits/primitives';
 import { VoltageLadder } from '../circuits/schematic';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from '../circuits/figures3';
-import { EX_9_7, ex97, fiveTOtaQuiz, QUIZ1_C, SET_B, tut1Q1, tut1Q4 } from '../physics';
+import { FoldedCascodeFig, MirrorTeleFig, NonInvertingFig, TwoStageFig } from '../circuits/figures4';
+import { EX_9_7, SET_A, ps1P6, ex97, fiveTOtaQuiz, QUIZ1_C, SET_B, tut1Q1, tut1Q4 } from '../physics';
 
 const E97 = ex97();
 const T1 = tut1Q1();
 const T4 = tut1Q4();
 const EXAM = fiveTOtaQuiz(QUIZ1_C);
+const P6 = ps1P6();
+const WL11 = (2 * 0.75e-3) / (SET_A.kpp * 0.4 * 0.4);
 
 export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactElement }> = [
   { id: 'water', title: 'Water analogy', el: <WaterAnalogy /> },
@@ -98,6 +101,11 @@ export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactEl
   { id: 'steering', title: 'Steering curve', el: <SteeringPlot kp={200e-6} wl={20} iss={200e-6} dvin={0.1} /> },
   { id: 'bode', title: 'Bode with 1/β', el: <BodePlot a0={1000} f0={1e5} beta={0.1} /> },
   { id: 'step', title: 'Step, slewing then settling', el: <StepPlot vstep={1} tau={5e-9} eps={0.01} sr={100e6} /> },
+  { id: 'folded', title: 'Folded cascode (PS1 P6)', el: <FoldedCascodeFig proc={SET_A} iss={0.75e-3} i={0.375e-3} wl1={P6.m1.wl} wl3={P6.m3.wl} wl5={P6.m5.wl} wl7={P6.m7.wl} wl9={P6.m9.wl} wl11={WL11} vinCm={0.6} vout={1.5} /> },
+  { id: 'mirrortele', title: 'Mirror-loaded telescopic (PS1 P5)', el: <MirrorTeleFig proc={SET_A} iss={1e-3} wlN={200} wlP={200} vinCm={1.2} vb1={1.6} vout={1.2} bias="diodes" /> },
+  { id: 'mirrortele-vb2', title: 'Telescopic, Vb2 mirror, buffer (Tut 3 Q1)', el: <MirrorTeleFig proc={SET_A} iss={1e-3} wlN={200} wlP={200} vinCm={1.2} vb1={1.7} vout={1.3} bias="vb2" vb2={1.2} buffer /> },
+  { id: 'twostage', title: 'Two-stage (Tut 3 Q2)', el: <TwoStageFig proc={SET_A} iss={1e-3} id2={1e-3} wl={200} vinCm={1.5} vout={1.5} /> },
+  { id: 'noninv', title: 'Non-inverting amplifier', el: <NonInvertingFig r1={9e3} r2={1e3} a={1000} cl={2e-12} /> },
 ];
 
 export function Gallery() {

@@ -5,8 +5,10 @@ import { LearnIndex } from '../learn/LearnIndex';
 import { DcStepper } from '../labs/DcStepper';
 import { LabsIndex } from '../labs/LabsIndex';
 import { MosfetLab } from '../labs/MosfetLab';
+import { ExamView } from '../review/ExamView';
 import { CascodeLab, CsLab, ImpedanceLab } from '../labs/M2Labs';
 import { DiffPairLab, FeedbackLab, HeadroomLab, OtaLab } from '../labs/M3Labs';
+import { FoldedLab } from '../labs/M4Labs';
 import { PracticeView } from '../practice/PracticeView';
 import { ReviewView } from '../review/ReviewView';
 import { Gallery } from './Gallery';
@@ -72,7 +74,7 @@ export function App() {
       break;
     case 'labs':
       {
-        const LAB: Record<string, () => React.ReactElement> = { mosfet: MosfetLab, dc: DcStepper, impedance: ImpedanceLab, cs: CsLab, cascode: CascodeLab, diffpair: DiffPairLab, ota: OtaLab, feedback: FeedbackLab, headroom: HeadroomLab };
+        const LAB: Record<string, () => React.ReactElement> = { mosfet: MosfetLab, dc: DcStepper, impedance: ImpedanceLab, cs: CsLab, cascode: CascodeLab, diffpair: DiffPairLab, ota: OtaLab, feedback: FeedbackLab, headroom: HeadroomLab, folded: FoldedLab };
         const L = arg ? LAB[arg] : undefined;
         view = L ? <L /> : <LabsIndex />;
       }
@@ -82,6 +84,9 @@ export function App() {
       break;
     case 'review':
       view = <ReviewView />;
+      break;
+    case 'exam':
+      view = <ExamView />;
       break;
     case 'settings':
       view = <SettingsView />;

@@ -89,7 +89,10 @@ export function ReviewView() {
 
       <section>
         <h2>Timed exam mode</h2>
-        <p className="muted">Arrives in Milestone 4 with the mid-sem-style paper (90 min, closed book), once Lectures 1–4 are in.</p>
+        <p className="muted">A closed-book paper with a countdown: no hints, no marking until you hand in, then every answer diagnosed with its full solution.</p>
+        <a className="btn primary" href="#/exam">
+          Start a timed paper
+        </a>
       </section>
     </div>
   );

@@ -75,3 +75,66 @@ describe('cascode nodes', () => {
     expect(regions(cascodeNodes({ ...base, vb1: 0.7 }).devices).m1).toBe('triode');
   });
 });
+
+import { foldedNodes, mirrorTeleNodes, twoStageNodes } from './nodes';
+import { SET_A } from './process';
+import { ps1P6, tut3Q1, tut3Q2 } from './solvers';
+
+describe('folded cascode nodes (Problem Set 1 P6/P8)', () => {
+  const d = ps1P6();
+  const wl11 = (2 * 0.75e-3) / (SET_A.kpp * 0.4 * 0.4);
+  const base = { proc: SET_A, iss: 0.75e-3, i: 0.375e-3, wl1: d.m1.wl, wl3: d.m3.wl, wl5: d.m5.wl, wl7: d.m7.wl, wl9: d.m9.wl, wl11, vinCm: 0.6, vout: 1.5 };
+  it('X sits at Vov5 = 0.5 V; all eleven saturated at mid swing', () => {
+    const n = foldedNodes(base);
+    expect(n.vX).toBeCloseTo(0.5, 9);
+    expect(Object.values(regions(n.devices)).every((r) => r === 'saturation')).toBe(true);
+  });
+  it('input CM limits: −0.3 V (M1 fence) and 1.5 V (tail headroom 0.4 V)', () => {
+    expect(regions(foldedNodes({ ...base, vinCm: -0.31 }).devices).m1).toBe('triode');
+    expect(regions(foldedNodes({ ...base, vinCm: -0.29 }).devices).m1).toBe('saturation');
+    expect(regions(foldedNodes({ ...base, vinCm: 1.51 }).devices).m11).toBe('triode');
+    expect(regions(foldedNodes({ ...base, vinCm: 1.49 }).devices).m11).toBe('saturation');
+  });
+  it('output range 1.0–2.0 V', () => {
+    expect(regions(foldedNodes({ ...base, vout: 0.99 }).devices).m3).toBe('triode');
+    expect(regions(foldedNodes({ ...base, vout: 2.01 }).devices).m7).toBe('triode');
+  });
+});
+
+describe('mirror-loaded telescopic nodes (PS1 P5, Tut 3 Q1)', () => {
+  it('P5: VX = 0.707 V and output 0.900–1.478 V; buffer window ends at 1.407 V', () => {
+    const base = { proc: SET_A, iss: 1e-3, wlN: 200, wlP: 200, vinCm: 1.2, vb1: 1.6, vout: 1.2, bias: 'diodes' as const };
+    const n = mirrorTeleNodes(base);
+    expect(n.vX).toBeCloseTo(0.707, 3);
+    // FLAG (content/inventory.md): with (W/L)5–8 = 200 the diode stack puts M3's drain at 0.678 V < VX,
+    // so M3 is NOT saturated in P5 as posed. Everything else is.
+    expect(n.vD3).toBeCloseTo(0.678, 3);
+    const r = regions(n.devices);
+    expect(r.m3).toBe('triode');
+    expect(Object.entries(r).filter(([k]) => k !== 'm3').every(([, v]) => v === 'saturation')).toBe(true);
+    // Wide enough PMOS (W/L ≥ 417) fixes it:
+    expect(regions(mirrorTeleNodes({ ...base, wlP: 420 }).devices).m3).toBe('saturation');
+    expect(regions(mirrorTeleNodes({ ...base, vout: 0.89 }).devices).m4).toBe('triode');
+    expect(regions(mirrorTeleNodes({ ...base, vout: 1.49 }).devices).m6).toBe('triode');
+    expect(regions(mirrorTeleNodes({ ...base, vout: 1.4, buffer: true }).devices).m2).toBe('saturation');
+    expect(regions(mirrorTeleNodes({ ...base, vout: 1.42, buffer: true }).devices).m2).toBe('triode');
+  });
+  it('Tut 3 Q1: VX (left output) = 1.839 V with Vb2 inside 1.039–1.478 V', () => {
+    const q = tut3Q1();
+    const n = mirrorTeleNodes({ proc: SET_A, iss: 1e-3, wlN: 200, wlP: 200, vinCm: 1.2, vb1: 1.7, vout: 1.3, bias: 'vb2', vb2: 1.2 });
+    expect(n.vD3).toBeCloseTo(q.vx, 3);
+    expect(Object.values(regions(n.devices)).every((r) => r === 'saturation')).toBe(true);
+    expect(regions(mirrorTeleNodes({ proc: SET_A, iss: 1e-3, wlN: 200, wlP: 200, vinCm: 1.2, vb1: 1.7, vout: 1.3, bias: 'vb2', vb2: q.vb2Min - 0.02 }).devices).m5).toBe('triode');
+    expect(regions(mirrorTeleNodes({ proc: SET_A, iss: 1e-3, wlN: 200, wlP: 200, vinCm: 1.2, vb1: 1.7, vout: 1.3, bias: 'vb2', vb2: q.vb2Max + 0.02 }).devices).m7).toBe('triode');
+  });
+});
+
+describe('two-stage nodes (Tut 3 Q2)', () => {
+  it('X, Y at 1.689 V; M1 leaves saturation above Vin,CM = 2.389 V', () => {
+    const q = tut3Q2();
+    const n = twoStageNodes({ proc: SET_A, iss: 1e-3, id2: 1e-3, wl: 200, vinCm: 1.5, vout: 1.5 });
+    expect(n.vXY).toBeCloseTo(q.vxy, 6);
+    expect(Object.values(regions(n.devices)).every((r) => r === 'saturation')).toBe(true);
+    expect(regions(twoStageNodes({ proc: SET_A, iss: 1e-3, id2: 1e-3, wl: 200, vinCm: q.vinCmMax + 0.01, vout: 1.5 }).devices).m1).toBe('triode');
+  });
+});
