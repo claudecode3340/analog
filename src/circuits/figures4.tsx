@@ -418,15 +418,16 @@ export function CmfbTriodeFig({ vout1, vout2, vp, wl, highlight }: { vout1: numb
   return (
     <Canvas w={480} h={330} title="Triode CMFB: M7 and M8 sit in deep triode; their gates sense the two outputs" highlight={highlight}>
       <Rail x1={xL - 30} x2={xR + 30} y={30} label="VDD" />
-      <Label x={xL - 34} y={70} text="PMOS cascode loads (M9–M12)" anchor="start" size={11} color="var(--ink-2)" />
+      <Label x={240} y={78} text="PMOS cascode" anchor="middle" size={11} color="var(--ink-2)" />
+      <Label x={240} y={93} text="loads (M9–M12)" anchor="middle" size={11} color="var(--ink-2)" />
       <Wire points={[[xL, 30], [xL, 190]]} />
       <Wire points={[[xR, 30], [xR, 190]]} />
       <rect x={xL - 18} y={44} width={36} height={80} rx={8} fill="var(--pmos-bg)" stroke="var(--pmos)" />
       <rect x={xR - 18} y={44} width={36} height={80} rx={8} fill="var(--pmos-bg)" stroke="var(--pmos)" />
       <Dot x={xL} y={140} id="out" />
       <Dot x={xR} y={140} id="out" />
-      <VoltageTag x={xL - 10} y={140} v={`Vout1 ${V(vout1)}`} anchor="end" id="out" />
-      <VoltageTag x={xR + 10} y={140} v={`Vout2 ${V(vout2)}`} id="out" />
+      <VoltageTag x={102} y={140} v={`Vout1 ${V(vout1)}`} anchor="end" id="out" />
+      <VoltageTag x={378} y={140} v={`Vout2 ${V(vout2)}`} id="out" />
       <rect x={xL - 18} y={160} width={36} height={60} rx={8} fill="var(--nmos-bg)" stroke="var(--nmos)" />
       <rect x={xR - 18} y={160} width={36} height={60} rx={8} fill="var(--nmos-bg)" stroke="var(--nmos)" />
       <Label x={xL + 24} y={194} text="M3, M5" size={11} color="var(--nmos)" weight={600} />

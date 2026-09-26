@@ -375,16 +375,16 @@ Differentiate the square law and you get **three faces of the same number**. Use
       caption: 'Tilt the “flat” part with λ. The steeper it is, the smaller rO. Then see the model the transistor turns into.',
     },
     predict: {
-      prompt: 'You double the bias current. The intrinsic gain gm·rO…',
+      prompt: 'You double the bias current AND the width, so the overdrive stays the same. The intrinsic gain gm·rO…',
       choices: ['doubles', 'halves', 'stays the same'],
       answer: 2,
-      explain: 'gm·rO = 2/(λVov). The current cancels: you cannot buy gain with current.',
+      explain: 'gm·rO = 2/(λVov): at a fixed overdrive the current cancels, so you cannot buy gain with current. (Doubling ID in the SAME device raises Vov by √2 and actually lowers the gain.)',
     },
     idea: `The saturation curve has a small slope set by λ. Its inverse is the device's **output resistance**: $r_O = 1/(\\lambda I_D)$, what you see looking into the drain.
 
 For small signals, replace the transistor by a **model**: an open circuit at the gate, and a current source $g_m v_{gs}$ in parallel with $r_O$ between drain and source. Three conversion rules: **DC voltage sources → ground**, **DC current sources → open**, **transistor → $g_m v_{gs} \\parallel r_O$**.
 
-The biggest gain one device can give is {{gmro}}: $g_m r_O = 2/(\\lambda V_{ov})$, independent of $I_D$.`,
+The biggest gain one device can give is {{gmro}}: $g_m r_O = 2/(\\lambda V_{ov})$. At a fixed overdrive it does not depend on $I_D$.`,
     rule: {
       tex: ['r_O = \\dfrac{1}{\\lambda I_D} = \\dfrac{V_A}{I_D}', 'g_m r_O = \\dfrac{2}{\\lambda V_{ov}}'],
       symbols: ['rO', 'lambda', 'gmro'],
@@ -397,7 +397,7 @@ The biggest gain one device can give is {{gmro}}: $g_m r_O = 2/(\\lambda V_{ov})
       hook: '“You can’t buy gain with current.”',
       cards: [
         { id: 'c-u4-ro', front: 'Output resistance of a saturated MOSFET?', back: 'rO = 1/(λID) = VA/ID.' },
-        { id: 'c-u4-intr', front: 'Intrinsic gain, and why is it independent of ID?', back: 'gm·rO = (2ID/Vov)·(1/λID) = 2/(λVov): ID cancels.' },
+        { id: 'c-u4-intr', front: 'Intrinsic gain, and when is it independent of ID?', back: 'gm·rO = (2ID/Vov)·(1/λID) = 2/(λVov): at a fixed overdrive ID cancels. In a fixed-size device more ID means more Vov and less gain.' },
         { id: 'c-u4-rules', front: 'Three small-signal conversion rules?', back: 'DC voltage sources → AC ground; DC current sources → open; transistor → gm·vgs ‖ rO.' },
       ],
     },

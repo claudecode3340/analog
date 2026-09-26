@@ -100,6 +100,8 @@ export function formatNumber(x: number, sig = 3): string {
   if (x === 0) return '0';
   const abs = Math.abs(x);
   if (abs >= 1e6 || abs < 1e-3) return x.toExponential(sig - 1).replace('-', '−');
+  // Four- and five-digit values (W/L 1111, gain 1429) read better whole than as 1110 / 1430.
+  if (abs >= 1000) return String(Math.round(x)).replace('-', '−');
   return sigfig(x, sig);
 }
 

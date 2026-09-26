@@ -7,7 +7,7 @@ import type { Card } from './types';
 export const AUDIT_CARDS: Card[] = [
   { id: 'audit-01', front: 'Why does ID stop growing once VDS exceeds Vov?', back: 'The channel pinches off at the drain end; beyond that the extra VDS drops across the tiny pinch-off region (the waterfall), so the current is set upstream by VGS. Only λ adds a small slope.' },
   { id: 'audit-02', front: 'Write gm three ways and say when each is useful.', back: 'µCox(W/L)Vov (fixed size and bias voltage); √(2µCox(W/L)ID) (fixed size and current); 2ID/Vov (headroom and design questions: the one you use most).' },
-  { id: 'audit-03', front: 'Why is gm·rO independent of bias current?', back: 'gm = 2ID/Vov and rO = 1/(λID): ID cancels, leaving 2/(λVov).' },
+  { id: 'audit-03', front: 'Why is gm·rO independent of bias current?', back: 'gm = 2ID/Vov and rO = 1/(λID): ID cancels, leaving 2/(λVov). (That holds at a fixed Vov; in a fixed-size device more current raises Vov and lowers the gain.)' },
   { id: 'audit-04', front: 'When does gmb appear, and why?', back: 'When the source is not at the body potential (a source that moves with the signal, e.g. followers, cascodes). The body acts as a second gate. Your tutorials set γ = 0.' },
   { id: 'audit-05', front: 'Why is CGD only overlap capacitance in saturation?', back: 'The channel is pinched off at the drain end, so the gate no longer sees the drain through the channel; only the gate–drain overlap remains.' },
   { id: 'audit-06', front: 'Gain of the five CS loads, from memory.', back: 'Resistor −gm(RD‖rO); diode −gm1/gm2 (‖rO’s); current source −gm1(rO1‖rO2); active −(gm1+gm2)(rO1‖rO2); degenerated −RD/(1/gm + RS).' },

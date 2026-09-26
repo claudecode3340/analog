@@ -32,7 +32,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   fence: { tex: 'V_D \\ge V_G - V_{th}', name: 'the saturation fence', def: 'NMOS is saturated when its drain stays above its gate minus one threshold. PMOS: VD ≤ VG + |Vth|.', firstIn: 'u2-pinchoff' },
   gm: { tex: 'g_m', name: 'transconductance', def: 'How much drain current changes per volt of gate wiggle: gm = 2ID/Vov = √(2µCox(W/L)ID) = µCox(W/L)Vov.', unit: 'S (A/V)', firstIn: 'u4-gm' },
   rO: { tex: 'r_O', name: 'output resistance', def: 'The small-signal resistance looking into the drain: rO = 1/(λID).', unit: 'Ω', firstIn: 'u4-ro' },
-  gmro: { tex: 'g_m r_O', name: 'intrinsic gain', def: 'The largest gain one transistor can give: gm·rO = 2/(λVov). Independent of ID.', firstIn: 'u4-ro' },
+  gmro: { tex: 'g_m r_O', name: 'intrinsic gain', def: 'The largest gain one transistor can give: gm·rO = 2/(λVov). At a fixed overdrive it does not depend on ID.', firstIn: 'u4-ro' },
   Av: { tex: 'A_v', name: 'voltage gain', def: 'vout/vin for small signals. Negative means the stage inverts.', unit: 'V/V', firstIn: 'u5-cs' },
   Gm: { tex: 'G_m', name: 'stage transconductance', def: 'Output short-circuit current per input volt, for a whole stage.', unit: 'S', firstIn: 'u5-cs' },
   Rout: { tex: 'R_{out}', name: 'output resistance', def: 'Resistance seen looking into the output node with the input grounded.', unit: 'Ω', firstIn: 'u5-cs' },

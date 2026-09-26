@@ -54,20 +54,7 @@ export function PracticeView() {
             <span className="menu-unit">mix</span>
             <span>Mixed set {mixPool.length ? `(${mixPool.length} types)` : '(unlocks as you master units)'}</span>
           </button>
-          <div className="eyebrow">By topic</div>
-          {GENERATORS.map((g) => {
-            const open = available.includes(g);
-            return (
-              <button key={g.id} type="button" disabled={!open} className={`menu-item ${source.kind === 'gen' && source.id === g.id ? 'active' : ''}`} onClick={() => { setSource({ kind: 'gen', id: g.id }); setSeed(newSeed()); }}>
-                <span className="menu-unit">{g.unit}</span>
-                <span>
-                  {open ? '' : '🔒 '}
-                  {g.title}
-                </span>
-              </button>
-            );
-          })}
-          <div className="eyebrow">Fixed bank</div>
+          <div className="eyebrow">Your tutorials, exams and labs</div>
           {BANK_GROUPS.map(([group, items]) => (
             <details key={group} className="bank-group" open={items.some((b) => source.kind === 'bank' && source.id === b.id)}>
               <summary>
@@ -81,6 +68,19 @@ export function PracticeView() {
               ))}
             </details>
           ))}
+          <div className="eyebrow">By topic</div>
+          {GENERATORS.map((g) => {
+            const open = available.includes(g);
+            return (
+              <button key={g.id} type="button" disabled={!open} className={`menu-item ${source.kind === 'gen' && source.id === g.id ? 'active' : ''}`} onClick={() => { setSource({ kind: 'gen', id: g.id }); setSeed(newSeed()); }}>
+                <span className="menu-unit">{g.unit}</span>
+                <span>
+                  {open ? '' : '🔒 '}
+                  {g.title}
+                </span>
+              </button>
+            );
+          })}
         </aside>
         <div>
           <ProblemView key={problem.id} problem={problem} />

@@ -399,7 +399,10 @@ export function BodePlot({ a0, f0, beta, h = 280 }: { a0: number; f0: number; be
   const markers = [{ x: Math.log10(fu), y: 0, label: `fu = ${formatSI(fu, 'Hz')}`, labelPos: 'above' as const }];
   if (beta) {
     const fc = (1 + beta * a0) * f0;
-    markers.push({ x: Math.log10(fc), y: db(a0 / (1 + beta * a0)) - 3, label: `β·fu ≈ ${formatSI(fc, 'Hz')}`, labelPos: 'above' as const });
+    // When the two points nearly coincide (β ≈ 1), one label names both so they cannot overlap.
+    const close = Math.abs(Math.log10(fc / fu)) < 0.4;
+    if (close) markers[0].label = '';
+    markers.push({ x: Math.log10(fc), y: db(a0 / (1 + beta * a0)) - 3, label: close ? `β·fu ≈ fu = ${formatSI(fu, 'Hz')}` : `β·fu ≈ ${formatSI(fc, 'Hz')}`, labelPos: 'above' as const });
   }
   return (
     <Plot
