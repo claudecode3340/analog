@@ -134,3 +134,22 @@ export function biasFromOverdrive(p: { id: number; kp: number; vov: number; vth:
   const wl = wlFromId(p.id, p.kp, p.vov);
   return { id: p.id, wl, vov: p.vov, vgs: p.vth + p.vov, gm: gmFromIdVov(p.id, p.vov), rO: rO(p.lambda, p.id) };
 }
+
+/**
+ * Complete DC solve of an NMOS with RD from VDD and a grounded source (λ = 0), in whichever region it lands.
+ * Saturation is assumed first; if the fence fails, the triode equation
+ *   VD = VDD − RD·µCox(W/L)[Vov·VD − VD²/2]
+ * is solved for VD (the smaller root of (k/2)VD² − (1 + k·Vov)VD + VDD = 0, k = µCox(W/L)RD).
+ */
+export function solveNmosRd(p: { vdd: number; vg: number; vth: number; kp: number; wl: number; rd: number }): { region: Region; id: number; vd: number; vov: number } {
+  const vov = overdrive(p.vg, p.vth);
+  if (vov <= 0) return { region: 'off', id: 0, vd: p.vdd, vov };
+  const idS = idSat(p.kp, p.wl, vov);
+  const vdS = p.vdd - idS * p.rd;
+  if (vdS >= vov) return { region: 'saturation', id: idS, vd: vdS, vov };
+  const k = p.kp * p.wl * p.rd;
+  const a = k / 2;
+  const b = -(1 + k * vov);
+  const vd = (-b - Math.sqrt(b * b - 4 * a * p.vdd)) / (2 * a);
+  return { region: 'triode', id: (p.vdd - vd) / p.rd, vd, vov };
+}

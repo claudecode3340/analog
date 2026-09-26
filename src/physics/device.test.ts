@@ -117,3 +117,25 @@ describe('impedance rules', () => {
     expect(currentDivider(1, 1e3, 9e3)).toBeCloseTo(0.9, 12);
   });
 });
+
+describe('solveNmosRd', () => {
+  it('saturated case is WE1', async () => {
+    const { solveNmosRd } = await import('./device');
+    const r = solveNmosRd({ vdd: 1.8, vg: 0.7, vth: 0.4, kp: 200e-6, wl: 10, rd: 10e3 });
+    expect(r.region).toBe('saturation');
+    expect(r.vd).toBeCloseTo(0.9, 12);
+  });
+  it('triode case satisfies both the triode equation and KVL', async () => {
+    const { solveNmosRd, idTriode } = await import('./device');
+    const p = { vdd: 1.8, vg: 0.9, vth: 0.4, kp: 200e-6, wl: 10, rd: 20e3 };
+    const r = solveNmosRd(p);
+    expect(r.region).toBe('triode');
+    expect(r.vd).toBeLessThan(r.vov);
+    expect(r.id).toBeCloseTo(idTriode(p.kp, p.wl, r.vov, r.vd), 12);
+    expect(p.vdd - r.id * p.rd).toBeCloseTo(r.vd, 12);
+  });
+  it('off case', async () => {
+    const { solveNmosRd } = await import('./device');
+    expect(solveNmosRd({ vdd: 1.8, vg: 0.3, vth: 0.4, kp: 200e-6, wl: 10, rd: 10e3 }).region).toBe('off');
+  });
+});
