@@ -50,7 +50,7 @@ export function MosfetLab() {
         <a href="#/labs">Labs</a> › MOSFET lab
       </nav>
       <h1>MOSFET lab</h1>
-      <p className="muted">Everything here comes from the square law in the physics engine. Vth = {VTH} V.</p>
+      <p className="muted lab-intro">Drag the sliders and watch electrons stream through the channel, then pile up at pinch-off. Everything comes from the square law; Vth = {VTH} V.</p>
       <div className="lab-grid">
         <div className="lab-figures">
           <ChannelCrossSection vov={vov} vds={vds} maxVov={0.7} />
@@ -90,7 +90,8 @@ export function MosfetLab() {
         <ul className="checklist">
           {challenges.map((c) => (
             <li key={c.id} className={seen[c.id] ? 'done' : ''}>
-              <span aria-hidden="true">{seen[c.id] ? '✓' : '○'}</span> {c.text}
+              <span aria-hidden="true">{seen[c.id] ? '✓' : '○'}</span>
+              <span>{c.text}</span>
             </li>
           ))}
         </ul>

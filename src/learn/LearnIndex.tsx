@@ -10,7 +10,7 @@ export function LearnIndex() {
       <h1>Learn</h1>
       {ns.lesson && (
         <p>
-          <a className="btn primary" href={`#/learn/${ns.lesson}`}>
+          <a className="btn primary big" href={`#/learn/${ns.lesson}`}>
             Continue: {LESSON_BY_ID[ns.lesson].title} →
           </a>
         </p>
@@ -20,20 +20,24 @@ export function LearnIndex() {
           <h2>
             <span className="mono muted">{u.id}</span> {u.title}
           </h2>
-          <ul className="lesson-list">
+          <div className="lesson-chips">
             {u.lessons.map((id) => {
               const l = LESSON_BY_ID[id];
               const st = p.lessons[id];
-              return (
-                <li key={id}>
-                  {lessonUnlocked(id, p) ? <a href={`#/learn/${id}`}>{l.title}</a> : <span className="muted">🔒 {l.title}</span>}{' '}
-                  <span className="small muted">
-                    · {l.minutes} min {st?.status === 'mastered' ? '· ✓ mastered' : st ? `· best ${Math.round(st.best * 100)}%` : ''}
-                  </span>
-                </li>
+              const cls = st?.status === 'mastered' ? 'mastered' : st ? 'started' : '';
+              return lessonUnlocked(id, p) ? (
+                <a key={id} href={`#/learn/${id}`} className={`lesson-chip ${cls}`}>
+                  <span className="chip-dot" />
+                  {l.title}
+                  <span className="small muted mono">{st?.status === 'mastered' ? '✓' : `${l.minutes} min`}</span>
+                </a>
+              ) : (
+                <span key={id} className="lesson-chip locked">
+                  🔒 {l.title}
+                </span>
               );
             })}
-          </ul>
+          </div>
         </section>
       ))}
       <p className="small muted">Units U6–U12 and the handout lectures arrive in the next milestones.</p>

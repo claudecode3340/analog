@@ -10,6 +10,9 @@ export interface Series {
   color?: string;
   width?: number;
   dashed?: boolean;
+  /** Shade the area under the curve. */
+  fill?: boolean;
+  opacity?: number;
   label?: string;
   labelAt?: 'end' | 'start';
   id?: string;
@@ -97,10 +100,10 @@ export function Plot(p: PlotProps) {
         </g>
       ))}
       {yt.map((v) => (
-        <line key={`gy${v}`} x1={m.l} x2={m.l + iw} y1={sy(v)} y2={sy(v)} stroke="var(--rule)" strokeWidth={1} />
+        <line key={`gy${v}`} x1={m.l} x2={m.l + iw} y1={sy(v)} y2={sy(v)} stroke="var(--line)" strokeWidth={1} strokeDasharray="2 4" />
       ))}
-      <line x1={m.l} y1={m.t + ih} x2={m.l + iw} y2={m.t + ih} stroke="var(--ink)" strokeWidth={1.5} />
-      <line x1={m.l} y1={m.t} x2={m.l} y2={m.t + ih} stroke="var(--ink)" strokeWidth={1.5} />
+      <line x1={m.l} y1={m.t + ih} x2={m.l + iw} y2={m.t + ih} stroke="var(--ink)" strokeWidth={2} strokeLinecap="round" />
+      <line x1={m.l} y1={m.t} x2={m.l} y2={m.t + ih} stroke="var(--ink)" strokeWidth={2} strokeLinecap="round" />
       {xt.map((v) => (
         <g key={`xt${v}`}>
           <line x1={sx(v)} x2={sx(v)} y1={m.t + ih} y2={m.t + ih + 4} stroke="var(--ink)" />
@@ -113,9 +116,9 @@ export function Plot(p: PlotProps) {
           {!(v === y0 && xt.includes(x0)) && <Label x={m.l - 6} y={sy(v) + 4} text={yf(v)} anchor="end" size={11} mono color="var(--ink-2)" />}
         </g>
       ))}
-      <Label x={m.l + iw / 2} y={h - 6} text={p.xLabel} anchor="middle" size={12} />
+      <Label x={m.l + iw / 2} y={h - 6} text={p.xLabel} anchor="middle" size={12} weight={600} color="var(--ink-2)" />
       <g transform={`translate(12, ${m.t + ih / 2}) rotate(-90)`}>
-        <Label x={0} y={0} text={p.yLabel} anchor="middle" size={12} />
+        <Label x={0} y={0} text={p.yLabel} anchor="middle" size={12} weight={600} color="var(--ink-2)" />
       </g>
       {p.guides?.map((g, i) =>
         g.axis === 'x' ? (
@@ -131,6 +134,16 @@ export function Plot(p: PlotProps) {
         ),
       )}
       <g clipPath={`url(#clip-${p.title.replace(/\W/g, '')})`}>
+        {p.series.map((s, i) =>
+          s.fill && s.points.length > 1 ? (
+            <polygon
+              key={`f${i}`}
+              points={[`${sx(s.points[0][0])},${sy(y0)}`, ...s.points.map(([x, y]) => `${sx(x)},${sy(clampY(y))}`), `${sx(s.points[s.points.length - 1][0])},${sy(y0)}`].join(' ')}
+              fill={s.color ?? 'var(--ink)'}
+              opacity={0.12}
+            />
+          ) : null,
+        )}
         {p.series.map((s, i) => (
           <polyline
             key={`l${i}`}
@@ -140,6 +153,8 @@ export function Plot(p: PlotProps) {
             strokeWidth={s.width ?? 2}
             strokeDasharray={s.dashed ? '5 4' : undefined}
             strokeLinejoin="round"
+            strokeLinecap="round"
+            opacity={s.opacity ?? 1}
           />
         ))}
       </g>
@@ -147,7 +162,7 @@ export function Plot(p: PlotProps) {
         if (!s.label || s.points.length === 0) return null;
         const [lx, ly] = s.labelAt === 'start' ? s.points[0] : s.points[s.points.length - 1];
         if (ly > y1 || ly < y0) return null;
-        return <Label key={`sl${i}`} x={sx(lx) - 4} y={sy(ly) - 6} text={s.label} anchor="end" size={11} mono color={s.color ?? 'var(--ink)'} bg />;
+        return <Label key={`sl${i}`} x={sx(lx) - 4} y={sy(ly) - 6} text={s.label} anchor="end" size={11} mono color={s.color ?? 'var(--ink)'} bg weight={600} />;
       })}
       {p.markers?.map((mk, i) => {
         const cx = sx(mk.x);
@@ -157,7 +172,8 @@ export function Plot(p: PlotProps) {
         const ly = pos === 'above' ? cy - 10 : pos === 'below' ? cy + 18 : cy + 4;
         return (
           <g key={`m${i}`}>
-            <circle cx={cx} cy={cy} r={5} fill={mk.color ?? 'var(--signal)'} stroke="var(--paper)" strokeWidth={1.5} />
+            <circle cx={cx} cy={cy} r={11} fill={mk.color ?? 'var(--signal)'} opacity={0.18} />
+            <circle cx={cx} cy={cy} r={5.5} fill={mk.color ?? 'var(--signal)'} stroke="var(--surface)" strokeWidth={2} />
             {mk.label && <Label x={lx} y={ly} text={mk.label} anchor={pos === 'left' ? 'end' : pos === 'right' ? 'start' : 'middle'} size={11} mono color={mk.color ?? 'var(--signal)'} bg weight={600} />}
           </g>
         );

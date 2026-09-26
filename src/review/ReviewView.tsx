@@ -34,7 +34,7 @@ export function ReviewView() {
         ))}
       </div>
 
-      <section className="sheet review-card">
+      <section className="card review-card">
         {total === 0 ? (
           <p>No cards yet. Every lesson you finish adds its cards here.</p>
         ) : !current ? (

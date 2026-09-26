@@ -31,7 +31,7 @@ const PRESETS: Circuit[] = [
 interface Step {
   title: string;
   tex: string;
-  reveal: { vd?: number; region?: Region; current?: string };
+  reveal: { vd?: number; region?: Region; current?: string; id?: number };
   highlight: string[];
   fence?: 'ok' | 'bad';
 }
@@ -112,9 +112,9 @@ export function DcStepper() {
   };
   const fig =
     circuit.kind === 'nmos' ? (
-      <NmosRd vdd={circuit.vdd} vg={circuit.vg} rd={circuit.rd} vd={r.vd} region={r.region} current={r.current} highlight={cur?.highlight} />
+      <NmosRd vdd={circuit.vdd} vg={circuit.vg} rd={circuit.rd} vd={r.vd} region={r.region} current={r.current} highlight={cur?.highlight} flow={r.current ? 0.45 : 0} />
     ) : (
-      <PmosRd vdd={circuit.vdd} vg={circuit.vg} rd={circuit.rd} vd={r.vd} region={r.region} current={r.current} highlight={cur?.highlight} />
+      <PmosRd vdd={circuit.vdd} vg={circuit.vg} rd={circuit.rd} vd={r.vd} region={r.region} current={r.current} highlight={cur?.highlight} flow={r.current ? 0.45 : 0} />
     );
   return (
     <div className="page lab">

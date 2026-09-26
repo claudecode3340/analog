@@ -30,7 +30,7 @@ export function SettingsView() {
   return (
     <div className="page narrow">
       <h1>Settings</h1>
-      <div className="settings">
+      <div className="settings card">
         <label>
           Theme
           <select value={s.theme} onChange={(e) => setSettings({ theme: e.target.value as typeof s.theme })}>

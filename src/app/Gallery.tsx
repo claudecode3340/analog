@@ -43,7 +43,7 @@ export function Gallery() {
           <h2>{style === 'symbol' ? 'Transistor symbols' : 'Simplified boxes'}</h2>
           <div className="gallery">
             {GALLERY_ITEMS.map((g) => (
-              <figure key={g.id} className="gallery-item" data-fig={`${style}-${g.id}`}>
+              <figure key={g.id} className="gallery-item bench" data-fig={`${style}-${g.id}`}>
                 {g.el}
                 <figcaption className="small muted">{g.title}</figcaption>
               </figure>

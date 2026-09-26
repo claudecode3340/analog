@@ -16,12 +16,14 @@ for (const id of LESSONS) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`#/learn/${id}`);
     for (let s = 0; s < 7; s++) {
-      const predict = page.locator('.predict .choice').first();
-      if (s === 2 && (await predict.isVisible())) await predict.click();
-      await page.getByRole('button', { name: /^Continue/ }).click();
+      if (s === 2) await page.locator('.choice-card').first().click();
+      await page.getByRole('button', { name: /^Next:/ }).click();
     }
     await expect(page.getByRole('heading', { name: 'Lock it in' })).toBeVisible();
-    await expect(page.locator('.problem').first()).toBeVisible();
+    await expect(page.locator('.lockin')).toBeVisible();
+    // Stepping back keeps the "Your turn" answers mounted.
+    await page.getByRole('button', { name: 'Step 7: Your turn' }).click();
+    await expect(page.locator('section.step-card:not([hidden]) .problem').first()).toBeVisible();
     await page.screenshot({ path: `test-results/shots/lesson-${id}-390.png`, fullPage: true });
     expect(errors).toEqual([]);
   });

@@ -91,8 +91,11 @@ function AnswerRow({
   return (
     <div className={`answer ${solved ? 'solved' : result?.status === 'wrong' ? 'wrong' : ''}`}>
       <div className="answer-label">
-        <Tex tex={u.sym} /> <span className="muted">{u.label}</span>
-        {u.unit && !u.choices && <span className="unit-hint">[{u.unit}]</span>}
+        <span className="answer-sym">
+          <Tex tex={u.sym} />
+        </span>
+        <span>{u.label}</span>
+        {solved && <span className="badge ok">✓ correct</span>}
       </div>
       {u.choices ? (
         <div className="choices" role="group" aria-label={u.label}>
@@ -116,18 +119,21 @@ function AnswerRow({
             submit(input);
           }}
         >
-          <input
-            type="text"
-            inputMode="text"
-            autoComplete="off"
-            spellCheck={false}
-            aria-label={`${u.label} in ${u.unit || 'plain number'}`}
-            placeholder={u.unit === 'A' ? 'e.g. 90u or 90 µA' : u.unit === 'Ω' ? 'e.g. 9k' : u.unit === 'S' ? 'e.g. 0.6m' : u.unit === 'V' ? 'e.g. 0.9' : 'number'}
-            value={input}
-            disabled={disabled || solved}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <button className="btn small" type="submit" disabled={disabled || solved || !input.trim()}>
+          <div className="input-unit">
+            <input
+              type="text"
+              inputMode="text"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label={`${u.label} in ${u.unit || 'plain number'}`}
+              placeholder={u.unit === 'A' ? 'e.g. 90u or 90 µA' : u.unit === 'Ω' ? 'e.g. 9k' : u.unit === 'S' ? 'e.g. 0.6m' : u.unit === 'V' ? 'e.g. 0.9' : 'number'}
+              value={input}
+              disabled={disabled || solved}
+              onChange={(e) => setInput(e.target.value)}
+            />
+            {u.unit && <span className="unit-chip">{u.unit}</span>}
+          </div>
+          <button className="btn small dark" type="submit" disabled={disabled || solved || !input.trim()}>
             Check
           </button>
         </form>
@@ -147,11 +153,13 @@ export function ProblemView({
   mode = 'independent',
   onResult,
   compact,
+  number,
 }: {
   problem: Problem;
   mode?: ProblemMode;
   onResult?: (k: string, r: CheckResult, first: boolean) => void;
   compact?: boolean;
+  number?: number;
 }) {
   const [hints, setHints] = useState(0);
   const [showSolution, setShowSolution] = useState(mode === 'worked');
@@ -159,10 +167,14 @@ export function ProblemView({
   return (
     <article className={`problem ${compact ? 'compact' : ''}`} aria-label={problem.title}>
       <header className="problem-head">
-        <div className="eyebrow">
-          {problem.source} · {problem.tags.join(', ')}
+        {number !== undefined && <span className="problem-num">{number}</span>}
+        <div>
+          <div className="eyebrow">
+            {mode === 'faded' ? 'Guided · ' : mode === 'worked' ? 'Worked example · ' : ''}
+            {problem.source} · {problem.tags.join(', ')}
+          </div>
+          <h3>{problem.title}</h3>
         </div>
-        <h3>{problem.title}</h3>
       </header>
       {problem.flags?.map((f, i) => (
         <p key={i} className="callout small">
@@ -170,7 +182,11 @@ export function ProblemView({
         </p>
       ))}
       <div className="problem-body">
-        <div className="problem-figure">{problem.figure && <Figure kind={problem.figure.kind} props={problem.figure.props} highlight={focus?.highlight} />}</div>
+        {problem.figure && (
+          <div className="problem-figure bench">
+            <Figure kind={problem.figure.kind} props={problem.figure.props} highlight={focus?.highlight} />
+          </div>
+        )}
         <div className="problem-text">
           <p>{problem.statement}</p>
           <Givens problem={problem} />

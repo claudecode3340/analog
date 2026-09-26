@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import {
   ChannelCrossSection,
+  flowStrength,
   IdVdsFamily,
   NmosRd,
   ParallelPair,
@@ -105,7 +106,7 @@ function Channel(p: { vov: number }) {
     <Panel figure={<ChannelCrossSection vov={p.vov} vds={vds} maxVov={0.5} />}>
       <Slider label="VDS" value={vds} min={0} max={1} step={0.01} onChange={setVds} format={V} />
       <Readout label="Vov (fixed)" value={V(p.vov)} />
-      <Readout label="overdrive left at the drain end, Vov − VDS" value={V(Math.max(0, p.vov - vds))} />
+      <Readout label="Vov − VDS (drain end)" value={V(Math.max(0, p.vov - vds))} />
       <Readout label="region" value={REG[r]} tone={tone(r)} />
       <p className="small muted">
         Fence: <Tex tex="V_{DS} \ge V_{ov}" /> ⟺ <Tex tex="V_D \ge V_G - V_{th}" />
@@ -142,7 +143,7 @@ function RecipeMini(p: { vdd: number; vth: number; kp: number; wl: number; rd: n
   const sat = vov > 0 && vdS >= vg - p.vth;
   const r: Region = vov <= 0 ? 'off' : sat ? 'saturation' : 'triode';
   return (
-    <Panel figure={<NmosRd vdd={p.vdd} vg={vg} rd={p.rd} vd={vdS} region={r} current={vov > 0 ? A(idS) : undefined} />}>
+    <Panel figure={<NmosRd vdd={p.vdd} vg={vg} rd={p.rd} vd={vdS} region={r} current={vov > 0 ? A(idS) : undefined} flow={flowStrength(idS)} />}>
       <Slider label="VG" value={vg} min={0.3} max={1.0} step={0.01} onChange={setVg} format={V} />
       <ol className="recipe">
         <li>
@@ -170,7 +171,7 @@ function PmosFlip(p: { vdd: number; vth: number; kp: number; wl: number; rd: num
   const sat = vov > 0 && vd <= vg + p.vth;
   const r: Region = vov <= 0 ? 'off' : sat ? 'saturation' : 'triode';
   return (
-    <Panel figure={<PmosRd vdd={p.vdd} vg={vg} rd={p.rd} vd={vd} region={r} current={vov > 0 ? A(id) : undefined} />}>
+    <Panel figure={<PmosRd vdd={p.vdd} vg={vg} rd={p.rd} vd={vd} region={r} current={vov > 0 ? A(id) : undefined} flow={flowStrength(id)} />}>
       <Slider label="VG" value={vg} min={0.4} max={1.8} step={0.01} onChange={setVg} format={V} />
       <Readout label="|VGS| = VS − VG" value={V(p.vdd - vg)} />
       <Readout label="|Vov| = |VGS| − |Vth|" value={V(vov)} />
