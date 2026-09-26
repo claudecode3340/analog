@@ -19,14 +19,16 @@ import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, Mirror
 import { DrawStyleContext } from '../circuits/primitives';
 import { VoltageLadder } from '../circuits/schematic';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from '../circuits/figures3';
-import { FoldedCascodeFig, MirrorTeleFig, NonInvertingFig, TwoStageFig } from '../circuits/figures4';
-import { EX_9_7, SET_A, ps1P6, ex97, fiveTOtaQuiz, QUIZ1_C, SET_B, tut1Q1, tut1Q4 } from '../physics';
+import { CmfbTriodeFig, FoldedCascodeFig, GainBoostFig, MirrorTeleFig, NonInvertingFig, TwoStageFig } from '../circuits/figures4';
+import { EX_9_7, SET_A, ps1P6, tut4Q1, tut5Q1, ex97, fiveTOtaQuiz, QUIZ1_C, SET_B, tut1Q1, tut1Q4 } from '../physics';
 
 const E97 = ex97();
 const T1 = tut1Q1();
 const T4 = tut1Q4();
 const EXAM = fiveTOtaQuiz(QUIZ1_C);
 const P6 = ps1P6();
+const T41 = tut4Q1();
+const T51 = tut5Q1();
 const WL11 = (2 * 0.75e-3) / (SET_A.kpp * 0.4 * 0.4);
 
 export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactElement }> = [
@@ -106,6 +108,8 @@ export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactEl
   { id: 'mirrortele-vb2', title: 'Telescopic, Vb2 mirror, buffer (Tut 3 Q1)', el: <MirrorTeleFig proc={SET_A} iss={1e-3} wlN={200} wlP={200} vinCm={1.2} vb1={1.7} vout={1.3} bias="vb2" vb2={1.2} buffer /> },
   { id: 'twostage', title: 'Two-stage (Tut 3 Q2)', el: <TwoStageFig proc={SET_A} iss={1e-3} id2={1e-3} wl={200} vinCm={1.5} vout={1.5} /> },
   { id: 'noninv', title: 'Non-inverting amplifier', el: <NonInvertingFig r1={9e3} r2={1e3} a={1000} cl={2e-12} /> },
+  { id: 'gainboost', title: 'Gain-boosted cascode (Tut 4 Q1)', el: <GainBoostFig vx={T41.vx} vg2={T41.vg2} vout={1.8} i1={100e-6} i2={0.5e-3} /> },
+  { id: 'cmfb', title: 'Triode CMFB (Tut 5 Q1)', el: <CmfbTriodeFig vout1={1.5} vout2={1.5} vp={0.1} wl={T51.wl} /> },
 ];
 
 export function Gallery() {

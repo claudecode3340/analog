@@ -17,6 +17,7 @@ import { Plot } from '../circuits/Plot';
 import { WIDGETS2 } from './widgets2';
 import { WIDGETS3 } from './widgets3';
 import { WIDGETS4 } from './widgets4';
+import { WIDGETS5 } from './widgets5';
 import {
   currentDivider,
   drainCurrent,
@@ -301,4 +302,5 @@ export const WIDGETS: Record<string, (p: any) => React.ReactElement> = {
   ...WIDGETS2,
   ...WIDGETS3,
   ...WIDGETS4,
+  ...WIDGETS5,
 };

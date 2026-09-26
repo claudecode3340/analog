@@ -2,7 +2,9 @@
  * Generators for the handout lectures: L1 gain error (Ex 9.1 style), L3 telescopic design from specs
  * (Ex 9.7 style), L4 folded-cascode design from specs (Tut 2 Q3 / PS1 P6 style).
  */
-import { closedLoopGain, foldedCascodePmosInput, gainError, minOpenLoopGain, telescopic, wlFromId, type Process } from '../../physics';
+import { boostedRout, closedLoopGain, foldedCascodePmosInput, gainError, gmFromIdVov, minOpenLoopGain, rO, slewTime, telescopic, triodeSenseWl, wlFromId, type Process } from '../../physics';
+
+const par = (a: number, b: number) => (a * b) / (a + b);
 import { nice, pick, type Rng } from '../rng';
 import type { Generator, GeneratorOutput, Problem } from '../schema';
 import { texNum, texSI } from '../tex';
@@ -143,4 +145,179 @@ export const genFoldedDesign: Generator = {
   },
 };
 
-export const HANDOUT_GENERATORS: Generator[] = [genGainError, genTeleDesign, genFoldedDesign];
+
+
+// ─── L5 two-stage ──────────────────────────────────────────────────────────
+
+export const genTwoStage: Generator = {
+  id: 'l5-twostage',
+  unit: 'L5',
+  title: 'Two-stage op amp: gain multiplies, swing is set by the second stage',
+  make(rng) {
+    const vdd = pick(rng, [1.8, 3]);
+    const i1 = nice(rng, 50e-6, 500e-6, 50e-6);
+    const i2 = nice(rng, 100e-6, 1e-3, 50e-6);
+    const vov1 = nice(rng, 0.15, 0.3, 0.05);
+    const vov5 = nice(rng, 0.15, 0.4, 0.05);
+    const vov7 = nice(rng, 0.15, 0.4, 0.05);
+    const ln = pick(rng, [0.05, 0.1]);
+    const lp = pick(rng, [0.1, 0.2]);
+    const a1 = gmFromIdVov(i1, vov1) * par(rO(ln, i1), rO(lp, i1));
+    const a2 = gmFromIdVov(i2, vov5) * par(rO(lp, i2), rO(ln, i2));
+    const a1t = ((2 * i1) / vov1) * par(1 / (ln * i1), 1 / (lp * i1));
+    const a2t = ((2 * i2) / vov5) * par(1 / (lp * i2), 1 / (ln * i2));
+    const swing = 2 * (vdd - vov5 - vov7);
+    const problem: Problem = {
+      ...base('l5-twostage', 'L5', 'Two-stage op amp: gain multiplies, swing is set by the second stage'),
+      statement: `A two-stage op amp (Fig. 9.23 style): stage 1 is an NMOS pair with PMOS current-source loads (ID = ${(i1 * 1e6).toFixed(0)} µA per side, Vov1 = ${vov1} V); stage 2 is a PMOS common-source device (ID = ${(i2 * 1e6).toFixed(0)} µA, |Vov5| = ${vov5} V) with an NMOS current-source load (Vov7 = ${vov7} V). λn = ${ln}, λp = ${lp} V⁻¹, VDD = ${vdd} V. Find A1, A2, the total gain and the differential output swing.`,
+      givens: [
+        { sym: 'I_{D1}', value: i1, unit: 'A' },
+        { sym: 'I_{D5}', value: i2, unit: 'A' },
+        { sym: 'V_{ov1}', value: vov1, unit: 'V' },
+        { sym: '|V_{ov5}|', value: vov5, unit: 'V' },
+        { sym: 'V_{ov7}', value: vov7, unit: 'V' },
+      ],
+      unknowns: [
+        { key: 'a1', sym: 'A_1', label: 'First-stage gain', unit: 'V/V' },
+        { key: 'a2', sym: 'A_2', label: 'Second-stage gain', unit: 'V/V' },
+        { key: 'a', sym: 'A_v', label: 'Total gain', unit: 'V/V' },
+        { key: 'swing', sym: 'V_{pp,diff}', label: 'Differential swing', unit: 'V' },
+      ],
+      answers: { a1, a2, a: a1 * a2, swing },
+      wrong: { a: [{ mistake: 'forgotRo', value: a1 + a2 }] },
+      steps: [
+        { tag: 'D', title: 'Stage 1: gm1 (rO1 ‖ rO3)', tex: `A_1 = ${texNum(a1t)}`, produces: 'a1', value: a1t },
+        { tag: 'D', title: 'Stage 2: a CS stage, gm5 (rO5 ‖ rO7)', tex: `A_2 = ${texNum(a2t)}`, produces: 'a2', value: a2t },
+        { tag: 'D', title: 'Gains in cascade multiply', tex: `A_v = ${texNum(a1t * a2t)}`, produces: 'a', value: a1t * a2t },
+        { tag: '✓', title: 'The output stage has only one device at each rail', tex: `2(V_{DD} - |V_{ov5}| - V_{ov7}) = ${texSI(2 * (vdd - vov5 - vov7), 'V')}`, produces: 'swing', value: 2 * (vdd - vov5 - vov7) },
+      ],
+      hints: ['High gain, then high swing: two jobs, two stages.', 'Each stage is a CS stage with a current-source load.', 'A = A1·A2; swing from the second stage.', `A1 = ${a1t.toFixed(1)}.`],
+    };
+    return { problem, sane: vdd - vov5 - vov7 > 0.3 };
+  },
+};
+
+export const genBoost: Generator = {
+  id: 'l6-boost',
+  unit: 'L6',
+  title: 'Gain boosting: Rout × (1 + A1)',
+  make(rng) {
+    const id = nice(rng, 50e-6, 500e-6, 50e-6);
+    const vov = nice(rng, 0.15, 0.3, 0.05);
+    const lambda = pick(rng, [0.1, 0.2]);
+    const a1 = pick(rng, [10, 20, 50, 100]);
+    const gm = gmFromIdVov(id, vov);
+    const ro = rO(lambda, id);
+    const r0 = boostedRout({ gm2: gm, rO2: ro, rO1: ro, a1: 0 });
+    const rb = boostedRout({ gm2: gm, rO2: ro, rO1: ro, a1 });
+    const gmt = (2 * id) / vov, rot = 1 / (lambda * id);
+    const problem: Problem = {
+      ...base('l6-boost', 'L6', 'Gain boosting: Rout × (1 + A1)'),
+      statement: `An NMOS cascode (M1 input, M2 cascode) carries ${(id * 1e6).toFixed(0)} µA with Vov = ${vov} V and λ = ${lambda} V⁻¹. An auxiliary amplifier of gain A1 = ${a1} senses M2’s source and drives its gate. Find Rout without and with boosting, and the gain with an ideal current-source load.`,
+      givens: [
+        { sym: 'I_D', value: id, unit: 'A' },
+        { sym: 'V_{ov}', value: vov, unit: 'V' },
+        { sym: '\\lambda', value: lambda, unit: '' },
+        { sym: 'A_1', value: a1, unit: '' },
+      ],
+      unknowns: [
+        { key: 'r0', sym: 'R_{out}', label: 'Plain cascode Rout', unit: 'Ω' },
+        { key: 'rb', sym: 'R_{out,boost}', label: 'Boosted Rout', unit: 'Ω' },
+        { key: 'av', sym: '|A_v|', label: 'Boosted gain (ideal load)', unit: 'V/V' },
+      ],
+      answers: { r0, rb, av: gm * rb },
+      wrong: { rb: [{ mistake: 'forgotHalf', value: a1 * r0 }] },
+      steps: [
+        { tag: 'C', title: 'gm and rO', tex: `g_m = ${texSI(gmt, 'S')},\; r_O = ${texSI(rot, 'Ω')}` },
+        { tag: 'C', title: 'Plain cascode: rO1 + rO2 + gm2 rO2 rO1', tex: `R_{out} = ${texSI(2 * rot + gmt * rot * rot, 'Ω')}`, produces: 'r0', value: 2 * rot + gmt * rot * rot },
+        { tag: 'C', title: 'The auxiliary amplifier multiplies the gm·rO·rO term by (1 + A1)', tex: `R_{out,boost} = 2r_O + (1 + ${a1})g_m r_O^2 = ${texSI(2 * rot + (1 + a1) * gmt * rot * rot, 'Ω')}`, produces: 'rb', value: 2 * rot + (1 + a1) * gmt * rot * rot },
+        { tag: 'D', title: 'Gain with an ideal load', tex: `|A_v| = g_m R_{out,boost} = ${texNum(gmt * (2 * rot + (1 + a1) * gmt * rot * rot))}`, produces: 'av', value: gmt * (2 * rot + (1 + a1) * gmt * rot * rot) },
+      ],
+      hints: ['The aux amp holds M2’s source still, so M2 fights back harder.', 'Rout = rO1 + rO2 + (1 + A1)gm2 rO2 rO1.', 'Gain = gm1·Rout (ideal load).', `gm·rO = ${(gmt * rot).toFixed(1)}.`],
+    };
+    return { problem, sane: true };
+  },
+};
+
+export const genTriodeSense: Generator = {
+  id: 'l7-triode',
+  unit: 'L7',
+  title: 'Triode CMFB: size the sensing pair for a target output CM',
+  make(rng) {
+    const kpn = pick(rng, [100e-6, 135e-6, 200e-6]);
+    const vth = pick(rng, [0.4, 0.5, 0.7]);
+    const id = nice(rng, 50e-6, 500e-6, 50e-6);
+    const vcm = nice(rng, vth + 0.4, vth + 1.0, 0.05);
+    const vp = pick(rng, [0.05, 0.1, 0.15, 0.2]);
+    const wl = triodeSenseWl({ id, kpn, vp, voutSum: 2 * vcm, vthn: vth });
+    const rtot = vp / (2 * id);
+    const problem: Problem = {
+      ...base('l7-triode', 'L7', 'Triode CMFB: size the sensing pair for a target output CM'),
+      statement: `Two deep-triode NMOS (gates on Vout1 and Vout2) form the tail of a fully differential pair; each branch carries ${(id * 1e6).toFixed(0)} µA. µnCox = ${kpn * 1e6} µA/V², Vth = ${vth} V. For an output CM of ${vcm} V with VP = ${vp * 1000} mV, find the tail resistance and W/L of each sensing device.`,
+      figure: { kind: 'cmfbTriode', props: { vout1: vcm, vout2: vcm, vp, wl } },
+      givens: [
+        { sym: 'I_D', value: id, unit: 'A' },
+        { sym: 'V_{out,CM}', value: vcm, unit: 'V' },
+        { sym: 'V_P', value: vp, unit: 'V' },
+      ],
+      unknowns: [
+        { key: 'rtot', sym: 'R_{tot}', label: 'Tail resistance (both in parallel)', unit: 'Ω' },
+        { key: 'wl', sym: 'W/L', label: 'Each sensing device', unit: '' },
+      ],
+      answers: { rtot, wl },
+      wrong: { wl: [{ mistake: 'issNotHalf', value: wl / 2 }] },
+      steps: [
+        { tag: 'A', title: 'Both branches’ current flows through the pair: Rtot = VP/(2ID)', tex: `R_{tot} = ${texSI(vp / (2 * id), 'Ω')}`, produces: 'rtot', value: vp / (2 * id) },
+        { tag: 'A', title: 'Deep triode: Rtot = 1/(µnCox(W/L)(Vout1 + Vout2 − 2Vth))', tex: `\\frac{W}{L} = \\frac{1}{\\mu_n C_{ox} R_{tot}(2V_{CM} - 2V_{th})} = ${texNum(1 / (kpn * (vp / (2 * id)) * (2 * vcm - 2 * vth)))}`, produces: 'wl', value: 1 / (kpn * (vp / (2 * id)) * (2 * vcm - 2 * vth)) },
+      ],
+      hints: ['In deep triode a MOSFET is a resistor controlled by its gate.', 'The two devices are in parallel: their conductances add.', 'Rtot = VP/(2ID) = 1/(µnCox(W/L)(Vout1 + Vout2 − 2Vth)).', `Rtot = ${(rtot).toFixed(0)} Ω.`],
+    };
+    return { problem, sane: true };
+  },
+};
+
+export const genSlewSettle: Generator = {
+  id: 'l9-slew',
+  unit: 'L9',
+  title: 'Big step: slewing first, then linear settling',
+  make(rng) {
+    const iss = nice(rng, 50e-6, 400e-6, 25e-6);
+    const cl = pick(rng, [1e-12, 2e-12, 4e-12, 5e-12]);
+    const acl = pick(rng, [1, 2, 4]);
+    const fu = pick(rng, [20e6, 50e6, 100e6]);
+    const vstep = pick(rng, [0.5, 1, 1.5]);
+    const tau = acl / (2 * Math.PI * fu);
+    const sr = iss / cl;
+    const vfinal = vstep * acl;
+    const ts = slewTime(vfinal, tau, sr);
+    const tLin = tau * Math.log((sr * tau) / (0.01 * vfinal));
+    const problem: Problem = {
+      ...base('l9-slew', 'L9', 'Big step: slewing first, then linear settling'),
+      statement: `A one-stage op amp (tail ISS charging CL, unity-gain frequency fu) is used at closed-loop gain ${acl}. A ${vstep} V input step is applied. Find the slew rate, how long it slews, and the total time to settle within 1%.`,
+      figure: { kind: 'step', props: { vstep: vfinal, tau, eps: 0.01, sr } },
+      givens: [
+        { sym: 'I_{SS}', value: iss, unit: 'A' },
+        { sym: 'C_L', value: cl, unit: 'F' },
+        { sym: 'f_u', value: fu, unit: 'Hz' },
+        { sym: 'A_{closed}', value: acl, unit: '' },
+        { sym: 'V_{step}', value: vstep, unit: 'V' },
+      ],
+      unknowns: [
+        { key: 'sr', sym: 'SR', label: 'Slew rate', unit: 'V/s' },
+        { key: 'ts', sym: 't_{slew}', label: 'Slewing time', unit: 's' },
+        { key: 'tt', sym: 't_{total}', label: 'Total time to 1%', unit: 's' },
+      ],
+      answers: { sr, ts, tt: ts + tLin },
+      wrong: { ts: [{ mistake: 'forgot2pi', value: (vfinal - sr * (acl / fu)) / sr }] },
+      steps: [
+        { tag: '·', title: 'SR = ISS/CL', tex: `SR = ${texSI(iss / cl, 'V/s')}`, produces: 'sr', value: iss / cl },
+        { tag: '·', title: 'τ = Aclosed/ωu; the linear response would start with slope Vfinal/τ. It slews until the error left is SR·τ', tex: `\\tau = ${texSI(tau, 's')},\; t_{slew} = \\frac{V_{final} - SR\\,\\tau}{SR} = ${texSI((vfinal - (iss / cl) * tau) / (iss / cl), 's')}`, produces: 'ts', value: (vfinal - (iss / cl) * tau) / (iss / cl) },
+        { tag: '·', title: 'Then settle the remaining SR·τ exponentially down to 1% of Vfinal', tex: `t_{total} = t_{slew} + \\tau\\ln\\frac{SR\\,\\tau}{0.01\\,V_{final}} = ${texSI((vfinal - (iss / cl) * tau) / (iss / cl) + tau * Math.log(((iss / cl) * tau) / (0.01 * vfinal)), 's')}`, produces: 'tt', value: (vfinal - (iss / cl) * tau) / (iss / cl) + tau * Math.log(((iss / cl) * tau) / (0.01 * vfinal)) },
+      ],
+      hints: ['A fixed tap fills the bucket first; then the cake gets eaten.', 'Slewing happens while Vfinal/τ would exceed ISS/CL.', 'tslew = (Vfinal − SR·τ)/SR; then τ·ln(SR·τ/(0.01·Vfinal)).', `τ = ${(tau * 1e9).toFixed(2)} ns.`],
+    };
+    return { problem, sane: ts > 0 && (sr * tau) / (0.01 * vfinal) > 1 };
+  },
+};
+
+export const HANDOUT_GENERATORS: Generator[] = [genGainError, genTeleDesign, genFoldedDesign, genTwoStage, genBoost, genTriodeSense, genSlewSettle];

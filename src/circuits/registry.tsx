@@ -13,7 +13,7 @@ import {
   WaterAnalogy,
 } from './figures';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from './figures3';
-import { FoldedCascodeFig, MirrorTeleFig, NonInvertingFig, TwoStageFig } from './figures4';
+import { CmfbTriodeFig, FoldedCascodeFig, GainBoostFig, MirrorTeleFig, NonInvertingFig, TwoStageFig } from './figures4';
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from './figures2';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,6 +46,8 @@ export const FIGURES: Record<string, (props: any) => React.ReactElement> = {
   mirrorTele: MirrorTeleFig,
   twoStage: TwoStageFig,
   nonInverting: NonInvertingFig,
+  gainBoost: GainBoostFig,
+  cmfbTriode: CmfbTriodeFig,
 };
 
 export function Figure({ kind, props, highlight }: { kind: string; props?: Record<string, unknown>; highlight?: string[] }) {

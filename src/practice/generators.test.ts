@@ -9,6 +9,7 @@ import { FIGURES } from '../circuits/registry';
 import { FIXED_BANK } from './bank';
 import { M3_BANK } from './bankM3';
 import { M4_BANK } from './bankM4';
+import { M5_BANK } from './bankM5';
 import { formatSI } from './units';
 
 describe.each(ALL_GENERATORS.map((g) => [g.id, g] as const))('generator %s', (_id, gen) => {
@@ -79,10 +80,10 @@ describe('checker generic diagnosis', () => {
 
 describe('fixed bank', () => {
   it('every fixed problem has a traced step for each unknown that agrees with the physics answer', () => {
-    for (const p of [...FIXED_BANK, ...M3_BANK, ...M4_BANK]) expect(traceDisagreement(p), p.id).toBeUndefined();
+    for (const p of [...FIXED_BANK, ...M3_BANK, ...M4_BANK, ...M5_BANK]) expect(traceDisagreement(p), p.id).toBeUndefined();
   });
   it('every fixed problem figure renders, and the right answers are accepted', () => {
-    for (const p of [...FIXED_BANK, ...M3_BANK, ...M4_BANK]) {
+    for (const p of [...FIXED_BANK, ...M3_BANK, ...M4_BANK, ...M5_BANK]) {
       if (p.figure) expect(renderToString(createElement(FIGURES[p.figure.kind], p.figure.props ?? {}))).not.toContain('NaN');
       for (const u of p.unknowns) {
         const typed = formatSI(p.answers[u.key], u.unit, 4).replace('−', '-');

@@ -7,8 +7,8 @@ import type { ReactNode } from 'react';
 import { foldedNodes, mirrorTeleNodes, twoStageNodes, type NodeDevice, type Process } from '../physics';
 import { formatSI } from '../practice/units';
 import { flowStrength } from './figures';
-import { Canvas, Capacitor, Dot, FlowDots, Ground, Label, Nmos, OpAmp, Pmos, Rail, Resistor, Sym, Terminal, VoltageTag, Wire } from './primitives';
-import { fromNode, Schematic, stackFlow, type DevState } from './schematic';
+import { Canvas, Capacitor, CurrentSource, Dot, FlowDots, Ground, Label, Nmos, OpAmp, Pmos, Rail, Resistor, Sym, Terminal, VoltageTag, Wire } from './primitives';
+import { fromNode, mosState, Schematic, stackFlow, type DevState } from './schematic';
 
 const V = (x: number) => formatSI(x, 'V');
 const R = (x: number) => formatSI(x, 'Ω');
@@ -365,6 +365,84 @@ export function NonInvertingFig({ r1, r2, a, cl, highlight }: { r1?: number; r2?
           <Ground x={370} y={160} />
         </>
       )}
+    </Canvas>
+  );
+}
+
+// ─── L6: gain-boosted (regulated) cascode, Tutorial 4 Q1 form ───────────────
+
+
+/** M1 input, M2 cascode, M3 an NMOS CS auxiliary amplifier sensing X and driving M2’s gate. */
+export function GainBoostFig({ vx, vg2, vout, i1, i2, vth = 0.7, highlight, inspector = true }: { vx: number; vg2: number; vout: number; i1: number; i2: number; vth?: number; highlight?: string[]; inspector?: boolean }) {
+  const devs: Record<string, DevState> = {
+    m1: mosState({ name: 'M1', kind: 'n', role: 'input (CS)', vg: vg2 - vx, vs: 0, vd: vx, vth, id: i2 }),
+    m2: mosState({ name: 'M2', kind: 'n', role: 'cascode, gate driven by M3', vg: vg2, vs: vx, vd: vout, vth, id: i2 }),
+    m3: mosState({ name: 'M3', kind: 'n', role: 'auxiliary CS amplifier (A1 = gm3·rO3)', vg: vx, vs: 0, vd: vg2, vth, id: i1 }),
+  };
+  const x2 = 300, x3 = 170, y2 = 150, yX = 196, y1 = 240, y3 = 196;
+  return (
+    <Schematic w={440} h={300} title="Gain-boosted cascode: M3 watches X and drives M2’s gate" states={devs} highlight={highlight} maxWidth={560} inspector={inspector}>
+      <Rail x1={x3 - 30} x2={x2 + 30} y={30} label="VDD" />
+      <CurrentSource x={x2} y1={30} y2={100} label={<Sym base="I" sub="2" />} value={formatSI(i2, 'A')} id="i2" />
+      <Wire points={[[x2, 100], [x2, y2 - 30]]} id="out" />
+      <Dot x={x2} y={108} id="out" />
+      <Wire points={[[x2, 108], [410, 108]]} id="out" />
+      <Terminal x={410} y={108} />
+      <Label x={410} y={96} text="Vout" anchor="middle" weight={600} />
+      <Nmos x={x2} y={y2} id="m2" />
+      <CurrentSource x={x3} y1={30} y2={100} label={<Sym base="I" sub="1" />} value={formatSI(i1, 'A')} labelSide="left" id="i1" />
+      <Wire points={[[x3, 100], [x3, y3 - 30]]} />
+      <Dot x={x3} y={y2} id="g2" />
+      <Wire points={[[x3, y2], [x2 - 30, y2]]} id="g2" />
+      <VoltageTag x={x3 - 12} y={y2 - 16} v={`VG2 ${V(vg2)}`} anchor="end" id="g2" />
+      <Nmos x={x3} y={y3} id="m3" flip />
+      <Ground x={x3} y={y3 + 30} />
+      <Wire points={[[x2, y2 + 30], [x2, y1 - 30]]} id="x" />
+      <Dot x={x2} y={yX} id="x" />
+      <Wire points={[[x3 + 30, y3], [x2, y3]]} id="x" />
+      <VoltageTag x={x2 + 12} y={yX + 2} v={`X ${V(vx)}`} id="x" />
+      <Nmos x={x2} y={y1} id="m1" />
+      <Wire points={[[x2 - 30, y1], [250, y1]]} id="in" />
+      <Terminal x={250} y={y1} />
+      <Label x={244} y={y1 + 4} text="Vin" anchor="end" weight={600} />
+      <Ground x={x2} y={y1 + 30} />
+      <FlowDots points={stackFlow(x2, 32, y1 + 30, [{ y: y2 }, { y: y1 }])} strength={flowStrength(i2)} />
+      <FlowDots points={stackFlow(x3, 32, y3 + 30, [{ y: y3, flip: true }])} strength={flowStrength(i1)} />
+    </Schematic>
+  );
+}
+
+/** L7–L8: triode-device CMFB in the tail (Tutorial 5 Q1 / Razavi 9.11): M7, M8 gates on the outputs. */
+export function CmfbTriodeFig({ vout1, vout2, vp, wl, highlight }: { vout1: number; vout2: number; vp: number; wl?: number; highlight?: string[] }) {
+  const xL = 150, xR = 330;
+  return (
+    <Canvas w={480} h={330} title="Triode CMFB: M7 and M8 sit in deep triode; their gates sense the two outputs" highlight={highlight}>
+      <Rail x1={xL - 30} x2={xR + 30} y={30} label="VDD" />
+      <Label x={xL - 34} y={70} text="PMOS cascode loads (M9–M12)" anchor="start" size={11} color="var(--ink-2)" />
+      <Wire points={[[xL, 30], [xL, 190]]} />
+      <Wire points={[[xR, 30], [xR, 190]]} />
+      <rect x={xL - 18} y={44} width={36} height={80} rx={8} fill="var(--pmos-bg)" stroke="var(--pmos)" />
+      <rect x={xR - 18} y={44} width={36} height={80} rx={8} fill="var(--pmos-bg)" stroke="var(--pmos)" />
+      <Dot x={xL} y={140} id="out" />
+      <Dot x={xR} y={140} id="out" />
+      <VoltageTag x={xL - 10} y={140} v={`Vout1 ${V(vout1)}`} anchor="end" id="out" />
+      <VoltageTag x={xR + 10} y={140} v={`Vout2 ${V(vout2)}`} id="out" />
+      <rect x={xL - 18} y={160} width={36} height={60} rx={8} fill="var(--nmos-bg)" stroke="var(--nmos)" />
+      <rect x={xR - 18} y={160} width={36} height={60} rx={8} fill="var(--nmos-bg)" stroke="var(--nmos)" />
+      <Label x={xL + 24} y={194} text="M3, M5" size={11} color="var(--nmos)" weight={600} />
+      <Label x={xR - 24} y={194} text="M4, M6" anchor="end" size={11} color="var(--nmos)" weight={600} />
+      <Wire points={[[xL, 220], [xL, 236], [xR, 236], [xR, 220]]} />
+      <Dot x={240} y={236} id="p" />
+      <VoltageTag x={240} y={222} v={`P ${V(vp)}`} anchor="middle" id="p" />
+      <Wire points={[[196, 236], [196, 256]]} />
+      <Wire points={[[284, 236], [284, 256]]} />
+      <Nmos x={196} y={286} name="M7" id="m7" />
+      <Nmos x={284} y={286} name="M8" id="m8" flip />
+      <Wire points={[[196, 316], [284, 316]]} />
+      <Ground x={240} y={316} />
+      <Wire points={[[166, 286], [110, 286], [110, 140], [xL, 140]]} id="sense" />
+      <Wire points={[[314, 286], [370, 286], [370, 140], [xR, 140]]} id="sense" />
+      <Label x={60} y={300} text={wl !== undefined ? `(W/L)7,8 = ${wl.toFixed(1)}` : 'triode sense'} size={11} weight={600} color="var(--signal)" />
     </Canvas>
   );
 }
