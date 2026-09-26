@@ -142,6 +142,15 @@ export function recordCheck(id: string, score: number, numericCorrect: boolean, 
   });
 }
 
+/** Add cards to the review deck (due today) without touching lesson progress. */
+export function addCards(ids: string[]) {
+  update((p) => {
+    const cards = { ...p.cards };
+    for (const c of ids) if (!cards[c]) cards[c] = { box: 1, due: today() };
+    return { ...p, cards };
+  });
+}
+
 export function logMistake(e: Omit<MistakeEntry, 't'>) {
   update((p) => ({ ...p, mistakes: [...p.mistakes, { ...e, t: Date.now() }].slice(-500) }));
 }

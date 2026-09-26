@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { CARD_BY_ID } from '../content';
 import { MISTAKES } from '../practice/mistakes';
-import { reviewCard, today, useProgress } from '../app/store';
+import { addCards, reviewCard, today, useProgress } from '../app/store';
+import { AUDIT_CARDS } from '../content/audit';
 import { RichText } from '../ui/RichText';
 
 export function ReviewView() {
@@ -67,6 +68,16 @@ export function ReviewView() {
               </button>
             )}
           </>
+        )}
+      </section>
+
+      <section>
+        <h2>The 20-question audit</h2>
+        <p className="muted small">From our chat: “20 things you should be able to answer cold”. {AUDIT_CARDS.every((c) => p.cards[c.id]) ? 'All 20 are in your deck.' : 'Add them to your deck; they come back on the same schedule.'}</p>
+        {!AUDIT_CARDS.every((c) => p.cards[c.id]) && (
+          <button type="button" className="btn" onClick={() => addCards(AUDIT_CARDS.map((c) => c.id))}>
+            Add the 20 audit cards
+          </button>
         )}
       </section>
 

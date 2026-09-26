@@ -276,3 +276,26 @@ Set A: µnCox 134.28 µ, µpCox 38.36 µ, λn 0.1, λp 0.2 (L = 0.5 µm), Vthn 0
 | 9.8(c) gain | **≈ 3950** (214 × 18.5) | — | new |
 
 Checks run: 54 automated tests pass (unit tests, the full §11 regression table, both quiz keys, and these tutorial solutions).
+
+---
+
+## 8. Lab sheets 1–9 (Cadence labs): calculation parts only
+
+Uploaded as `source/labs/lab-1..9.pdf` (page images in `source/labs/images/`). Only the hand calculations are
+used; simulator steps (Virtuoso, ADE, calculator expressions, ADT) are skipped as you asked.
+
+| Lab | Topic | Hand calculations in the app (bank "Lab sheets") | Unit |
+|---|---|---|---|
+| 1 | RC LPF, MOSFET curves | C from τ, rise time 2.2τ, f−3dB = 1/(2πRC) | U12 |
+| 2 | CS amplifier with V* | RD = VRD/ID, V* = 2VRD/|Av|, W by ratio from a chart reading, max gain 2(VDD − V*)/V* | U5 |
+| 3 | Cascode | gm = 2ID/V*, intrinsic gain 2VA/V*, cascode ≈ square, BW, GBW = gm/(2πCL) | U9, U12 |
+| 4 | PMOS source follower | gm, Rout = 1/gm, output pole, DC shift = |VGS| (peaking needs simulated caps: skipped) | U8 |
+| 5 | Simple vs low-compliance cascode mirror | Iout = 2Iin, Rout rO vs gm·rO², Vout,min = 2V* | U6, U9 |
+| 6 | PMOS-input resistive diff amp | RD from the CM level, V* from Ad, gm, BW | U10 |
+| 7 | 5-T OTA from specs | gm = 2π·GBW·CL, dB → ratio for gain and CMRR | U11, U12 |
+| 8 | Negative feedback (behavioural OTA) | COUT, ROUT, β = CF/(CF + CIN), ACL, closed-loop BW, desensitisation | L1 |
+| 9 | Two-stage Miller OTA buffer | A ≥ 1/ε (2000, 66 dB), τ = tr/2.2, fu = 1/(2πτ), IB1 = SR·Cc | L5, L9 |
+
+**Flag 12 (Lab 8):** the sheet lists COUT = 4.88 pF, but GM/(2π·fu) = 159 µS/(2π·5 MHz) = 5.06 pF; 4.88 pF would need GM ≈ 153 µS. Worth asking your instructor.
+
+Chart-based sizing (V* and gm/ID charts) depends on your own simulation data, so the app uses clearly labelled *example* chart readings to practise the ratio-and-proportion method.

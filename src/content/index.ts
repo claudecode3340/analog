@@ -2,9 +2,12 @@ import { FIXED_BANK } from '../practice/bank';
 import { M3_BANK } from '../practice/bankM3';
 import { M4_BANK } from '../practice/bankM4';
 import { M5_BANK } from '../practice/bankM5';
+import { LAB_BANK } from '../practice/bankLabs';
+import { CHAT_BANK } from '../practice/bankChat';
 import { ALL_GENERATORS } from '../practice/generators';
 
 import type { Generator, Problem } from '../practice/schema';
+import { AUDIT_CARDS } from './audit';
 import { UNITS } from './curriculum';
 import { FOUNDATION_LESSONS } from './lessons/foundations';
 import { SINGLE_STAGE_LESSONS } from './lessons/single';
@@ -18,11 +21,14 @@ export const LESSON_BY_ID: Record<string, Lesson> = Object.fromEntries(LESSONS.m
 export const UNIT_BY_ID: Record<string, Unit> = Object.fromEntries(UNITS.map((u) => [u.id, u]));
 export const GENERATORS: Generator[] = ALL_GENERATORS;
 export const GENERATOR_BY_ID: Record<string, Generator> = Object.fromEntries(GENERATORS.map((g) => [g.id, g]));
-export const BANK: Problem[] = [...FIXED_BANK, ...M3_BANK, ...M4_BANK, ...M5_BANK];
+export const BANK: Problem[] = [...FIXED_BANK, ...M3_BANK, ...M4_BANK, ...M5_BANK, ...LAB_BANK, ...CHAT_BANK];
 export const BANK_BY_ID: Record<string, Problem> = Object.fromEntries(BANK.map((p) => [p.id, p]));
 
 export { UNITS };
 
 /** All review cards, by id, with the lesson they come from. */
-export const CARDS = LESSONS.flatMap((l) => l.lockIn.cards.map((c) => ({ ...c, lesson: l.id, unit: l.unit })));
+export const CARDS = [
+  ...LESSONS.flatMap((l) => l.lockIn.cards.map((c) => ({ ...c, lesson: l.id, unit: l.unit }))),
+  ...AUDIT_CARDS.map((c) => ({ ...c, lesson: 'audit', unit: 'Audit' })),
+];
 export const CARD_BY_ID = Object.fromEntries(CARDS.map((c) => [c.id, c]));
