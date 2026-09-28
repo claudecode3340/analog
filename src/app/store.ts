@@ -41,6 +41,8 @@ export interface Progress {
   mistakes: MistakeEntry[];
   practice: { attempted: number; correct: number };
   settings: Settings;
+  /** Actions per day (epoch day → count): lesson steps, checks, practice answers, reviews. For the streak. */
+  activity: Record<number, number>;
 }
 
 const KEY = 'analog-gym/progress/v1';
@@ -53,6 +55,7 @@ export function emptyProgress(): Progress {
     mistakes: [],
     practice: { attempted: 0, correct: 0 },
     settings: { theme: 'auto', drawStyle: 'symbol', tol: 0.02, unlockAll: false },
+    activity: {},
   };
 }
 
@@ -77,6 +80,7 @@ export function migrate(x: unknown): Progress {
     mistakes: Array.isArray(p.mistakes) ? p.mistakes.slice(-500) : [],
     practice: p.practice ?? base.practice,
     settings: { ...base.settings, ...(p.settings ?? {}) },
+    activity: p.activity && typeof p.activity === 'object' ? p.activity : {},
   };
 }
 
@@ -120,10 +124,26 @@ export function today(): number {
   return Math.floor(Date.now() / 86_400_000);
 }
 
+function bump(p: Progress): Progress['activity'] {
+  const d = today();
+  return { ...p.activity, [d]: (p.activity[d] ?? 0) + 1 };
+}
+
+/** Consecutive days with activity, ending today (or yesterday, if nothing yet today). */
+export function streak(p: Progress, now = today()): number {
+  let d = p.activity[now] ? now : now - 1;
+  let n = 0;
+  while (p.activity[d]) {
+    n++;
+    d--;
+  }
+  return n;
+}
+
 export function recordLessonStep(id: string, step: number) {
   update((p) => {
     const cur = p.lessons[id] ?? { status: 'learning', best: 0, attempts: 0, step: 0 };
-    return { ...p, lessons: { ...p.lessons, [id]: { ...cur, step: Math.max(cur.step, step) } } };
+    return { ...p, activity: bump(p), lessons: { ...p.lessons, [id]: { ...cur, step: Math.max(cur.step, step) } } };
   });
 }
 
@@ -136,6 +156,7 @@ export function recordCheck(id: string, score: number, numericCorrect: boolean, 
     for (const c of cardIds) if (!cards[c]) cards[c] = { box: 1, due: today() };
     return {
       ...p,
+      activity: bump(p),
       cards,
       lessons: { ...p.lessons, [id]: { ...cur, attempts: cur.attempts + 1, best: Math.max(cur.best, score), status: mastered ? 'mastered' : 'learning' } },
     };
@@ -156,7 +177,7 @@ export function logMistake(e: Omit<MistakeEntry, 't'>) {
 }
 
 export function recordPractice(correct: boolean) {
-  update((p) => ({ ...p, practice: { attempted: p.practice.attempted + 1, correct: p.practice.correct + (correct ? 1 : 0) } }));
+  update((p) => ({ ...p, activity: bump(p), practice: { attempted: p.practice.attempted + 1, correct: p.practice.correct + (correct ? 1 : 0) } }));
 }
 
 /** Leitner: right → next box (interval 1, 2, 4, 8, 16 days); wrong → box 1, due today. */
@@ -166,7 +187,7 @@ export function reviewCard(id: string, right: boolean) {
   update((p) => {
     const cur = p.cards[id] ?? { box: 1, due: today() };
     const box = right ? Math.min(5, cur.box + 1) : 1;
-    return { ...p, cards: { ...p.cards, [id]: { box, due: today() + (right ? LEITNER_DAYS[box] : 0) } } };
+    return { ...p, activity: bump(p), cards: { ...p.cards, [id]: { box, due: today() + (right ? LEITNER_DAYS[box] : 0) } } };
   });
 }
 

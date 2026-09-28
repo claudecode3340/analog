@@ -1817,3 +1817,98 @@ button.bit {
   color: var(--ink-2);
   font-size: 12px;
 }
+
+/* ─── Streak and mid-sem plan strip (Path) ───────────────────── */
+.plan-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: var(--s3) 0 var(--s2);
+}
+.plan-chip {
+  display: inline-block;
+  line-height: 1.5;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.plan-chip.hot {
+  border-color: var(--signal);
+  color: var(--signal);
+  background: var(--signal-bg);
+}
+.plan-chip.link {
+  color: var(--signal);
+  text-decoration: none;
+  font-weight: 600;
+}
+.plan-chip.link:hover {
+  border-color: var(--signal);
+}
+.plan-chip.plan-wide {
+  flex: 1 1 280px;
+}
+
+/* ─── Learn index: search and course parts ─────────────────── */
+.field.search {
+  margin: var(--s4) 0 var(--s3);
+}
+.field.search input {
+  font-family: var(--font-sans);
+}
+.learn-part {
+  border-top: 1px solid var(--line);
+  padding: var(--s3) 0;
+}
+.learn-part > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  padding: 6px 0;
+}
+.learn-part > summary::-webkit-details-marker {
+  display: none;
+}
+.learn-part > summary::before {
+  content: '▸';
+  color: var(--muted);
+}
+.learn-part[open] > summary::before {
+  content: '▾';
+}
+.learn-part-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+.learn-part-note {
+  flex-basis: 100%;
+  padding-left: 18px;
+}
+
+/* ─── A small celebration when a lesson is mastered ──────────── */
+@keyframes pop-in {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.celebrate {
+  animation: pop-in 0.5s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .celebrate {
+    animation: none;
+  }
+}

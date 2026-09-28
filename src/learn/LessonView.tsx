@@ -266,7 +266,7 @@ export function LessonView({ id }: { id: string }) {
               <p>{lesson.lockIn.hook}</p>
             </div>
             {answeredAll ? (
-              <div className={`score-card ${mastered ? 'ok' : 'bad'}`} role="status">
+              <div className={`score-card ${mastered ? 'ok celebrate' : 'bad'}`} role="status">
                 <div className="score-ring" style={{ ['--p' as string]: `${Math.round(score * 100)}` }}>
                   <span>{Math.round(score * 100)}%</span>
                 </div>

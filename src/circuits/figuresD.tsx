@@ -64,7 +64,7 @@ export function InverterFig({ load = 'cmos', vin, vout, highlight }: { load?: Lo
  */
 export function VtcPlot({ curve, vdd, vil, vih, vm, vol, voh, extra, h = 280 }: { curve: Array<[number, number]>; vdd: number; vil?: number; vih?: number; vm?: number; vol?: number; voh?: number; extra?: Array<{ points: Array<[number, number]>; label: string; color: string }>; h?: number }) {
   const series: Series[] = [
-    { points: [[0, 0], [vdd, vdd]], color: 'var(--muted)', width: 1.2, dashed: true, label: 'Vin = Vout', labelAt: 'end' },
+    { points: [[0, 0], [vdd, vdd]], color: 'var(--muted)', width: 1.2, dashed: true },
     ...(extra ?? []).map((e) => ({ points: e.points, color: e.color, width: 2, label: e.label, labelAt: 'end' as const })),
     { points: curve, color: 'var(--ink)', width: 2.8 },
   ];
@@ -87,7 +87,7 @@ export function VtcPlot({ curve, vdd, vil, vih, vm, vol, voh, extra, h = 280 }: 
       markers={[
         ...(vil !== undefined ? [{ x: vil, y: at(vil), label: `VIL ${vil.toFixed(2)}`, labelPos: 'left' as const, color: 'var(--nmos)' }] : []),
         ...(vih !== undefined ? [{ x: vih, y: at(vih), label: `VIH ${vih.toFixed(2)}`, labelPos: 'right' as const, color: 'var(--pmos)' }] : []),
-        ...(vm !== undefined ? [{ x: vm, y: vm, label: `VM ${vm.toFixed(2)}`, labelPos: 'right' as const, color: 'var(--signal)' }] : []),
+        ...(vm !== undefined ? [{ x: vm, y: vm, label: `VM ${vm.toFixed(2)} (Vin = Vout)`, labelPos: 'right' as const, color: 'var(--signal)' }] : []),
       ]}
       guides={[
         ...(voh !== undefined ? [{ axis: 'y' as const, at: voh, label: `VOH ${voh.toFixed(2)}`, color: 'var(--ok)' }] : []),
@@ -383,7 +383,7 @@ export function FlopTimingFig({ tc, tpcq, tpd, tsetup, tskew = 0 }: { tc: number
       {seg(0, tpcq, 100, 'var(--nmos)', 'tpcq')}
       {seg(tpcq, tpcq + tpd, 100, 'var(--signal)', 'tpd (logic)')}
       {seg(tc - tsetup, tc, 140, 'var(--pmos)', 'tsetup')}
-      {tskew > 0 && seg(tc - tsetup - tskew, tc - tsetup, 140, 'var(--ink-2)', 'skew')}
+      {tskew > 0 && seg(tc - tsetup - tskew, tc - tsetup, 172, 'var(--ink-2)', 'skew')}
       <line x1={sx(tc)} x2={sx(tc)} y1={30} y2={190} stroke="var(--muted)" strokeDasharray="4 4" />
       <Label x={sx(tc) + 4} y={200} text={`Tc ${formatSI(tc, 's')}`} size={11} mono />
       <line x1={sx(tpcq + tpd)} x2={sx(tpcq + tpd)} y1={86} y2={150} stroke={ok ? 'var(--ok)' : 'var(--bad)'} strokeWidth={2} />

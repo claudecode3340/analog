@@ -2,7 +2,7 @@ import { EXAMS } from '../content/curriculum';
 import { LESSON_BY_ID, UNITS } from '../content';
 import { IconArrowRight, IconCheck, IconLock } from '../ui/Icons';
 import { daysUntil, lessonUnlocked, nextStep, unitState, type UnitState } from './progress';
-import { today, useProgress } from './store';
+import { streak, today, useProgress } from './store';
 
 /** A progress ring (0..1) with a label in the middle. */
 export function Ring({ value, size = 64, stroke = 7, color = 'var(--signal)', children }: { value: number; size?: number; stroke?: number; color?: string; children?: React.ReactNode }) {
@@ -38,6 +38,11 @@ export function PathView() {
   const upcoming = EXAMS.map((e) => ({ ...e, days: daysUntil(e.date) })).filter((e) => e.days >= 0);
   const exam = upcoming[0];
   const due = Object.values(p.cards).filter((c) => c.due <= today()).length;
+  const st = streak(p);
+  const todayCount = p.activity[today()] ?? 0;
+  const midsem = EXAMS[0];
+  const midDays = daysUntil(midsem.date);
+  const midLeft = UNITS.filter((u) => u.group !== 'digital').flatMap((u) => u.lessons).filter((l) => p.lessons[l]?.status !== 'mastered').length;
 
   return (
     <div className="page">
@@ -69,7 +74,7 @@ export function PathView() {
             ) : ns.done ? (
               <p>Every available lesson is mastered. Mix it up in Practice or clear today's Review cards.</p>
             ) : (
-              <p>Master the unit before {ns.unit} to unlock it, or turn on the override in Settings.</p>
+              <p>Pick any lesson from the map below.</p>
             )}
           </div>
         </div>
@@ -91,6 +96,24 @@ export function PathView() {
           </div>
         </div>
       </section>
+
+      <div className="plan-strip small" role="status">
+        <span className={`plan-chip ${st > 0 ? 'hot' : ''}`}>
+          <strong className="mono">{st}</strong>-day streak
+        </span>
+        <span className="plan-chip">
+          today: <strong className="mono">{todayCount}</strong> {todayCount === 1 ? 'step' : 'steps'}
+        </span>
+        {midDays >= 0 && midLeft > 0 && (
+          <span className="plan-chip plan-wide">
+            Mid-sem plan: <strong className="mono">{midLeft}</strong> analog lessons left in <strong className="mono">{midDays}</strong> days → about{' '}
+            <strong className="mono">{Math.ceil(midLeft / Math.max(1, midDays))}</strong> a day
+          </span>
+        )}
+        <a className="plan-chip link" href="#/learn">
+          Find any lesson →
+        </a>
+      </div>
 
       {upcoming.length > 1 && (
         <div className="exam-strip small">
@@ -142,6 +165,10 @@ function UnitRow({ id }: { id: string }) {
   const st = unitState(u, p);
   const done = u.lessons.filter((l) => p.lessons[l]?.status === 'mastered').length;
   const frac = u.lessons.length ? done / u.lessons.length : 0;
+  const started = u.lessons.some((l) => p.lessons[l]);
+  const ns = nextStep(p);
+  const active = st === 'learning' && (started || ns.unit === u.id);
+  const label = st === 'learning' ? (started ? 'in progress' : ns.unit === u.id ? 'next up' : 'not started') : st === 'coming' ? `${STATE_LABEL[st]} · M${u.milestone}` : STATE_LABEL[st];
   return (
     <li className={`unit unit-${st}`}>
       <div className="unit-node">
@@ -157,10 +184,10 @@ function UnitRow({ id }: { id: string }) {
           <span className="unit-node-idle mono">{u.id}</span>
         )}
       </div>
-      <div className={`unit-card ${st === 'learning' ? 'card' : ''}`}>
+      <div className={`unit-card ${active ? 'card' : ''}`}>
         <div className="unit-head">
           <span className="unit-title">{u.title}</span>
-          <span className={`badge ${st === 'mastered' ? 'ok' : st === 'learning' ? 'signal' : ''}`}>{st === 'coming' ? `${STATE_LABEL[st]} · M${u.milestone}` : STATE_LABEL[st]}</span>
+          <span className={`badge ${st === 'mastered' ? 'ok' : active ? 'signal' : ''}`}>{label}</span>
         </div>
         <div className="small muted unit-sub">
           {u.short}

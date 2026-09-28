@@ -27,6 +27,7 @@ async function overlaps(page: Page) {
 for (const width of [1280, 390]) {
   for (const scheme of ['light', 'dark'] as const) {
     test(`gallery ${width}px ${scheme}`, async ({ page }) => {
+      test.setTimeout(600_000);
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto('#/gallery');

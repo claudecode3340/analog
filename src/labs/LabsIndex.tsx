@@ -1,4 +1,4 @@
-import { IconBolt, IconLab, IconLock } from '../ui/Icons';
+import { IconBolt, IconLab } from '../ui/Icons';
 
 const LABS = [
   { id: 'mosfet', title: 'MOSFET lab', desc: 'Channel cross-section with moving electrons, ID–VDS curves, region, gm, rO, gm·rO.', ready: true },
@@ -21,29 +21,25 @@ export function LabsIndex() {
     <div className="page">
       <h1>Labs</h1>
       <p className="muted lab-intro">Play with real circuits. Drag the sliders and watch the currents, voltages and curves respond. Every number comes from the same equations you use in your tutorials.</p>
-      <ul className="labs-grid">
-        {LABS.map((l) => (
-          <li key={l.id}>
-            {l.ready ? (
-              <a href={`#/labs/${l.id}`} className="lab-card card">
-                <span className="lab-icon">{l.id === 'dc' ? <IconBolt size={22} /> : <IconLab size={22} />}</span>
-                <strong>{l.title}</strong>
-                <span className="small muted">{l.desc}</span>
-              </a>
-            ) : (
-              <div className="lab-card card coming">
-                <span className="lab-icon">
-                  <IconLock size={20} />
-                </span>
-                <strong>{l.title}</strong>
-                <span className="small muted">
-                  {l.desc} Coming in Milestone {l.m}.
-                </span>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+      {[
+        { title: 'Analog', ids: LABS.filter((l) => !['inverter', 'effort'].includes(l.id)) },
+        { title: 'Digital', ids: LABS.filter((l) => ['inverter', 'effort'].includes(l.id)) },
+      ].map((grp) => (
+        <section key={grp.title}>
+          <h2 className="path-heading">{grp.title}</h2>
+          <ul className="labs-grid">
+            {grp.ids.map((l) => (
+              <li key={l.id}>
+                <a href={`#/labs/${l.id}`} className="lab-card card">
+                  <span className="lab-icon">{l.id === 'dc' ? <IconBolt size={22} /> : <IconLab size={22} />}</span>
+                  <strong>{l.title}</strong>
+                  <span className="small muted">{l.desc}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }

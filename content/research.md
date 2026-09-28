@@ -39,3 +39,14 @@ stack (walk the node voltages + fence), size W/L from ID and Vov, gain by
 inspection (Gm × Rout with rO combos), CM range / output swing (headroom sums),
 bandwidth (Rout·CL, GBW = gm/CL), feedback/settling numbers. So every lesson ends
 with a problem *in that exact shape* and every lab has a preset from those papers.
+
+## Second pass (Sep 2026): what the best learning apps do, and what changed here
+
+| Source | What it does | Applied in Analog Gym |
+|---|---|---|
+| Brilliant (ustwo case study; UX Collective on interactive play) | One concept per lesson, **pretest before teaching**, instant custom feedback, a "gameboard" of progress, a companion pointing to the next lesson, small celebrations | Predict-then-reveal in every lesson; diagnosed mistakes; Path "your next step"; a pop-in celebration on mastery |
+| Duolingo (path redesign, streak research) | One visible path; a **streak kept by a single lesson**; daily feedback | Streak and "today" counter on the Path; everything still open, the path is a suggestion |
+| EveryCircuit, CircuitLab | Animated current, instant re-plot on every change | Flow dots on schematics; every slider re-plots live (Bode, step, VTC, delay) |
+| Razavi’s own teaching (book; UCLA handouts were not reachable from this environment) | Intuition first: "the loop amplifies its own noise", "wiggle each gate", Miller as (1 + A) swing, pole splitting as a diode at high f | Used as the opening idea of the L10–L14 lessons |
+
+New navigation: a search box and collapsible course parts on Learn, grouped Practice topics, Analog/Digital lab sections, and a mid-sem pace line (analog lessons left ÷ days left).
