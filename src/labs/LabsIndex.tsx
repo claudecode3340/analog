@@ -11,6 +11,8 @@ const LABS = [
   { id: 'diffpair', title: 'Differential pair lab', desc: 'Current steering, ±√2·Vov, DM and CM half circuits.', ready: true, m: 3 },
   { id: 'ota', title: 'Five-transistor OTA lab', desc: 'Signal currents through the mirror, CM range, swing, buffer.', ready: true, m: 3 },
   { id: 'feedback', title: 'Feedback, Bode and settling', desc: 'The 1/β line, the ε band, 4.6τ, slewing then settling.', ready: true, m: 3 },
+  { id: 'inverter', title: 'Inverter lab', desc: 'CMOS VTC from the square law: VM, VIL, VIH, noise margins, τPHL and τPLH.', ready: true, m: 6 },
+  { id: 'effort', title: 'Logical effort lab', desc: 'Size a path of gates: F = GBH, equal stage effort, D = Nf̂ + P, best N.', ready: true, m: 6 },
   { id: 'stability', title: 'Stability & compensation', desc: 'Poles, ωgx, ωpx, phase and gain margin, ringing; the two-stage op amp with CC and Rz.', ready: true, m: 5 },
 ];
 

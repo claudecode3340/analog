@@ -15,6 +15,7 @@ import {
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from './figures3';
 import { CmfbTriodeFig, FoldedCascodeFig, GainBoostFig, MirrorTeleFig, NonInvertingFig, TwoStageFig } from './figures4';
 import { BarkhausenFig, ClosedStepFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from './figures5';
+import { CmosVtcFig, DynamicGateFig, EffortPathFig, FlopTimingFig, InverterFig, NoiseMarginFig, PassGateFig, RcLadderFig, SramCellFig, StaticGateFig, SwitchingFig, VtcPlot } from './figuresD';
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from './figures2';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,6 +57,18 @@ export const FIGURES: Record<string, (props: any) => React.ReactElement> = {
   twoStageMiller: TwoStageMillerFig,
   replicaCmfb: ReplicaCmfbFig,
   noiseShare: NoiseShareFig,
+  inverter: InverterFig,
+  vtc: VtcPlot,
+  cmosVtc: CmosVtcFig,
+  noiseMargin: NoiseMarginFig,
+  switching: SwitchingFig,
+  staticGate: StaticGateFig,
+  rcLadder: RcLadderFig,
+  effortPath: EffortPathFig,
+  flopTiming: FlopTimingFig,
+  dynamicGate: DynamicGateFig,
+  passGate: PassGateFig,
+  sramCell: SramCellFig,
 };
 
 export function Figure({ kind, props, highlight }: { kind: string; props?: Record<string, unknown>; highlight?: string[] }) {

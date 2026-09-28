@@ -17,6 +17,7 @@ import {
 } from '../circuits/figures';
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from '../circuits/figures2';
 import { BarkhausenFig, ClosedStepFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from '../circuits/figures5';
+import { CmosVtcFig, DynamicGateFig, EffortPathFig, FlopTimingFig, InverterFig, NoiseMarginFig, PassGateFig, RcLadderFig, SramCellFig, StaticGateFig, SwitchingFig } from '../circuits/figuresD';
 import { DrawStyleContext } from '../circuits/primitives';
 import { VoltageLadder } from '../circuits/schematic';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from '../circuits/figures3';
@@ -123,6 +124,21 @@ export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactEl
   { id: 'twostage-rz', title: 'Two-stage with CC and Rz', el: <TwoStageMillerFig rz /> },
   { id: 'replica', title: 'Replica CMFB (Lec 12)', el: <ReplicaCmfbFig vref={1.2} vcm={1.2} /> },
   { id: 'noise-share', title: 'Noise shares', el: <NoiseShareFig items={[{ label: 'M1, M2', value: 3, tone: 'n' }, { label: 'M3, M4', value: 1.2, tone: 'p' }, { label: 'M5', value: 0, tone: 'muted' }]} /> },
+  { id: 'inv-cmos', title: 'CMOS inverter', el: <InverterFig load="cmos" vin={0} vout={1.8} /> },
+  { id: 'inv-res', title: 'Resistive-load inverter', el: <InverterFig load="resistive" /> },
+  { id: 'inv-pseudo', title: 'Pseudo-nMOS inverter', el: <InverterFig load="pseudo" /> },
+  { id: 'inv-dep', title: 'Depletion-load inverter', el: <InverterFig load="depletion" /> },
+  { id: 'vtc', title: 'CMOS VTC', el: <CmosVtcFig spec={{ vdd: 5, vtn: 1, vtp: 1, kn: 100e-6, kp: 60e-6 }} /> },
+  { id: 'nm', title: 'Noise margins', el: <NoiseMarginFig voh={5} vol={0.3} vil={2.1} vih={2.9} vdd={5} /> },
+  { id: 'switch', title: 'Switching delays', el: <SwitchingFig tphl={80e-12} tplh={120e-12} /> },
+  { id: 'gate-aoi', title: 'Static gate AOI21', el: <StaticGateFig expr="AB+C" /> },
+  { id: 'gate-cx', title: 'Static gate A(B+C)+D', el: <StaticGateFig expr="A(B+C)+D" /> },
+  { id: 'rc', title: 'RC ladder', el: <RcLadderFig stages={[{ r: 1e3, c: 10e-15 }, { r: 1e3, c: 10e-15 }, { r: 1e3, c: 10e-15 }]} /> },
+  { id: 'path', title: 'Logical-effort path', el: <EffortPathFig stages={[{ name: 'NAND2', b: 2 }, { name: 'NAND3', b: 3 }, { name: 'NOR2' }]} caps={[8, 15, 15]} cout={45} delays={[7, 7, 7]} /> },
+  { id: 'flop', title: 'Flip-flop timing', el: <FlopTimingFig tc={1e-9} tpcq={80e-12} tpd={700e-12} tsetup={60e-12} tskew={40e-12} /> },
+  { id: 'dyn', title: 'Dynamic gate', el: <DynamicGateFig cx /> },
+  { id: 'pass', title: 'Pass gates', el: <PassGateFig vdd={1.8} vtn={0.45} vtp={0.45} /> },
+  { id: 'sram', title: '6T SRAM cell', el: <SramCellFig q={0} reading bump={0.12} /> },
 ];
 
 export function Gallery() {

@@ -40,7 +40,6 @@ export function LearnIndex() {
           </div>
         </section>
       ))}
-      <p className="small muted">Units U6–U12 and the handout lectures arrive in the next milestones.</p>
     </div>
   );
 }

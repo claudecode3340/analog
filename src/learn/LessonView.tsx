@@ -155,6 +155,7 @@ export function LessonView({ id }: { id: string }) {
             </p>
             <p className="small muted refs">
               {lesson.refs.razavi && <>Razavi 2nd ed {lesson.refs.razavi} · </>}
+              {lesson.refs.book && <>{lesson.refs.book} · </>}
               {lesson.refs.notes && <>Your notes: {lesson.refs.notes} · </>}
               {lesson.refs.conversation && <>From your tutoring chat: {lesson.refs.conversation}</>}
             </p>

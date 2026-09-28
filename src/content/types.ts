@@ -30,7 +30,7 @@ export interface Lesson {
   title: string;
   minutes: number;
   /** Where this lives in your sources. */
-  refs: { razavi?: string; notes?: string; conversation?: string };
+  refs: { razavi?: string; book?: string; notes?: string; conversation?: string };
   /** 1. Why you need this: one sentence tied to a real tutorial/exam question. */
   why: string;
   /** 2. The picture. */
@@ -55,7 +55,7 @@ export interface Unit {
   id: string;
   title: string;
   short: string;
-  group: 'foundations' | 'handout';
+  group: 'foundations' | 'handout' | 'digital';
   lessons: string[];
   prereqs: string[];
   /** Handout reference, e.g. "Handout L4 · 1st ed §9.2.4–9.2.5 · 2nd ed §9.2.4–9.2.6" */

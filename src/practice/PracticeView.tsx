@@ -26,6 +26,12 @@ function bankGroup(p: Problem): string {
 const GROUP_ORDER = ['Exam and quizzes', 'Tutorial 1', 'Tutorial 2', 'Tutorial 3', 'Tutorial 4', 'Tutorial 5', 'Tutorial 6', 'Tutorial 7', 'Tutorial 8', 'Problem Set 1 (L1–L4)', 'Problem Set 2 (L8–L14)', 'Problem Set 3 (digital)', 'Your lecture notes', 'Razavi examples', 'Razavi end-of-chapter problems', 'Digital VLSI examples', 'Lab sheets (calculations)', 'Questions from our chat', 'Worked examples'];
 const BANK_GROUPS: Array<[string, Problem[]]> = GROUP_ORDER.map((g) => [g, BANK.filter((b) => bankGroup(b) === g)] as [string, Problem[]]).filter(([, xs]) => xs.length > 0);
 
+const TOPIC_GROUPS: Array<[string, (g: string) => boolean]> = [
+  ['Foundations (U0–U12)', (g) => g === 'foundations'],
+  ['Op amps (L1–L14)', (g) => g === 'handout'],
+  ['Digital VLSI (L15–L38)', (g) => g === 'digital'],
+];
+
 type Source = { kind: 'gen'; id: string } | { kind: 'mix' } | { kind: 'bank'; id: string };
 
 export function PracticeView() {
@@ -74,16 +80,20 @@ export function PracticeView() {
             </details>
           ))}
           <div className="eyebrow">By topic</div>
-          {GENERATORS.map((g) => {
-            const open = available.includes(g);
+          {TOPIC_GROUPS.map(([label, test]) => {
+            const gens = GENERATORS.filter((g) => test(UNIT_BY_ID[g.unit]?.group ?? 'foundations'));
             return (
-              <button key={g.id} type="button" disabled={!open} className={`menu-item ${source.kind === 'gen' && source.id === g.id ? 'active' : ''}`} onClick={() => { setSource({ kind: 'gen', id: g.id }); setSeed(newSeed()); }}>
-                <span className="menu-unit">{g.unit}</span>
-                <span>
-                  {open ? '' : '🔒 '}
-                  {g.title}
-                </span>
-              </button>
+              <details key={label} className="bank-group" open={source.kind === 'gen' && gens.some((g) => g.id === source.id)}>
+                <summary>
+                  {label} <span className="badge">{gens.length}</span>
+                </summary>
+                {gens.map((g) => (
+                  <button key={g.id} type="button" className={`menu-item ${source.kind === 'gen' && source.id === g.id ? 'active' : ''}`} onClick={() => { setSource({ kind: 'gen', id: g.id }); setSeed(newSeed()); }}>
+                    <span className="menu-unit">{g.unit}</span>
+                    <span>{g.title}</span>
+                  </button>
+                ))}
+              </details>
             );
           })}
         </aside>

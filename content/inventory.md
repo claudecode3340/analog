@@ -319,3 +319,10 @@ Chart-based sizing (V* and gm/ID charts) depends on your own simulation data, so
 **Lec 12 (L8)** also has the replica CMFB (M14–M15 copy M11–M13 with VREF; M16–M18 fix VDS): now lesson `l8-replica` and PS2 P5.
 
 **Problem Set 2 (L8–L14)** added: P1 telescopic slew, P2 two-pole PM at β = 1 and 0.2, P3 compensating the Lec 17 three-pole amplifier, P4 compensating a two-stage built on the exam OTA, P5 replica CMFB, P6 folded-cascode noise.
+
+## 10. Digital half (handout L15–L38): built from the textbooks
+
+No digital lecture notes, tutorials or books are in `source/` yet (the handout cites Kang & Leblebici 3rd ed and Weste & Harris). Every digital lesson, generator and Problem Set 3 item is written from the standard treatments and flagged in the app. Notation: VM for the inverter switching threshold (Kang calls it Vth; here Vth stays the transistor threshold), kR = kn/kp, τPHL/τPLH, Weste’s g, h, p, F, f̂.
+
+**Flag 16:** carry-skip and ripple delay formulas follow Weste & Harris §11.2.2 with unit delays; check them against the lecture when it happens.
+**Flag 17:** VIL/VIH of an unsymmetric CMOS inverter are computed from the exact square-law VTC (slope −1 points); Kang also gives closed forms. They agree to the displayed precision for the symmetric case ((3VDD + 2Vth)/8, (5VDD − 2Vth)/8), which is tested.

@@ -105,7 +105,7 @@ export function PathView() {
       <div className="path-columns">
       <section>
       <h2 className="path-heading">Foundations</h2>
-      <p className="muted small">Build these first. Each unit unlocks when the one before it is mastered.</p>
+      <p className="muted small">Build these first. Everything is open: go anywhere, the order is only a suggestion.</p>
       <ol className="path">
         {UNITS.filter((u) => u.group === 'foundations').map((u) => (
           <UnitRow key={u.id} id={u.id} />
@@ -118,6 +118,13 @@ export function PathView() {
       <p className="muted small">Numbered as in the course handout. The matching pages of your own notes are shown on each lecture.</p>
       <ol className="path">
         {UNITS.filter((u) => u.group === 'handout').map((u) => (
+          <UnitRow key={u.id} id={u.id} />
+        ))}
+      </ol>
+      <h2 className="path-heading">Digital VLSI (L15–L38)</h2>
+      <p className="muted small">After the mid-sem: Kang & Leblebici and Weste & Harris. No notes yet: built from the textbooks.</p>
+      <ol className="path">
+        {UNITS.filter((u) => u.group === 'digital').map((u) => (
           <UnitRow key={u.id} id={u.id} />
         ))}
       </ol>

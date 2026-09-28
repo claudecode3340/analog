@@ -3,7 +3,7 @@
  * Accepts: "90u", "90 µA", "90e-6", "0.09 mA", "9k", "9 kΩ", "1.2M", "-5.5", "358 kHz", "0.6 mA/V", "30 V/µs".
  */
 
-export type Unit = 'V' | 'A' | 'Ω' | 'S' | 'F' | 'Hz' | 'rad/s' | 's' | 'V/V' | 'V/s' | 'A/V²' | '°' | 'dB' | 'nV/√Hz' | '';
+export type Unit = 'V' | 'A' | 'Ω' | 'S' | 'F' | 'Hz' | 'rad/s' | 's' | 'V/V' | 'V/s' | 'A/V²' | '°' | 'dB' | 'nV/√Hz' | 'W' | 'J' | '';
 
 const PREFIX: Record<string, number> = {
   p: 1e-12,
@@ -25,6 +25,8 @@ function unitOf(str: string, expected: Unit): Unit | undefined {
   if (/^hz$/i.test(str)) return 'Hz';
   if (/^(°|deg|degrees?)$/i.test(str)) return '°';
   if (/^db$/i.test(str)) return 'dB';
+  if (str === 'W' || /^watts?$/i.test(str)) return 'W';
+  if (str === 'J' || /^joules?$/i.test(str)) return 'J';
   if (/^nv\/(√|sqrt|rt)\(?hz\)?$/i.test(str)) return 'nV/√Hz';
   if (/^rad\/s$/i.test(str)) return 'rad/s';
   if (/^v\/v$/i.test(str)) return 'V/V';
@@ -91,7 +93,7 @@ const FORMAT_PREFIXES: Array<[number, string]> = [
 ];
 
 /** Units that take SI prefixes on display. Gains and ratios are shown plainly. */
-const PREFIXED: Unit[] = ['V', 'A', 'Ω', 'S', 'F', 'Hz', 'rad/s', 's'];
+const PREFIXED: Unit[] = ['V', 'A', 'Ω', 'S', 'F', 'Hz', 'rad/s', 's', 'W', 'J'];
 
 function sigfig(x: number, sig: number): string {
   return Number(x.toPrecision(sig)).toString().replace('-', '−');

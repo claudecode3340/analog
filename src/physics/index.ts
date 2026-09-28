@@ -13,3 +13,4 @@ export * from './nodes.helpers';
 export * from './solvers2';
 export * from './stability';
 export * from './noise';
+export * from './digital';
