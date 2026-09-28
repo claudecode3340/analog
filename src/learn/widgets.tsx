@@ -18,6 +18,7 @@ import { WIDGETS2 } from './widgets2';
 import { WIDGETS3 } from './widgets3';
 import { WIDGETS4 } from './widgets4';
 import { WIDGETS5 } from './widgets5';
+import { WIDGETS6 } from './widgets6';
 import {
   currentDivider,
   drainCurrent,
@@ -303,4 +304,5 @@ export const WIDGETS: Record<string, (p: any) => React.ReactElement> = {
   ...WIDGETS3,
   ...WIDGETS4,
   ...WIDGETS5,
+  ...WIDGETS6,
 };

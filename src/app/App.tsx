@@ -9,6 +9,7 @@ import { ExamView } from '../review/ExamView';
 import { CascodeLab, CsLab, ImpedanceLab } from '../labs/M2Labs';
 import { DiffPairLab, FeedbackLab, HeadroomLab, OtaLab } from '../labs/M3Labs';
 import { FoldedLab } from '../labs/M4Labs';
+import { StabilityLab } from '../labs/M5Labs';
 import { PracticeView } from '../practice/PracticeView';
 import { ReviewView } from '../review/ReviewView';
 import { Gallery } from './Gallery';
@@ -74,7 +75,7 @@ export function App() {
       break;
     case 'labs':
       {
-        const LAB: Record<string, () => React.ReactElement> = { mosfet: MosfetLab, dc: DcStepper, impedance: ImpedanceLab, cs: CsLab, cascode: CascodeLab, diffpair: DiffPairLab, ota: OtaLab, feedback: FeedbackLab, headroom: HeadroomLab, folded: FoldedLab };
+        const LAB: Record<string, () => React.ReactElement> = { mosfet: MosfetLab, dc: DcStepper, impedance: ImpedanceLab, cs: CsLab, cascode: CascodeLab, diffpair: DiffPairLab, ota: OtaLab, feedback: FeedbackLab, headroom: HeadroomLab, folded: FoldedLab, stability: StabilityLab };
         const L = arg ? LAB[arg] : undefined;
         view = L ? <L /> : <LabsIndex />;
       }

@@ -1,7 +1,7 @@
 /**
  * Lectures after the mid-sem that your notes already cover (L5–L9): two-stage op amp, gain boosting,
  * CMFB (concept and techniques), input range and slew rate. Tutorials 3–6 and Quiz 2 are the worked
- * examples. L10–L14 stay locked placeholders until you send those notes.
+ * examples. L10–L14 live in stability.ts.
  */
 import type { Lesson } from '../types';
 
@@ -151,7 +151,7 @@ Differential signals do not disturb it: $V_{out1} + V_{out2}$ is unchanged when 
     unit: 'L9',
     title: 'Slew rate: a fixed tap before the exponential',
     minutes: 12,
-    refs: { razavi: '§9.9', conversation: 'Tutorial 6' },
+    refs: { razavi: '§9.9', notes: 'Lec 13–14', conversation: 'Tutorial 6' },
     why: 'Tutorial 6 Q1–Q3: when does an op amp slew, how long, and what limits the slew rate of a folded cascode?',
     picture: {
       visual: { widget: 'settleMini' },

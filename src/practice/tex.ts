@@ -2,6 +2,8 @@ import { formatNumber, formatSI, type Unit } from './units';
 
 /** A quantity as TeX: texSI(90e-6,'A') → "90\,\mathrm{\mu A}". */
 export function texSI(x: number, unit: Unit, sig = 3): string {
+  if (unit === '°') return `${texNum(x, sig)}^\\circ`;
+  if (unit === 'nV/√Hz') return `${texNum(x, sig)}\\,\\mathrm{nV/\\sqrt{Hz}}`;
   if (unit === 'A/V²') return `${Number((x * 1e6).toPrecision(sig + 2))}\\,\\mathrm{\\mu A/V^2}`;
   const s = formatSI(x, unit, sig);
   const sp = s.indexOf(' ');

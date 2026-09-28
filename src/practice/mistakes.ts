@@ -100,6 +100,30 @@ export const MISTAKES: Record<MistakeId, { title: string; hint: string }> = {
     title: 'Used Vov where the full VGS was needed',
     hint: 'A node voltage drop across a gate-source junction is the whole VGS = Vth + Vov, not just Vov. Only stacked drain-source headroom costs Vov.',
   },
+  phaseNoInversion: {
+    title: 'Phase margin measured from the wrong line',
+    hint: 'PM = 180° + ∠βA at ωgx. The inversion of negative feedback is already the first 180°; the margin is how far the loop phase is from −180°, not from 0°.',
+  },
+  usedANotBetaA: {
+    title: 'Used A where the loop gain βA was needed',
+    hint: 'Stability is about the LOOP gain βA. The gain crossover is where |βA| = 1, i.e. where |A| meets the 1/β line, not where |A| = 1 (unless β = 1).',
+  },
+  rhpZeroAsLead: {
+    title: 'Treated the right-half-plane zero as helpful',
+    hint: 'A RHP zero (like Gm2/CC) lifts the magnitude like a zero but LAGS the phase like a pole: subtract atan(ω/ωz) from the phase, do not add it.',
+  },
+  millerNoPlusOne: {
+    title: 'Miller multiplier slip',
+    hint: 'The capacitor sees the input swing plus the amplified output swing: CC·(1 + A2) at the input node, not CC·A2 (close for big A2, wrong for small).',
+  },
+  noiseOneHalf: {
+    title: 'Counted only one half of the pair',
+    hint: 'Both halves of a differential pair make noise, and their noise powers add: 8kTγ(…) for the pair, not 4kTγ(…).',
+  },
+  wrongPmTan: {
+    title: 'Mixed up the phase-margin rule',
+    hint: 'With the dominant pole giving −90°, PM = 90° − atan(ωu/ωp2): 45° needs ωp2 = ωu, 60° needs ωp2 = 1.73·ωu (≈ 2.2·ωu once the RHP zero at 10ωu is included).',
+  },
 };
 
 /**

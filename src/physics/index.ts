@@ -11,3 +11,5 @@ export * from './transfer';
 export * from './nodes';
 export * from './nodes.helpers';
 export * from './solvers2';
+export * from './stability';
+export * from './noise';

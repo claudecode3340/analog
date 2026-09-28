@@ -274,7 +274,7 @@ export function LessonView({ id }: { id: string }) {
                   <p className="small">
                     {firstTryRight}/{totalItems} right first time.{' '}
                     {mastered
-                      ? 'The next lessons are unlocked and these cards are in your Review deck.'
+                      ? 'These cards are now in your Review deck.'
                       : 'Mastery needs 80%, including a number answer. Try a fresh set. The cards are already in Review.'}
                   </p>
                 </div>

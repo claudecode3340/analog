@@ -16,6 +16,7 @@ import {
   WaterAnalogy,
 } from '../circuits/figures';
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from '../circuits/figures2';
+import { BarkhausenFig, ClosedStepFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from '../circuits/figures5';
 import { DrawStyleContext } from '../circuits/primitives';
 import { VoltageLadder } from '../circuits/schematic';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from '../circuits/figures3';
@@ -110,6 +111,18 @@ export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactEl
   { id: 'noninv', title: 'Non-inverting amplifier', el: <NonInvertingFig r1={9e3} r2={1e3} a={1000} cl={2e-12} /> },
   { id: 'gainboost', title: 'Gain-boosted cascode (Tut 4 Q1)', el: <GainBoostFig vx={T41.vx} vg2={T41.vg2} vout={1.8} i1={100e-6} i2={0.5e-3} /> },
   { id: 'cmfb', title: 'Triode CMFB (Tut 5 Q1)', el: <CmfbTriodeFig vout1={1.5} vout2={1.5} vp={0.1} wl={T51.wl} /> },
+  { id: 'loop-2p', title: 'Loop Bode, two poles (PM)', el: <LoopBodeFig spec={{ a0: 1000, poles: [1e5, 50e6], beta: 1 }} /> },
+  { id: 'loop-3p', title: 'Loop Bode, three poles (PM, GM)', el: <LoopBodeFig spec={{ a0: 1e4, poles: [1e4, 5e6, 30e6], beta: 0.1 }} /> },
+  { id: 'loop-notes', title: 'Loop Bode, |A| and 1/β (Lec 17)', el: <LoopBodeFig mode="notes" spec={{ a0: 1e5, poles: [1e3, 1e6, 1e7], beta: 0.01 }} /> },
+  { id: 'loop-unstable', title: 'Loop Bode, negative PM', el: <LoopBodeFig spec={{ a0: 1e4, poles: [1e4, 1e6, 3e6], beta: 1 }} /> },
+  { id: 'closed-step', title: 'Closed-loop steps', el: <ClosedStepFig specs={[{ spec: { a0: 1000, poles: [1e5, 1.1e8], beta: 1 }, label: 'PM 45°' }, { spec: { a0: 1000, poles: [1e5, 1e9], beta: 1 }, label: 'PM 84°' }]} /> },
+  { id: 'barkhausen', title: 'Barkhausen', el: <BarkhausenFig loopGain={1} lag={180} /> },
+  { id: 'miller-block', title: 'Miller block (Lec 17)', el: <MillerBlockFig /> },
+  { id: 'miller-eq', title: 'Miller split', el: <MillerBlockFig equivalent a2={50} /> },
+  { id: 'twostage-miller', title: 'Two-stage with CC', el: <TwoStageMillerFig /> },
+  { id: 'twostage-rz', title: 'Two-stage with CC and Rz', el: <TwoStageMillerFig rz /> },
+  { id: 'replica', title: 'Replica CMFB (Lec 12)', el: <ReplicaCmfbFig vref={1.2} vcm={1.2} /> },
+  { id: 'noise-share', title: 'Noise shares', el: <NoiseShareFig items={[{ label: 'M1, M2', value: 3, tone: 'n' }, { label: 'M3, M4', value: 1.2, tone: 'p' }, { label: 'M5', value: 0, tone: 'muted' }]} /> },
 ];
 
 export function Gallery() {

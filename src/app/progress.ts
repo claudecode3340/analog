@@ -1,6 +1,6 @@
 /**
- * Mastery gating and "your next step". A unit unlocks when every lesson in its prerequisite units is
- * mastered (or the manual override is on). Placeholder units stay locked until they have lessons.
+ * Mastery state and "your next step". Every unit is open (the student asked to roam freely); the
+ * suggested order still follows the curriculum, and mastery is still tracked and shown.
  */
 import { LESSONS, UNITS, UNIT_BY_ID } from '../content';
 import type { Unit } from '../content/types';
@@ -15,11 +15,7 @@ export function unitMastered(u: Unit, p: Progress): boolean {
 export function unitState(u: Unit, p: Progress = getProgress()): UnitState {
   if (u.placeholder || u.lessons.length === 0) return 'coming';
   if (unitMastered(u, p)) return 'mastered';
-  const prereqsOk = u.prereqs.every((id) => {
-    const pu = UNIT_BY_ID[id];
-    return pu.lessons.length === 0 || unitMastered(pu, p);
-  });
-  return prereqsOk || p.settings.unlockAll ? 'learning' : 'locked';
+  return 'learning';
 }
 
 export function lessonUnlocked(lessonId: string, p: Progress = getProgress()): boolean {

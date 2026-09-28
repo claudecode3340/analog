@@ -65,7 +65,13 @@ export type MistakeId =
   | 'wrongTerminalRule'
   | 'issNotHalf'
   | 'dbConversion'
-  | 'vovNotVgs';
+  | 'vovNotVgs'
+  | 'phaseNoInversion'
+  | 'usedANotBetaA'
+  | 'rhpZeroAsLead'
+  | 'millerNoPlusOne'
+  | 'noiseOneHalf'
+  | 'wrongPmTan';
 
 export interface WrongAnswer {
   mistake: MistakeId;

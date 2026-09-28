@@ -3,7 +3,7 @@
  * Accepts: "90u", "90 µA", "90e-6", "0.09 mA", "9k", "9 kΩ", "1.2M", "-5.5", "358 kHz", "0.6 mA/V", "30 V/µs".
  */
 
-export type Unit = 'V' | 'A' | 'Ω' | 'S' | 'F' | 'Hz' | 'rad/s' | 's' | 'V/V' | 'V/s' | 'A/V²' | '';
+export type Unit = 'V' | 'A' | 'Ω' | 'S' | 'F' | 'Hz' | 'rad/s' | 's' | 'V/V' | 'V/s' | 'A/V²' | '°' | 'dB' | 'nV/√Hz' | '';
 
 const PREFIX: Record<string, number> = {
   p: 1e-12,
@@ -23,6 +23,9 @@ function unitOf(str: string, expected: Unit): Unit | undefined {
   if (str === 'S' || /^(siemens?|mho|a\/v)$/i.test(str)) return expected === 's' ? 's' : 'S';
   if (str === 's' || /^(sec|secs|seconds?)$/i.test(str)) return expected === 'S' ? 'S' : 's';
   if (/^hz$/i.test(str)) return 'Hz';
+  if (/^(°|deg|degrees?)$/i.test(str)) return '°';
+  if (/^db$/i.test(str)) return 'dB';
+  if (/^nv\/(√|sqrt|rt)\(?hz\)?$/i.test(str)) return 'nV/√Hz';
   if (/^rad\/s$/i.test(str)) return 'rad/s';
   if (/^v\/v$/i.test(str)) return 'V/V';
   if (/^v\/s$/i.test(str)) return 'V/s';

@@ -65,6 +65,12 @@ describe('curriculum', () => {
     const ids = new Set(LESSONS.map((l) => l.id));
     for (const [k, g] of Object.entries(GLOSSARY)) expect(ids.has(g.firstIn), `${k} → ${g.firstIn}`).toBe(true);
   });
+  it('glossary TeX survived escaping (no control characters, no bare command names)', () => {
+    for (const [k, g] of Object.entries(GLOSSARY)) {
+      expect(g.tex, k).not.toMatch(/[\u0000-\u001f]/);
+      expect(g.tex, k).not.toMatch(/^(overline|beta|omega|gamma|mu|lambda|tau|varepsilon)/);
+    }
+  });
   it('card ids are unique', () => {
     const ids = LESSONS.flatMap((l) => l.lockIn.cards.map((c) => c.id));
     expect(new Set(ids).size).toBe(ids.length);

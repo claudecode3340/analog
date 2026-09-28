@@ -299,3 +299,23 @@ used; simulator steps (Virtuoso, ADE, calculator expressions, ADT) are skipped a
 **Flag 12 (Lab 8):** the sheet lists COUT = 4.88 pF, but GM/(2π·fu) = 159 µS/(2π·5 MHz) = 5.06 pF; 4.88 pF would need GM ≈ 153 µS. Worth asking your instructor.
 
 Chart-based sizing (V* and gm/ID charts) depends on your own simulation data, so the app uses clearly labelled *example* chart readings to practise the ratio-and-proportion method.
+
+## 9. Lecture notes 13–17 (uploaded later) → L9–L14
+
+| Notes | Date | Content | Handout lecture | App |
+|---|---|---|---|---|
+| Lec 13 | 07 Sep | RC step response; closed-loop τ = CL·Rout/(1 + A·R2/(R1+R2)); 5-T OTA small vs large step; SR = ISS/CL | L9 | `l9-slew` (refs updated) |
+| Lec 14 | 09 Sep | Slew of the fully differential telescopic (each output ISS/2CL, differential ISS/CL) and folded cascode (IP); concept of stability, loop gain, Barkhausen | L9, L11 | `l9-slew`, `l11-barkhausen`, PS2 P1 |
+| Lec 15 | 11 Sep | Loop-gain Bode plots, ωgx, ωpx, gain and phase margin, one-pole systems unconditionally stable, two-pole systems | L11–L12 | `l11-multipole`, `l12-margins` |
+| Lec 16 | 16 Sep | PM → closed-loop peaking: 5° → 11.5/β, 45° → 1.3/β, 60° → 1/β; step responses | L12 | `l12-ringing`, bank `bank-lec16` |
+| Lec 17 | 18 Sep | Frequency compensation: 20log A − 20log(1/β); three-pole 100 dB example; Miller CC(1 + A2); P1′ ≈ 1/(R1A2CC); notes’ two-stage op amp (M1–M7) and its transfer function with the RHP zero (1 − sCC/Gm2) | L13–L14 | `l13-dominant`, `l13-miller`, `l14-twostage`, `l14-rz`, Stability lab |
+
+**Flag 13 (L10):** none of your notes cover PSRR or noise (handout L10, Razavi §9.11–9.12). The two L10 lessons are built from Razavi only; check against the lecture when it happens.
+
+**Flag 14 (L14):** your notes stop at the start of two-stage compensation (Lec 17). The nulling resistor, CC for 60°, and two-stage slewing come from Razavi §10.5–10.6.
+
+**Flag 15 (Razavi Ex 9.26):** the book’s numbers for the noise example could not be reproduced from the stated sizes (M1/M3 part matches with 0.125 mA per side, the M5/M7 part does not match any reading of the figure). It is not used as a regression value.
+
+**Lec 12 (L8)** also has the replica CMFB (M14–M15 copy M11–M13 with VREF; M16–M18 fix VDS): now lesson `l8-replica` and PS2 P5.
+
+**Problem Set 2 (L8–L14)** added: P1 telescopic slew, P2 two-pole PM at β = 1 and 0.2, P3 compensating the Lec 17 three-pole amplifier, P4 compensating a two-stage built on the exam OTA, P5 replica CMFB, P6 folded-cascode noise.

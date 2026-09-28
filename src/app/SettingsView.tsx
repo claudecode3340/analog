@@ -54,10 +54,6 @@ export function SettingsView() {
             <option value={0.05}>±5%</option>
           </select>
         </label>
-        <label className="check">
-          <input type="checkbox" checked={s.unlockAll} onChange={(e) => setSettings({ unlockAll: e.target.checked })} />
-          Unlock every unit (override mastery gating)
-        </label>
       </div>
 
       <h2>Your progress file</h2>

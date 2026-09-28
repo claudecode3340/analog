@@ -14,6 +14,7 @@ import {
 } from './figures';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from './figures3';
 import { CmfbTriodeFig, FoldedCascodeFig, GainBoostFig, MirrorTeleFig, NonInvertingFig, TwoStageFig } from './figures4';
+import { BarkhausenFig, ClosedStepFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from './figures5';
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from './figures2';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,6 +49,13 @@ export const FIGURES: Record<string, (props: any) => React.ReactElement> = {
   nonInverting: NonInvertingFig,
   gainBoost: GainBoostFig,
   cmfbTriode: CmfbTriodeFig,
+  loopBode: LoopBodeFig,
+  closedStep: ClosedStepFig,
+  barkhausen: BarkhausenFig,
+  millerBlock: MillerBlockFig,
+  twoStageMiller: TwoStageMillerFig,
+  replicaCmfb: ReplicaCmfbFig,
+  noiseShare: NoiseShareFig,
 };
 
 export function Figure({ kind, props, highlight }: { kind: string; props?: Record<string, unknown>; highlight?: string[] }) {

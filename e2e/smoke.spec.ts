@@ -1,7 +1,7 @@
 /** Smoke test: every page loads, every lesson can be walked from "why" to "lock it in" without errors. */
 import { expect, test } from '@playwright/test';
 
-const LESSONS = ['u0-drops', 'u0-parallel', 'u1-mosfet', 'u2-pinchoff', 'u2-squarelaw', 'u3-recipe', 'u3-pmos-design', 'u4-gm', 'u4-ro', 'u5-cs', 'u6-rules', 'u6-mirror', 'u7-loads', 'u7-degen', 'u8-follower', 'u8-cg', 'u9-cascode', 'u9-telescopic', 'u10-steering', 'u10-half', 'u10-cmrange', 'u11-ota', 'u11-ota-range', 'u12-poles', 'u12-settling', 'l1-gain', 'l1-speed', 'l1-other', 'l2-onestage', 'l2-buffer', 'l3-design', 'l3-scaling', 'l4-folding', 'l4-gain', 'l5-twostage', 'l6-boost', 'l7-cmfb', 'l8-cmfb', 'l9-slew'];
+const LESSONS = ['u0-drops', 'u0-parallel', 'u1-mosfet', 'u2-pinchoff', 'u2-squarelaw', 'u3-recipe', 'u3-pmos-design', 'u4-gm', 'u4-ro', 'u5-cs', 'u6-rules', 'u6-mirror', 'u7-loads', 'u7-degen', 'u8-follower', 'u8-cg', 'u9-cascode', 'u9-telescopic', 'u10-steering', 'u10-half', 'u10-cmrange', 'u11-ota', 'u11-ota-range', 'u12-poles', 'u12-settling', 'l1-gain', 'l1-speed', 'l1-other', 'l2-onestage', 'l2-buffer', 'l3-design', 'l3-scaling', 'l4-folding', 'l4-gain', 'l5-twostage', 'l6-boost', 'l7-cmfb', 'l8-cmfb', 'l8-replica', 'l9-slew', 'l10-psrr', 'l10-noise', 'l11-barkhausen', 'l11-multipole', 'l12-margins', 'l12-ringing', 'l13-dominant', 'l13-miller', 'l14-twostage', 'l14-rz'];
 
 test.beforeEach(async ({ page }) => {
   page.on('pageerror', (e) => {
@@ -29,7 +29,7 @@ for (const id of LESSONS) {
   });
 }
 
-for (const route of ['#/path', '#/learn', '#/labs', '#/labs/mosfet', '#/labs/dc', '#/labs/impedance', '#/labs/cs', '#/labs/cascode', '#/labs/diffpair', '#/labs/ota', '#/labs/feedback', '#/labs/headroom', '#/labs/folded', '#/practice', '#/review', '#/exam', '#/settings']) {
+for (const route of ['#/path', '#/learn', '#/labs', '#/labs/mosfet', '#/labs/dc', '#/labs/impedance', '#/labs/cs', '#/labs/cascode', '#/labs/diffpair', '#/labs/ota', '#/labs/feedback', '#/labs/headroom', '#/labs/folded', '#/labs/stability', '#/practice', '#/review', '#/exam', '#/settings']) {
   test(`page ${route}`, async ({ page }) => {
     const errors: string[] = [];
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
