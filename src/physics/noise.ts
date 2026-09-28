@@ -80,3 +80,21 @@ export function psrrDb(psrr: number): number {
 export function replicaCmfbOutputCm(p: { vref: number; vth: number; wl12: number; wl13: number; wl15: number }): number {
   return p.vth + (p.wl15 * (p.vref - p.vth)) / (p.wl12 + p.wl13);
 }
+
+/** Thermal noise voltage of a resistor: 4kTR (V²/Hz), flat (“white”). */
+export function resistorNoise(r: number, temp = 300): number {
+  return 4 * K_BOLTZMANN * temp * r;
+}
+
+/**
+ * Total rms noise on C from a resistor R (Razavi HO #10 example): integrate 4kTR over the RC filter's noise
+ * bandwidth (π/2)·1/(2πRC). R cancels: a bigger R is noisier per hertz but lets through fewer hertz.
+ */
+export function rcNoiseRms(r: number, c: number, temp = 300): number {
+  return Math.sqrt(integratedWhiteNoise(resistorNoise(r, temp), 1 / (2 * Math.PI * r * c)));
+}
+
+/** Uncorrelated noise sources add as powers: √(v1² + v2² + …) for rms values. */
+export function addUncorrelated(rms: number[]): number {
+  return Math.sqrt(rms.reduce((a, v) => a + v * v, 0));
+}

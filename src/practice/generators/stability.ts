@@ -5,13 +5,19 @@
  */
 import {
   a0ForPhaseMargin,
+  addUncorrelated,
   ccForPhaseMargin,
+  clForPhaseMargin,
   dominantPoleHand,
   gainCrossover,
   gmFromIdVov,
   inputNoisePair,
   millerTwoStage,
   nvPerRtHz,
+  oneStageLoop,
+  oneStagePmHand,
+  rcNoiseRms,
+  resistorNoise,
   peakingFactor,
   phaseMargin,
   psrr5T,
@@ -186,6 +192,63 @@ export const genNoise: Generator = {
       ],
     };
     return { problem, sane: true };
+  },
+};
+
+/* ─── L10: what noise is (Razavi HO #10): 4kTR, noise bandwidth, kT/C, powers add ─── */
+
+export const genKtc: Generator = {
+  id: 'l10-ktc',
+  unit: 'L10',
+  title: 'kT/C: the noise a resistor leaves on a capacitor',
+  make(rng: Rng): GeneratorOutput {
+    const r = pick(rng, [200, 500, 1e3, 2e3, 5e3, 10e3]);
+    const c = pick(rng, [0.2e-12, 0.5e-12, 1e-12, 2e-12, 5e-12]);
+    const vamp = pick(rng, [20e-6, 30e-6, 50e-6, 80e-6]);
+    const T = 300;
+    const kT = K_BOLTZMANN * T;
+    const dens = Math.sqrt(resistorNoise(r, T)) * 1e9;
+    const f3 = 1 / (2 * Math.PI * r * c);
+    const vt = rcNoiseRms(r, c, T);
+    const tot = addUncorrelated([vt, vamp]);
+    // Independent route: the closed form √(kT/C), and the Pythagoras sum written out.
+    const vtH = Math.sqrt(kT / c);
+    const totH = Math.sqrt(vtH * vtH + vamp * vamp);
+    const problem: Problem = {
+      ...base('l10-ktc', 'L10', 'kT/C: the noise a resistor leaves on a capacitor'),
+      statement: `A sampling switch with on-resistance R = ${fmtR(r)} charges C = ${fmtF(c)} (T = 300 K). Find (a) the resistor’s noise density √(4kTR) in nV/√Hz, (b) the RC filter’s f−3dB, (c) the total rms noise on C, and (d) the total when an amplifier adds another ${(vamp * 1e6).toFixed(0)} µV rms of its own (independent).`,
+      figure: { kind: 'ktcSpectrum', props: { r, c } },
+      givens: [
+        { sym: 'R', value: r, unit: 'Ω' },
+        { sym: 'C', value: c, unit: 'F' },
+        { sym: 'v_{amp}', value: vamp, unit: 'V' },
+      ],
+      unknowns: [
+        { key: 'dens', sym: '\sqrt{4kTR}', label: 'Noise density of R', unit: 'nV/√Hz' },
+        { key: 'f3', sym: 'f_{-3dB}', label: 'RC bandwidth', unit: 'Hz' },
+        { key: 'vt', sym: 'v_{n,C}', label: 'Total rms noise on C', unit: 'V' },
+        { key: 'tot', sym: 'v_{n,tot}', label: 'Total with the amplifier', unit: 'V' },
+      ],
+      answers: { dens, f3, vt, tot },
+      wrong: {
+        vt: [{ mistake: 'noiseBwNoPiOver2', value: Math.sqrt(resistorNoise(r, T) * f3) }],
+        tot: [{ mistake: 'noiseAmplitudesAdded', value: vt + vamp }],
+        f3: [{ mistake: 'forgot2pi', value: 1 / (r * c) }],
+      },
+      steps: [
+        { tag: '·', title: 'Height of the spectrum: 4kTR (flat: “white”)', tex: `\sqrt{4kTR} = \sqrt{4(${texNum(kT)})(${r})} = ${texSI(Math.sqrt(4 * kT * r) * 1e9, 'nV/√Hz')}`, produces: 'dens', value: Math.sqrt(4 * kT * r) * 1e9 },
+        { tag: '·', title: 'Width: the RC filter cuts it off at 1/(2πRC)', tex: `f_{-3dB} = \frac{1}{2\pi RC} = ${texSI(1 / (2 * Math.PI * r * c), 'Hz')}`, produces: 'f3', value: 1 / (2 * Math.PI * r * c) },
+        { tag: '·', title: 'Area = height² × noise bandwidth (π/2)·f−3dB: R cancels, leaving kT/C', tex: `4kTR\cdot\frac{\pi}{2}\cdot\frac{1}{2\pi RC} = \frac{kT}{C} \Rightarrow \sqrt{kT/C} = ${texSI(vtH, 'V')}`, produces: 'vt', value: vtH },
+        { tag: '✓', title: 'Independent sources add as powers (Pythagoras), not amplitudes', tex: `\sqrt{(${texSI(vtH, 'V')})^2 + (${texSI(vamp, 'V')})^2} = ${texSI(totH, 'V')}`, produces: 'tot', value: totH },
+      ],
+      hints: [
+        'Picture the spectrum: a flat height 4kTR, cut off by the RC filter. The total is the area.',
+        'A bigger R is noisier per hertz but lets through fewer hertz. What is left depends only on C.',
+        'vn = √(kT/C); independent noises add as √(v1² + v2²).',
+        `kT = ${texNum(kT)} J at 300 K.`,
+      ],
+    };
+    return { problem, sane: Math.abs(vt - vtH) / vtH < 1e-9 && Math.abs(tot - totH) / totH < 1e-9 };
   },
 };
 
@@ -509,6 +572,70 @@ export const genTwoStageComp: Generator = {
   },
 };
 
+/* ─── L13: a one-stage op amp is compensated by its own load (Razavi HO #12) ─── */
+
+export const genOneStage: Generator = {
+  id: 'l13-onestage',
+  unit: 'L13',
+  title: 'One-stage op amp: CL is the dominant pole; find PM and the smallest CL',
+  make(rng: Rng): GeneratorOutput {
+    const iss = pick(rng, [100e-6, 200e-6, 400e-6, 500e-6]);
+    const vov = pick(rng, [0.15, 0.2, 0.25]);
+    const gm = iss / vov; // each input device: 2(ISS/2)/Vov
+    const rout = pick(rng, [0.5e6, 1e6, 2e6]);
+    const fnd = pick(rng, [100e6, 200e6, 300e6, 500e6]);
+    const beta = pick(rng, [1, 1, 0.5]);
+    const cl = pick(rng, [0.5e-12, 1e-12, 2e-12, 3e-12]);
+    const pmT = pick(rng, [60, 70]);
+    const gbw = gm / (2 * Math.PI * cl);
+    const pm = oneStagePmHand({ gm, cl, fnd, beta });
+    const clMin = clForPhaseMargin({ gm, fnd, pm: pmT, beta });
+    const exact = phaseMargin(oneStageLoop({ gm, rout, cl, fnd, beta }));
+    // Hand route.
+    const fgxH = (beta * gm) / (2 * Math.PI * cl);
+    const pmH = 90 - deg(Math.atan(fgxH / fnd));
+    const clH = (beta * gm) / (2 * Math.PI * fnd * Math.tan(rad(90 - pmT)));
+    const problem: Problem = {
+      ...base('l13-onestage', 'L13', 'One-stage op amp: CL is the dominant pole'),
+      statement: `A telescopic op amp has ISS = ${formatUA(iss)}, input overdrive ${vov} V, Rout = ${fmtR(rout)} and drives CL = ${fmtF(cl)}. Its only other pole (the mirror/cascode node) is at ${fmtHz(fnd)}. It is used with β = ${beta}. With the hand method (the output pole gives −90° at ωgx, and fgx ≈ β·gm/(2πCL)), find (a) gm, (b) the GBW in Hz, (c) the phase margin, and (d) the smallest CL for PM = ${pmT}°.`,
+      figure: { kind: 'loopBode', props: { spec: oneStageLoop({ gm, rout, cl, fnd, beta }) } },
+      givens: [
+        { sym: 'I_{SS}', value: iss, unit: 'A' },
+        { sym: 'V_{ov1}', value: vov, unit: 'V' },
+        { sym: 'R_{out}', value: rout, unit: 'Ω' },
+        { sym: 'C_L', value: cl, unit: 'F' },
+        { sym: 'f_{nd}', value: fnd, unit: 'Hz' },
+        { sym: '\beta', value: beta, unit: '' },
+      ],
+      unknowns: [
+        { key: 'gm', sym: 'g_{m1}', label: 'gm of the input pair', unit: 'S' },
+        { key: 'gbw', sym: 'f_u', label: 'GBW = gm/(2πCL)', unit: 'Hz' },
+        { key: 'pm', sym: 'PM', label: 'Phase margin (hand method)', unit: '°', tol: 0.01 },
+        { key: 'clMin', sym: 'C_{L,min}', label: `Smallest CL for PM = ${pmT}°`, unit: 'F' },
+      ],
+      answers: { gm, gbw, pm, clMin },
+      wrong: {
+        gm: [{ mistake: 'issNotHalf', value: (2 * iss) / vov }],
+        gbw: [{ mistake: 'forgot2pi', value: gm / cl }],
+        clMin: [{ mistake: 'wrongPmTan', value: (beta * gm) / (2 * Math.PI * fnd * Math.tan(rad(pmT))) }],
+      },
+      steps: [
+        { tag: 'C', title: 'Each input device carries ISS/2: gm = 2(ISS/2)/Vov', tex: `g_{m1} = \frac{I_{SS}}{V_{ov1}} = ${texSI(iss / vov, 'S')}`, produces: 'gm', value: iss / vov },
+        { tag: 'D', title: 'The output node is the dominant pole; above it the gain is gm/(ωCL)', tex: `f_u = \frac{g_{m1}}{2\pi C_L} = ${texSI((iss / vov) / (2 * Math.PI * cl), 'Hz')}`, produces: 'gbw', value: (iss / vov) / (2 * Math.PI * cl) },
+        { tag: '·', title: 'Loop crossover fgx ≈ β·fu; the internal pole takes atan(fgx/fnd)', tex: `PM = 90^\circ - \tan^{-1}\frac{${texSI(fgxH, 'Hz')}}{${texSI(fnd, 'Hz')}} = ${texSI(pmH, '°')}`, produces: 'pm', value: pmH },
+        { tag: '✓', title: `For ${pmT}°: the internal pole may use ${90 - pmT}°, so fgx = fnd·tan(${90 - pmT}°); CL = β·gm/(2π·fgx)`, tex: `C_L = \frac{\beta g_{m1}}{2\pi f_{nd}\tan(${90 - pmT}^\circ)} = ${texSI(clH, 'F')}`, produces: 'clMin', value: clH },
+      ],
+      hints: [
+        'In a one-stage op amp the load capacitor is the compensation: the output node is the dominant pole.',
+        'A bigger CL lowers fu = gm/(2πCL) while the internal pole stays put: more margin, less speed.',
+        'PM ≈ 90° − atan(β·fu/fnd); for a target PM, fnd·tan(90° − PM) = β·gm/(2πCL).',
+        `gm = ISS/Vov = ${(gm * 1e3).toFixed(2)} mS.`,
+      ],
+    };
+    return { problem, sane: Math.abs(pm - pmH) < 1e-9 && Math.abs(clMin - clH) / clH < 1e-9 && pm > 20 && pm < 88 && Math.abs(exact - pm) < 5 && gm * rout > 100 };
+  },
+};
+
 function fmtHz(f: number) {
   const units: Array<[number, string]> = [[1e9, 'GHz'], [1e6, 'MHz'], [1e3, 'kHz'], [1, 'Hz']];
   const [k, u] = units.find(([k]) => f >= k) ?? [1, 'Hz'];
@@ -527,4 +654,4 @@ function fmtF(x: number) {
   return `${Number((x * 1e12).toPrecision(3))} pF`;
 }
 
-export const STABILITY_GENERATORS: Generator[] = [genReplica, genPsrr, genNoise, genOnePoleLoop, genTwoPolePm, genA0ForPm, genDominant, genMiller, genTwoStageComp];
+export const STABILITY_GENERATORS: Generator[] = [genReplica, genPsrr, genKtc, genNoise, genOnePoleLoop, genTwoPolePm, genA0ForPm, genDominant, genOneStage, genMiller, genTwoStageComp];

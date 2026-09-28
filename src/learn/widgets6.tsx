@@ -5,16 +5,21 @@
  */
 import { useState } from 'react';
 import { FiveTOtaFig } from '../circuits/figures3';
-import { BarkhausenFig, ClosedStepFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from '../circuits/figures5';
+import { BarkhausenFig, ClosedStepFig, KtcSpectrumFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from '../circuits/figures5';
 import {
   a0ForPhaseMargin,
   ccForPhaseMargin,
+  clForPhaseMargin,
   closedLoopStep,
   dominantPoleHand,
   gainCrossover,
   gainMarginDb,
   inputNoiseFolded,
   inputNoisePair,
+  ktcNoiseRms,
+  oneStageLoop,
+  rcNoiseRms,
+  resistorNoise,
   millerLoop,
   millerTwoStage,
   nvPerRtHz,
@@ -118,6 +123,59 @@ function NoiseMini() {
       <Readout label="gm1 / gm(load)" value={`${(gm1 * 1e3).toFixed(2)} / ${(gmL * 1e3).toFixed(2)} mS`} />
       <Readout label="input noise" value={`${nvPerRtHz(v2).toFixed(1)} nV/√Hz`} tone="signal" />
       <p className="small muted">ISS = 200 µA, γ = 2/3. Razavi’s rule: wiggle each gate a little; if the output moves, that device’s noise counts. The tail and the cascodes barely move the output, so they barely count. Loads count as gm_load/gm1²: give them a big overdrive (small gm) and they go quiet, but that costs swing.</p>
+    </Panel>
+  );
+}
+
+/* ─── L10: what noise is (Razavi HO #10): power per hertz, and kT/C ─── */
+
+function KtcMini() {
+  const [lr, setLr] = useState(3);
+  const [cP, setCP] = useState(1);
+  const r = 10 ** lr, c = cP * 1e-12;
+  const f3 = 1 / (2 * Math.PI * r * c);
+  const other = lr >= 4.5 ? r / 100 : r * 100;
+  const vt = rcNoiseRms(r, c);
+  return (
+    <Panel
+      figure={<KtcSpectrumFig r={r} c={c} other={other} />}
+    >
+      <Slider label="R" value={lr} min={2} max={6} step={0.1} onChange={setLr} format={(v) => formatSI(10 ** v, 'Ω')} />
+      <Slider label="C" value={cP} min={0.1} max={10} step={0.1} onChange={setCP} format={(v) => `${v.toFixed(1)} pF`} />
+      <Readout label="height: √(4kTR)" value={`${Math.sqrt(resistorNoise(r) * 1e18).toFixed(2)} nV/√Hz`} />
+      <Readout label="width: f−3dB = 1/(2πRC)" value={Hz(f3)} />
+      <Readout label="total on C (area)" value={`${(vt * 1e6).toFixed(1)} µV rms`} tone="signal" />
+      <Readout label="√(kT/C)" value={`${(ktcNoiseRms(c) * 1e6).toFixed(1)} µV rms`} tone="ok" />
+      <p className="small muted">Razavi’s picture of noise: pass it through a 1 Hz-wide window and measure the power that gets through; do that at every frequency and you get the spectrum. Here a bigger R makes the curve taller (more noise per hertz) but the RC filter narrower (fewer hertz). The two cancel exactly: the total depends only on C. Move R and watch the last two readouts stay equal.</p>
+    </Panel>
+  );
+}
+
+/* ─── L13: the load capacitor helps a one-stage op amp and hurts a two-stage one (Razavi HO #12) ─── */
+
+function LoadCapMini() {
+  const [clP, setClP] = useState(8);
+  const one = (cl: number) => oneStageLoop({ gm: 1e-3, rout: 2e6, cl: cl * 1e-12, fnd: 300e6, beta: 1 });
+  const two = (cl: number) => millerLoop({ gm1: 0.5e-3, r1: 400e3, c1: 0.2e-12, gm2: 2.5e-3, r2: 40e3, c2: cl * 1e-12, cc: 1.5e-12, rz: 400 }, 1);
+  const ref = 2;
+  const pm1 = phaseMargin(one(clP)), pm2 = phaseMargin(two(clP));
+  const need = clForPhaseMargin({ gm: 1e-3, fnd: 300e6, pm: 60, beta: 1 });
+  return (
+    <Panel
+      figure={
+        <div className="stack">
+          <ClosedStepFig title="One-stage op amp (CL is the dominant pole)" specs={[{ spec: one(ref), label: `CL = ${ref} pF`, color: 'var(--muted)' }, { spec: one(clP), label: `CL = ${clP} pF` }]} h={180} />
+          <ClosedStepFig title="Two-stage op amp (CL sets the second pole)" specs={[{ spec: two(ref), label: `CL = ${ref} pF`, color: 'var(--muted)' }, { spec: two(clP), label: `CL = ${clP} pF` }]} h={180} />
+        </div>
+      }
+    >
+      <Slider label="CL" value={clP} min={0.3} max={20} step={0.1} onChange={setClP} format={(v) => `${v.toFixed(1)} pF`} />
+      <Readout label="one-stage: PM" value={degs(pm1)} tone={pm1 < 45 ? 'bad' : pm1 < 58 ? undefined : 'ok'} />
+      <Readout label="one-stage: GBW = gm/(2πCL)" value={Hz(1e-3 / (2 * Math.PI * clP * 1e-12))} />
+      <Readout label="two-stage: PM" value={degs(pm2)} tone={pm2 < 45 ? 'bad' : pm2 < 58 ? undefined : 'ok'} />
+      <Readout label="two-stage: P2 ≈ Gm2/(2πCL)" value={Hz(2.5e-3 / (2 * Math.PI * clP * 1e-12))} />
+      <Readout label="one-stage: smallest CL for 60°" value={formatSI(need, 'F')} />
+      <p className="small muted">One-stage: gm = 1 mS, Rout = 2 MΩ, mirror pole 300 MHz. Two-stage: Gm1 = 0.5 mS, Gm2 = 2.5 mS, CC = 1.5 pF, Rz = 1/Gm2. Grey is CL = 2 pF. Raise CL: the one-stage op amp gets slower but calmer; the two-stage op amp keeps its speed (Gm1/CC) but starts to ring.</p>
     </Panel>
   );
 }
@@ -312,4 +370,6 @@ export const WIDGETS6: Record<string, (p: any) => React.ReactElement> = {
   dominantMini: DominantMini,
   millerMini: MillerMini,
   twoStageCompMini: TwoStageCompMini,
+  ktcMini: KtcMini,
+  loadCapMini: LoadCapMini,
 };

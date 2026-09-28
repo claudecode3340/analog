@@ -319,3 +319,27 @@ export function dominantPoleHand(p: { a0: number; nondominant: number[]; pm: num
   const fgx = Math.sqrt(lo * hi);
   return { fgx, fd: fgx / (p.beta * p.a0) };
 }
+
+/**
+ * A one-stage op amp (5-T OTA, telescopic, folded cascode) in feedback: the output node is the dominant
+ * pole, 1/(2π·Rout·CL), and one internal node (the mirror or folding node) gives a fixed non-dominant pole
+ * fnd. The load capacitor IS the compensation (Razavi HO #12: “does a telescopic op amp need compensation?”).
+ */
+export function oneStageLoop(p: { gm: number; rout: number; cl: number; fnd: number; beta: number }): LoopSpec {
+  return { a0: p.gm * p.rout, poles: [1 / (2 * Math.PI * p.rout * p.cl), p.fnd], beta: p.beta };
+}
+
+/**
+ * Smallest CL that gives a one-stage op amp the phase margin PM (hand method: the output pole gives −90°
+ * at ωgx, and ωgx ≈ β·gm/CL once βA0 ≫ 1). The internal pole may use 90° − PM:
+ *   β·gm/(2π·CL) = fnd·tan(90° − PM)  ⇒  CL = β·gm / (2π·fnd·tan(90° − PM)).
+ * A bigger CL only adds margin (and costs speed); in a two-stage op amp CL sets the non-dominant pole instead.
+ */
+export function clForPhaseMargin(p: { gm: number; fnd: number; pm: number; beta: number }): number {
+  return (p.beta * p.gm) / (2 * Math.PI * p.fnd * Math.tan(rad(90 - p.pm)));
+}
+
+/** Hand phase margin of a one-stage op amp: PM ≈ 90° − atan(β·gm/(2π·CL) ÷ fnd) (output pole gives −90°). */
+export function oneStagePmHand(p: { gm: number; cl: number; fnd: number; beta: number }): number {
+  return 90 - (Math.atan((p.beta * p.gm) / (2 * Math.PI * p.cl) / p.fnd) * 180) / Math.PI;
+}

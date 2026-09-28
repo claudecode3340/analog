@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   a0ForPhaseMargin,
   ccForPhaseMargin,
+  clForPhaseMargin,
   closedLoopStep,
   dominantPoleForPM,
   gainCrossover,
   gainMarginDb,
+  oneStageLoop,
+  millerLoop,
   millerPhaseMargin,
   millerTwoStage,
   overshoot,
@@ -17,7 +20,7 @@ import {
   rzNull,
   twoStageSlewRate,
 } from './stability';
-import { inputNoisePair, ktcNoiseRms, psrr5T, replicaCmfbOutputCm, thermalNoiseCurrent } from './noise';
+import { addUncorrelated, inputNoisePair, ktcNoiseRms, rcNoiseRms, resistorNoise, psrr5T, replicaCmfbOutputCm, thermalNoiseCurrent } from './noise';
 
 describe('loop gain, crossovers, margins', () => {
   it('one pole: PM = 90° + a bit, never unstable, no phase crossover', () => {
@@ -153,5 +156,42 @@ describe('noise and PSRR', () => {
   it('replica CMFB (Lec 12): (W/L)15 = (W/L)12 + (W/L)13 → Vout,CM = VREF', () => {
     expect(replicaCmfbOutputCm({ vref: 1.2, vth: 0.5, wl12: 10, wl13: 10, wl15: 20 })).toBeCloseTo(1.2, 12);
     expect(replicaCmfbOutputCm({ vref: 1.2, vth: 0.5, wl12: 10, wl13: 10, wl15: 30 })).toBeGreaterThan(1.2);
+  });
+});
+
+describe('Razavi HO #10/#12 and Allen L22 intuitions', () => {
+  it('RC noise: R cancels, total = √(kT/C) (Razavi HO #10)', () => {
+    for (const r of [100, 1e3, 1e6]) expect(rcNoiseRms(r, 1e-12) / ktcNoiseRms(1e-12)).toBeCloseTo(1, 12);
+    expect(resistorNoise(1e3) * 1e18).toBeCloseTo(16.57, 1); // 1 kΩ ≈ 4.07 nV/√Hz
+  });
+  it('uncorrelated sources add as powers: 3 and 4 → 5', () => {
+    expect(addUncorrelated([3, 4])).toBeCloseTo(5, 12);
+  });
+  it('Razavi HO #12: phase −175° at ωgx → |Y/X| ≈ 11.5/β; 45° → 1.3/β', () => {
+    expect(peakingFactor(5)).toBeCloseTo(11.47, 1);
+    expect(peakingFactor(45)).toBeCloseTo(1.307, 3);
+  });
+  it('one-stage op amp: hand CL for 60° gives 60–64° (safe side); more CL = more margin', () => {
+    const gm = 1e-3, rout = 2e6, fnd = 300e6;
+    const cl = clForPhaseMargin({ gm, fnd, pm: 60, beta: 1 });
+    expect(cl * 1e12).toBeCloseTo(0.919, 2);
+    // The hand method ignores the second pole's small magnitude drop at ωgx, so it errs on the safe side.
+    const exact = phaseMargin(oneStageLoop({ gm, rout, cl, fnd, beta: 1 }));
+    expect(exact).toBeGreaterThan(60);
+    expect(exact).toBeLessThan(64);
+    const pm = (c: number) => phaseMargin(oneStageLoop({ gm, rout, cl: c, fnd, beta: 1 }));
+    expect(pm(2 * cl)).toBeGreaterThan(pm(cl));
+  });
+  it('two-stage op amp: more CL = less margin (P2 = Gm2/CL moves down)', () => {
+    const m = { gm1: 0.5e-3, r1: 400e3, c1: 0.2e-12, gm2: 2.5e-3, r2: 40e3, cc: 1.5e-12, rz: 400 };
+    const pm = (cl: number) => phaseMargin(millerLoop({ ...m, c2: cl }, 1));
+    expect(pm(10e-12)).toBeLessThan(pm(5e-12));
+  });
+  it('Allen L22 rule (zero at 10·GB, P2 ≥ 2.2·GB for 60°) ⇔ CC ≥ 0.22·CL', () => {
+    const cc = ccForPhaseMargin({ gm1: 1e-3, gm2: 10e-3, cl: 1e-12, pm: 60, zeroNulled: false });
+    expect(cc / 1e-12).toBeGreaterThan(0.22);
+    expect(cc / 1e-12).toBeLessThan(0.223);
+    // P2/GB = (Gm2/CL)/(Gm1/CC) = 10·CC/CL ≈ 2.2
+    expect((10 * cc) / 1e-12).toBeCloseTo(2.2, 1);
   });
 });

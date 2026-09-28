@@ -120,6 +120,14 @@ export const MISTAKES: Record<MistakeId, { title: string; hint: string }> = {
     title: 'Counted only one half of the pair',
     hint: 'Both halves of a differential pair make noise, and their noise powers add: 8kTγ(…) for the pair, not 4kTγ(…).',
   },
+  noiseAmplitudesAdded: {
+    title: 'Added noise amplitudes instead of powers',
+    hint: 'Independent noise sources add as powers (squares): total = √(v1² + v2²), not v1 + v2. Two equal sources give √2 times one, not 2 times.',
+  },
+  noiseBwNoPiOver2: {
+    title: 'Used f−3dB as the noise bandwidth',
+    hint: 'A one-pole filter lets through more noise than a brick wall at f−3dB: its noise bandwidth is (π/2)·f−3dB. With it, R cancels and you get √(kT/C).',
+  },
   wrongPmTan: {
     title: 'Mixed up the phase-margin rule',
     hint: 'With the dominant pole giving −90°, PM = 90° − atan(ωu/ωp2): 45° needs ωp2 = ωu, 60° needs ωp2 = 1.73·ωu (≈ 2.2·ωu once the RHP zero at 10ωu is included).',

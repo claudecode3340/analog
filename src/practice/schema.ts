@@ -71,7 +71,9 @@ export type MistakeId =
   | 'rhpZeroAsLead'
   | 'millerNoPlusOne'
   | 'noiseOneHalf'
-  | 'wrongPmTan';
+  | 'wrongPmTan'
+  | 'noiseAmplitudesAdded'
+  | 'noiseBwNoPiOver2';
 
 export interface WrongAnswer {
   mistake: MistakeId;

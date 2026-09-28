@@ -86,6 +86,47 @@ Feedback does not rescue it: the loop cuts the supply-to-output gain and the inp
     },
   },
   {
+    id: 'l10-noisebasics',
+    unit: 'L10',
+    title: 'What noise is: power per hertz, and the kT/C surprise',
+    minutes: 10,
+    refs: { razavi: '§7.1–7.2 (UCLA EE215A handout #10)' },
+    why: 'Every noise answer (op-amp input noise, sampling noise) is an area under a spectrum; kT/C is the one number you must know.',
+    picture: {
+      visual: { widget: 'ktcMini' },
+      caption: 'Slide R: the curve gets taller but narrower. The total on C (the area) does not move.',
+    },
+    predict: {
+      prompt: 'A resistor charges a 1 pF capacitor. You make the resistor 100 times bigger. The total noise on the capacitor…',
+      choices: ['grows 10 times', 'stays the same', 'drops 10 times'],
+      answer: 1,
+      explain: 'More R means more noise per hertz (4kTR) but a narrower filter (1/(2πRC)). They cancel: the total is √(kT/C), set by C alone.',
+    },
+    idea: `Razavi’s picture: noise is random, so we cannot say its value at any instant, only how **strong** it is on average.
+
+To see which frequencies carry it, pass it through a 1 Hz-wide window and measure the power that gets through. Do that at every frequency: that is the spectrum, in V²/Hz. A resistor’s is flat (“white”): 4kTR.
+
+The total noise is the **area** under the spectrum after any filtering. On an RC, the area is $4kTR\cdot\frac{\pi}{2}\cdot\frac{1}{2\pi RC} = kT/C$.
+
+Independent noises add as **powers**: $\sqrt{v_1^2 + v_2^2}$, never $v_1 + v_2$.`,
+    analogy: 'A river’s roar: you cannot predict each splash, but you can measure how loud it is in each pitch band.',
+    rule: {
+      tex: ['\overline{V_n^2} = 4kTR\;\mathrm{(V^2/Hz)}', '\overline{v_{n,C}^2} = \frac{kT}{C}', 'v_{tot} = \sqrt{v_1^2 + v_2^2}'],
+      symbols: ['Vn', 'kT'],
+      note: 'Noise bandwidth of one pole = (π/2)·f−3dB. 1 pF at 300 K: 64 µV rms.',
+    },
+    worked: { generator: 'l10-ktc', seed: 3 },
+    yourTurn: { generators: ['l10-ktc'], count: 2 },
+    lockIn: {
+      summary: 'Spectrum = power per hertz; total = area. R on C leaves √(kT/C), whatever R. Independent noises add as squares.',
+      hook: '“Taller but narrower: same area.”',
+      cards: [
+        { id: 'c-l10-ktc', front: 'Total noise a resistor leaves on C?', back: '√(kT/C): 64 µV rms for 1 pF at 300 K. R cancels (more noise per Hz, fewer Hz).' },
+        { id: 'c-l10-add', front: 'Two independent noises of 30 µV and 40 µV rms together?', back: '√(30² + 40²) = 50 µV: they add as powers, not amplitudes.' },
+      ],
+    },
+  },
+  {
     id: 'l10-noise',
     unit: 'L10',
     title: 'Noise: wiggle each gate and see if the output moves',
@@ -158,6 +199,7 @@ A **single pole** can delay the signal by at most 90°, so a one-pole loop can n
       hook: '“Flip twice and it comes back in step: the loop sings.”',
       cards: [
         { id: 'c-l11-bark', front: 'Barkhausen’s criteria?', back: '|βA(jω1)| = 1 and ∠βA(jω1) = −180°: the loop returns the signal in phase and at full size.' },
+        { id: 'c-l11-measure', front: 'How do you find the loop gain of a real circuit (Razavi)?', back: 'Set the input to zero, break the loop, inject a test voltage Vt and measure what returns, VF: βA = −VF/Vt.' },
         { id: 'c-l11-onepole', front: 'Why is a one-pole feedback amplifier always stable?', back: 'One pole adds at most 90° of lag; the loop phase never reaches −180°.' },
       ],
     },
@@ -278,6 +320,7 @@ That is why the target is about **60°**. Remember it is a small-signal idea: bi
       hook: '“60° rides smoothly.”',
       cards: [
         { id: 'c-l12-peak', front: 'Closed-loop peaking at ωgx for PM = 45° and 60°?', back: '45° → 1.3/β (30% peak); 60° → exactly 1/β.' },
+        { id: 'c-l12-rings', front: 'Allen’s rule of thumb for “stable enough” from a step response?', back: 'Fewer than about three rings: PM of at least 45°, preferably 60°. PM is a small-signal guide; big steps also slew (Razavi).' },
         { id: 'c-l12-why60', front: 'Why is ≈ 60° phase margin the usual target?', back: 'No frequency peaking, little overshoot, fast settling; more margin is slower, less rings.' },
       ],
     },
@@ -318,6 +361,46 @@ Hand method: the other poles may use only 90° − PM at ωgx. For one other pol
       cards: [
         { id: 'c-l13-dom', front: 'Dominant-pole compensation for PM = 45° with one fixed pole ωp2?', back: 'Put ωgx at ωp2: move the first pole to ωp2/(βA0).' },
         { id: 'c-l13-rout', front: 'Why does raising Rout not compensate an op amp?', back: 'It raises the low-frequency gain but leaves the high-frequency |βA| (and ωgx) unchanged.' },
+      ],
+    },
+  },
+  {
+    id: 'l13-onestage',
+    unit: 'L13',
+    title: 'One stage vs two: the load capacitor helps one and hurts the other',
+    minutes: 10,
+    refs: { razavi: '§10.4 (UCLA EE215A handout #12)', notes: 'Lec 17' },
+    why: 'A classic viva/quiz question: does a telescopic op amp need compensation, and what happens if you double CL?',
+    picture: {
+      visual: { widget: 'loadCapMini' },
+      caption: 'Raise CL. Top (one stage): slower but calmer. Bottom (two stage): same speed, more ringing.',
+    },
+    predict: {
+      prompt: 'A telescopic (one-stage) op amp in unity feedback rings a little. You add more load capacitance. It will…',
+      choices: ['ring more', 'ring less, but settle more slowly', 'oscillate'],
+      answer: 1,
+      explain: 'In a one-stage op amp the output node IS the dominant pole. More CL lowers fu = gm/(2πCL) while the internal pole stays put: more phase margin.',
+    },
+    idea: `Razavi asks: does a telescopic op amp need compensation? Usually not. Its high-resistance output node carries CL, so it is already the **dominant pole**. The internal nodes (mirror, cascode sources) see about 1/gm and sit far above.
+
+So CL is the compensation: fu = gm/(2πCL), and more CL only adds margin, at the cost of speed.
+
+In a **two-stage** op amp the dominant pole is set by CC at the first stage, and CL sits on the **second** pole, Gm2/CL. More CL pulls that pole down towards fu: the margin shrinks and the step rings.`,
+    analogy: 'A heavier trailer slows a steady truck (one stage) but makes a wobbly one (two stage) sway more.',
+    rule: {
+      tex: ['\text{one stage: } f_u = \frac{g_m}{2\pi C_L},\; PM \approx 90^\circ - \tan^{-1}\frac{\beta f_u}{f_{nd}}', 'C_{L,min} = \frac{\beta g_m}{2\pi f_{nd}\tan(90^\circ - PM)}', '\text{two stage: } \omega_{p2} \approx \frac{G_{m2}}{C_L}\;(\text{more } C_L \Rightarrow \text{less } PM)'],
+      symbols: ['gm', 'CL', 'PM', 'beta', 'omegap2'],
+      note: 'The hand CL is on the safe side: the exact margin comes out a few degrees higher.',
+    },
+    worked: { generator: 'l13-onestage', seed: 7 },
+    yourTurn: { generators: ['l13-onestage'], count: 2 },
+    lab: { id: 'stability' },
+    lockIn: {
+      summary: 'One stage: CL is the dominant pole; more CL = more margin, less speed. Two stage: CL sets P2 = Gm2/CL; more CL = less margin.',
+      hook: '“CL steadies one stage and shakes two.”',
+      cards: [
+        { id: 'c-l13-onestage', front: 'Does a telescopic op amp need compensation?', back: 'Usually not: its output node (Rout·CL) is the dominant pole; internal poles sit near gm/C. CL itself compensates it.' },
+        { id: 'c-l13-cl', front: 'Doubling CL: effect on a one-stage vs a two-stage op amp?', back: 'One stage: fu halves, PM rises. Two stage: fu = Gm1/CC unchanged, P2 = Gm2/CL halves, PM falls (rings).' },
       ],
     },
   },
@@ -396,6 +479,7 @@ Slewing: the tail current charges CC, so $SR = I_{SS}/C_C$, unless M7 cannot als
       cards: [
         { id: 'c-l14-gbw', front: 'GBW of a Miller-compensated two-stage op amp?', back: 'ωu = Gm1/CC.' },
         { id: 'c-l14-cc', front: 'CC for PM = 45° / 60° (zero removed, β = 1)?', back: 'CC = (Gm1/Gm2)CL for 45°; 1.73·(Gm1/Gm2)CL for 60°.' },
+        { id: 'c-l14-allen', front: 'Allen’s CC ≥ 0.22·CL rule: where does it come from?', back: 'RHP zero at 10·GB and P2 ≥ 2.2·GB for 60°; with Gm2 = 10·Gm1 that is CC ≈ 0.22·CL, the same as our tan formula with the zero kept.' },
         { id: 'c-l14-sr', front: 'Slew rate of a two-stage op amp?', back: 'ISS/CC, unless the output current source runs out: (I7 − ISS)/CL.' },
       ],
     },
@@ -436,6 +520,7 @@ $R_z = 1/G_{m2}$ sends it to infinity; $R_z = (C_L + C_C)/(G_{m2}C_C)$ puts it i
       hook: '“Close the backwards leak with a valve.”',
       cards: [
         { id: 'c-l14-rhp', front: 'Where does the RHP zero of a Miller two-stage op amp come from?', back: 'CC feeds the signal forward from M6’s gate to the output, opposing the main path; they cancel at ωz = Gm2/CC.' },
+        { id: 'c-l14-rztrack', front: 'How does Razavi make Rz track 1/Gm2 over process and temperature?', back: 'Build Rz from a triode MOSFET whose gate is biased by a replica branch, so its resistance follows the output device’s 1/gm.' },
         { id: 'c-l14-rz', front: 'Nulling resistor values?', back: 'Rz = 1/Gm2 moves the zero to ∞; Rz = (CL + CC)/(Gm2CC) puts it on P2 in the LHP.' },
       ],
     },

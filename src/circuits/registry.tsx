@@ -14,7 +14,7 @@ import {
 } from './figures';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from './figures3';
 import { CmfbTriodeFig, FoldedCascodeFig, GainBoostFig, MirrorTeleFig, NonInvertingFig, TwoStageFig } from './figures4';
-import { BarkhausenFig, ClosedStepFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from './figures5';
+import { BarkhausenFig, ClosedStepFig, KtcSpectrumFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from './figures5';
 import { CmosVtcFig, DynamicGateFig, EffortPathFig, FlopTimingFig, InverterFig, NoiseMarginFig, PassGateFig, RcLadderFig, SramCellFig, StaticGateFig, SwitchingFig, VtcPlot } from './figuresD';
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from './figures2';
 
@@ -57,6 +57,7 @@ export const FIGURES: Record<string, (props: any) => React.ReactElement> = {
   twoStageMiller: TwoStageMillerFig,
   replicaCmfb: ReplicaCmfbFig,
   noiseShare: NoiseShareFig,
+  ktcSpectrum: KtcSpectrumFig,
   inverter: InverterFig,
   vtc: VtcPlot,
   cmosVtc: CmosVtcFig,

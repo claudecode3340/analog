@@ -4,7 +4,7 @@
  * the Miller block diagram and the notes' two-stage op amp with CC (and Rz).
  */
 import type { ReactNode } from 'react';
-import { closedLoopStep, gainCrossover, loopMag, loopPhase, phaseCrossover, type LoopSpec } from '../physics';
+import { closedLoopStep, gainCrossover, loopMag, loopPhase, phaseCrossover, resistorNoise, type LoopSpec } from '../physics';
 import { formatSI } from '../practice/units';
 import { Plot, type Series } from './Plot';
 import { Canvas, Dot, Ground, Label, Nmos, Pmos, Rail, ResistorH, Sym, Terminal, Wire, Capacitor, CurrentSource, Resistor } from './primitives';
@@ -131,7 +131,7 @@ export function LoopBodeFig({ spec, mode = 'loop', h = 230 }: { spec: LoopSpec; 
 }
 
 /** Closed-loop unit step response (normalised to its final value) for one or more loops. */
-export function ClosedStepFig({ specs, h = 240 }: { specs: Array<{ spec: LoopSpec; label: string; color?: string }>; h?: number }) {
+export function ClosedStepFig({ specs, h = 240, title }: { specs: Array<{ spec: LoopSpec; label: string; color?: string }>; h?: number; title?: string }) {
   const gx = Math.min(...specs.map((s) => gainCrossover(s.spec) ?? 1e6));
   const tEnd = 12 / (2 * Math.PI * gx);
   const unit = tEnd < 1e-6 ? { k: 1e9, u: 'ns' } : tEnd < 1e-3 ? { k: 1e6, u: 'µs' } : { k: 1e3, u: 'ms' };
@@ -147,7 +147,7 @@ export function ClosedStepFig({ specs, h = 240 }: { specs: Array<{ spec: LoopSpe
   return (
     <div>
     <Plot
-      title="Closed-loop step response (1 = the final value 1/β)"
+      title={title ?? 'Closed-loop step response (1 = the final value 1/β)'}
       xRange={[0, tEnd * unit.k]}
       yRange={[0, yTop]}
       xLabel={`time (${unit.u})`}
@@ -407,3 +407,44 @@ export function NoiseShareFig({ items }: { items: Array<{ label: string; value: 
 }
 
 export { Hz };
+
+/**
+ * Razavi HO #10: the noise of R seen on C. Height √(4kTR) (flat, “white”), cut by the RC filter at 1/(2πRC).
+ * A second, dashed curve (another R, same C) shows the trade: taller but narrower, the same total √(kT/C).
+ */
+export function KtcSpectrumFig({ r, c, other }: { r: number; c: number; other?: number }) {
+  const yMin = -2, yMax = 2.5;
+  const curve = (rr: number): Array<[number, number]> => {
+    const ff = 1 / (2 * Math.PI * rr * c);
+    const out: Array<[number, number]> = [];
+    for (let k = 0; k <= 200; k++) {
+      const lf = 2 + (9 * k) / 200;
+      const d = Math.sqrt(resistorNoise(rr) / (1 + (10 ** lf / ff) ** 2)) * 1e9;
+      out.push([lf, Math.max(yMin, Math.log10(d))]);
+    }
+    return out;
+  };
+  const series: Series[] = [];
+  if (other) series.push({ points: curve(other), color: 'var(--muted)', width: 1.6, dashed: true });
+  series.push({ points: curve(r), color: 'var(--signal)', width: 2.6 });
+  return (
+    <div>
+      <Plot
+        title="Noise density on C: √(4kTR), flat, then cut by the RC filter"
+        xRange={[2, 11]}
+        yRange={[yMin, yMax]}
+        xLabel="frequency (Hz, log scale)"
+        yLabel="nV/√Hz (log)"
+        xTicks={[2, 4, 6, 8, 10]}
+        yTicks={[-2, -1, 0, 1, 2]}
+        xFmt={(v) => formatSI(10 ** v, 'Hz', 1)}
+        yFmt={(v) => String(Number((10 ** v).toPrecision(1)))}
+        series={series}
+      />
+      <div className="plot-legend">
+        <span><i style={{ background: 'var(--signal)' }} />R = {formatSI(r, 'Ω')}</span>
+        {other && <span><i style={{ background: 'var(--muted)' }} />R = {formatSI(other, 'Ω')} (same C)</span>}
+      </div>
+    </div>
+  );
+}

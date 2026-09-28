@@ -16,7 +16,7 @@ import {
   WaterAnalogy,
 } from '../circuits/figures';
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from '../circuits/figures2';
-import { BarkhausenFig, ClosedStepFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from '../circuits/figures5';
+import { BarkhausenFig, ClosedStepFig, KtcSpectrumFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from '../circuits/figures5';
 import { CmosVtcFig, DynamicGateFig, EffortPathFig, FlopTimingFig, InverterFig, NoiseMarginFig, PassGateFig, RcLadderFig, SramCellFig, StaticGateFig, SwitchingFig } from '../circuits/figuresD';
 import { DrawStyleContext } from '../circuits/primitives';
 import { VoltageLadder } from '../circuits/schematic';
@@ -123,6 +123,7 @@ export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactEl
   { id: 'twostage-miller', title: 'Two-stage with CC', el: <TwoStageMillerFig /> },
   { id: 'twostage-rz', title: 'Two-stage with CC and Rz', el: <TwoStageMillerFig rz /> },
   { id: 'replica', title: 'Replica CMFB (Lec 12)', el: <ReplicaCmfbFig vref={1.2} vcm={1.2} /> },
+  { id: 'ktc-spectrum', title: 'kT/C: R noise on C', el: <KtcSpectrumFig r={1e3} c={1e-12} other={1e5} /> },
   { id: 'noise-share', title: 'Noise shares', el: <NoiseShareFig items={[{ label: 'M1, M2', value: 3, tone: 'n' }, { label: 'M3, M4', value: 1.2, tone: 'p' }, { label: 'M5', value: 0, tone: 'muted' }]} /> },
   { id: 'inv-cmos', title: 'CMOS inverter', el: <InverterFig load="cmos" vin={0} vout={1.8} /> },
   { id: 'inv-res', title: 'Resistive-load inverter', el: <InverterFig load="resistive" /> },
