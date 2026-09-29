@@ -3,7 +3,7 @@
  * (triode CMFB), Tutorial 6 Q1–Q3 (slewing and settling), Quiz 2 A–C (CMFB, verified against the key).
  * Tutorials 4–6 have no answer key; each assumption is stated in the flags.
  */
-import { quiz2, QUIZ2_A, QUIZ2_B, QUIZ2_C, tut4Q1, tut4Q2, tut5Q1, tut6Q1, tut6Q2, tut6Q3, type Quiz2Part } from '../physics';
+import { quiz2, QUIZ2_A, QUIZ2_B, QUIZ2_C, tut4Q1, tut4Q2, tut4Q3, tut5Q1, tut5Q3, tut6Q1, tut6Q2, tut6Q3, type Quiz2Part } from '../physics';
 import type { Problem } from './schema';
 import { texNum, texSI } from './tex';
 
@@ -59,6 +59,7 @@ function t4q2(): Problem {
     source: 'Tutorial 4 Q2',
     tags: ['L6'],
     title: 'Tutorial 4 Q2: gain boosting with a PMOS auxiliary',
+    figure: { kind: 'gainBoostPmos' },
     statement: 'VDD = 1.8 V, µnCox = 150 µA/V², µpCox = 100 µA/V², (W/L)n = 150, (W/L)p = 100, Vthn = 0.7 V, |Vthp| = 0.85 V, ID1 = 0.1 mA. (a) Vbp. (b) With VP = Vov1 and Vout,min = 2Vov1, is M3 saturated? (c) With Vov4 = 0.1 V, the required VS. (d) With the auxiliary removed and M5 ideal (0.1 mA), λn for a gain of about 2550. (e) With λp = 1.3λn, the gain of the full circuit.',
     givens: [
       { sym: 'V_{DD}', value: 1.8, unit: 'V' },
@@ -115,6 +116,124 @@ function t5q1(): Problem {
     ],
     hints: ['Two deep-triode devices in parallel act as one resistor.', 'Ron = 1/(µnCox(W/L)(VGS − Vth)); VP = 2ID·Rtot.', 'W/L = 2ID/(µnCox·VP·(Vout1 + Vout2 − 2Vth)).', 'Rtot = 0.1 V / 1 mA = 100 Ω.'],
     flags: [NO_KEY, 'Deep-triode form (Lec 11) gives 46.3; the full triode equation (with VDS²/2) gives 49.4. Both are marked right.', '(b) and (c) assume “all transistors have the same size” means W/L = 46.3 for every device.'],
+  };
+}
+
+function t4q3(): Problem {
+  const r = tut4Q3();
+  return {
+    id: 'bank-t4q3',
+    source: 'Tutorial 4 Q3',
+    tags: ['L6'],
+    title: 'Tutorial 4 Q3: gain boosting with a folded-cascode auxiliary',
+    statement: 'VDD = 3 V, 3 mW in total, µnCox = 200 µA/V², µpCox = 100 µA/V², λn = 0.1 V⁻¹, λp = 0.2 V⁻¹, Vthn = 0.7 V, |Vthp| = 0.8 V. M1 = M2 = 100/0.5 carrying 500 µA. (W/L)5 = (W/L)8 = 0.4(W/L)6, (W/L)3 = 0.5(W/L)6, (W/L)4 = (W/L)9 = (W/L)1. (a) For a 2.5 V output swing, (W/L)6. (b) With VP = Vov1, R3. (c) With VDS9 = 1.15·Vov9, is M4 saturated? (d) (W/L)7, R1, R2. (e) The overall gain.',
+    figure: { kind: 'gainBoostFolded' },
+    givens: [
+      { sym: 'V_{DD}', value: 3, unit: 'V' },
+      { sym: 'P', value: 3e-3, unit: 'W' },
+      { sym: 'I_{D1}', value: 500e-6, unit: 'A' },
+      { sym: '(W/L)_{1}', value: 200, unit: '' },
+    ],
+    unknowns: [
+      { key: 'wl6', sym: '(W/L)_6', label: '(a) Size of M6', unit: '' },
+      { key: 'r3', sym: 'R_3', label: '(b) R3', unit: 'Ω' },
+      { key: 'm4', sym: 'M_4', label: '(c) M4 region', unit: '', choices: ['Saturated', 'Triode'] },
+      { key: 'wl7', sym: '(W/L)_7', label: '(d) Size of M7', unit: '' },
+      { key: 'r1', sym: 'R_1', label: '(d) R1', unit: 'Ω' },
+      { key: 'r2', sym: 'R_2', label: '(d) R2', unit: 'Ω' },
+      { key: 'av', sym: '|A_v|', label: '(e) Overall gain', unit: 'V/V', tol: 0.03 },
+    ],
+    answers: { wl6: r.wl6, r3: r.r3, m4: r.m4Saturated ? 0 : 1, wl7: r.wl7, r1: r.r1, r2: r.r2, av: r.av },
+    wrong: { av: [{ mistake: 'cascodeSimpleLoad', value: r.avIdealLoad }], wl6: [{ mistake: 'forgotHalf', value: r.wl6 / 2 }] },
+    steps: [
+      { tag: 'A', title: 'Power budget: 3 mW / 3 V = 1 mA. M6 500 µA; M8 and M5 are 0.4× M6 at the same |VGS|: 200 µA each; M3 gets what is left, M9 sinks I4 + I3', tex: `I_3 = 1 - 0.5 - 0.2 - 0.2 = ${texSI(r.i3, 'A')},\\; I_9 = ${texSI(r.i9, 'A')}` },
+      { tag: 'A', title: '(a) Vout runs from 2Vov1 (M1, M2 identical) up to VDD − |Vov6|', tex: `|V_{ov6}| = 3 - 2.5 - 2(${texNum(r.vov1, 4)}) = ${texSI(r.vov6, 'V', 4)} \\Rightarrow (W/L)_6 = \\frac{2(500\\mu)}{100\\mu\\,(${texNum(r.vov6, 4)})^2} = ${texNum((2 * 500e-6) / (100e-6 * r.vov6 * r.vov6), 4)}`, produces: 'wl6', value: (2 * 500e-6) / (100e-6 * r.vov6 * r.vov6) },
+      { tag: 'A', title: '(b) M3 (W/L = ½(W/L)6, 100 µA) has its gate at VP = Vov1; its source sits |VGS3| higher; R3 drops the rest', tex: `V_{S3} = ${texNum(r.vp, 4)} + 0.8 + ${texNum(r.vov3, 4)} = ${texSI(r.vs3, 'V', 4)},\\; R_3 = \\frac{3 - V_{S3}}{100\\mu} = ${texSI((3 - r.vs3) / r.i3, 'Ω')}`, produces: 'r3', value: (3 - r.vs3) / r.i3 },
+      { tag: '✓', title: '(c) Node F = 1.15·Vov9; VG4 = F + VGS4; M4’s drain is M2’s gate = VP + VGS2. Fence: VD4 ≥ VG4 − Vth', tex: `V_{D4} = ${texSI(r.vd4, 'V', 4)} \\ge ${texSI(r.vg4 - 0.7, 'V', 4)}\\;\\checkmark`, produces: 'm4', value: r.vd4 >= r.vg4 - 0.7 ? 0 : 1 },
+      { tag: 'A', title: '(d) M7 mirrors M9 (same VGS): widths scale with current', tex: `(W/L)_7 = 200\\times\\frac{200\\mu}{300\\mu} = ${texNum((200 * 200e-6) / 300e-6, 4)}`, produces: 'wl7', value: (200 * 200e-6) / 300e-6 },
+      { tag: 'A', title: 'Walk the bias string: R2 from VGS7 up to VG4, R1 from VG4 up to M8’s drain (VDD − |VGS8|)', tex: `R_2 = \\frac{${texNum(r.vg4, 4)} - ${texNum(r.vgs7, 4)}}{200\\mu} = ${texSI((r.vg4 - r.vgs7) / 200e-6, 'Ω')},\\; R_1 = \\frac{${texNum(r.vd8, 4)} - ${texNum(r.vg4, 4)}}{200\\mu} = ${texSI((r.vd8 - r.vg4) / 200e-6, 'Ω')}`, produces: 'r2', value: (r.vg4 - r.vgs7) / 200e-6 },
+      { tag: 'A', title: 'R1: from VG4 up to M8’s drain', tex: `R_1 = \\frac{${texNum(r.vd8, 4)} - ${texNum(r.vg4, 4)}}{200\\mu} = ${texSI((r.vd8 - r.vg4) / 200e-6, 'Ω')}`, produces: 'r1', value: (r.vd8 - r.vg4) / 200e-6 },
+      { tag: 'C', title: '(e) Auxiliary gain: M3 is degenerated by R3 (Gm3 = gm3/(1 + gm3R3)) into rO5 ‖ (M4 cascoded over rO9)', tex: `A_{aux} = ${texNum(r.gm3eff * 1e6, 3)}\\,\\mu S \\times ${texSI(r.rAux, 'Ω')} = ${texNum(r.aAux, 3)}` },
+      { tag: 'D', title: 'Boosted Rdown is MΩ, but M6 is a simple source (rO6 = 10 kΩ): smallest in parallel wins', tex: `|A_v| = g_{m1}(R_{boost}\\parallel r_{O6}) = ${texNum(r.gm1 * 1e3, 4)}\\,\\mathrm{mS}\\times(${texSI(r.rBoost, 'Ω')}\\parallel 10\\,\\mathrm{k\\Omega}) = ${texNum(r.gm1 * ((r.rBoost * r.ro6) / (r.rBoost + r.ro6)), 4)}`, produces: 'av', value: r.gm1 * ((r.rBoost * r.ro6) / (r.rBoost + r.ro6)) },
+    ],
+    hints: ['Start from the power: 1 mA shared between the branches; equal |VGS| means currents scale with W/L.', 'Swing: Vout from 2Vov1 to VDD − |Vov6|.', 'R3 = (VDD − VP − |VGS3|)/I3; walk the bias string node by node.', `Vov1 = ${r.vov1.toFixed(4)} V.`],
+    flags: [
+      NO_KEY,
+      'Read from the figure: M3 is a PMOS whose drain folds into M4’s source (node F, the drain of M9); M8 and M7 are diodes; M5, M6 share M8’s gate; M9 shares M7’s gate.',
+      'Currents follow from 3 mW and equal |VGS|: M8, M5 = 200 µA, M3 = 100 µA, M9 = 300 µA. λ is used only for rO.',
+      '(e) The simple PMOS load M6 limits the gain to about gm1·rO6 ≈ 63: the load trap. With an ideal load the boosted gain would be about 3.6 × 10⁴.',
+    ],
+  };
+}
+
+function t5q2(): Problem {
+  return {
+    id: 'bank-t5q2',
+    source: 'Tutorial 5 Q2 (Razavi Problem 9.12)',
+    tags: ['L8', 'L7'],
+    title: 'Tutorial 5 Q2: which pair for the CMFB amplifier, and the loop gain',
+    statement: 'In the folded cascode with resistive sensing (R1, R2), an error amplifier compares Vout,CM with VREF and drives M3, M4 through VE. The error amplifier is a differential pair with an active current-mirror load. (a) NMOS or PMOS input pair? (b) Which expression is the CMFB loop gain?',
+    figure: { kind: 'foldedCmfb' },
+    givens: [],
+    unknowns: [
+      { key: 'pair', sym: '\\text{pair}', label: '(a) Input pair of the error amplifier', unit: '', choices: ['PMOS: its mirror output sits near VGS,n, the level M3, M4 need', 'NMOS: its mirror output sits near VDD − |VGS,p|'] },
+      { key: 'loop', sym: 'T_{CM}', label: '(b) Loop gain', unit: '', choices: ['A_EA · gm3 · (Rup ‖ Rdown)', 'A_EA · gm3 · (R1 + R2)', 'A_EA · (Rup ‖ Rdown)', 'gm3 · (Rup ‖ Rdown)'] },
+    ],
+    answers: { pair: 0, loop: 0 },
+    wrong: {},
+    steps: [
+      { tag: 'A', title: '(a) VE must sit at about VGS3 (≈ Vthn + Vov), low. A PMOS pair with an NMOS mirror puts its output one VGS,n above ground: the right level. An NMOS pair’s output sits near VDD − |VGS,p|, far too high', tex: '\\text{PMOS input pair}', produces: 'pair', value: 0 },
+      { tag: 'B', title: '(b) Go round the loop: Vout,CM → (sense: gain 1) → error amp A_EA = gm,EA(rO,N ‖ rO,P) → VE → M3, M4 (gm3 each) → a CM current into each output', tex: '\\Delta I = g_{m3}\\,A_{EA}\\,\\Delta V_{out,CM}' },
+      { tag: 'C', title: 'In CM no current flows through R1, R2 (both ends move together), so each output sees Rup ‖ Rdown', tex: 'T_{CM} = A_{EA}\\,g_{m3}\\,(R_{up}\\parallel R_{down})', produces: 'loop', value: 0 },
+    ],
+    hints: ['What DC level must VE have to bias M3, M4?', 'Where does the output of a 5-T OTA sit, for each pair type?', 'Break the loop at VE and go round: sense, amplify, convert to current, back to voltage.', 'In common mode, R1 and R2 carry no current.'],
+    flags: ['Razavi 9.12 gives no device sizes, so (b) is asked as an expression. The loop is negative: Vout,CM up → VE up → more current in M3, M4 → outputs pulled down.'],
+  };
+}
+
+function t5q3(): Problem {
+  const r = tut5Q3();
+  return {
+    id: 'bank-t5q3',
+    source: 'Tutorial 5 Q3',
+    tags: ['L8', 'L7'],
+    title: 'Tutorial 5 Q3: CM gain and CMRR with and without CMFB',
+    statement: 'I1 = 50 µA, I2 = 200 µA, W/L = 50 µm/1 µm for every device, R = 10 MΩ. VDD = 1.8 V, µnCox = 100 µA/V², µpCox = 50 µA/V², λp = 0.2 V⁻¹, λn = 0.1 V⁻¹, Vthn = 0.4 V, |Vthp| = 0.5 V. Without CMFB: Ad, ACM, the optimum VO,CM and CMRR. With CMFB: the CM gain needed for ±1% on VO,CM, the CM loop gain, the CM gain achieved and the CMRR.',
+    figure: { kind: 'cmfbTut5Q3' },
+    givens: [
+      { sym: 'I_1', value: 50e-6, unit: 'A' },
+      { sym: 'I_2', value: 200e-6, unit: 'A' },
+      { sym: 'W/L', value: 50, unit: '' },
+      { sym: 'R', value: 10e6, unit: 'Ω' },
+    ],
+    unknowns: [
+      { key: 'ad', sym: 'A_d', label: 'Differential gain', unit: 'V/V' },
+      { key: 'acm', sym: '|A_{CM}|', label: 'CM gain, no CMFB', unit: 'V/V' },
+      { key: 'vocm', sym: 'V_{O,CM}', label: 'Optimum VO,CM (middle of the swing)', unit: 'V' },
+      { key: 'cmrr', sym: 'CMRR', label: 'CMRR, no CMFB', unit: '' },
+      { key: 'target', sym: '|A_{CM}|_{req}', label: 'CM gain allowed by ±1%', unit: 'V/V' },
+      { key: 'loop', sym: 'T_{CM}', label: 'CM loop gain', unit: '', tol: 0.03 },
+      { key: 'acmfb', sym: '|A_{CM}|_{fb}', label: 'CM gain with CMFB', unit: 'V/V', tol: 0.03 },
+      { key: 'cmrrfb', sym: 'CMRR_{fb}', label: 'CMRR with CMFB', unit: '', tol: 0.03 },
+    ],
+    answers: { ad: r.ad, acm: r.acm, vocm: r.vocm, cmrr: r.cmrr, target: r.acmTarget, loop: r.loop, acmfb: r.acmFb, cmrrfb: r.cmrrFb },
+    wrong: { acm: [{ mistake: 'rssNot2rss', value: r.ro3 / (1 / r.gm1 + r.ro5) }] },
+    steps: [
+      { tag: 'A', title: 'Currents: M3, M4 copy I1 (50 µA each), so M5 carries 100 µA; M11 copies I2, 100 µA in each of M7, M8', tex: `g_{m1} = ${texSI(r.gm1, 'S')},\\; r_{O1} = ${texSI(r.ro1, 'Ω')},\\; r_{O3} = ${texSI(r.ro3, 'Ω')},\\; r_{O5} = ${texSI(r.ro5, 'Ω')}` },
+      { tag: 'D', title: 'Differential: the R midpoint is AC ground, so each output sees rO1 ‖ rO3 ‖ R', tex: `A_d = g_{m1}(r_{O1}\\parallel r_{O3}\\parallel R) = ${texNum(r.ad, 4)}`, produces: 'ad', value: r.ad },
+      { tag: 'D', title: 'Common mode: no current in the R’s; CM half circuit with 2rO5 in the source', tex: `|A_{CM}| = \\frac{r_{O3}}{1/g_{m1} + 2r_{O5}} = ${texNum(r.acm, 4)}`, produces: 'acm', value: r.acm },
+      { tag: 'A', title: 'Output range: Vov5 + Vov1 up to VDD − |Vov3|; the optimum CM is its middle', tex: `V_{O,CM} = \\frac{${texNum(r.voutMin, 4)} + ${texNum(r.voutMax, 4)}}{2} = ${texSI(r.vocm, 'V', 4)}`, produces: 'vocm', value: r.vocm },
+      { tag: '·', title: 'CMRR = Ad/|ACM|', tex: `${texNum(r.cmrr, 4)}\\;(${texNum(20 * Math.log10(r.cmrr), 3)}\\,\\mathrm{dB})`, produces: 'cmrr', value: r.cmrr },
+      { tag: '·', title: '±1% on the output CM for a CM change at the input: |ACM| ≤ 0.01', tex: `|A_{CM}|_{req} = 0.010`, produces: 'target', value: r.acmTarget },
+      { tag: 'C', title: 'Loop: ΔVO,CM → M8 (gm7/2 of pair current) → diode M9 (1/gm9 ‖ rO9 ‖ rO7) → M5 (gm5) → half per side into rO3 ‖ Rdown,CM', tex: `T = \\frac{g_{m7}}{2}\\,(${texSI(r.zDiode, 'Ω')})\\,g_{m5}\\,\\frac{1}{2}(r_{O3}\\parallel R_{dn}) = ${texNum(r.loop, 4)}`, produces: 'loop', value: r.loop },
+      { tag: 'D', title: 'Feedback divides the CM gain by (1 + T); Ad is unchanged', tex: `|A_{CM}|_{fb} = \\frac{${texNum(r.acm, 4)}}{1 + ${texNum(r.loop, 4)}} = ${texNum(r.acmFb, 4)}`, produces: 'acmfb', value: r.acmFb },
+      { tag: '✓', title: 'CMRR with CMFB (the circuit does not reach the 0.010 target)', tex: `\\frac{${texNum(r.ad, 4)}}{${texNum(r.acmFb, 4)}} = ${texNum(r.cmrrFb, 4)}\\;(${texNum(20 * Math.log10(r.cmrrFb), 3)}\\,\\mathrm{dB})`, produces: 'cmrrfb', value: r.cmrrFb },
+    ],
+    hints: ['Find every current from the mirrors first.', 'In DM the R midpoint is AC ground; in CM no current flows in the R’s.', 'CM half circuit: the tail counts as 2rO5.', `gm1 = ${(r.gm1 * 1e3).toFixed(4)} mS, rO3 = 100 kΩ.`],
+    flags: [
+      NO_KEY,
+      'Several parts are open to reading. Assumed here: optimum VO,CM = the middle of [Vov5 + Vov1, VDD − |Vov3|]; “±1%” means |ACM| ≤ 0.01; ACM uses the course formula rO3/(1/gm + 2rO5).',
+    ],
   };
 }
 
@@ -245,6 +364,7 @@ function quiz2p(part: 'A' | 'B' | 'C', q: Quiz2Part): Problem {
     tags: ['L8', 'L7'],
     title: `Quiz 2 Part ${part}: triode-sensing CMFB on a telescopic`,
     statement: `Reconstructed from your Quiz 2 key (the question sheet was not uploaded). VDD = ${q.vdd} V, µnCox = ${q.kpn * 1e6} µA/V², µpCox = ${q.kpp * 1e6} µA/V², Vthn = ${q.vthn} V, |Vthp| = ${q.vthp} V, λn = ${q.lambdan} V⁻¹. PMOS M3,4: W/L = ${q.wlP34} at ${q.id3 * 1e6} µA. NMOS devices: W/L = ${q.wlN} at ${q.idN * 1e6} µA, Vb1 = ${q.vb1} V; output CM = ${q.cmFraction}·VDD. Find VD4, VP, (W/L)11,12 of the triode sensing pair, Vout,min and Rout looking down.`,
+    figure: { kind: 'cmfbTriode', props: { vout1: q.cmFraction * q.vdd, vout2: q.cmFraction * q.vdd, tail: ['M11', 'M12'], upper: 'PMOS loads M3, M4', upper2: 'NMOS cascodes below', lower: ['NMOS', 'NMOS'] } },
     givens: [{ sym: 'V_{b1}', value: q.vb1, unit: 'V' }],
     unknowns: [
       { key: 'vd4', sym: 'V_{D4}', label: 'VD4', unit: 'V' },
@@ -267,4 +387,4 @@ function quiz2p(part: 'A' | 'B' | 'C', q: Quiz2Part): Problem {
   };
 }
 
-export const M5_BANK: Problem[] = [t4q1(), t4q2(), t5q1(), t6q1(), t6q2(), t6q3(), quiz2p('A', QUIZ2_A), quiz2p('B', QUIZ2_B), quiz2p('C', QUIZ2_C)];
+export const M5_BANK: Problem[] = [t4q1(), t4q2(), t4q3(), t5q1(), t5q2(), t5q3(), t6q1(), t6q2(), t6q3(), quiz2p('A', QUIZ2_A), quiz2p('B', QUIZ2_B), quiz2p('C', QUIZ2_C)];

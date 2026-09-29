@@ -243,9 +243,9 @@ The originals were lost, so each diagram is listed with the source it will be dr
 | Tutorial 2 (9.1–9.3), Tutorial 3 (9.4, 9.6, 9.8) | L2–L4 | ✅ solved, see §7 |
 | Current-mirror handout problem | U6 | ✅ |
 | Quiz 2 A–C | L7–L8 CMFB | ✅ (key rounding noted) |
-| Tutorial 4 Q1–Q3 | L6 gain boosting | 🔒 until L6 is built (notes available) |
-| Tutorial 5 Q1–Q3 | L7–L8 CMFB | 🔒 until L7–L8 are built |
-| Tutorial 6 Q1–Q3 | L1/L9 slewing | 🔒 until L9 (settling part available after L1) |
+| Tutorial 4 Q1–Q3 | L6 gain boosting | ✅ all three in the bank with figures (no key: Flag 18) |
+| Tutorial 5 Q1–Q3 | L7–L8 CMFB | ✅ all three in the bank with figures (Q2 = Razavi 9.12 asked as concepts; Flag 19) |
+| Tutorial 6 Q1–Q3 | L1/L9 slewing | ✅ in the bank |
 | "20 things to answer cold" audit | mixed | becomes Review cards |
 
 ---
@@ -326,3 +326,30 @@ No digital lecture notes, tutorials or books are in `source/` yet (the handout c
 
 **Flag 16:** carry-skip and ripple delay formulas follow Weste & Harris §11.2.2 with unit delays; check them against the lecture when it happens.
 **Flag 17:** VIL/VIH of an unsymmetric CMOS inverter are computed from the exact square-law VTC (slope −1 points); Kang also gives closed forms. They agree to the displayed precision for the symmetric case ((3VDD + 2Vth)/8, (5VDD − 2Vth)/8), which is tested.
+
+---
+
+## 11. Tutorial audit (29 Sep) and Razavi/Allen handouts
+
+Every question on Tutorial sheets 1–6 now has a bank entry with its circuit drawn: T1 Q1–Q5, T2 Q1–Q3, T3 Q1–Q3,
+T4 Q1–Q3, T5 Q1–Q3, T6 Q1–Q3. Added in this pass: T4 Q3, T5 Q2, T5 Q3, plus figures for Razavi Fig 9.24 (T3 Q3),
+T4 Q2, Quiz 2, Ex 9.2, Ex 9.8, PS1 P10, Labs 1–9 and the chat's 1 V buffer.
+
+**Flag 18 (Tutorial 4 Q3, no key):** read from the figure: M3 is a PMOS on R3 whose drain folds into node F (M4 source,
+M9 drain); M5, M6 share M8's gate; M7/M9 form a mirror. Currents follow from 3 mW and equal |VGS|: 500/200/200/100 µA,
+M9 = 300 µA. Engine: (W/L)6 = 296.1, R3 = 19.26 kΩ, M4 saturated (VD4 1.016 V ≥ 0.241 V), (W/L)7 = 133.3,
+R1 = 5.377 kΩ, R2 = 591.9 Ω, |Av| ≈ 63.1. The gain is set by the simple PMOS load M6 (the load trap), and M3's source
+resistor R3 degenerates the auxiliary gain to about 1.26. If your class solution treats R3 as bypassed or M6 as ideal,
+the gain will differ.
+
+**Flag 19 (Tutorial 5 Q2 = Razavi 9.12 and Q3):** 9.12 gives no sizes, so (b) is asked as an expression
+(T = A_EA·gm3·(Rup ‖ Rdown)). For Q3 three readings are assumed: the optimum VO,CM is the middle of the output range
+(0.971 V); “±1%” means |ACM| ≤ 0.010; ACM uses rO3/(1/gm + 2rO5). Engine: Ad 46.8, |ACM| 0.497, CMRR 94.3
+(39.5 dB), loop gain 17.1, |ACM|fb 0.0274, CMRR 1707 (64.6 dB).
+
+**Razavi's UCLA EE215A handouts (Fall 2014, #10 noise, #10 feedback, #12 stability) and Allen's lectures 22–23**
+were read for their intuition, not copied. Used: noise as power in a 1 Hz window and the kT/C cancellation
+(new lesson L10 “What noise is”); “does a telescopic op amp need compensation?” and the opposite effect of CL on one-
+and two-stage op amps (new lesson L13 “One stage vs two”); breaking the loop with a test source to measure βA;
+Rz from a triode MOSFET that tracks 1/gm; Allen's “fewer than three rings” and CC ≥ 0.22·CL (matches the engine's
+tan formula with the zero kept: 0.2216·CL for Gm2 = 10·Gm1). No disagreement with the book was found.

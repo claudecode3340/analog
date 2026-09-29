@@ -76,3 +76,33 @@ describe('curriculum', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
+
+/**
+ * TeX escaping lint: a TeX string written with a single backslash inside a JS string loses it (\f becomes a
+ * form feed, \o becomes “o”). Catch control characters and bare TeX command names in every TeX field.
+ */
+describe('TeX strings keep their backslashes', () => {
+  const CTRL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/;
+  const BARE = /(^|[^\\a-zA-Z])(frac|sqrt|overline|mathrm|text|tfrac|dfrac|left|right)[{(|.]/;
+  const check = (where: string, tex: string) => {
+    expect(CTRL.test(tex), `${where}: control character in ${JSON.stringify(tex)}`).toBe(false);
+    expect(BARE.test(tex), `${where}: TeX command without backslash in ${JSON.stringify(tex)}`).toBe(false);
+  };
+  it('in lessons (rule, idea maths, cards)', () => {
+    for (const l of LESSONS) {
+      l.rule.tex.forEach((t) => check(`${l.id} rule`, t));
+      for (const t of allText(l)) expect(CTRL.test(t), `${l.id}: control character`).toBe(false);
+      for (const m of l.idea.match(/\$[^$]+\$/g) ?? []) check(`${l.id} idea`, m);
+    }
+  });
+  it('in the fixed bank and generated problems (steps, givens, unknowns)', async () => {
+    const { BANK } = await import('./index');
+    const { generate } = await import('../practice/generate');
+    const probs = [...BANK, ...Object.values(GENERATOR_BY_ID).map((g) => generate(g, 7))];
+    for (const p of probs) {
+      p.steps.forEach((s) => s.tex && check(`${p.id} step`, s.tex));
+      p.givens.forEach((g) => check(`${p.id} given`, g.sym));
+      p.unknowns.forEach((u) => check(`${p.id} unknown`, u.sym));
+    }
+  });
+});

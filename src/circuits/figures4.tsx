@@ -413,13 +413,13 @@ export function GainBoostFig({ vx, vg2, vout, i1, i2, vth = 0.7, highlight, insp
 }
 
 /** L7–L8: triode-device CMFB in the tail (Tutorial 5 Q1 / Razavi 9.11): M7, M8 gates on the outputs. */
-export function CmfbTriodeFig({ vout1, vout2, vp, wl, highlight }: { vout1: number; vout2: number; vp: number; wl?: number; highlight?: string[] }) {
+export function CmfbTriodeFig({ vout1, vout2, vp, wl, highlight, tail = ['M7', 'M8'], upper = 'PMOS cascode', upper2 = 'loads (M9–M12)', lower = ['M3, M5', 'M4, M6'] }: { vout1: number; vout2: number; vp?: number; wl?: number; highlight?: string[]; tail?: [string, string]; upper?: string; upper2?: string; lower?: [string, string] }) {
   const xL = 150, xR = 330;
   return (
     <Canvas w={480} h={330} title="Triode CMFB: M7 and M8 sit in deep triode; their gates sense the two outputs" highlight={highlight}>
       <Rail x1={xL - 30} x2={xR + 30} y={30} label="VDD" />
-      <Label x={240} y={78} text="PMOS cascode" anchor="middle" size={11} color="var(--ink-2)" />
-      <Label x={240} y={93} text="loads (M9–M12)" anchor="middle" size={11} color="var(--ink-2)" />
+      <Label x={240} y={78} text={upper} anchor="middle" size={11} color="var(--ink-2)" />
+      <Label x={240} y={93} text={upper2} anchor="middle" size={11} color="var(--ink-2)" />
       <Wire points={[[xL, 30], [xL, 190]]} />
       <Wire points={[[xR, 30], [xR, 190]]} />
       <rect x={xL - 18} y={44} width={36} height={80} rx={8} fill="var(--pmos-bg)" stroke="var(--pmos)" />
@@ -430,15 +430,15 @@ export function CmfbTriodeFig({ vout1, vout2, vp, wl, highlight }: { vout1: numb
       <VoltageTag x={378} y={140} v={`Vout2 ${V(vout2)}`} id="out" />
       <rect x={xL - 18} y={160} width={36} height={60} rx={8} fill="var(--nmos-bg)" stroke="var(--nmos)" />
       <rect x={xR - 18} y={160} width={36} height={60} rx={8} fill="var(--nmos-bg)" stroke="var(--nmos)" />
-      <Label x={xL + 24} y={194} text="M3, M5" size={11} color="var(--nmos)" weight={600} />
-      <Label x={xR - 24} y={194} text="M4, M6" anchor="end" size={11} color="var(--nmos)" weight={600} />
+      <Label x={xL + 24} y={194} text={lower[0]} size={11} color="var(--nmos)" weight={600} />
+      <Label x={xR - 24} y={194} text={lower[1]} anchor="end" size={11} color="var(--nmos)" weight={600} />
       <Wire points={[[xL, 220], [xL, 236], [xR, 236], [xR, 220]]} />
       <Dot x={240} y={236} id="p" />
-      <VoltageTag x={240} y={222} v={`P ${V(vp)}`} anchor="middle" id="p" />
+      <VoltageTag x={240} y={222} v={vp !== undefined ? `P ${V(vp)}` : 'P'} anchor="middle" id="p" />
       <Wire points={[[196, 236], [196, 256]]} />
       <Wire points={[[284, 236], [284, 256]]} />
-      <Nmos x={196} y={286} name="M7" id="m7" />
-      <Nmos x={284} y={286} name="M8" id="m8" flip />
+      <Nmos x={196} y={286} name={tail[0]} id="m7" />
+      <Nmos x={284} y={286} name={tail[1]} id="m8" flip />
       <Wire points={[[196, 316], [284, 316]]} />
       <Ground x={240} y={316} />
       <Wire points={[[166, 286], [110, 286], [110, 140], [xL, 140]]} id="sense" />

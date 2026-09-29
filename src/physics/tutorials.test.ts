@@ -65,3 +65,31 @@ describe('Tutorial 3', () => {
     near(r.av, 3952);
   });
 });
+
+describe('Tutorial 4 Q3 and Tutorial 5 Q3 (no answer key: engine values, hand-checked)', () => {
+  it('T4 Q3: currents from 3 mW, sizes, R3, M4 check, bias string, gain', async () => {
+    const { tut4Q3 } = await import('./solvers2');
+    const r = tut4Q3();
+    expect(r.i3 * 1e6).toBeCloseTo(100, 6);
+    expect(r.i9 * 1e6).toBeCloseTo(300, 6);
+    expect(r.wl6).toBeCloseTo(296.1, 1);
+    expect(r.r3 / 1e3).toBeCloseTo(19.26, 2);
+    expect(r.vg4).toBeCloseTo(0.9408, 4);
+    expect(r.m4Saturated).toBe(true);
+    expect(r.wl7).toBeCloseTo(133.33, 2);
+    expect(r.r2).toBeCloseTo(591.9, 1);
+    expect(r.r1 / 1e3).toBeCloseTo(5.377, 3);
+    expect(r.av).toBeCloseTo(63.1, 1); // the simple PMOS load M6 (rO = 10 kΩ) sets the gain
+  });
+  it('T5 Q3: Ad, ACM, VO,CM, loop gain, CMRR with and without CMFB', async () => {
+    const { tut5Q3 } = await import('./solvers2');
+    const r = tut5Q3();
+    expect(r.ad).toBeCloseTo(46.83, 2);
+    expect(r.acm).toBeCloseTo(0.4965, 4);
+    expect(r.cmrr).toBeCloseTo(94.3, 1);
+    expect(r.vocm).toBeCloseTo(0.9707, 4);
+    expect(r.loop).toBeCloseTo(17.10, 2);
+    expect(r.acmFb).toBeCloseTo(0.0274, 4);
+    expect(r.cmrrFb).toBeCloseTo(1707, 0);
+  });
+});

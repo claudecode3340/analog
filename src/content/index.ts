@@ -7,6 +7,7 @@ import { DIGITAL_BANK } from '../practice/bankD';
 import { LAB_BANK } from '../practice/bankLabs';
 import { CHAT_BANK } from '../practice/bankChat';
 import { ALL_GENERATORS } from '../practice/generators';
+import { BANK_FIGURES } from '../practice/bankFigures';
 
 import type { Generator, Problem } from '../practice/schema';
 import { AUDIT_CARDS } from './audit';
@@ -28,7 +29,9 @@ export const LESSON_BY_ID: Record<string, Lesson> = Object.fromEntries(LESSONS.m
 export const UNIT_BY_ID: Record<string, Unit> = Object.fromEntries(UNITS.map((u) => [u.id, u]));
 export const GENERATORS: Generator[] = ALL_GENERATORS;
 export const GENERATOR_BY_ID: Record<string, Generator> = Object.fromEntries(GENERATORS.map((g) => [g.id, g]));
-export const BANK: Problem[] = [...FIXED_BANK, ...M3_BANK, ...M4_BANK, ...M5_BANK, ...M6_BANK, ...DIGITAL_BANK, ...LAB_BANK, ...CHAT_BANK];
+export const BANK: Problem[] = [...FIXED_BANK, ...M3_BANK, ...M4_BANK, ...M5_BANK, ...M6_BANK, ...DIGITAL_BANK, ...LAB_BANK, ...CHAT_BANK].map((p) =>
+  p.figure || !BANK_FIGURES[p.id] ? p : { ...p, figure: BANK_FIGURES[p.id] },
+);
 export const BANK_BY_ID: Record<string, Problem> = Object.fromEntries(BANK.map((p) => [p.id, p]));
 
 export { UNITS };

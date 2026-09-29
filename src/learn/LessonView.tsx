@@ -13,6 +13,8 @@ import { Tex } from '../ui/Tex';
 import { IconArrowLeft, IconArrowRight, STEP_ICONS } from '../ui/Icons';
 import { WIDGETS } from './widgets';
 import { nextLessonAfter } from '../app/progress';
+import { IDEA_FIGURES } from '../content/ideaFigures';
+import type { FigureSpec } from '../practice/schema';
 
 const SECTIONS = ['Why you need this', 'The picture', 'Predict', 'The idea', 'The rule', 'Worked example', 'Your turn', 'Lock it in'];
 const SHORT = ['Why', 'Picture', 'Predict', 'Idea', 'Rule', 'Example', 'Your turn', 'Lock in'];
@@ -62,6 +64,28 @@ function workedProblem(l: Lesson): Problem | null {
   return null;
 }
 
+/** Figure beside the text-only steps (analog lessons): a chosen figure, else the picture if static, else the worked example's. */
+function sideFigure(l: Lesson, worked: Problem | null): FigureSpec | undefined {
+  if (UNIT_BY_ID[l.unit]?.group === 'digital') return undefined;
+  if (IDEA_FIGURES[l.id]) return IDEA_FIGURES[l.id];
+  if (!('widget' in l.picture.visual)) return l.picture.visual;
+  if (worked?.figure) return worked.figure;
+  if ('custom' in l.worked) return l.worked.custom.figure;
+  return undefined;
+}
+
+function WithFigure({ fig, children }: { fig?: FigureSpec; children: React.ReactNode }) {
+  if (!fig) return <>{children}</>;
+  return (
+    <div className="with-figure">
+      <div className="with-figure-text">{children}</div>
+      <div className="with-figure-fig bench" aria-label="Circuit for this step">
+        <Figure kind={fig.kind} props={fig.props} />
+      </div>
+    </div>
+  );
+}
+
 export function LessonView({ id }: { id: string }) {
   const lesson = LESSON_BY_ID[id];
   const progress = useProgress();
@@ -86,6 +110,7 @@ export function LessonView({ id }: { id: string }) {
   }, [id]);
 
   const worked = useMemo(() => (lesson ? workedProblem(lesson) : null), [lesson]);
+  const fig = useMemo(() => (lesson ? sideFigure(lesson, worked) : undefined), [lesson, worked]);
   const turnProblems = useMemo(() => {
     if (!lesson) return [];
     const out: Problem[] = [];
@@ -149,6 +174,7 @@ export function LessonView({ id }: { id: string }) {
     switch (i) {
       case 0:
         return (
+          <WithFigure fig={fig}>
           <div className="why-block">
             <p className="why">
               <RichText text={lesson.why} />
@@ -160,6 +186,7 @@ export function LessonView({ id }: { id: string }) {
               {lesson.refs.conversation && <>From your tutoring chat: {lesson.refs.conversation}</>}
             </p>
           </div>
+          </WithFigure>
         );
       case 1:
         return (
@@ -183,7 +210,7 @@ export function LessonView({ id }: { id: string }) {
         );
       case 3:
         return (
-          <>
+          <WithFigure fig={fig}>
             <div className="idea">
               <Prose text={lesson.idea} />
             </div>
@@ -195,11 +222,11 @@ export function LessonView({ id }: { id: string }) {
                 </p>
               </div>
             )}
-          </>
+          </WithFigure>
         );
       case 4:
         return (
-          <>
+          <WithFigure fig={fig}>
             <div className="rule-box">
               {lesson.rule.tex.map((t, j) => (
                 <div key={j} className="rule-line">
@@ -221,7 +248,7 @@ export function LessonView({ id }: { id: string }) {
                 <RichText text={lesson.rule.note} />
               </p>
             )}
-          </>
+          </WithFigure>
         );
       case 5:
         if (worked) return <ProblemView problem={worked} mode="worked" />;
@@ -258,13 +285,15 @@ export function LessonView({ id }: { id: string }) {
       default:
         return (
           <div className="lockin">
-            <p className="summary">
-              <RichText text={lesson.lockIn.summary} />
-            </p>
-            <div className="hook">
-              <span className="eyebrow">Memory hook</span>
-              <p>{lesson.lockIn.hook}</p>
-            </div>
+            <WithFigure fig={fig}>
+              <p className="summary">
+                <RichText text={lesson.lockIn.summary} />
+              </p>
+              <div className="hook">
+                <span className="eyebrow">Memory hook</span>
+                <p>{lesson.lockIn.hook}</p>
+              </div>
+            </WithFigure>
             {answeredAll ? (
               <div className={`score-card ${mastered ? 'ok celebrate' : 'bad'}`} role="status">
                 <div className="score-ring" style={{ ['--p' as string]: `${Math.round(score * 100)}` }}>

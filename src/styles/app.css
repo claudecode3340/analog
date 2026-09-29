@@ -1912,3 +1912,12 @@ button.bit {
     animation: none;
   }
 }
+
+/* Text-only lesson steps carry the lesson's circuit beside the words (stacked on phones). */
+.with-figure { display: grid; gap: var(--s-4, 16px); align-items: start; }
+.with-figure-fig { min-width: 0; order: -1; }
+.with-figure-fig svg { max-width: 100%; height: auto; }
+@media (min-width: 900px) {
+  .with-figure { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+  .with-figure-fig { position: sticky; top: 90px; order: 0; }
+}

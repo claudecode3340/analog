@@ -106,12 +106,12 @@ Feedback does not rescue it: the loop cuts the supply-to-output gain and the inp
 
 To see which frequencies carry it, pass it through a 1 Hz-wide window and measure the power that gets through. Do that at every frequency: that is the spectrum, in V²/Hz. A resistor’s is flat (“white”): 4kTR.
 
-The total noise is the **area** under the spectrum after any filtering. On an RC, the area is $4kTR\cdot\frac{\pi}{2}\cdot\frac{1}{2\pi RC} = kT/C$.
+The total noise is the **area** under the spectrum after any filtering. On an RC, the area is $4kTR\\cdot\\frac{\\pi}{2}\\cdot\\frac{1}{2\\pi RC} = kT/C$.
 
-Independent noises add as **powers**: $\sqrt{v_1^2 + v_2^2}$, never $v_1 + v_2$.`,
+Independent noises add as **powers**: $\\sqrt{v_1^2 + v_2^2}$, never $v_1 + v_2$.`,
     analogy: 'A river’s roar: you cannot predict each splash, but you can measure how loud it is in each pitch band.',
     rule: {
-      tex: ['\overline{V_n^2} = 4kTR\;\mathrm{(V^2/Hz)}', '\overline{v_{n,C}^2} = \frac{kT}{C}', 'v_{tot} = \sqrt{v_1^2 + v_2^2}'],
+      tex: ['\\overline{V_n^2} = 4kTR\\;\\mathrm{(V^2/Hz)}', '\\overline{v_{n,C}^2} = \\frac{kT}{C}', 'v_{tot} = \\sqrt{v_1^2 + v_2^2}'],
       symbols: ['Vn', 'kT'],
       note: 'Noise bandwidth of one pole = (π/2)·f−3dB. 1 pF at 300 K: 64 µV rms.',
     },
@@ -213,7 +213,7 @@ A **single pole** can delay the signal by at most 90°, so a one-pole loop can n
     why: 'Lec 15–16 and Razavi 10.1–10.3: every real op amp has several poles, and the extra poles eat phase long before they cut gain.',
     picture: {
       visual: { widget: 'multiPoleMini' },
-      caption: 'Switch between 1, 2 and 3 poles and lower β. Watch where the phase crosses −180° and whether the gain is still above 0 dB there.',
+      caption: 'Switch between 1, 2 and 3 poles and lower β. Razavi’s two ways to go bad are one problem: too much gain or too much phase both mean |βA| is still ≥ 1 when the phase reaches −180°.',
     },
     predict: {
       prompt: 'You make the feedback weaker (smaller β, higher closed-loop gain). The loop becomes…',
@@ -312,6 +312,7 @@ That is why the target is about **60°**. Remember it is a small-signal idea: bi
     rule: {
       tex: ['|A_f(\\omega_{gx})| = \\dfrac{1}{\\beta}\\cdot\\dfrac{1}{2\\sin(PM/2)}', '5^\\circ \\to 11.5,\\quad 45^\\circ \\to 1.3,\\quad 60^\\circ \\to 1.0\\;(\\times 1/\\beta)'],
       symbols: ['Af', 'PM', 'beta'],
+      note: 'Allen’s rule of thumb: fewer than about three rings in the step means PM ≥ 45°. PM is a small-signal guide; a big step also slews (Razavi).',
     },
     worked: { bank: 'bank-lec16' },
     yourTurn: { generators: ['l12-pm'], count: 2 },
@@ -351,6 +352,7 @@ Hand method: the other poles may use only 90° − PM at ωgx. For one other pol
     rule: {
       tex: ['20\\log|A| - 20\\log\\tfrac{1}{\\beta} = 20\\log|\\beta A|', '\\omega_{gx} = \\omega_{p2}\\tan(90^\\circ - PM),\\quad \\omega\'_{p1} = \\dfrac{\\omega_{gx}}{\\beta A_0}'],
       symbols: ['omegap1', 'omegap2', 'omegagx', 'PM', 'beta'],
+      note: 'Razavi’s shortcut on the Bode plot: start at the first non-dominant pole on the 0 dB line and draw a −20 dB/dec line back up to the flat gain. Where it meets is the new dominant pole (PM ≈ 45°).',
     },
     worked: { bank: 'bank-ps2-p3' },
     yourTurn: { generators: ['l13-dominant'], count: 2 },
@@ -388,7 +390,7 @@ So CL is the compensation: fu = gm/(2πCL), and more CL only adds margin, at the
 In a **two-stage** op amp the dominant pole is set by CC at the first stage, and CL sits on the **second** pole, Gm2/CL. More CL pulls that pole down towards fu: the margin shrinks and the step rings.`,
     analogy: 'A heavier trailer slows a steady truck (one stage) but makes a wobbly one (two stage) sway more.',
     rule: {
-      tex: ['\text{one stage: } f_u = \frac{g_m}{2\pi C_L},\; PM \approx 90^\circ - \tan^{-1}\frac{\beta f_u}{f_{nd}}', 'C_{L,min} = \frac{\beta g_m}{2\pi f_{nd}\tan(90^\circ - PM)}', '\text{two stage: } \omega_{p2} \approx \frac{G_{m2}}{C_L}\;(\text{more } C_L \Rightarrow \text{less } PM)'],
+      tex: ['\\text{one stage: } f_u = \\frac{g_m}{2\\pi C_L},\\; PM \\approx 90^\\circ - \\tan^{-1}\\frac{\\beta f_u}{f_{nd}}', 'C_{L,min} = \\frac{\\beta g_m}{2\\pi f_{nd}\\tan(90^\\circ - PM)}', '\\text{two stage: } \\omega_{p2} \\approx \\frac{G_{m2}}{C_L}\\;(\\text{more } C_L \\Rightarrow \\text{less } PM)'],
       symbols: ['gm', 'CL', 'PM', 'beta', 'omegap2'],
       note: 'The hand CL is on the safe side: the exact margin comes out a few degrees higher.',
     },
@@ -469,6 +471,7 @@ Slewing: the tail current charges CC, so $SR = I_{SS}/C_C$, unless M7 cannot als
     rule: {
       tex: ['\\omega_u = \\dfrac{G_{m1}}{C_C},\\quad \\omega_{p2} \\approx \\dfrac{G_{m2}}{C_L}', 'C_C = \\dfrac{G_{m1}C_L\\tan PM}{G_{m2}}\\;(\\text{zero removed})', 'SR = \\min\\left(\\dfrac{I_{SS}}{C_C},\\,\\dfrac{I_7 - I_{SS}}{C_L}\\right)'],
       symbols: ['CC', 'omegau', 'Gm', 'CL', 'PM', 'SR'],
+      note: 'Allen’s check: RHP zero at ≥ 10·GBW and P2 ≥ 2.2·GBW give 60°, i.e. CC ≥ 0.22·CL when Gm2 = 10·Gm1. The tan formula with the zero kept gives the same 0.22.',
     },
     worked: { bank: 'bank-ps2-p4' },
     yourTurn: { generators: ['l14-cc', 'l13-miller'], count: 3 },

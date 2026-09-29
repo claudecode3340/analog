@@ -18,6 +18,7 @@ import {
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from '../circuits/figures2';
 import { BarkhausenFig, ClosedStepFig, KtcSpectrumFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from '../circuits/figures5';
 import { CmosVtcFig, DynamicGateFig, EffortPathFig, FlopTimingFig, InverterFig, NoiseMarginFig, PassGateFig, RcLadderFig, SramCellFig, StaticGateFig, SwitchingFig } from '../circuits/figuresD';
+import { CapNonInvFig, CmfbTut5Q3Fig, FoldedCmfbFig, PmosFollowerFig, PmosPairRdFig, GainBoostFoldedFig, GainBoostPmosFig, TwoStageTeleFig } from '../circuits/figures6';
 import { DrawStyleContext } from '../circuits/primitives';
 import { VoltageLadder } from '../circuits/schematic';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from '../circuits/figures3';
@@ -123,6 +124,15 @@ export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactEl
   { id: 'twostage-miller', title: 'Two-stage with CC', el: <TwoStageMillerFig /> },
   { id: 'twostage-rz', title: 'Two-stage with CC and Rz', el: <TwoStageMillerFig rz /> },
   { id: 'replica', title: 'Replica CMFB (Lec 12)', el: <ReplicaCmfbFig vref={1.2} vcm={1.2} /> },
+  { id: 'twostage-tele', title: 'Two-stage, telescopic first stage (Tut 3 Q3)', el: <TwoStageTeleFig /> },
+  { id: 'gainboost-pmos', title: 'Gain boosting, PMOS auxiliary (Tut 4 Q2)', el: <GainBoostPmosFig /> },
+  { id: 'gainboost-folded', title: 'Gain boosting, folded auxiliary (Tut 4 Q3)', el: <GainBoostFoldedFig /> },
+  { id: 'folded-cmfb', title: 'Folded cascode with resistive CMFB (Tut 5 Q2)', el: <FoldedCmfbFig /> },
+  { id: 'cmfb-t5q3', title: 'CMFB with PMOS error amp (Tut 5 Q3)', el: <CmfbTut5Q3Fig /> },
+  { id: 'cmfb-quiz2', title: 'Triode CMFB, Quiz 2 names', el: <CmfbTriodeFig vout1={0.9} vout2={0.9} tail={['M11', 'M12']} upper="PMOS loads M3, M4" upper2="NMOS cascodes below" lower={['M5, M7', 'M6, M8']} /> },
+  { id: 'pmos-follower', title: 'PMOS source follower (Lab 4)', el: <PmosFollowerFig /> },
+  { id: 'pmos-pair-rd', title: 'PMOS pair, resistor loads (Lab 6)', el: <PmosPairRdFig /> },
+  { id: 'cap-noninv', title: 'Capacitive non-inverting amp (Lab 8)', el: <CapNonInvFig /> },
   { id: 'ktc-spectrum', title: 'kT/C: R noise on C', el: <KtcSpectrumFig r={1e3} c={1e-12} other={1e5} /> },
   { id: 'noise-share', title: 'Noise shares', el: <NoiseShareFig items={[{ label: 'M1, M2', value: 3, tone: 'n' }, { label: 'M3, M4', value: 1.2, tone: 'p' }, { label: 'M5', value: 0, tone: 'muted' }]} /> },
   { id: 'inv-cmos', title: 'CMOS inverter', el: <InverterFig load="cmos" vin={0} vout={1.8} /> },

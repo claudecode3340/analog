@@ -224,7 +224,7 @@ export const genKtc: Generator = {
         { sym: 'v_{amp}', value: vamp, unit: 'V' },
       ],
       unknowns: [
-        { key: 'dens', sym: '\sqrt{4kTR}', label: 'Noise density of R', unit: 'nV/√Hz' },
+        { key: 'dens', sym: '\\sqrt{4kTR}', label: 'Noise density of R', unit: 'nV/√Hz' },
         { key: 'f3', sym: 'f_{-3dB}', label: 'RC bandwidth', unit: 'Hz' },
         { key: 'vt', sym: 'v_{n,C}', label: 'Total rms noise on C', unit: 'V' },
         { key: 'tot', sym: 'v_{n,tot}', label: 'Total with the amplifier', unit: 'V' },
@@ -236,10 +236,10 @@ export const genKtc: Generator = {
         f3: [{ mistake: 'forgot2pi', value: 1 / (r * c) }],
       },
       steps: [
-        { tag: '·', title: 'Height of the spectrum: 4kTR (flat: “white”)', tex: `\sqrt{4kTR} = \sqrt{4(${texNum(kT)})(${r})} = ${texSI(Math.sqrt(4 * kT * r) * 1e9, 'nV/√Hz')}`, produces: 'dens', value: Math.sqrt(4 * kT * r) * 1e9 },
-        { tag: '·', title: 'Width: the RC filter cuts it off at 1/(2πRC)', tex: `f_{-3dB} = \frac{1}{2\pi RC} = ${texSI(1 / (2 * Math.PI * r * c), 'Hz')}`, produces: 'f3', value: 1 / (2 * Math.PI * r * c) },
-        { tag: '·', title: 'Area = height² × noise bandwidth (π/2)·f−3dB: R cancels, leaving kT/C', tex: `4kTR\cdot\frac{\pi}{2}\cdot\frac{1}{2\pi RC} = \frac{kT}{C} \Rightarrow \sqrt{kT/C} = ${texSI(vtH, 'V')}`, produces: 'vt', value: vtH },
-        { tag: '✓', title: 'Independent sources add as powers (Pythagoras), not amplitudes', tex: `\sqrt{(${texSI(vtH, 'V')})^2 + (${texSI(vamp, 'V')})^2} = ${texSI(totH, 'V')}`, produces: 'tot', value: totH },
+        { tag: '·', title: 'Height of the spectrum: 4kTR (flat: “white”)', tex: `\\sqrt{4kTR} = \\sqrt{4(${texNum(kT)})(${r})} = ${texSI(Math.sqrt(4 * kT * r) * 1e9, 'nV/√Hz')}`, produces: 'dens', value: Math.sqrt(4 * kT * r) * 1e9 },
+        { tag: '·', title: 'Width: the RC filter cuts it off at 1/(2πRC)', tex: `f_{-3dB} = \\frac{1}{2\\pi RC} = ${texSI(1 / (2 * Math.PI * r * c), 'Hz')}`, produces: 'f3', value: 1 / (2 * Math.PI * r * c) },
+        { tag: '·', title: 'Area = height² × noise bandwidth (π/2)·f−3dB: R cancels, leaving kT/C', tex: `4kTR\\cdot\\frac{\\pi}{2}\\cdot\\frac{1}{2\\pi RC} = \\frac{kT}{C} \\Rightarrow \\sqrt{kT/C} = ${texSI(vtH, 'V')}`, produces: 'vt', value: vtH },
+        { tag: '✓', title: 'Independent sources add as powers (Pythagoras), not amplitudes', tex: `\\sqrt{(${texSI(vtH, 'V')})^2 + (${texSI(vamp, 'V')})^2} = ${texSI(totH, 'V')}`, produces: 'tot', value: totH },
       ],
       hints: [
         'Picture the spectrum: a flat height 4kTR, cut off by the RC filter. The total is the area.',
@@ -605,7 +605,7 @@ export const genOneStage: Generator = {
         { sym: 'R_{out}', value: rout, unit: 'Ω' },
         { sym: 'C_L', value: cl, unit: 'F' },
         { sym: 'f_{nd}', value: fnd, unit: 'Hz' },
-        { sym: '\beta', value: beta, unit: '' },
+        { sym: '\\beta', value: beta, unit: '' },
       ],
       unknowns: [
         { key: 'gm', sym: 'g_{m1}', label: 'gm of the input pair', unit: 'S' },
@@ -620,10 +620,10 @@ export const genOneStage: Generator = {
         clMin: [{ mistake: 'wrongPmTan', value: (beta * gm) / (2 * Math.PI * fnd * Math.tan(rad(pmT))) }],
       },
       steps: [
-        { tag: 'C', title: 'Each input device carries ISS/2: gm = 2(ISS/2)/Vov', tex: `g_{m1} = \frac{I_{SS}}{V_{ov1}} = ${texSI(iss / vov, 'S')}`, produces: 'gm', value: iss / vov },
-        { tag: 'D', title: 'The output node is the dominant pole; above it the gain is gm/(ωCL)', tex: `f_u = \frac{g_{m1}}{2\pi C_L} = ${texSI((iss / vov) / (2 * Math.PI * cl), 'Hz')}`, produces: 'gbw', value: (iss / vov) / (2 * Math.PI * cl) },
-        { tag: '·', title: 'Loop crossover fgx ≈ β·fu; the internal pole takes atan(fgx/fnd)', tex: `PM = 90^\circ - \tan^{-1}\frac{${texSI(fgxH, 'Hz')}}{${texSI(fnd, 'Hz')}} = ${texSI(pmH, '°')}`, produces: 'pm', value: pmH },
-        { tag: '✓', title: `For ${pmT}°: the internal pole may use ${90 - pmT}°, so fgx = fnd·tan(${90 - pmT}°); CL = β·gm/(2π·fgx)`, tex: `C_L = \frac{\beta g_{m1}}{2\pi f_{nd}\tan(${90 - pmT}^\circ)} = ${texSI(clH, 'F')}`, produces: 'clMin', value: clH },
+        { tag: 'C', title: 'Each input device carries ISS/2: gm = 2(ISS/2)/Vov', tex: `g_{m1} = \\frac{I_{SS}}{V_{ov1}} = ${texSI(iss / vov, 'S')}`, produces: 'gm', value: iss / vov },
+        { tag: 'D', title: 'The output node is the dominant pole; above it the gain is gm/(ωCL)', tex: `f_u = \\frac{g_{m1}}{2\\pi C_L} = ${texSI((iss / vov) / (2 * Math.PI * cl), 'Hz')}`, produces: 'gbw', value: (iss / vov) / (2 * Math.PI * cl) },
+        { tag: '·', title: 'Loop crossover fgx ≈ β·fu; the internal pole takes atan(fgx/fnd)', tex: `PM = 90^\\circ - \\tan^{-1}\\frac{${texSI(fgxH, 'Hz')}}{${texSI(fnd, 'Hz')}} = ${texSI(pmH, '°')}`, produces: 'pm', value: pmH },
+        { tag: '✓', title: `For ${pmT}°: the internal pole may use ${90 - pmT}°, so fgx = fnd·tan(${90 - pmT}°); CL = β·gm/(2π·fgx)`, tex: `C_L = \\frac{\\beta g_{m1}}{2\\pi f_{nd}\\tan(${90 - pmT}^\\circ)} = ${texSI(clH, 'F')}`, produces: 'clMin', value: clH },
       ],
       hints: [
         'In a one-stage op amp the load capacitor is the compensation: the output node is the dominant pole.',
