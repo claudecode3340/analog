@@ -14,7 +14,7 @@ import {
 } from './figures';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from './figures3';
 import { CmfbTriodeFig, FoldedCascodeFig, GainBoostFig, MirrorTeleFig, NonInvertingFig, TwoStageFig } from './figures4';
-import { TelescopicBiasFig, CapNonInvFig, CmfbTut5Q3Fig, FoldedCmfbFig, PmosFollowerFig, PmosPairRdFig, GainBoostFoldedFig, GainBoostPmosFig, TwoStageTeleFig } from './figures6';
+import { CapFeedbackFig, CmChoiceFig, FoldingStepsFig, TelescopicBiasFig, CapNonInvFig, CmfbTut5Q3Fig, FoldedCmfbFig, PmosFollowerFig, PmosPairRdFig, GainBoostFoldedFig, GainBoostPmosFig, TwoStageTeleFig } from './figures6';
 import { BarkhausenFig, ClosedStepFig, KtcSpectrumFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from './figures5';
 import { CmosVtcFig, DynamicGateFig, EffortPathFig, FlopTimingFig, InverterFig, NoiseMarginFig, PassGateFig, RcLadderFig, SramCellFig, StaticGateFig, SwitchingFig, VtcPlot } from './figuresD';
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from './figures2';
@@ -65,6 +65,9 @@ export const FIGURES: Record<string, (props: any) => React.ReactElement> = {
   foldedCmfb: FoldedCmfbFig,
   cmfbTut5Q3: CmfbTut5Q3Fig,
   telescopicBias: TelescopicBiasFig,
+  cmChoice: CmChoiceFig,
+  capFeedback: CapFeedbackFig,
+  foldingSteps: FoldingStepsFig,
   pmosFollower: PmosFollowerFig,
   pmosPairRd: PmosPairRdFig,
   capNonInv: CapNonInvFig,

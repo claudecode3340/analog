@@ -15,7 +15,7 @@ Tags such as **[U4]** or **[L2]** give the curriculum unit each item belongs to 
 | Conversation **quizzes** (`quiz_display`) | ❌ lost | Only the "20 things to answer cold" audit and the Problem Set 1 statements survive. New check questions will be written per lesson. |
 | Conversation images (your photos) | ✅ recovered in the second export | 40 files in `source/conversation/images/`: lecture-note screenshots, **the exam paper** (`1789657566261_image.png`), tutorial sheets and **your Tutorial 1 handwritten solutions** (`20260820_*.jpg`). |
 | Razavi 2nd ed. PDF | ✅ | `source/razavi.pdf`, 801 pages, text-searchable |
-| Lecture notes 1–4, 6–12 | ✅ | vector handwriting, readable at 300 dpi. **There is no Lecture 5 file**; please check whether one exists. Lec 1–4 re-audited 29 Sep: every item is in the app (see §12). |
+| Lecture notes 1–4, 6–12 | ✅ | vector handwriting, readable at 300 dpi. Lecture 5 (12 Aug) uploaded 29 Sep. Lec 1–5 audited: every item is in the app (see §12). |
 | Settling-time example | ✅ | Razavi Ex 9.2 worked out by hand |
 | Current-mirror handout | ✅ | typed, 8 pp.: cascode mirror, low-voltage cascode, generating Vb |
 | Tutorials 1–6 | ✅ | question sheets, typed, with vector figures |
@@ -367,4 +367,14 @@ tan formula with the zero kept: 0.2216·CL for Gm2 = 10·Gm1). No disagreement w
 
 Fixed in this audit: the Ex 9.7 power split now shows the 0.33 mA bias share; the notes' gain was misread as 1408 earlier
 (it is 1428, matching the engine's 1429); the bias-branch figure (Fig 9.11 as drawn in Lec 4) was added; a card for the
-closed-loop Thevenin picture of Lec 3 was added. **Lecture 5 is still missing from source/notes.**
+closed-loop Thevenin picture of Lec 3 was added.
+
+| Lec 5 | fully differential op amp closed through C1–R1–R2 / C2–R3–R4 and its telescopic version (Razavi Ex 9.6, Fig 9.10); folding transformation (NMOS cascode → PMOS input + I2, and the PMOS version); fully differential folded cascode with ISS1, ISS2; PMOS-input folded cascode M1–M11, Rup, Rdown, Gm by current divider ≈ gm1 | new lesson L2 “Closed loop through capacitors: choose the CM level” (widget, generator l2-cmchoice, figures capFeedback and cmChoice); L4 folding lesson now shows the folding steps (figure foldingSteps); card for ISS2 = ISS1 + ISS/2 |
+
+**Flag 20 (Lec 5 numbering):** your notes number the folded cascode M9, M10 (bottom sources), M5, M6 (PMOS cascodes), M7, M8
+(top sources), so Rup = gm5rO5rO7 and Rdown = gm3rO3(rO1‖rO9). The app keeps Razavi’s numbering (also used by Tutorial 2 Q3
+and Problem Set 1): M5, M6 bottom, M7, M8 cascodes, M9, M10 top. The L4 gain lesson states the translation.
+
+**Topic links (29 Sep):** every lesson's “Your turn” and “Lock it in” steps and every topic on the Learn page list the
+tutorial, problem-set, quiz, Razavi and lab questions you can solve after that topic (a question lives in the last topic
+it needs; earlier topics show it as “coming up”). Links open the question in Practice (#/practice/<id>).

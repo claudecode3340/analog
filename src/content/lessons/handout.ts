@@ -213,6 +213,45 @@ Closing the loop also makes the output stiff: $R_{out}/(1+\\beta A)$ → about $
     },
   },
 
+  {
+    id: 'l2-cmchoice',
+    unit: 'L2',
+    title: 'Closed loop through capacitors: choose the CM level',
+    minutes: 10,
+    refs: { razavi: '§9.2.1, Example 9.6, Fig. 9.10', notes: 'Lec 05' },
+    why: 'Your Lec 5 opens with this circuit (Razavi Ex 9.6): a telescopic in closed loop, where one choice of CM level doubles the usable swing.',
+    picture: {
+      visual: { widget: 'cmChoiceMini' },
+      caption: 'Slide VCM. Too low and M3, M4 clip the bottom of the swing; too high and M1, M2 are in triode before any signal arrives.',
+    },
+    predict: {
+      prompt: 'The loop forces the input CM to equal the output CM. Where should VCM sit for the largest symmetric swing?',
+      choices: ['At Vb − Vth (M3, M4 at their edge)', 'At Vb − (VGS3,4 − Vth) (M1, M2 at their edge)', 'Exactly at VDD/2'],
+      answer: 1,
+      explain: 'At the top edge X can fall a full Vth − Vov before M3, M4 leave saturation, and rising only meets the PMOS loads. At the bottom edge it cannot fall at all.',
+    },
+    idea: `The input capacitors block DC, so the resistors set the bias: **the input CM equals the output CM**. The drains X, Y therefore sit at the same level as the input gates.
+
+Two fences box X in: M3, M4 need $V_X \\ge V_b - V_{th}$; M1, M2 need $V_X \\le V_b - (V_{GS3,4} - V_{th})$ at DC.
+
+Pick the **top** edge. X can fall by $V_{th} - V_{ov}$. It can rise freely, because the op amp's gain keeps its input gates almost still; only the PMOS loads stop it. So each output swings $\\pm(V_{th} - V_{ov})$ around VCM.`,
+    analogy: 'Parking in a garage with a low beam and a floor drain: park as high as the beam allows and you have the most room to bounce down.',
+    rule: {
+      tex: ['V_{CM} = V_b - (V_{GS3,4} - V_{th1,2}) = V_b - V_{ov3,4}', 'V_{X,min} = V_b - V_{th3,4}', '\\text{swing per side} = \\pm(V_{th} - V_{ov}),\\quad V_{pp,diff} = 4(V_{th} - V_{ov})'],
+      symbols: ['VCM', 'Vth', 'Vov', 'VGS'],
+      note: 'This is the buffer window’s cousin: the same two fences, but here the gates stay still, so only the bottom fence limits the swing.',
+    },
+    worked: { generator: 'l2-cmchoice', seed: 6 },
+    yourTurn: { generators: ['l2-cmchoice'], count: 2 },
+    lockIn: {
+      summary: 'In closed loop Vin,CM = Vout,CM. Put VCM at Vb − (VGS3,4 − Vth): X can fall Vth − Vov to Vb − Vth; the swing is ±(Vth − Vov) per side.',
+      hook: '“Park just under the beam.”',
+      cards: [
+        { id: 'c-l2-cmchoice', front: 'Ex 9.6: best output CM of a telescopic closed through capacitors?', back: 'VCM = Vb − (VGS3,4 − Vth1,2) (M1, M2 at their edge). X can then fall to Vb − Vth3,4: a swing of ±(Vth − Vov).' },
+        { id: 'c-l2-cmwhy', front: 'Why can X rise above that VCM without pushing M1, M2 into triode?', back: 'The op amp’s high gain keeps its input gates nearly still, so M1, M2’s fence does not move; only the PMOS loads limit the upswing.' },
+      ],
+    },
+  },
   // ─── L3 Design procedure ─────────────────────────────────────────────────
   {
     id: 'l3-design',
@@ -297,7 +336,7 @@ What you gain: $\\omega_u = g_m/C_L$ stays the same with α times the load capac
     unit: 'L4',
     title: 'Folded cascode: don’t stack, fold',
     minutes: 14,
-    refs: { razavi: '§9.2.4–9.2.6', notes: 'Lec 06', conversation: 'Folded-cascode lecture; PS1 P6, P8' },
+    refs: { razavi: '§9.2.4–9.2.6', notes: 'Lec 05, Lec 06', conversation: 'Folded-cascode lecture; PS1 P6, P8' },
     why: 'Tutorial 2 Q3 and Problem Set 1 P6–P8: the folded cascode fixes the telescopic’s swing and buffer problems.',
     picture: {
       visual: { widget: 'foldedMini' },
@@ -326,6 +365,7 @@ The input pair and the tail are no longer in the output stack, so the output onl
       hook: '“Don’t stack — fold. Folding flips the inequality.”',
       cards: [
         { id: 'c-l4-current', front: 'Current in M5,6 of a folded cascode?', back: 'ISS/2 + I.' },
+        { id: 'c-l4-iss2', front: 'Lec 5, fully differential folded cascode: how big must the bottom sources ISS2 be?', back: 'ISS2 = ISS1 + ISS/2: they carry the cascode branch current plus half the input pair’s tail.' },
         { id: 'c-l4-swing', front: 'Folded-cascode output range?', back: 'Vov3 + Vov5 ≤ Vout ≤ VDD − |Vov7| − |Vov9| (four overdrives).' },
       ],
     },
@@ -336,7 +376,7 @@ The input pair and the tail are no longer in the output stack, so the output onl
     unit: 'L4',
     title: 'Folded-cascode gain and the current divider',
     minutes: 12,
-    refs: { razavi: '§9.2.4', notes: 'Lec 06', conversation: 'PS1 P7' },
+    refs: { razavi: '§9.2.4', notes: 'Lec 05, Lec 06', conversation: 'PS1 P7' },
     why: 'Problem Set 1 P7: Gm = gm1 is an approximation; the folding node splits the signal current, and you can quantify it.',
     picture: {
       visual: { widget: 'foldedGain' },
@@ -357,6 +397,7 @@ $\\dfrac{r_{O1}\\parallel r_{O5}}{(1/g_{m3}\\parallel r_{O3}) + (r_{O1}\\paralle
     rule: {
       tex: ['R_{up} = g_{m7}r_{O7}r_{O9},\\quad R_{down} = g_{m3}r_{O3}(r_{O1}\\parallel r_{O5})', 'G_m = g_{m1}\\,\\dfrac{r_{O1}\\parallel r_{O5}}{(1/g_{m3}\\parallel r_{O3}) + (r_{O1}\\parallel r_{O5})}', 'A_v = G_m\\,(R_{up}\\parallel R_{down})'],
       symbols: ['Rup', 'Rdown', 'Gm', 'gm', 'rO'],
+      note: 'Your Lec 5 numbers the folded cascode differently: bottom sources M9, M10, PMOS cascodes M5, M6, top sources M7, M8. In that numbering Rup = gm5·rO5·rO7 and Rdown = gm3·rO3·(rO1 ‖ rO9). Same formulas; the app follows Razavi and your tutorial sheets.',
     },
     worked: { bank: 'bank-ps1p7' },
     yourTurn: { generators: ['l4-folded', 'u9-cascode'], count: 2 },

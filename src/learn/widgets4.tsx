@@ -6,7 +6,9 @@ import { LogBars } from '../circuits/figures2';
 import { FoldedCascodeFig, MirrorTeleFig, NonInvertingFig } from '../circuits/figures4';
 import { Plot } from '../circuits/Plot';
 import { VoltageLadder } from '../circuits/schematic';
+import { CmChoiceFig } from '../circuits/figures6';
 import {
+  closedLoopCmChoice,
   closedLoopGain,
   foldedCascodePmosInput,
   gainError,
@@ -371,11 +373,35 @@ function SeriesCompare() {
   );
 }
 
+/* ─── L2, Razavi Ex 9.6 (Lec 5): where to put the CM level of a telescopic in closed loop ─── */
+
+function CmChoiceMini() {
+  const [vcm, setVcm] = useState(0.95);
+  const [amp, setAmp] = useState(0.3);
+  const vb = 1.6, vth = 0.7, vov = 0.2;
+  const r = closedLoopCmChoice({ vb, vgs34: vth + vov, vth34: vth, vth12: vth });
+  const m12Ok = vcm <= r.vcm + 1e-9;
+  const m34Ok = vcm - amp >= r.floor - 1e-9;
+  const room = Math.max(0, vcm - r.floor);
+  return (
+    <Panel figure={<CmChoiceFig vb={vb} vth={vth} vov={vov} vcm={vcm} amp={amp} />}>
+      <Slider label="output CM level VCM" value={vcm} min={0.9} max={1.5} step={0.01} onChange={setVcm} format={V} />
+      <Slider label="signal amplitude at X" value={amp} min={0.05} max={0.6} step={0.01} onChange={setAmp} format={V} />
+      <Readout label="M1, M2 at DC (need VCM ≤ Vb − Vov)" value={m12Ok ? 'saturated' : 'triode'} tone={m12Ok ? 'ok' : 'bad'} />
+      <Readout label="M3, M4 at the bottom of the swing" value={m34Ok ? 'saturated' : 'triode'} tone={m34Ok ? 'ok' : 'bad'} />
+      <Readout label="room to fall = VCM − (Vb − Vth)" value={V(room)} tone="signal" />
+      <Readout label="best VCM (top edge)" value={`${V(r.vcm)}: ±${V(r.peak)}`} />
+      <p className="small muted">Vb = 1.6 V, Vth = 0.7 V, Vov3,4 = 0.2 V. Because the loop forces Vin,CM = Vout,CM, the drains X, Y sit at the input CM. Put it at the top edge (M1, M2 just saturated): X can then fall a full Vth − Vov before M3, M4 leave saturation, and rising is limited only by the PMOS loads.</p>
+    </Panel>
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const WIDGETS4: Record<string, (p: any) => React.ReactElement> = {
   gainErrorMini: GainErrorMini,
   offsetMini: OffsetMini,
   bufferWindow: BufferWindow,
+  cmChoiceMini: CmChoiceMini,
   topologyCompare: TopologyCompare,
   designWizard: DesignWizard,
   scalingMini: ScalingMini,

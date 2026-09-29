@@ -6,24 +6,8 @@ import { generate } from './generate';
 import { ProblemView } from './ProblemView';
 import { newSeed } from './rng';
 import type { Problem } from './schema';
+import { bankGroup, GROUP_ORDER } from './bankGroups';
 
-/** Group the fixed bank by where each problem comes from. */
-function bankGroup(p: Problem): string {
-  const s = p.source;
-  if (/^Mid-sem|^Quiz/.test(s)) return 'Exam and quizzes';
-  if (/^Tutorial (\d+)/.test(s)) return `Tutorial ${s.match(/^Tutorial (\d+)/)![1]}`;
-  if (/^Problem Set 1/.test(s)) return 'Problem Set 1 (L1–L4)';
-  if (/^Problem Set 2/.test(s)) return 'Problem Set 2 (L8–L14)';
-  if (/^Problem Set 3/.test(s)) return 'Problem Set 3 (digital)';
-  if (/^Razavi Problem/.test(s)) return 'Razavi end-of-chapter problems';
-  if (/^Razavi/.test(s)) return 'Razavi examples';
-  if (/^Lecture notes/.test(s)) return 'Your lecture notes';
-  if (/^Lab/.test(s)) return 'Lab sheets (calculations)';
-  if (/^Kang|^Weste|^Rabaey|^Digital/.test(s)) return 'Digital VLSI examples';
-  if (/chat|conversation/i.test(s)) return 'Questions from our chat';
-  return 'Worked examples';
-}
-const GROUP_ORDER = ['Exam and quizzes', 'Tutorial 1', 'Tutorial 2', 'Tutorial 3', 'Tutorial 4', 'Tutorial 5', 'Tutorial 6', 'Tutorial 7', 'Tutorial 8', 'Problem Set 1 (L1–L4)', 'Problem Set 2 (L8–L14)', 'Problem Set 3 (digital)', 'Your lecture notes', 'Razavi examples', 'Razavi end-of-chapter problems', 'Digital VLSI examples', 'Lab sheets (calculations)', 'Questions from our chat', 'Worked examples'];
 const BANK_GROUPS: Array<[string, Problem[]]> = GROUP_ORDER.map((g) => [g, BANK.filter((b) => bankGroup(b) === g)] as [string, Problem[]]).filter(([, xs]) => xs.length > 0);
 
 const TOPIC_GROUPS: Array<[string, (g: string) => boolean]> = [
@@ -34,12 +18,16 @@ const TOPIC_GROUPS: Array<[string, (g: string) => boolean]> = [
 
 type Source = { kind: 'gen'; id: string } | { kind: 'mix' } | { kind: 'bank'; id: string };
 
-export function PracticeView() {
+export function PracticeView({ initial }: { initial?: string } = {}) {
   const p = useProgress();
   const available = GENERATORS.filter((g) => unitState(UNIT_BY_ID[g.unit], p) !== 'locked');
   const masteredUnits = new Set(Object.keys(UNIT_BY_ID).filter((u) => unitState(UNIT_BY_ID[u], p) === 'mastered'));
   const mixPool = available.filter((g) => masteredUnits.has(g.unit));
-  const [source, setSource] = useState<Source>(() => (available[0] ? { kind: 'gen', id: available[0].id } : { kind: 'bank', id: BANK[0].id }));
+  const [source, setSource] = useState<Source>(() => {
+    if (initial && BANK.some((b) => b.id === initial)) return { kind: 'bank', id: initial };
+    if (initial && GENERATORS.some((g) => g.id === initial)) return { kind: 'gen', id: initial };
+    return available[0] ? { kind: 'gen', id: available[0].id } : { kind: 'bank', id: BANK[0].id };
+  });
   const [seed, setSeed] = useState(() => newSeed());
 
   const problem: Problem = useMemo(() => {

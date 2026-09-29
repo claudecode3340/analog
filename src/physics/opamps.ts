@@ -228,6 +228,19 @@ export function unityGainWindow(p: { vb1: number; vgs4: number; vth4: number; vt
   return { lower, upper, width: upper - lower };
 }
 
+/**
+ * Razavi Ex 9.6 (your Lec 5): a telescopic op amp in closed loop through input capacitors, so Vin,CM = Vout,CM.
+ * The drains X, Y must stay between Vb − Vth3,4 (M3, M4 saturated) and Vb − (VGS3,4 − Vth1,2) (M1, M2 saturated).
+ * Put VCM at the TOP edge: X can then fall to Vb − Vth3,4, and rising is free (the input gates barely move), so the
+ * symmetric swing per side is ±(Vth − Vov3,4) around VCM, i.e. 4(Vth − Vov) peak-to-peak differential.
+ */
+export function closedLoopCmChoice(p: { vb: number; vgs34: number; vth34: number; vth12: number }) {
+  const vcm = p.vb - (p.vgs34 - p.vth12);
+  const floor = p.vb - p.vth34;
+  const peak = vcm - floor;
+  return { vcm, floor, peak, ppSide: 2 * peak, ppDiff: 4 * peak };
+}
+
 // ─── Folded cascode (PMOS input, Razavi Fig. 9.15 numbering) ───────────────
 // M1,2 PMOS input; M3,4 NMOS cascodes; M5,6 NMOS folding current sources (carry ISS/2 + I);
 // M7,8 PMOS cascodes; M9,10 PMOS current sources (carry I).

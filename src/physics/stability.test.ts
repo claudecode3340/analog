@@ -195,3 +195,14 @@ describe('Razavi HO #10/#12 and Allen L22 intuitions', () => {
     expect((10 * cc) / 1e-12).toBeCloseTo(2.2, 1);
   });
 });
+
+describe('Razavi Ex 9.6 (Lec 5): CM level of a telescopic in closed loop', () => {
+  it('VCM = Vb − (VGS3,4 − Vth1,2); swing ±(Vth − Vov) per side', async () => {
+    const { closedLoopCmChoice } = await import('./opamps');
+    const r = closedLoopCmChoice({ vb: 1.6, vgs34: 0.9, vth34: 0.7, vth12: 0.7 });
+    expect(r.vcm).toBeCloseTo(1.4, 12);
+    expect(r.floor).toBeCloseTo(0.9, 12);
+    expect(r.peak).toBeCloseTo(0.5, 12); // Vth − Vov = 0.7 − 0.2
+    expect(r.ppDiff).toBeCloseTo(2.0, 12);
+  });
+});

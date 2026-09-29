@@ -3,6 +3,7 @@ import { LESSON_BY_ID, LESSONS, UNIT_BY_ID, UNITS } from '../content';
 import { nextStep } from '../app/progress';
 import { useProgress } from '../app/store';
 import type { Unit } from '../content/types';
+import { SheetLinks } from './SheetLinks';
 
 const PARTS: Array<{ id: Unit['group']; title: string; note: string }> = [
   { id: 'foundations', title: 'Foundations (U0–U12)', note: 'The MOSFET, small signal, every single stage, the pair, the OTA, poles.' },
@@ -83,6 +84,7 @@ export function LearnIndex() {
                       <LessonChip key={id} id={id} />
                     ))}
                   </div>
+                  <SheetLinks unit={u.id} compact />
                 </section>
               ))}
             </details>

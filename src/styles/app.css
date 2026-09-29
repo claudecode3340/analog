@@ -1921,3 +1921,17 @@ button.bit {
   .with-figure { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
   .with-figure-fig { position: sticky; top: 90px; order: 0; }
 }
+
+/* A topic's real questions (tutorials, problem sets, quizzes, labs), linked into Practice. */
+.sheet-links { margin-top: 20px; }
+.sheet-links.card { padding: 16px 18px; }
+.sheet-links h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.sheet-links ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.sheet-link { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; text-decoration: none; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.sheet-link:hover, .sheet-link:focus-visible { border-color: var(--signal); }
+.sheet-src { font-family: var(--font-mono, monospace); font-size: 0.78rem; color: var(--ink-2); min-width: 9.5em; }
+.sheet-title { color: var(--ink); }
+.sheet-links details { margin-top: 10px; }
+.sheet-links.compact { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip-link { font-size: 0.8rem; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+.chip-link:hover, .chip-link:focus-visible { border-color: var(--signal); }

@@ -4,6 +4,7 @@
  * Razavi 9.12, Q3 with R = 10 MΩ sensing). Bias gates carry net labels (Vbp, Vbn, …) instead of long wires,
  * so the signal path stays readable. Colour code: NMOS purple, PMOS teal (from the primitives).
  */
+import { Plot, type Series } from './Plot';
 import { Capacitor, CurrentSource, Canvas, Dot, Ground, Label, Nmos, Pmos, Rail, Resistor, ResistorH, Terminal, Wire } from './primitives';
 
 const NET = 'var(--ink-2)';
@@ -497,6 +498,130 @@ export function TelescopicBiasFig({ highlight }: { highlight?: string[] }) {
       <Wire points={[[xm, yT - 10], [xm, y9 - 30]]} />
       <Nmos x={xm} y={y9} name="M9" flip />
       <Ground x={xm} y={y9 + 30} />
+    </Canvas>
+  );
+}
+
+/**
+ * Razavi Fig 9.10(c, d) / Lec 5: the drain voltage VX of a telescopic in closed loop swings around VCM. It must stay
+ * above Vb − Vth3,4 (M3, M4) and, at DC, below Vb − (VGS3,4 − Vth1,2) (M1, M2). A VCM at the top edge leaves the
+ * most room to fall; a VCM at the bottom edge leaves none.
+ */
+export function CmChoiceFig({ vb, vth, vov, vcm, amp }: { vb: number; vth: number; vov: number; vcm: number; amp: number }) {
+  const top = vb - vov; // Vb − (VGS − Vth) with equal thresholds
+  const floor = vb - vth;
+  const lo = floor - 0.35, hi = vb + 0.15;
+  const wave: Array<[number, number]> = [];
+  for (let k = 0; k <= 200; k++) {
+    const t = (k / 200) * 2;
+    wave.push([t, Math.max(lo, Math.min(hi, vcm + amp * Math.sin(2 * Math.PI * t)))]);
+  }
+  const clips = vcm - amp < floor - 1e-9 || vcm > top + 1e-9;
+  const series: Series[] = [
+    { points: [[0, vb], [2, vb]], color: 'var(--muted)', width: 1.2, dashed: true, label: 'Vb', labelAt: 'end' },
+    { points: [[0, top], [2, top]], color: 'var(--nmos)', width: 1.6, dashed: true, label: 'Vb − (VGS − Vth)', labelAt: 'end' },
+    { points: [[0, floor], [2, floor]], color: 'var(--bad)', width: 1.6, dashed: true, label: 'Vb − Vth', labelAt: 'end' },
+    { points: wave, color: clips ? 'var(--bad)' : 'var(--signal)', width: 2.6 },
+  ];
+  return (
+    <Plot
+      title="Drain voltage VX of a telescopic in closed loop: where to put VCM"
+      xRange={[0, 2]}
+      yRange={[lo, hi]}
+      xLabel="time (cycles)"
+      yLabel="VX (V)"
+      xTicks={[0, 1, 2]}
+      yFmt={(v) => v.toFixed(1)}
+      series={series}
+    />
+  );
+}
+
+/** Lec 5 / Razavi Fig 9.10(a): a fully differential op amp closed through C1–R1–R2 and C2–R3–R4. */
+export function CapFeedbackFig({ highlight }: { highlight?: string[] }) {
+  return (
+    <Canvas w={480} h={250} title="Closed loop through input capacitors: the input CM becomes the output CM" highlight={highlight} maxWidth={600}>
+      <path d="M 200 70 L 200 180 L 290 125 Z" fill="var(--surface)" stroke="var(--ink)" strokeWidth={2} />
+      <Label x={207} y={98} text="−" size={14} weight={700} />
+      <Label x={207} y={160} text="+" size={14} weight={700} />
+      <Label x={262} y={110} text="+" size={12} weight={700} />
+      <Label x={262} y={148} text="−" size={12} weight={700} />
+      <Wire points={[[40, 94], [60, 94]]} />
+      <line x1={64} x2={64} y1={82} y2={106} stroke="var(--ink)" strokeWidth={3} />
+      <line x1={72} x2={72} y1={82} y2={106} stroke="var(--ink)" strokeWidth={3} />
+      <Label x={68} y={76} text="C1" anchor="middle" weight={600} />
+      <ResistorH x1={76} x2={150} y={94} label="R1" />
+      <Wire points={[[150, 94], [200, 94]]} />
+      <Dot x={170} y={94} />
+      <Wire points={[[170, 94], [170, 40]]} />
+      <ResistorH x1={170} x2={320} y={40} label="R2" />
+      <Wire points={[[320, 40], [320, 112], [284, 112]]} id="out" />
+      <Wire points={[[40, 156], [60, 156]]} />
+      <line x1={64} x2={64} y1={144} y2={168} stroke="var(--ink)" strokeWidth={3} />
+      <line x1={72} x2={72} y1={144} y2={168} stroke="var(--ink)" strokeWidth={3} />
+      <Label x={68} y={186} text="C2" anchor="middle" weight={600} />
+      <ResistorH x1={76} x2={150} y={156} label="R3" />
+      <Wire points={[[150, 156], [200, 156]]} />
+      <Dot x={170} y={156} />
+      <Wire points={[[170, 156], [170, 212]]} />
+      <ResistorH x1={170} x2={340} y={212} label="R4" />
+      <Wire points={[[340, 212], [340, 138], [284, 138]]} id="out" />
+      <Wire points={[[320, 112], [380, 112]]} id="out" />
+      <Wire points={[[340, 138], [380, 138]]} id="out" />
+      <Terminal x={384} y={112} />
+      <Terminal x={384} y={138} />
+      <Label x={392} y={116} text="Vout1" weight={600} />
+      <Label x={392} y={142} text="Vout2" weight={600} />
+      <Label x={36} y={98} text="Vin1" anchor="end" weight={600} />
+      <Label x={36} y={160} text="Vin2" anchor="end" weight={600} />
+    </Canvas>
+  );
+}
+
+/**
+ * Lec 5: folding a cascode. Left: an NMOS cascode (M1 under M2, fed by I1). Right: the input device turned into a
+ * PMOS that injects its current into M2's source, which now needs its own current source I2 to ground.
+ */
+export function FoldingStepsFig({ highlight }: { highlight?: string[] }) {
+  return (
+    <Canvas w={520} h={290} title="Folding: move the input device from under the cascode to beside it" highlight={highlight} maxWidth={640}>
+      <Label x={110} y={24} text="cascode" anchor="middle" weight={700} color="var(--ink-2)" />
+      <Label x={370} y={24} text="folded cascode" anchor="middle" weight={700} color="var(--ink-2)" />
+      {/* left: NMOS cascode */}
+      <Wire points={[[70, 36], [150, 36]]} />
+      <Label x={154} y={40} text="VDD" size={11} weight={600} />
+      <CurrentSource x={110} y1={36} y2={96} label="I1" />
+      <Wire points={[[110, 96], [110, 120]]} id="out" />
+      <Dot x={110} y={108} id="out" />
+      <Wire points={[[110, 108], [160, 108]]} id="out" />
+      <Label x={164} y={112} text="Vout" size={12} weight={600} />
+      <Nmos x={110} y={150} name="M2" />
+      <Net x={76} y={150} text="Vb" />
+      <Wire points={[[110, 180], [110, 200]]} />
+      <Nmos x={110} y={230} name="M1" />
+      <Net x={76} y={230} text="Vin" />
+      <Ground x={110} y={260} />
+      {/* arrow */}
+      <line x1={200} x2={244} y1={150} y2={150} stroke="var(--signal)" strokeWidth={3} />
+      <polygon points="256,150 242,142 242,158" fill="var(--signal)" />
+      {/* right: folded */}
+      <Wire points={[[300, 36], [470, 36]]} />
+      <Label x={474} y={40} text="VDD" size={11} weight={600} />
+      <CurrentSource x={330} y1={36} y2={96} label="I1" labelSide="left" />
+      <Wire points={[[330, 96], [330, 120]]} id="out" />
+      <Dot x={330} y={108} id="out" />
+      <Wire points={[[330, 108], [300, 108]]} id="out" />
+      <Label x={296} y={112} text="Vout" anchor="end" size={12} weight={600} />
+      <Nmos x={330} y={150} name="M2" />
+      <Net x={296} y={150} text="Vb" />
+      <Wire points={[[330, 180], [330, 200]]} />
+      <Dot x={330} y={200} />
+      <Wire points={[[330, 200], [430, 200], [430, 180]]} />
+      <Wire points={[[430, 36], [430, 120]]} />
+      <Pmos x={430} y={150} name="M1" flip />
+      <Net x={466} y={150} text="Vin" anchor="start" />
+      <CurrentSource x={330} y1={200} y2={256} label="I2" labelSide="left" />
+      <Ground x={330} y={256} />
     </Canvas>
   );
 }

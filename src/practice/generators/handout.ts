@@ -2,7 +2,7 @@
  * Generators for the handout lectures: L1 gain error (Ex 9.1 style), L3 telescopic design from specs
  * (Ex 9.7 style), L4 folded-cascode design from specs (Tut 2 Q3 / PS1 P6 style).
  */
-import { boostedRout, closedLoopGain, foldedCascodePmosInput, gainError, gmFromIdVov, minOpenLoopGain, rO, slewTime, telescopic, triodeSenseWl, wlFromId, type Process } from '../../physics';
+import { boostedRout, closedLoopCmChoice, closedLoopGain, foldedCascodePmosInput, gainError, gmFromIdVov, minOpenLoopGain, rO, slewTime, telescopic, triodeSenseWl, wlFromId, type Process } from '../../physics';
 
 const par = (a: number, b: number) => (a * b) / (a + b);
 import { nice, pick, type Rng } from '../rng';
@@ -50,6 +50,53 @@ export const genGainError: Generator = {
       hints: ['β is what comes back; 1/β is what you get.', 'Gain error is one over loop gain.', 'Aclosed = A/(1 + βA); ε = 1/(1 + βA); Amin = Aclosed/ε.', `βA = ${(a / acl).toFixed(1)}.`],
     };
     return { problem, sane: true };
+  },
+};
+
+export const genCmChoice: Generator = {
+  id: 'l2-cmchoice',
+  unit: 'L2',
+  title: 'Telescopic in closed loop: choose the CM level for the largest swing (Ex 9.6)',
+  make(rng: Rng): GeneratorOutput {
+    const vth = pick(rng, [0.4, 0.5, 0.7]);
+    const vov = pick(rng, [0.15, 0.2, 0.25, 0.3]);
+    const vb = nice(rng, vth + 0.8, vth + 1.4, 0.05);
+    const r = closedLoopCmChoice({ vb, vgs34: vth + vov, vth34: vth, vth12: vth });
+    // Hand route.
+    const vcmH = vb - vov;
+    const floorH = vb - vth;
+    const peakH = vcmH - floorH;
+    const problem: Problem = {
+      ...base('l2-cmchoice', 'L2', 'Telescopic in closed loop: choose the CM level'),
+      statement: `A fully differential telescopic op amp is closed through input capacitors and feedback resistors (Razavi Ex 9.6), so its input and output CM levels are equal. The NMOS cascodes M3, M4 have their gates at Vb = ${vb} V and overdrive ${vov} V; every Vth = ${vth} V. (a) What output CM level VCM gives the largest symmetric swing? (b) How low can each output go? (c) What is the peak swing per side, and (d) the peak-to-peak differential swing?`,
+      figure: { kind: 'cmChoice', props: { vb, vth, vov, vcm: r.vcm, amp: r.peak } },
+      givens: [
+        { sym: 'V_b', value: vb, unit: 'V' },
+        { sym: 'V_{ov3,4}', value: vov, unit: 'V' },
+        { sym: 'V_{th}', value: vth, unit: 'V' },
+      ],
+      unknowns: [
+        { key: 'vcm', sym: 'V_{CM}', label: '(a) Best output CM level', unit: 'V' },
+        { key: 'floor', sym: 'V_{X,min}', label: '(b) Lowest output', unit: 'V' },
+        { key: 'peak', sym: '\\Delta V_{peak}', label: '(c) Peak swing per side', unit: 'V' },
+        { key: 'pp', sym: 'V_{pp,diff}', label: '(d) Differential peak-to-peak', unit: 'V' },
+      ],
+      answers: { vcm: r.vcm, floor: r.floor, peak: r.peak, pp: r.ppDiff },
+      wrong: { vcm: [{ mistake: 'vgsForVov', value: vb - vth }], peak: [{ mistake: 'vgsForVov', value: vth }] },
+      steps: [
+        { tag: 'A', title: 'The loop makes Vin,CM = Vout,CM, so the drains X, Y sit at the CM level. M1, M2 stay saturated while X ≤ Vb − (VGS3,4 − Vth1,2)', tex: `V_{CM,max} = V_b - V_{ov3,4} = ${texNum(vb)} - ${texNum(vov)} = ${texSI(vcmH, 'V', 4)}`, produces: 'vcm', value: vcmH },
+        { tag: 'A', title: 'M3, M4 stay saturated while X ≥ Vb − Vth3,4 (their fence)', tex: `V_{X,min} = V_b - V_{th} = ${texSI(floorH, 'V', 4)}`, produces: 'floor', value: floorH },
+        { tag: '✓', title: 'Put VCM at the top edge: X can fall Vth − Vov; rising is limited only by the PMOS loads, so the symmetric swing is ±(Vth − Vov)', tex: `\\Delta V_{peak} = V_{th} - V_{ov3,4} = ${texSI(peakH, 'V', 4)}`, produces: 'peak', value: peakH },
+        { tag: '·', title: 'Each output swings ±peak; the difference swings twice as far', tex: `V_{pp,diff} = 4(V_{th} - V_{ov}) = ${texSI(4 * peakH, 'V', 4)}`, produces: 'pp', value: 4 * peakH },
+      ],
+      hints: [
+        'In closed loop the input and output CM levels are the same, so the drains sit at the input CM.',
+        'Two fences: M3, M4 need X ≥ Vb − Vth; M1, M2 need X ≤ Vb − (VGS3,4 − Vth).',
+        'Put VCM at the top edge; the room to fall is Vth − Vov.',
+        `Vb − Vov = ${(vb - vov).toFixed(2)} V.`,
+      ],
+    };
+    return { problem, sane: Math.abs(r.vcm - vcmH) < 1e-9 && Math.abs(r.peak - peakH) < 1e-9 && peakH > 0.05 };
   },
 };
 
@@ -320,4 +367,4 @@ export const genSlewSettle: Generator = {
   },
 };
 
-export const HANDOUT_GENERATORS: Generator[] = [genGainError, genTeleDesign, genFoldedDesign, genTwoStage, genBoost, genTriodeSense, genSlewSettle];
+export const HANDOUT_GENERATORS: Generator[] = [genGainError, genCmChoice, genTeleDesign, genFoldedDesign, genTwoStage, genBoost, genTriodeSense, genSlewSettle];

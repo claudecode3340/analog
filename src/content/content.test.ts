@@ -106,3 +106,10 @@ describe('TeX strings keep their backslashes', () => {
     }
   });
 });
+
+describe('every sheet question is linked from a topic', () => {
+  it('each bank problem has a home topic (its last tag in curriculum order)', async () => {
+    const { BANK, homeUnit } = await import('./index');
+    for (const p of BANK) expect(homeUnit(p), `${p.id} has no topic tag`).toBeDefined();
+  });
+});

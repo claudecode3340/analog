@@ -42,3 +42,22 @@ export const CARDS = [
   ...AUDIT_CARDS.map((c) => ({ ...c, lesson: 'audit', unit: 'Audit' })),
 ];
 export const CARD_BY_ID = Object.fromEntries(CARDS.map((c) => [c.id, c]));
+
+/**
+ * Tutorial, problem-set, exam and lab questions for a topic. A question belongs to the LAST topic it needs (in
+ * curriculum order): that is where you can first solve it. Earlier topics it uses list it as “coming up”.
+ */
+const UNIT_INDEX: Record<string, number> = Object.fromEntries(UNITS.map((u, i) => [u.id, i]));
+export function homeUnit(p: Problem): string | undefined {
+  const known = p.tags.filter((t) => UNIT_INDEX[t] !== undefined);
+  return known.sort((a, b) => UNIT_INDEX[b] - UNIT_INDEX[a])[0];
+}
+export function sheetProblems(unitId: string): { now: Problem[]; later: Problem[] } {
+  const now: Problem[] = [];
+  const later: Problem[] = [];
+  for (const p of BANK) {
+    if (!p.tags.includes(unitId)) continue;
+    (homeUnit(p) === unitId ? now : later).push(p);
+  }
+  return { now, later };
+}

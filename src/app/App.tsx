@@ -82,7 +82,7 @@ export function App() {
       }
       break;
     case 'practice':
-      view = <PracticeView />;
+      view = <PracticeView key={arg ?? ''} initial={arg} />;
       break;
     case 'review':
       view = <ReviewView />;
