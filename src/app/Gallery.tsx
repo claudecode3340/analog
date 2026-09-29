@@ -18,7 +18,7 @@ import {
 import { CascodeFig, CommonGateFig, CsLoadFig, FollowerFig, ImpedanceFig, MirrorFig, TelescopicFig } from '../circuits/figures2';
 import { BarkhausenFig, ClosedStepFig, KtcSpectrumFig, LoopBodeFig, MillerBlockFig, NoiseShareFig, ReplicaCmfbFig, TwoStageMillerFig } from '../circuits/figures5';
 import { CmosVtcFig, DynamicGateFig, EffortPathFig, FlopTimingFig, InverterFig, NoiseMarginFig, PassGateFig, RcLadderFig, SramCellFig, StaticGateFig, SwitchingFig } from '../circuits/figuresD';
-import { CapNonInvFig, CmfbTut5Q3Fig, FoldedCmfbFig, PmosFollowerFig, PmosPairRdFig, GainBoostFoldedFig, GainBoostPmosFig, TwoStageTeleFig } from '../circuits/figures6';
+import { TelescopicBiasFig, CapNonInvFig, CmfbTut5Q3Fig, FoldedCmfbFig, PmosFollowerFig, PmosPairRdFig, GainBoostFoldedFig, GainBoostPmosFig, TwoStageTeleFig } from '../circuits/figures6';
 import { DrawStyleContext } from '../circuits/primitives';
 import { VoltageLadder } from '../circuits/schematic';
 import { BodePlot, DiffPairFig, FiveTOtaFig, HalfCircuitFig, StepPlot, SteeringPlot } from '../circuits/figures3';
@@ -130,6 +130,7 @@ export const GALLERY_ITEMS: Array<{ id: string; title: string; el: React.ReactEl
   { id: 'folded-cmfb', title: 'Folded cascode with resistive CMFB (Tut 5 Q2)', el: <FoldedCmfbFig /> },
   { id: 'cmfb-t5q3', title: 'CMFB with PMOS error amp (Tut 5 Q3)', el: <CmfbTut5Q3Fig /> },
   { id: 'cmfb-quiz2', title: 'Triode CMFB, Quiz 2 names', el: <CmfbTriodeFig vout1={0.9} vout2={0.9} tail={['M11', 'M12']} upper="PMOS loads M3, M4" upper2="NMOS cascodes below" lower={['M5, M7', 'M6, M8']} /> },
+  { id: 'telescopic-bias', title: 'Telescopic with bias branch (Lec 4, Fig 9.11)', el: <TelescopicBiasFig /> },
   { id: 'pmos-follower', title: 'PMOS source follower (Lab 4)', el: <PmosFollowerFig /> },
   { id: 'pmos-pair-rd', title: 'PMOS pair, resistor loads (Lab 6)', el: <PmosPairRdFig /> },
   { id: 'cap-noninv', title: 'Capacitive non-inverting amp (Lab 8)', el: <CapNonInvFig /> },

@@ -338,7 +338,7 @@ function ex97p(): Problem {
     answers: { wlN: r.wlN, wlP: r.wlP, wl9: r.wl9, av: r.av, vb1: r.vb1, vb2: r.vb2 },
     wrong: {},
     steps: [
-      { tag: 'A', title: 'Power: 10 mW / 3 V ≈ 3 mA; each side 1.5 mA', tex: 'I_{SS} = 3\\,\\mathrm{mA}' },
+      { tag: 'A', title: 'Power: 10 mW / 3 V = 3.33 mA. About 0.33 mA goes to the bias branches (Ib1, Ib2), leaving ISS = 3 mA: 1.5 mA each side', tex: 'I_{SS} = 3\\,\\mathrm{mA}' },
       { tag: 'A', title: 'Swing: 3 V differential = 1.5 V each side; the rest (1.5 V) goes to 2|Vov,P| + 2Vov,N + Vov9 = 0.6 + 0.4 + 0.5', tex: '|V_{ov,P}| = 0.3,\\; V_{ov,N} = 0.2,\\; V_{ov9} = 0.5' },
       { tag: 'A', title: 'Sizes from the square law', tex: `\\left(\\tfrac{W}{L}\\right)_{1-4} = \\frac{2(1.5\\mathrm{m})}{60\\mu(0.2)^2} = ${texNum((2 * 1.5e-3) / (60e-6 * 0.04))}`, produces: 'wlN', value: (2 * 1.5e-3) / (60e-6 * 0.04) },
       { tag: 'A', title: 'PMOS', tex: `\\left(\\tfrac{W}{L}\\right)_{5-8} = \\frac{2(1.5\\mathrm{m})}{30\\mu(0.3)^2} = ${texNum((2 * 1.5e-3) / (30e-6 * 0.09))}`, produces: 'wlP', value: (2 * 1.5e-3) / (30e-6 * 0.09) },
@@ -349,7 +349,7 @@ function ex97p(): Problem {
       { tag: 'A', title: 'Vb2 = VDD − |Vov7| − |VGS5|', tex: `V_{b2} = 3 - 0.3 - 1.0 = ${texSI(3 - 0.3 - (0.7 + 0.3), 'V')}`, produces: 'vb2', value: 3 - 0.3 - (0.7 + 0.3) },
     ],
     hints: ['Start with power, then swing, then overdrives, then sizes.', 'Every W/L from 2ID/(µCox·Vov²).', 'Gain = gm1(Rdown ‖ Rup).', 'ID = 1.5 mA per side.'],
-    flags: ['Gain: exact square law 1429, Razavi prints 1416, your notes 1408 (inventory flag 5). All agree to 1%.'],
+    flags: ['Gain: exact square law 1429, Razavi prints 1416, your notes 1428 (inventory flag 5). All agree to 1%.'],
   };
 }
 

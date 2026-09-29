@@ -16,6 +16,7 @@ export const IDEA_FIGURES: Record<string, FigureSpec> = {
     kind: 'telescopic',
     props: { proc: EX_9_7, iss: 3e-3, wlN: E97.wlN, wlP: E97.wlP, wl9: E97.wl9, vinCm: E97.vinCm, vb1: E97.vb1, vb2: E97.vb2, vout: 1.65 },
   },
+  'l3-design': { kind: 'telescopicBias' },
   'l8-cmfb': { kind: 'cmfbTriode', props: { vout1: 1.5, vout2: 1.5, vp: 0.1, wl: tut5Q1().wl } },
   'l9-slew': { kind: 'step', props: { vstep: 1, tau: 5e-9, eps: 0.01, sr: 100e6 } },
   'l11-barkhausen': { kind: 'barkhausen', props: { loopGain: 1, lag: 180 } },

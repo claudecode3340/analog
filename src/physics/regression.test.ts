@@ -158,7 +158,7 @@ describe('Razavi examples', () => {
     near(r.wlP, 1111, 0.001);
     near(r.wl9, 400);
     // ≈1.4×10³. The exact square-law value is 1429; Razavi prints 1416 (no working shown) and the
-    // lecture notes 1408 (rounded rO). All three agree to 1%; the app shows 1429 and cites the book's 1416.
+    // lecture notes 1428. All three agree to 1%; the app shows 1429 and cites the book's 1416.
     near(r.av, 1428.6, 0.001);
     near(r.av, 1416, 0.01);
     near(r.avLengthened, 4000, 0.001);

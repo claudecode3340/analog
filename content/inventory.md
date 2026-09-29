@@ -15,7 +15,7 @@ Tags such as **[U4]** or **[L2]** give the curriculum unit each item belongs to 
 | Conversation **quizzes** (`quiz_display`) | ❌ lost | Only the "20 things to answer cold" audit and the Problem Set 1 statements survive. New check questions will be written per lesson. |
 | Conversation images (your photos) | ✅ recovered in the second export | 40 files in `source/conversation/images/`: lecture-note screenshots, **the exam paper** (`1789657566261_image.png`), tutorial sheets and **your Tutorial 1 handwritten solutions** (`20260820_*.jpg`). |
 | Razavi 2nd ed. PDF | ✅ | `source/razavi.pdf`, 801 pages, text-searchable |
-| Lecture notes 1–4, 6–12 | ✅ | vector handwriting, readable at 300 dpi. **There is no Lecture 5 file**; please check whether one exists. |
+| Lecture notes 1–4, 6–12 | ✅ | vector handwriting, readable at 300 dpi. **There is no Lecture 5 file**; please check whether one exists. Lec 1–4 re-audited 29 Sep: every item is in the app (see §12). |
 | Settling-time example | ✅ | Razavi Ex 9.2 worked out by hand |
 | Current-mirror handout | ✅ | typed, 8 pp.: cascode mirror, low-voltage cascode, generating Vb |
 | Tutorials 1–6 | ✅ | question sheets, typed, with vector figures |
@@ -59,7 +59,7 @@ Tags such as **[U4]** or **[L2]** give the curriculum unit each item belongs to 
 
 4. **Buffer bandwidth, three accepted answers.** For Exam Q1(e) the key gives **31.95 MHz** from 1/(2πCL(1/gm2 ‖ rO4)) and **32.19 MHz** from f3dB·(1 + βA). The conversation's 1/gm gives **31.8 MHz**. The app will teach 1/gm as the fast route and accept all three, explaining the difference.
 
-5. **Ex 9.7 gain.** The exact square law gives **1429**, Razavi prints **1416**, your notes say **1408** and the conversation says "≈ 1.4 × 10³". They agree to 1%. The app shows 1429 and cites the book's value.
+5. **Ex 9.7 gain.** The exact square law gives **1429**, Razavi prints **1416**, your notes (Lec 4) say **1428** and the conversation says "≈ 1.4 × 10³". They agree to 1%. The app shows 1429 and cites the book's value.
 
 6. **Quiz 2 key rounds intermediates** (VP = 0.11 V instead of 0.1106 V, and so on), so its W/L answers differ from exact arithmetic by up to 1.3%. The engine gives exact values, and the practice checker's ±2% tolerance accepts either.
 
@@ -353,3 +353,18 @@ were read for their intuition, not copied. Used: noise as power in a 1 Hz window
 and two-stage op amps (new lesson L13 “One stage vs two”); breaking the loop with a test source to measure βA;
 Rz from a triode MOSFET that tracks 1/gm; Allen's “fewer than three rings” and CC ≥ 0.22·CL (matches the engine's
 tan formula with the zero kept: 0.2216·CL for Gm2 = 10·Gm1). No disagreement with the book was found.
+
+---
+
+## 12. Lecture 1–4 notes audit (29 Sep)
+
+| Notes | Content | Where in the app |
+|---|---|---|
+| Lec 1 | gain 10 with < 1% error; Aclosed = A/(1+βA), β = R2/(R1+R2), ε = 1/(1+βA) ≈ 1/βA, A ≥ 990 → 1000 | L1 “gain and gain error”, bank Ex 9.1, generator l1-gain |
+| Lec 2 | gain, BW (ωu = A0ω0 = GBW), swing, linearity, noise, offset; fully differential pair with current-source loads and 5-T OTA: Av, CM range, swing, BW = 1/((rO2‖rO4)CL) | L1 speed/other, L2 one-stage, U11 OTA and OTA range |
+| Lec 3 | 5-T OTA in unity feedback: Aopen = gmN(rON‖rOP), Rout,closed = 1/gm2, ω = gm2/CL, Thevenin picture with RL; telescopic both versions, gain (gm·rO)²/2, both swings (mirror version loses |Vthp|); buffer window | L2 buffer, U12 poles, L2 one-stage, card c-l2-model |
+| Lec 4 | buffer window (shaded sketch); Ex 9.7 with 3.33 mA (0.33 mA bias), overdrives 0.5/0.3/0.2, W/L 1250/1111/400, Av 1428, gm·rO ∝ √(WL/ID), λ ∝ 1/L → L = 1 µm for M5–M8, Av ≈ 4000; bias branch Mb1–Mb3 | L3 design (figure telescopicBias), bank Ex 9.7, cascode lab |
+
+Fixed in this audit: the Ex 9.7 power split now shows the 0.33 mA bias share; the notes' gain was misread as 1408 earlier
+(it is 1428, matching the engine's 1429); the bias-branch figure (Fig 9.11 as drawn in Lec 4) was added; a card for the
+closed-loop Thevenin picture of Lec 3 was added. **Lecture 5 is still missing from source/notes.**

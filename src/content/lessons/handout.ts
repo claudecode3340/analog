@@ -207,6 +207,7 @@ Closing the loop also makes the output stiff: $R_{out}/(1+\\beta A)$ → about $
       summary: 'Telescopic buffer window: Vb1 − Vth4 ≤ Vout ≤ Vb1 − VGS4 + Vth2, width Vth − Vov4. Feedback lowers Rout by (1 + βA).',
       hook: '“In a buffer the output is a gate voltage.”',
       cards: [
+        { id: 'c-l2-model', front: 'Lec 3: how does a closed-loop op amp look to a load RL?', back: 'Like a source Vin·Aclosed behind Rout,closed = Rout,open/(1 + βAopen). For the 5-T OTA buffer (β = 1) that is ≈ 1/gm2, so RL barely loads it; its pole moves to gm2/CL.' },
         { id: 'c-l2-window', front: 'Output window of a telescopic in unity-gain feedback?', back: 'Vb1 − Vth4 ≤ Vout ≤ Vb1 − VGS4 + Vth2 (width Vth − Vov4).' },
       ],
     },

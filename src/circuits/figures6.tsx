@@ -435,3 +435,68 @@ export function CapNonInvFig({ highlight }: { highlight?: string[] }) {
     </Canvas>
   );
 }
+
+/**
+ * Lecture 4 / Razavi Fig 9.11: the telescopic op amp with its bias branch. Ib1 flows through the diodes Mb1
+ * (sets the gates of M7, M8) and Mb2 (sets Vb2 for M5, M6); Ib2 through the diode Mb3 sets the tail M9.
+ */
+export function TelescopicBiasFig({ highlight }: { highlight?: string[] }) {
+  const xb = 90, xL = 300, xR = 440, xm = 370, x9b = 530;
+  const y7 = 70, y5 = 140, yO = 190, y3 = 240, y1 = 310, yT = 355, y9 = 385;
+  return (
+    <Canvas w={620} h={450} title="Telescopic op amp with its bias branch: Ib1 through Mb1, Mb2 sets the PMOS gates; Ib2 through Mb3 sets the tail" highlight={highlight} maxWidth={680}>
+      <Rail x1={50} x2={540} y={30} label="VDD" />
+      {/* bias branch */}
+      <Wire points={[[xb, 30], [xb, y7 - 30]]} />
+      <Pmos x={xb} y={y7} name="Mb1" diode flip />
+      <Wire points={[[xb + 30, y7], [xL - 30, y7]]} />
+      <Wire points={[[xb, y7 + 30], [xb, y5 - 30]]} />
+      <Pmos x={xb} y={y5} name="Mb2" diode flip />
+      <Wire points={[[xb + 30, y5], [xL - 30, y5]]} />
+      <Wire points={[[xb, y5 + 30], [xb, 200]]} />
+      <CurrentSource x={xb} y1={200} y2={256} label="Ib1" labelSide="left" />
+      <Ground x={xb} y={256} />
+      <Wire points={[[x9b, 30], [x9b, 300]]} />
+      <CurrentSource x={x9b} y1={300} y2={y9 - 30} label="Ib2" />
+      <Nmos x={x9b} y={y9} name="Mb3" diode />
+      <Wire points={[[x9b - 30, y9], [xm + 30, y9]]} />
+      <Ground x={x9b} y={y9 + 30} />
+      {/* main amplifier */}
+      <Wire points={[[xL, 30], [xL, y7 - 30]]} />
+      <Wire points={[[xR, 30], [xR, y7 - 30]]} />
+      <Pmos x={xL} y={y7} name="M7" flip />
+      <Pmos x={xR} y={y7} name="M8" />
+      <Wire points={[[xL + 30, y7], [xR - 30, y7]]} />
+      <Wire points={[[xL, y7 + 30], [xL, y5 - 30]]} />
+      <Wire points={[[xR, y7 + 30], [xR, y5 - 30]]} />
+      <Pmos x={xL} y={y5} name="M5" flip />
+      <Pmos x={xR} y={y5} name="M6" />
+      <Wire points={[[xL + 30, y5], [xR - 30, y5]]} />
+      <Wire points={[[xL, y5 + 30], [xL, y3 - 30]]} id="out" />
+      <Wire points={[[xR, y5 + 30], [xR, y3 - 30]]} id="out" />
+      <Dot x={xL} y={yO} id="out" />
+      <Dot x={xR} y={yO} id="out" />
+      <Label x={xL + 10} y={yO - 6} text="Vout1" weight={600} />
+      <Label x={xR - 10} y={yO - 6} text="Vout2" anchor="end" weight={600} />
+      <Nmos x={xL} y={y3} name="M3" flip />
+      <Nmos x={xR} y={y3} name="M4" />
+      <Wire points={[[xL + 30, y3], [xR - 30, y3]]} />
+      <Net x={xm} y={y3 - 12} text="Vb1" anchor="middle" />
+      <Wire points={[[xL, y3 + 30], [xL, y1 - 30]]} />
+      <Wire points={[[xR, y3 + 30], [xR, y1 - 30]]} />
+      <Nmos x={xL} y={y1} name="M1" />
+      <Nmos x={xR} y={y1} name="M2" flip />
+      <Wire points={[[xL - 30, y1], [xL - 44, y1]]} />
+      <Terminal x={xL - 48} y={y1} />
+      <Label x={xL - 48} y={y1 - 12} text="Vin1" anchor="middle" weight={600} />
+      <Wire points={[[xR + 30, y1], [xR + 44, y1]]} />
+      <Terminal x={xR + 48} y={y1} />
+      <Label x={xR + 48} y={y1 - 12} text="Vin2" anchor="middle" weight={600} />
+      <Wire points={[[xL, y1 + 30], [xL, yT - 10], [xR, yT - 10], [xR, y1 + 30]]} />
+      <Dot x={xm} y={yT - 10} />
+      <Wire points={[[xm, yT - 10], [xm, y9 - 30]]} />
+      <Nmos x={xm} y={y9} name="M9" flip />
+      <Ground x={xm} y={y9 + 30} />
+    </Canvas>
+  );
+}
