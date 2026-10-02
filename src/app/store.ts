@@ -43,6 +43,8 @@ export interface Progress {
   settings: Settings;
   /** Actions per day (epoch day → count): lesson steps, checks, practice answers, reviews. For the streak. */
   activity: Record<number, number>;
+  /** Tutorial / PYQ / problem-set questions: which parts you have got right at least once. */
+  sheets: Record<string, Record<string, boolean>>;
 }
 
 const KEY = 'analog-gym/progress/v1';
@@ -56,6 +58,7 @@ export function emptyProgress(): Progress {
     practice: { attempted: 0, correct: 0 },
     settings: { theme: 'auto', drawStyle: 'symbol', tol: 0.02, unlockAll: false },
     activity: {},
+    sheets: {},
   };
 }
 
@@ -81,6 +84,7 @@ export function migrate(x: unknown): Progress {
     practice: p.practice ?? base.practice,
     settings: { ...base.settings, ...(p.settings ?? {}) },
     activity: p.activity && typeof p.activity === 'object' ? p.activity : {},
+    sheets: p.sheets && typeof p.sheets === 'object' ? p.sheets : {},
   };
 }
 
@@ -144,6 +148,14 @@ export function recordLessonStep(id: string, step: number) {
   update((p) => {
     const cur = p.lessons[id] ?? { status: 'learning', best: 0, attempts: 0, step: 0 };
     return { ...p, activity: bump(p), lessons: { ...p.lessons, [id]: { ...cur, step: Math.max(cur.step, step) } } };
+  });
+}
+
+/** Record one part of a tutorial / PYQ question; a part stays “right” once you have got it right. */
+export function recordSheetPart(problemId: string, key: string, correct: boolean) {
+  update((p) => {
+    const cur = p.sheets[problemId] ?? {};
+    return { ...p, activity: bump(p), sheets: { ...p.sheets, [problemId]: { ...cur, [key]: cur[key] || correct } } };
   });
 }
 

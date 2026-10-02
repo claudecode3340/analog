@@ -4,12 +4,12 @@
  * Practice, with the full step-by-step solution under each question.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Figure } from '../circuits/registry';
 import { GENERATOR_BY_ID } from '../content';
 import { checkAnswer, type CheckResult } from '../practice/checker';
 import { generate } from '../practice/generate';
 import { MISTAKES } from '../practice/mistakes';
 import { Givens, StepTrace } from '../practice/ProblemView';
+import { QuestionFigure } from '../practice/QuestionFigure';
 import { newSeed } from '../practice/rng';
 import type { Problem } from '../practice/schema';
 import { formatSI } from '../practice/units';
@@ -176,7 +176,7 @@ export function ExamView() {
           <div className="problem-body">
             {p.figure && (
               <div className="problem-figure bench">
-                <Figure kind={p.figure.kind} props={p.figure.props} />
+                <QuestionFigure problem={p} reveal={handedIn} />
               </div>
             )}
             <div>

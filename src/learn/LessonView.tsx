@@ -12,7 +12,7 @@ import { Prose, RichText, Term } from '../ui/RichText';
 import { Tex } from '../ui/Tex';
 import { IconArrowLeft, IconArrowRight, STEP_ICONS } from '../ui/Icons';
 import { WIDGETS } from './widgets';
-import { SheetLinks } from './SheetLinks';
+import { TopicCta } from './SheetLinks';
 import { nextLessonAfter } from '../app/progress';
 import { IDEA_FIGURES } from '../content/ideaFigures';
 import type { FigureSpec } from '../practice/schema';
@@ -281,7 +281,6 @@ export function LessonView({ id }: { id: string }) {
             {turnProblems.map((p, j) => (
               <ProblemView key={p.id} problem={p} mode={j === 0 ? 'faded' : 'independent'} onResult={onTurnResult(p)} compact number={j + 1} />
             ))}
-            <SheetLinks unit={lesson.unit} />
           </>
         );
       default:
@@ -319,7 +318,7 @@ export function LessonView({ id }: { id: string }) {
                 </button>
               </p>
             )}
-            <SheetLinks unit={lesson.unit} />
+            <TopicCta unit={lesson.unit} lastLesson={UNIT_BY_ID[lesson.unit]?.lessons.at(-1) === lesson.id} />
             <div className="cards-preview">
               {lesson.lockIn.cards.map((c) => (
                 <div key={c.id} className="card-mini">

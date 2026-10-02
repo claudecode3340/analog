@@ -45,3 +45,25 @@ export function daysUntil(isoDate: string, now = new Date()): number {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((target.getTime() - start.getTime()) / 86_400_000);
 }
+
+/** A lesson counts as covered once you have reached its last step (or mastered it). */
+export function lessonCovered(id: string, p: Progress = getProgress()): boolean {
+  const l = p.lessons[id];
+  return !!l && (l.status === 'mastered' || l.step >= 7);
+}
+
+export function unitCovered(u: Unit, p: Progress = getProgress()): boolean {
+  return u.lessons.length > 0 && u.lessons.every((l) => lessonCovered(l, p));
+}
+
+/** Can you attempt this question yet? Ready once every topic it is tagged with is covered. */
+export function problemReady(tags: string[], p: Progress = getProgress()): { ready: boolean; missing: string[] } {
+  const missing = tags.filter((t) => UNIT_BY_ID[t] && !unitCovered(UNIT_BY_ID[t], p));
+  return { ready: missing.length === 0, missing };
+}
+
+/** Solved = every part answered right at least once. */
+export function problemSolved(problemId: string, keys: string[], p: Progress = getProgress()): boolean {
+  const s = p.sheets?.[problemId];
+  return !!s && keys.length > 0 && keys.every((k) => s[k]);
+}

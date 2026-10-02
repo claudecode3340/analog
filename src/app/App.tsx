@@ -12,6 +12,7 @@ import { FoldedLab } from '../labs/M4Labs';
 import { StabilityLab } from '../labs/M5Labs';
 import { EffortLab, InverterLab } from '../labs/DigitalLabs';
 import { PracticeView } from '../practice/PracticeView';
+import { TopicView } from '../learn/TopicView';
 import { ReviewView } from '../review/ReviewView';
 import { Gallery } from './Gallery';
 import { PathView } from './PathView';
@@ -74,6 +75,9 @@ export function App() {
     case 'learn':
       view = arg ? <LessonView id={arg} /> : <LearnIndex />;
       break;
+    case 'topic':
+      view = <TopicView key={arg} unit={arg ?? ''} />;
+      break;
     case 'labs':
       {
         const LAB: Record<string, () => React.ReactElement> = { mosfet: MosfetLab, dc: DcStepper, impedance: ImpedanceLab, cs: CsLab, cascode: CascodeLab, diffpair: DiffPairLab, ota: OtaLab, feedback: FeedbackLab, headroom: HeadroomLab, folded: FoldedLab, stability: StabilityLab, inverter: InverterLab, effort: EffortLab };
@@ -116,7 +120,7 @@ export function App() {
         </a>
         <nav className="mainnav" aria-label="Main">
           {NAV.map((n) => {
-            const active = section === n.match || (!section && n.match === 'path');
+            const active = section === n.match || (!section && n.match === 'path') || (section === 'topic' && n.match === 'learn');
             return (
               <a key={n.href} href={n.href} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined} title={`${n.label} (key ${n.key})`}>
                 <n.Icon size={20} />

@@ -1,3 +1,4 @@
+import { SheetLinks } from '../learn/SheetLinks';
 import { EXAMS } from '../content/curriculum';
 import { LESSON_BY_ID, UNITS } from '../content';
 import { IconArrowRight, IconCheck, IconLock } from '../ui/Icons';
@@ -216,6 +217,7 @@ function UnitRow({ id }: { id: string }) {
             })}
           </div>
         )}
+        <SheetLinks unit={u.id} />
       </div>
     </li>
   );

@@ -3,7 +3,7 @@ import type { Problem } from './schema';
 /** Group the fixed bank by where each problem comes from. */
 export function bankGroup(p: Problem): string {
   const s = p.source;
-  if (/^Mid-sem|^Quiz/.test(s)) return 'Exam and quizzes';
+  if (/^Mid-sem|^Quiz/.test(s)) return 'Quizzes and mid-sem (PYQs)';
   if (/^Tutorial (\d+)/.test(s)) return `Tutorial ${s.match(/^Tutorial (\d+)/)![1]}`;
   if (/^Problem Set 1/.test(s)) return 'Problem Set 1 (L1–L4)';
   if (/^Problem Set 2/.test(s)) return 'Problem Set 2 (L8–L14)';
@@ -16,4 +16,4 @@ export function bankGroup(p: Problem): string {
   if (/chat|conversation/i.test(s)) return 'Questions from our chat';
   return 'Worked examples';
 }
-export const GROUP_ORDER = ['Exam and quizzes', 'Tutorial 1', 'Tutorial 2', 'Tutorial 3', 'Tutorial 4', 'Tutorial 5', 'Tutorial 6', 'Tutorial 7', 'Tutorial 8', 'Problem Set 1 (L1–L4)', 'Problem Set 2 (L8–L14)', 'Problem Set 3 (digital)', 'Your lecture notes', 'Razavi examples', 'Razavi end-of-chapter problems', 'Digital VLSI examples', 'Lab sheets (calculations)', 'Questions from our chat', 'Worked examples'];
+export const GROUP_ORDER = ['Quizzes and mid-sem (PYQs)', 'Tutorial 1', 'Tutorial 2', 'Tutorial 3', 'Tutorial 4', 'Tutorial 5', 'Tutorial 6', 'Tutorial 7', 'Tutorial 8', 'Problem Set 1 (L1–L4)', 'Problem Set 2 (L8–L14)', 'Problem Set 3 (digital)', 'Your lecture notes', 'Razavi examples', 'Razavi end-of-chapter problems', 'Digital VLSI examples', 'Lab sheets (calculations)', 'Questions from our chat', 'Worked examples'];

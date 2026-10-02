@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Figure } from '../circuits/registry';
+import { QuestionFigure } from './QuestionFigure';
 import { logMistake, recordPractice, useProgress } from '../app/store';
 import { Tex } from '../ui/Tex';
 import { checkAnswer, type CheckResult } from './checker';
@@ -176,54 +176,65 @@ export function ProblemView({
           <h3>{problem.title}</h3>
         </div>
       </header>
-      {problem.flags?.map((f, i) => (
-        <p key={i} className="callout small">
-          ⚑ {f}
-        </p>
-      ))}
-      <div className="problem-body">
-        {problem.figure && (
-          <div className="problem-figure bench">
-            <Figure kind={problem.figure.kind} props={problem.figure.props} highlight={focus?.highlight} />
-          </div>
-        )}
-        <div className="problem-text">
-          <p>{problem.statement}</p>
-          <Givens problem={problem} />
-        </div>
-      </div>
-      {mode === 'faded' && (
-        <div className="scaffold">
-          <div className="eyebrow">The method (fill in the numbers yourself)</div>
-          <StepTrace steps={problem.steps} hideValues />
-        </div>
-      )}
-      {mode !== 'worked' && (
-        <div className="answers">
-          {problem.unknowns.map((u) => (
-            <AnswerRow key={u.key} problem={problem} k={u.key} onResult={(k, r, f) => onResult?.(k, r, f)} />
-          ))}
-        </div>
-      )}
-      {mode !== 'worked' && (
-        <div className="hints">
-          {problem.hints.slice(0, hints).map((h, i) => (
-            <p key={i} className="hint">
-              <span className="hint-rung">Hint {i + 1}</span> {h}
+      {problem.flags && problem.flags.length > 0 && (
+        <details className="problem-flags">
+          <summary>
+            ⚑ {problem.flags.length === 1 ? 'A note on this question' : `${problem.flags.length} notes on this question`} (assumptions, answer key)
+          </summary>
+          {problem.flags.map((f, i) => (
+            <p key={i} className="small">
+              {f}
             </p>
           ))}
-          <div className="row">
-            {hints < 4 && (
-              <button type="button" className="btn small ghost" onClick={() => setHints((h) => h + 1)}>
-                {hints === 0 ? 'I’m stuck: give me a nudge' : 'Next hint'}
-              </button>
-            )}
-            <button type="button" className="btn small ghost" onClick={() => setShowSolution((s) => !s)}>
-              {showSolution ? 'Hide full solution' : 'Show full solution'}
-            </button>
-          </div>
-        </div>
+        </details>
       )}
+      <div className={`problem-grid ${problem.figure ? 'has-figure' : ''}`}>
+        {problem.figure && (
+          <div className="problem-left">
+            <div className="problem-figure bench">
+              <QuestionFigure problem={problem} reveal={mode === 'worked' || showSolution} highlight={focus?.highlight} />
+            </div>
+          </div>
+        )}
+        <div className="problem-right">
+          <div className="problem-text">
+            <p>{problem.statement}</p>
+            <Givens problem={problem} />
+          </div>
+          {mode === 'faded' && (
+            <div className="scaffold">
+              <div className="eyebrow">The method (fill in the numbers yourself)</div>
+              <StepTrace steps={problem.steps} hideValues />
+            </div>
+          )}
+          {mode !== 'worked' && (
+            <div className="answers">
+              {problem.unknowns.map((u) => (
+                <AnswerRow key={u.key} problem={problem} k={u.key} onResult={(k, r, f) => onResult?.(k, r, f)} />
+              ))}
+            </div>
+          )}
+          {mode !== 'worked' && (
+            <div className="hints">
+              {problem.hints.slice(0, hints).map((h, i) => (
+                <p key={i} className="hint">
+                  <span className="hint-rung">Hint {i + 1}</span> {h}
+                </p>
+              ))}
+              <div className="row">
+                {hints < 4 && (
+                  <button type="button" className="btn small ghost" onClick={() => setHints((h) => h + 1)}>
+                    {hints === 0 ? 'I’m stuck: give me a nudge' : 'Next hint'}
+                  </button>
+                )}
+                <button type="button" className="btn small ghost" onClick={() => setShowSolution((s) => !s)}>
+                  {showSolution ? 'Hide full solution' : 'Show full solution'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       {showSolution && (
         <div className="solution">
           <div className="eyebrow">{mode === 'worked' ? 'Worked example: hover a step to see it on the circuit' : 'Full solution'}</div>

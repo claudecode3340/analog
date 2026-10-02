@@ -29,7 +29,7 @@ for (const id of LESSONS) {
   });
 }
 
-for (const route of ['#/path', '#/learn', '#/labs', '#/labs/mosfet', '#/labs/dc', '#/labs/impedance', '#/labs/cs', '#/labs/cascode', '#/labs/diffpair', '#/labs/ota', '#/labs/feedback', '#/labs/headroom', '#/labs/folded', '#/labs/stability', '#/labs/inverter', '#/labs/effort', '#/practice', '#/review', '#/exam', '#/settings']) {
+for (const route of ['#/path', '#/learn', '#/labs', '#/labs/mosfet', '#/labs/dc', '#/labs/impedance', '#/labs/cs', '#/labs/cascode', '#/labs/diffpair', '#/labs/ota', '#/labs/feedback', '#/labs/headroom', '#/labs/folded', '#/labs/stability', '#/labs/inverter', '#/labs/effort', '#/practice', '#/practice/bank-t4q3', '#/topic/U10', '#/topic/L2', '#/topic/L6', '#/review', '#/exam', '#/settings']) {
   test(`page ${route}`, async ({ page }) => {
     const errors: string[] = [];
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -74,4 +74,16 @@ test('DC stepper reaches the fence check', async ({ page }) => {
   await page.getByRole('button', { name: /Trap/ }).click();
   await page.getByRole('button', { name: 'Show all' }).click();
   await expect(page.locator('.fence-bad').first()).toBeVisible();
+});
+
+test('end-of-topic page: open a tutorial question, answer a part, it records progress', async ({ page }) => {
+  await page.goto('#/topic/U10');
+  await expect(page.getByRole('heading', { name: /Tutorials & PYQs/ })).toBeVisible();
+  const first = page.locator('.sheet-toggle').first();
+  await first.click();
+  await expect(page.locator('.sheet-body .problem')).toBeVisible();
+  const input = page.locator('.sheet-body input').first();
+  await input.fill('1');
+  await input.press('Enter');
+  await expect(page.locator('.sheet-body .check-result, .sheet-body [role="status"]').first()).toBeVisible();
 });

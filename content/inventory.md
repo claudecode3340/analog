@@ -378,3 +378,9 @@ and Problem Set 1): M5, M6 bottom, M7, M8 cascodes, M9, M10 top. The L4 gain les
 **Topic links (29 Sep):** every lesson's “Your turn” and “Lock it in” steps and every topic on the Learn page list the
 tutorial, problem-set, quiz, Razavi and lab questions you can solve after that topic (a question lives in the last topic
 it needs; earlier topics show it as “coming up”). Links open the question in Practice (#/practice/<id>).
+
+**End-of-topic Tutorials & PYQs (2 Oct):** every topic ends with a page (#/topic/<unit>) listing the tutorials, PYQs
+(Quiz 1, Quiz 2 and the mid-sem; no earlier-year papers are in source/), problem sets, Razavi examples and lab questions
+that need only topics up to that one. Each is attempted inline, shows whether its topics are covered, and is marked
+solved once every part has been right. Problems on a computer screen show the figure (large, pinned) beside the question
+and one-line answer rows; figures run in question mode (non-given numbers shown as “?”) until the full solution opens.
