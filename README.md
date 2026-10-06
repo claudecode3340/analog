@@ -1,6 +1,6 @@
 # Analog Gym
 
-An offline, interactive tutor for Razavi's op-amp chapter (EEE/INSTR F313), built from `CLAUDE.md`.
+An offline, interactive tutor for Razavi's op-amp chapter (EEE/INSTR F313), built from `docs/build-spec.md` (the original build prompt; `CLAUDE.md` is now a short working guide).
 
 ## Use it
 
