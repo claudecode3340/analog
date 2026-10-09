@@ -27,7 +27,7 @@ def section(card):
     # 2 the four arithmetic uses, with real pictures
     H.append(lesson('What the four arithmetic operations are used for',
         'Each arithmetic operation has one classic job. The pictures show them on a real photograph.',
-        '<div class="mini">'
+        '<div class="mini wide">'
         '<div><h5>Add, then divide by K: remove noise</h5>' + figs(img('avg_1', 150, 'one noisy shot'), img('avg_64', 150, 'average of 64 shots')) +
         '<p>Each shot = true picture + random noise. Averaging keeps the picture and cancels the noise: the noise spread (standard deviation) shrinks by √K. Noise σ = 64, K = 16 shots → 64/√16 = <b>16</b>; K = 64 → <b>8</b>.</p></div>'
         '<div><h5>Subtract: find what changed</h5>' + figs(img('cam', 105, 'before'), img('cam_changed', 105, 'after'), img('diff', 105, 'after − before')) +

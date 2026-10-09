@@ -4,7 +4,7 @@
 import re, sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *  # noqa
-import cards_ch2, cards_ch3, cards_ch4, calc_extra, prose, labs_help, style_extra, ch2_px, ch2_math, ch2_sq, ch2_eye
+import cards_ch2, cards_ch3, cards_ch4, calc_extra, prose, labs_help, style_extra, ch2_px, ch2_math, ch2_sq, ch2_eye, ch3_int, ch3_hist, ch3_filt, ch3_smooth, ch3_sharp
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 s = open(os.path.join(HERE, 'orig.html'), encoding='utf-8').read()
@@ -23,6 +23,8 @@ def sub(old, new, count=None):
 # End-sem 2022-23 Q2: second row of A is (−2, 1, −3) (check: −2·1 + 1·1 − 3 = −4 = y of f(1,1))
 sub(r'\begin{bmatrix}1&-3&5\\2&1&-3\\0&0&1\end{bmatrix}', r'\begin{bmatrix}1&-3&5\\-2&1&-3\\0&0&1\end{bmatrix}', 2)
 sub('<div class="">5</div><div class="">2</div><div class="">1</div><div class="">−3</div>', '<div class="">5</div><div class="">−2</div><div class="">1</div><div class="">−3</div>', 2)
+sub('<span class="mcol" id="cvs"></span>', '<span class="mcol cvs"></span>', 1)
+sub("$('#cvs',out)", "$('.cvs',out)", 1)
 # calculator keys that do not exist on the fx-991CW (checked in the Casio manual)
 sub('<span class="k">OPTN</span><span class="arrow">→</span><span class="k m">1-Var Results</span>',
     '<span class="k">OK</span><span class="arrow">→</span><span class="k m">1-Var Results</span><span class="arrow">→</span><span class="k">OK</span>')
@@ -83,6 +85,11 @@ replace_section("ch2-px", ch2_px.section)
 replace_section("ch2-math", ch2_math.section)
 replace_section("ch2-sq", ch2_sq.section)
 replace_section("ch2-eye", ch2_eye.section)
+replace_section("ch3-int", ch3_int.section)
+replace_section("ch3-hist", ch3_hist.section)
+replace_section("ch3-filt", ch3_filt.section)
+replace_section("ch3-smooth", ch3_smooth.section)
+replace_section("ch3-sharp", ch3_sharp.section)
 # ── 4. global: lab help boxes, the clearer path lab, extra CSS ──
 s = labs_help.add_help(s)
 s = labs_help.patch_path_lab(s)

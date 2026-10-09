@@ -35,8 +35,7 @@ def mach():
         ptp.append(f'{x0},{y - 9 if k else y:.0f} {x0 + 8},{y:.0f} {x0 + 52},{y:.0f} {x0 + 60},{y + 9 if k < 5 else y:.0f}')
     s += f'<polyline points="{" ".join(pts)}" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 4"/>'
     s += f'<polyline points="{" ".join(ptp)}" fill="none" stroke="#c2410c" stroke-width="2.5"/>'
-    s += '<text x="22" y="175" class="a-lab">dashed: true brightness (flat steps) · orange: what you see (over- and undershoot at every edge)</text>'
-    return svg_wrap(s, 420, 185, 'Mach bands')
+    return svg_wrap(s, 420, 185, 'dashed: the true brightness (flat steps) · orange: what you see (over- and undershoot at every edge)')
 
 
 def simcon():

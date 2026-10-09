@@ -80,3 +80,6 @@ CSS += r'''
 .mini > div{background:var(--surface-2);border-radius:12px;padding:12px 14px}
 .mini h5{margin:0 0 6px;font-size:1.02rem}
 '''
+CSS += '.gsvg{max-width:100%;height:auto}.gfig{max-width:100%}.lesson .cols > div{min-width:0}\n'
+CSS += '.gsvg .b-bar{fill:#60a5fa}.gsvg .b-hl{fill:#f59e0b}\n'
+CSS += '.mini.wide{grid-template-columns:repeat(2,minmax(0,1fr))}@media (max-width:1100px){.mini.wide{grid-template-columns:1fr}}\n'
