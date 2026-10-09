@@ -4,7 +4,7 @@
 import re, sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *  # noqa
-import cards_ch2, cards_ch3, cards_ch4, calc_extra, prose, labs_help, style_extra, ch2_px, ch2_math, ch2_sq, ch2_eye, ch3_int, ch3_hist, ch3_filt, ch3_smooth, ch3_sharp
+import cards_ch2, cards_ch3, cards_ch4, calc_extra, prose, labs_help, style_extra, ch2_px, ch2_math, ch2_sq, ch2_eye, ch3_int, ch3_hist, ch3_filt, ch3_smooth, ch3_sharp, ch4_a, ch4_b
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 s = open(os.path.join(HERE, 'orig.html'), encoding='utf-8').read()
@@ -90,6 +90,12 @@ replace_section("ch3-hist", ch3_hist.section)
 replace_section("ch3-filt", ch3_filt.section)
 replace_section("ch3-smooth", ch3_smooth.section)
 replace_section("ch3-sharp", ch3_sharp.section)
+replace_section("ch4-conv", ch4_a.conv)
+replace_section("ch4-ft", ch4_a.ft)
+replace_section("ch4-dft", ch4_a.dft)
+replace_section("ch4-fft", ch4_b.fft)
+replace_section("ch4-2d", ch4_b.twod)
+replace_section("ch4-filt", ch4_b.filt)
 # ── 4. global: lab help boxes, the clearer path lab, extra CSS ──
 s = labs_help.add_help(s)
 s = labs_help.patch_path_lab(s)
