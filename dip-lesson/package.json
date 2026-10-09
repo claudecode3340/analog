@@ -1,0 +1,1 @@
+{ "name": "dip-lesson", "private": true, "type": "module", "dependencies": { "katex": "0.16.11" } }
