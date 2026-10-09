@@ -4,7 +4,7 @@
 import re, sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *  # noqa
-import cards_ch2, cards_ch3, cards_ch4, calc_extra, prose
+import cards_ch2, cards_ch3, cards_ch4, calc_extra, prose, labs_help, style_extra, ch2_px, ch2_math, ch2_sq, ch2_eye
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 s = open(os.path.join(HERE, 'orig.html'), encoding='utf-8').read()
@@ -62,6 +62,31 @@ for marker, block in calc_extra.INSERTS:
     insert_after(marker, block)
 for old, new in calc_extra.PATCHES:
     sub(old, new)
+
+# ── 3. rebuilt sections (teaching rewritten, cards kept with new solutions) ──
+def card_by_id(cid):
+    i = s.find(f'<div class="prob" id="{cid}"')
+    if i < 0: raise SystemExit('card missing: ' + cid)
+    a, b = extract_div(s, i)
+    return s[a:b]
+
+
+def replace_section(sec_id, builder):
+    global s
+    i = s.find(f'<section class="topic" id="{sec_id}"')
+    j = s.find('<section class="topic"', i + 10)
+    new = builder(card_by_id) if builder.__code__.co_argcount == 1 else builder(card_by_id, s[i:j])
+    s = s[:i] + new + '\n' + s[j:]
+
+
+replace_section("ch2-px", ch2_px.section)
+replace_section("ch2-math", ch2_math.section)
+replace_section("ch2-sq", ch2_sq.section)
+replace_section("ch2-eye", ch2_eye.section)
+# ── 4. global: lab help boxes, the clearer path lab, extra CSS ──
+s = labs_help.add_help(s)
+s = labs_help.patch_path_lab(s)
+s = s.replace('</style></head>', style_extra.CSS + '</style></head>', 1)
 
 out = os.path.join(HERE, 'DIP_Mid-sem_Master_Guide.html')
 open(out, 'w', encoding='utf-8').write(s)
