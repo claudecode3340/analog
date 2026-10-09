@@ -1,7 +1,6 @@
 /* DIP drawing kit: pixel grids, sliding kernels, histograms, transfer curves, real photos with live lookup tables,
    calculator screens. Everything is a pure function of scene time (the engine's rule), so scrubbing is exact. */
 'use strict';
-const fx = (v, d = 3) => (+(+v).toPrecision(d)).toString();
 const fr = (v, d = 2) => (Math.round(v * 10 ** d) / 10 ** d).toString();
 const roundHalfUp = (v) => Math.floor(v + 0.5);
 const NUM = (k) => ANSWERS[k];
@@ -194,4 +193,22 @@ function hood(S, x, y, cs, sets, o = {}) {
 const N4 = [[-1, 0], [1, 0], [0, -1], [0, 1]], ND = [[-1, -1], [-1, 1], [1, -1], [1, 1]], N8 = N4.concat(ND);
 
 /* the past-paper stop source with marks, e.g. src('Midsem 2023-24 Q2(a)', 5) */
-const src = (s, marks) => (marks ? `${s} · ${marks} marks` : s);
+const srcM = (s, marks) => (marks ? `${s} · ${marks} marks` : s);
+
+/* bullet list revealed item by item: items = [[t, html]]; returns the group */
+function bullets(S, x, y, w, items, o = {}) {
+  const g = S.g(); let yy = y;
+  items.forEach(([t, s]) => {
+    const inner = `<div class="bl" style="font-size:${o.size || 22}px;line-height:1.42;color:${o.color || '#e7edf5'}">${o.mark === false ? '' : `<span style="color:${o.mc || C.amb};font-weight:800;margin-right:10px">${o.mark || '•'}</span>`}${rt(s)}</div>`;
+    const h = Math.ceil(measureHTML(inner, w)) + (o.gap ?? 10);
+    const fo = html(S, x, yy, w, h, inner, '', g); fo.style.opacity = 0; S.slideIn(fo, t, 0.5, 0, 10);
+    yy += h;
+  });
+  return g;
+}
+/* a card with a title and body text */
+function card(S, x, y, w, h, title, body, t0, col = C.volt, t1) {
+  const fo = html(S, x, y, w, h, `<div style="height:100%;background:rgba(15,22,33,.92);border:1px solid ${col};border-radius:14px;padding:12px 16px;color:#e7edf5;font-size:20px;line-height:1.4"><div style="font-weight:800;color:${col};margin-bottom:6px">${rt(title)}</div>${rt(body)}</div>`);
+  if (t0 !== undefined) { fo.style.opacity = 0; S.slideIn(fo, t0, 0.6, 0, 12); if (t1) S.out(fo, t1, 0.4); }
+  return fo;
+}

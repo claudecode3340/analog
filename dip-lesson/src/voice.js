@@ -30,7 +30,7 @@ const Voice = (() => {
   function choose(name) { chosen = list().find((v) => v.name === name) || chosen; store('alab.voice', name); }
 
   /* ── how a teacher reads the symbols ── */
-  const SUB = { th: 'threshold', thp: 'threshold P', thn: 'threshold N', ov: 'overdrive', in: 'in', out: 'out', min: 'min', max: 'max', up: 'up', down: 'down',
+  const SUB = { k: 'k', q: 'q', j: 'j', e: 'e', mask: 'mask', xy: 'x y', rk: 'r k', '': '', th: 'threshold', thp: 'threshold P', thn: 'threshold N', ov: 'overdrive', in: 'in', out: 'out', min: 'min', max: 'max', up: 'up', down: 'down',
     casc: 'cascode', bottom: 'bottom', src: 'source', ox: 'ox', eff: 'effective', tot: 'total', id: 'I D', b: 'B', BIAS: 'bias', bias: 'bias', OUT: 'out', IN: 'in', REF: 'ref', ref: 'ref',
     DD: 'D D', SS: 'S S', CM: 'C M', DM: 'D M' };
   const letters = (s) => s.toUpperCase().split('').join(' ');
@@ -51,18 +51,29 @@ const Voice = (() => {
   const SUPS = '⁰¹²³⁴⁵⁶⁷⁸⁹', SUBS = '₀₁₂₃₄₅₆₇₈₉';
   /* words a voice gets wrong if left alone: GB is not gigabytes, PM is not the afternoon, VOL is not a volume */
   const LEX = [
-    [/\bGBW\b/g, 'G B W'], [/\bGBP\b/g, 'G B P'], [/\bGB\b/g, 'G B'], [/\bUGB\b/g, 'unity-gain bandwidth'], [/\bPM\b/g, 'phase margin'],
-    [/\bdB\b/g, 'decibels'], [/\bCMRR\b/g, 'C M R R'], [/\bPSRR\b/g, 'P S R R'], [/\bRHP\b/g, 'right-half-plane'], [/\bLHP\b/g, 'left-half-plane'],
-    [/\bICMR\b/g, 'I C M R'], [/\bVTC\b/g, 'V T C'], [/\bDC\b/g, 'D C'], [/\bCMOS\b/g, 'C mos'], [/\b[nN]MOS\b/g, 'N mos'], [/\b[pP]MOS\b/g, 'P mos'], [/\bMOS\b/g, 'mos'],
-    [/\b(VDD|VSS|VOL|VOH|VIL|VIH|NML|NMH|VCM|ISS|VISS|ACM|SR|KCL|KVL|CMFB|OTA|DM|CM)\b/g, (w) => (w === 'SR' ? 'slew rate' : letters(w))],
-    [/\bV(DS|GS|SB|DSAT|ds|gs)(\d*)\b/g, (_m, s, d) => `V ${letters(s)} ${d}`], [/\bVth(\d*)\b/g, 'V threshold $1'], [/\bVov(\d*)\b/g, 'V overdrive $1'], [/\bVin\b/g, 'V in'], [/\bVout\b/g, 'V out'],
-    [/\b([gr])([mO])(\d+)\b/g, (_m, a, b, d) => `${a.toUpperCase()} ${b.toUpperCase()} ${d}`], [/\bgm\b/g, 'G M'], [/\brO\b/g, 'R O'],
-    [/\b([ICRV])(\d+)\b/g, '$1 $2'], [/\bCc\b/g, 'C C'], [/\bCL\b/g, 'C L'], [/\bRL\b/g, 'R L'], [/\bRz\b/g, 'R Z'], [/\bk([nRpP])\b/g, 'k $1'], [/\bRout\b/g, 'R out'],
-    [/\bA([vd])\b/g, `${LETTER_A} $1`], [/\bA(\d)\b/g, (_m, d) => `${LETTER_A} ${d === '0' ? 'zero' : d}`], [/\bpF\b/g, 'picofarads'], [/\bAv(\d)\b/g, `${LETTER_A} V $1`],
+    [/\bdemosaicing\b/gi, 'dee-mosaicking'], [/\bDemosaicing\b/g, 'Dee-mosaicking'], [/\bDebayering\b/gi, 'dee-bayering'], [/\bBayer\b/g, 'Bayer'],
+    [/\bscotopic\b/gi, 'skoh-topic'], [/\bphotopic\b/gi, 'foh-topic'], [/\bfovea\b/gi, 'foh-vee-uh'], [/\bciliary\b/gi, 'silly-airy'], [/\bsclera\b/gi, 'sclair-uh'],
+    [/\bisopreference\b/gi, 'iso-preference'], [/\bbicubic\b/gi, 'bye-cubic'], [/\bbilinear\b/gi, 'bye-linear'], [/\bHadamard\b/g, 'Hada-mar'], [/\bLanczos\b/g, 'Lanchosh'],
+    [/\bDeMorgan'?s\b/g, 'De Morgan\'s'], [/\bSobel\b/g, 'Soh-bel'], [/\bGaussian\b/g, 'Gaussian'], [/\bunsharp\b/gi, 'un-sharp'], [/\bhighboost\b/gi, 'high-boost'],
+    [/\bmammogram\b/gi, 'mammogram'], [/\bangiogram\b/gi, 'angio-gram'], [/\bWeber\b/g, 'Vayber'], [/\bMach\b/g, 'Mahk'],
+    [/\b(DFT|FFT|DPI|CCD|LSB|MSB|RGB|CMYK|HSI|HSV|MRI|PET|GPR|ADAS|CT|CAT|PMF|PDF|CDF|LUT|ROI|SNR|RMS|rms|IC|LSI|VLSI|ULSI|PC|IBM|ALU|EM|UV|IR|LPF|HPF|BW)\b/g, (w) => w === 'CAT' ? 'cat' : w === 'PDF' ? 'P D F' : letters(w)],
+    [/\bCMOS\b/g, 'see-moss'], [/\bMATLAB\b/g, 'mat-lab'], [/\bfx-991CW\b/g, 'F X 991 C W'], [/\bBITS\b/g, 'bits'],
+    [/\bN_?4\b/g, 'N 4'], [/\bN_?8\b/g, 'N 8'], [/\bN_?D\b/g, 'N D'], [/\bD_?4\b/g, 'D 4'], [/\bD_?8\b/g, 'D 8'], [/\bD_?e\b/g, 'D E'], [/\bD_?m\b/g, 'D M'],
+    [/\b(\d+)\s*[x×]\s*(\d+)\b/g, '$1 by $2'], [/\bdB\b/g, 'decibels'], [/\bk-bit\b/g, 'k bit'], [/\bm-path\b/g, 'M path'], [/\bm-adjacen/g, 'M adjacen'],
+    [/\b([ICRV])(\d+)\b/g, '$1 $2'], [/\bMat([A-D])\b/g, 'Mat $1'], [/\bAns\b/g, 'answer'],
   ];
 
   function texSpeak(x) {
-    let s = x;
+    let s = x
+      .replace(/\\sum_\{([^{}]*)\}\^\{?([^{}\s]*)\}?/g, ' the sum, for $1 up to $2, of ').replace(/\\sum_\{([^{}]*)\}/g, ' the sum over $1 of ').replace(/\\sum/g, ' the sum of ')
+      .replace(/\\nabla\^\{?2\}?/g, ' the Laplacian of ').replace(/\\nabla/g, ' the gradient of ')
+      .replace(/\\lfloor|\\rfloor/g, ' ').replace(/\\bar\{?([a-z])\}?/g, ' $1 bar ').replace(/\\hat\{?([a-z])\}?/g, ' $1 hat ').replace(/\\sqrt\{([^{}]*)\}/g, ' root of $1, ')
+      .replace(/\\max/g, ' the max of ').replace(/\\min/g, ' the min of ').replace(/\\log/g, ' log ').replace(/\\ln/g, ' l n ').replace(/\\cup/g, ' union ').replace(/\\cap/g, ' intersection ')
+      .replace(/\\mapsto/g, ' maps to ').replace(/\\star|\\circledast/g, ' correlated with ').replace(/\\ast/g, ' convolved with ').replace(/\\odot/g, ' element by element times ')
+      .replace(/\\neq/g, ' is not ').replace(/\\ne\b/g, ' is not ').replace(/\\forall/g, ' for every ').replace(/\\notin/g, ' is not in ').replace(/\\subseteq/g, ' is inside ')
+      .replace(/([a-zA-Z])\(([a-z0-9]),\s*([a-z0-9])\)/g, ' $1 of $2 $3, ').replace(/([a-zA-Z])\(([a-z0-9])\)/g, ' $1 of $2, ')
+      .replace(/\^\{?([a-zA-Z])\}?(?![a-zA-Z])/g, ' to the $1 ').replace(/\^\{?T\}?/g, ' transpose ').replace(/\^\\top/g, ' transpose ')
+      .replace(/\(L\s*-\s*1\)/g, ' L minus 1, ').replace(/L\s*-\s*1/g, 'L minus 1').replace(/([a-zA-Z0-9])\s*-\s*([a-zA-Z0-9])/g, '$1 minus $2').replace(/\|([^|]+)\|/g, ' the size of $1, ');
     // a ≤ b ≤ c reads as "b lies between a and c"
     const chain = (op) => { const p = s.split(op); if (p.length === 3 && !/\\[lg]e/.test(p.join(''))) s = `${p[1]} lies between ${op === '\\le' ? p[0] : p[2]} and ${op === '\\le' ? p[2] : p[0]}`; };
     chain('\\le'); chain('\\ge');
