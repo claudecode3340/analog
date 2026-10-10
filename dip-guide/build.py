@@ -25,6 +25,8 @@ sub(r'\begin{bmatrix}1&-3&5\\2&1&-3\\0&0&1\end{bmatrix}', r'\begin{bmatrix}1&-3&
 sub('<div class="">5</div><div class="">2</div><div class="">1</div><div class="">−3</div>', '<div class="">5</div><div class="">−2</div><div class="">1</div><div class="">−3</div>', 2)
 sub('<span class="mcol" id="cvs"></span>', '<span class="mcol cvs"></span>', 1)
 sub("$('#cvs',out)", "$('.cvs',out)", 1)
+# Oct 2024 Q1: 21/14 = 1.5 rounds half-up to 2 (was shown as 1)
+sub('Correlation:<div class="mat" style="grid-template-columns:repeat(3,auto)"><div class="">2</div><div class="">1</div>', 'Correlation:<div class="mat" style="grid-template-columns:repeat(3,auto)"><div class="">2</div><div class="">2</div>', 2)
 # calculator keys that do not exist on the fx-991CW (checked in the Casio manual)
 sub('<span class="k">OPTN</span><span class="arrow">→</span><span class="k m">1-Var Results</span>',
     '<span class="k">OK</span><span class="arrow">→</span><span class="k m">1-Var Results</span><span class="arrow">→</span><span class="k">OK</span>')

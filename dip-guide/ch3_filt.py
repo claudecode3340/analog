@@ -76,9 +76,9 @@ def section(card):
         ('Work with 14·h, divide at the end', 'h = ¹⁄₁₄ × [1 2 1; 1 2 2; 2 1 3]. Use the whole numbers and divide every sum by 14.', None),
         ('Correlation at the centre (1, 1)', f'The window is the whole image. Sum of products = {fmt(ta)} → ÷14 = {fmt(round(ta / 14, 4))} → rounded <b>2</b>.', fa),
         ('Convolution at the centre: turn h first', f'Rotated kernel [3 1 2; 2 2 1; 1 2 1]. Sum = {fmt(tb)} → ÷14 = {fmt(round(tb / 14, 4))} → <b>2</b>.', fb),
-        ('All nine pixels (zero padding)', 'Repeat at every pixel (corners use zeros outside). Sums ÷ 14, then round to the nearest integer in 0 … 7:', figs(gsvg(m['corr14'], {}, cell=40, idx=False, label='correlation × 14'), gsvg(m['corr_q'], {(i, j): 'hl' for i in range(3) for j in range(3)}, cell=40, idx=False, label='correlation, 3-bit'), gsvg(m['conv14'], {}, cell=40, idx=False, label='convolution × 14'), gsvg(m['conv_q'], {(i, j): 'hl' for i in range(3) for j in range(3)}, cell=40, idx=False, label='convolution, 3-bit'))),
+        ('All nine pixels (zero padding)', 'Repeat at every pixel (corners use zeros outside). Sums ÷ 14, then round to the nearest integer in 0 … 7 (halves round up: 21/14 = 1.5 → 2):', figs(gsvg(m['corr14'], {}, cell=40, idx=False, label='correlation × 14'), gsvg(m['corr_q'], {(i, j): 'hl' for i in range(3) for j in range(3)}, cell=40, idx=False, label='correlation, 3-bit'), gsvg(m['conv14'], {}, cell=40, idx=False, label='convolution × 14'), gsvg(m['conv_q'], {(i, j): 'hl' for i in range(3) for j in range(3)}, cell=40, idx=False, label='convolution, 3-bit'))),
         ('Compare', 'The two results differ because h is not symmetric under a half-turn. For a symmetric kernel they would be identical.', None),
-    ]) + '<div class="ansbig">Correlation [2 1 1; 2 2 1; 1 2 1], convolution [1 1 1; 1 2 2; 1 2 2] (3-bit, rounded); they differ because h is not 180°-symmetric.</div>'))
+    ]) + '<div class="ansbig">Correlation [2 2 1; 2 2 1; 1 2 1], convolution [1 1 1; 1 2 2; 1 2 2] (3-bit, rounded); they differ because h is not 180°-symmetric.</div>'))
 
     f318 = np.zeros((5, 5)); f318[1:4, 2] = 1
     full = ANS['p318']['conv_full']
