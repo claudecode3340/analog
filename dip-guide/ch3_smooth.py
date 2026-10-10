@@ -122,7 +122,10 @@ def section(card):
     D3 = band((1, -2, 1), 3); assert np.allclose(D3 @ np.array(blk) + np.array(blk) @ D3, o['f1'])
     w01 = pad(blk, 1, 'zero')[0:3, 1:4]; c2, _ = trace_lines(w01, F2, 'MatB')
     c4, G2 = m4_lines(blk, F2, name='Filter-2 output'); assert np.allclose(G2, o['f2'])
+    f5 = [[0] * 5, [0, 15, 7, 0, 0], [0, 7, 15, 7, 0], [0, 0, 7, 15, 0], [0] * 5]
     H.append(set_solution(card('o23q2'), walk([
+        ('The image from Question 1', 'The question says “apply to the image given in Question-1”. That image (Oct 2023 Q1, 4-bit) is f = [0 0 0 0 0; 0 15 7 0 0; 0 7 15 7 0; 0 0 7 15 0; 0 0 0 0 0]. “The non-zero pixels” = the 3×3 block in rows 1–3, columns 1–3: [15 7 0; 7 15 7; 0 7 15]. The zeros around it act as zero padding, so filter just this block with zero padding.',
+         gsvg(f5, {(i, j): 'hl' for i in range(1, 4) for j in range(1, 4)}, cell=38, idx=True, label='5×5 image of Q1; highlighted = the block to filter')),
         ('Identify the filters', 'Filter-1 = the 4-neighbour Laplacian (weights add to 0 → highpass, finds detail). Filter-2 = a Gaussian-like weighted average (weights add to 1 → lowpass, smooths).', None),
         ('Filter-1 at the centre', f'7 + 7 + 7 + 7 − 4·15 = <b>{fmt(t1)}</b>. (The zeros around the block act as zero padding.)', f1),
         ('Filter-1, whole block', 'D·F + F·D with the 3×3 band matrix D of (1 −2 1) (zero padding = plain band): D·F = up + down − 2·centre, F·D = left + right − 2·centre.', grid_out(o['f1'], 'Filter-1', d=0),

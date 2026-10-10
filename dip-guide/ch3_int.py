@@ -131,7 +131,7 @@ def section(card):
         ('(a) Method', 'Write every pixel as a 4-bit binary number (4-bit image: values 0 … 15). Plane 4 (MSB, worth 8) is the first digit of every pixel, plane 3 (worth 4) the second, plane 2 (worth 2) the third, plane 1 (LSB, worth 1) the last.', gsvg(binv, {}, cell=64, label='every pixel in binary'),
          cl(K('HOME', '>Base-N', 'OK'), 'opens Base-N in Dec')
          + cl(K('14', 'EXE', 'FORMAT'), 'type a value, press FORMAT until Bin: 14 → 1110; read the last 4 digits (leading zeros are just more 0s)')
-         + cl('repeat for 15, 12, 9, 10, 8, 6, 3', '15 = 1111, 12 = 1100, 9 = 1001, 10 = 1010, 8 = 1000, 6 = 0110, 3 = 0011 — the small ones (0, 1, 2) you know by heart')),
+         + cl('repeat', 'for 15, 12, 9, 10, 8, 6, 3: 15 = 1111, 12 = 1100, 9 = 1001, 10 = 1010, 8 = 1000, 6 = 0110, 3 = 0011 — the small ones (0, 1, 2) you know by heart')),
         ('(b) The four planes', 'Read one digit position from every pixel.', figs(gsvg(p['plane4'], {(i, j): 'hl' for i in range(4) for j in range(4) if p['plane4'][i][j]}, cell=34, idx=False, label='plane 4 (MSB, 8)'), gsvg(p['plane3'], {(i, j): 'hl' for i in range(4) for j in range(4) if p['plane3'][i][j]}, cell=34, idx=False, label='plane 3 (4)'), gsvg(p['plane2'], {(i, j): 'hl' for i in range(4) for j in range(4) if p['plane2'][i][j]}, cell=34, idx=False, label='plane 2 (2)'), gsvg(p['plane1'], {(i, j): 'hl' for i in range(4) for j in range(4) if p['plane1'][i][j]}, cell=34, idx=False, label='plane 1 (LSB, 1)'))),
         ('Check one pixel', '14 = 1110 → planes 4, 3, 2 are 1, plane 1 is 0: 8 + 4 + 2 = 14 ✓.', None),
     ]) + '<div class="ansbig">The four 0/1 images shown in step 2 (plane 4 = MSB … plane 1 = LSB).</div>'))
@@ -142,7 +142,7 @@ def section(card):
         ('Make the Gray-code table once', 'Only 8 values exist (3-bit), so convert each once: g = b XOR (b shifted right). 0→000, 1→001, 2→011, 3→010, 4→110, 5→111, 6→101, 7→100.', table(['b', 'binary', 'b shifted right', 'Gray = XOR'], [[v, format(v, '03b'), format(v >> 1, '03b'), format(v ^ (v >> 1), '03b')] for v in range(8)]),
          cl(K('HOME', '>Base-N', 'OK'), 'opens Base-N; press FORMAT until Bin so you type and read binary')
          + cl(K('110', 'CATALOG', '>Logic Operation', '>xor', '11', 'EXE'), 'Gray code of 6: 110 XOR 011 (6 shifted right = 3 = 11); screen shows 101')
-         + cl('repeat for the other 7 values', 'only 8 values exist, so make the table once and read every pixel from it')),
+         + cl('repeat', 'for the other 7 values; only 8 values exist, so make the table once and read every pixel from it')),
         ('Convert every pixel', 'Replace each value by its Gray code (shown as the decimal value of the Gray bits).', figs(gsvg(o_img, {}, cell=40, idx=False, label='the image'), gsvg(o['gray'], {}, cell=40, idx=False, label='its Gray codes (as numbers)'))),
         ('Read the two planes', 'LSB plane = last Gray bit (1 for values 1, 2, 5, 6). MSB plane = first Gray bit = the normal MSB (1 for values 4 … 7).', figs(gsvg(o['lsb'], {(i, j): 'hl' for i in range(5) for j in range(5) if o['lsb'][i][j]}, cell=40, idx=False, label='f_LSB (Gray)'), gsvg(o['msb'], {(i, j): 'hl' for i in range(5) for j in range(5) if o['msb'][i][j]}, cell=40, idx=False, label='f_MSB'))),
     ]) + '<div class="ansbig">f<sub>LSB</sub> and f<sub>MSB</sub> as in step 3. Shortcut: Gray LSB = 1 when the value is 1, 2, 5 or 6; MSB = 1 when the value is 4 or more.</div>'))

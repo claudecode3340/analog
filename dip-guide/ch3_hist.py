@@ -16,7 +16,7 @@ def sheet_eq(nk, MN=None, L=None, open_=True, show=True):
     run = np.cumsum(nk); s = (L - 1) * run / MN
     o = cl(K('HOME', '>Spreadsheet', 'OK'), 'opens the sheet (cells A1:E45); the cursor is on A1') if open_ else ''
     o += cl(K(*[x for v in nk for x in (fmt(v), 'EXE')]), f'types the counts n<sub>k</sub> down column A (A1 … A{n}); each EXE moves one cell down')
-    o += cl('cursor to B1, then ' + K(fmt(nk[0]), 'EXE'), 'B1 = the first running total, which is just the first count')
+    o += cl(K(fmt(nk[0]), 'EXE'), 'cursor to B1 first; B1 = the first running total, which is just the first count')
     o += cl(K('TOOLS', '>Fill Formula'), f'Form: <b>B1+A2</b> (B = SHIFT 5, A = SHIFT 4), Range: <b>B2:B{n}</b>, OK → every B cell = total above + its own count = the running total')
     o += cl(K('TOOLS', '>Fill Formula'), f'Form: <b>{L - 1}×B1÷{MN}</b>, Range: <b>C1:C{n}</b>, OK → column C = (L − 1) × running ÷ MN = s before rounding',
             lcdmat('A | B | C', [[fmt(v), int(r), f4(x)] for v, r, x in zip(nk, run, s)]) if show else '')
@@ -33,8 +33,8 @@ def stats_cl(xs, fs, MN=None):
     m = (x * f).sum() / n; sd = float(np.sqrt((x * x * f).sum() / n - m * m))
     o = cl(K('HOME', '>Statistics', '>1-Variable'), 'opens the Statistics app with an empty x column')
     o += cl(K('TOOLS', '>Frequency', '>On'), 'adds a Freq column: x = the grey level, Freq = how many pixels have it')
-    o += cl('x: ' + ', '.join(fmt(v) for v in xs) + ' (EXE after each); then the Freq column: ' + ', '.join(fmt(v) for v in fs),
-            'each row means “level x occurs Freq times” — exactly the histogram', lcdmat('x | Freq', [[a, b] for a, b in zip(xs, fs)]))
+    o += cl(K(fmt(xs[0]), 'EXE', fmt(xs[1]), 'EXE', '…'), 'x column: ' + ', '.join(fmt(v) for v in xs) + ' (EXE after each); then the Freq column: ' + ', '.join(fmt(v) for v in fs) + '. Each row means “level x occurs Freq times” — exactly the histogram',
+            lcdmat('x | Freq', [[a, b] for a, b in zip(xs, fs)]) if len(xs) <= 8 else lcdmat('x (top) | Freq (bottom)', [xs, fs]))
     o += cl(K('OK', '>1-Var Results', '>OK'), f'x̄ is the mean, σx the standard deviation (divides by n, the image formula). Do <b>not</b> use sx (divides by n − 1). Check n = {fmt(MN or n)} = number of pixels.',
             lcd('1-Var Results', f'x̄ = {g10(m)}<br>σx = {g10(sd)}<br>n = {fmt(n)}'))
     return o
@@ -130,7 +130,7 @@ def section(card):
         ('Mean', 'p(r) = 125r/3500 = r/28. Mean = Σ r·p(r) = (0 + 1 + 4 + 9 + 16 + 25 + 36 + 49)/28 = 140/28 = <b>5</b>.', None,
          stats_cl(range(8), [125 * r for r in range(8)], 3500)),
         ('Standard deviation', 'Average of r² = Σ r²·r/28 = (0 + 1 + 8 + 27 + 64 + 125 + 216 + 343)/28 = 784/28 = 28. Variance = 28 − 5² = <b>3</b>; σ = √3 = <b>1.7321</b>.', None,
-         cl('read σx = 1.732050808 on the same 1-Var Results screen', 'that is σ directly')
+         cl(K('OK', '>1-Var Results', '>OK'), 'read σx = 1.732050808 on the same screen: that is σ directly')
          + cl(K('1.732050808', 'x²', 'EXE'), 'squares σx → screen shows 3 = the variance')),
     ]) + '<div class="ansbig">(a) k = 125. (b) mean = 5, σ² = 3, σ = 1.7321.</div>'))
     H24 = [100 * r for r in range(8)] + [100 * (15 - r) for r in range(8, 16)]
@@ -148,7 +148,7 @@ def section(card):
          cl(K('32', '×', '48', 'EXE'), 'MN = 1536 = the number of pixels (also the last running total — a free check)')
          + arith(7, 528, 1536) + FIX4 + sheet_eq(nq4)),
         ('Move the counts', 'Each count goes to its rounded s; counts landing on the same s are added: s = 0 gets 24 + 48 = 72, s = 1 gets 96, s = 2 gets 360, s = 4 gets 420, s = 6 gets 288, s = 7 gets 192 + 108 = 300.', bars([72, 96, 360, 0, 420, 0, 288, 300], 'equalised histogram', w=240, hl={6}),
-         cl('round column C: 0, 0, 1, 2, 4, 6, 7, 7', 'only r = 5 lands on s = 6 (5.6328 → 6), so bar 6 holds just the 288 pixels of r = 5')),
+         cl('round C', 'column C rounded: 0, 0, 1, 2, 4, 6, 7, 7. Only r = 5 lands on s = 6 (5.6328 → 6), so bar 6 holds just the 288 pixels of r = 5')),
         ('Normalise the asked bar', 'p<sub>s</sub>(6) = 288 / 1536 = <b>0.1875</b>.', None,
          cl(K('288', '÷', '1536', 'EXE'), 'count of bar 6 ÷ number of pixels; screen shows 3/16 → FORMAT → Decimal → 0.1875')),
     ]) + '<div class="ansbig">p<sub>s</sub>(6) = 0.1875.</div>'))
@@ -159,7 +159,7 @@ def section(card):
          cl(K('8', '+', '7', '+', '2', '+', '6', '+', '9', '+', '4', 'EXE'), 'the tally check: screen must show 36 = 6 × 6, otherwise a pixel was missed')),
         ('Equalisation table', 'L − 1 = 7, MN = 36.', eq_table(m19['nk'])[0],
          arith(7, 15, 36) + sheet_eq(m19['nk'])
-         + cl('round column C', 'LUT 2, 3, 3, 4, 6, 7, 7, 7 (r = 6, 7 do not occur but still map to 7)')),
+         + cl('round C', 'LUT 2, 3, 3, 4, 6, 7, 7, 7 (r = 6, 7 do not occur but still map to 7)')),
         ('Rewrite the image with the lookup table', 'r → s: 0→2, 1→3, 2→3, 3→4, 4→6, 5→7, 6→7, 7→7.', figs(gsvg(m19['img'], {}, cell=34, idx=False, label='equalised image'), bars(m19['eq_hist'], 'its histogram', w=220))),
     ]) + '<div class="ansbig">Lookup table 0→2, 1→3, 2→3, 3→4, 4→6, 5→7, 6→7, 7→7, and the image in step 3.</div>'))
     ne = [1813, 1506, 574, 203]
@@ -197,16 +197,16 @@ def section(card):
          cl(K('6', '+', '8', '+', '6', '+', '4', '+', '1', 'EXE'), 'tally check: screen must show 25 = 5 × 5')),
         ('6 · Equalise', 'Table with L − 1 = 7, MN = 25, then move the counts.', eq_table(qh['nk'])[0] + figs(bars(qh['eq_hist'], 'equalised histogram', w=240), gsvg(qh['eq_img'], {}, cell=34, idx=False, label='equalised image')),
          arith(7, 14, 25) + sheet_eq(qh['nk'])
-         + cl('round column C', 'LUT 0, 2, 4, 6, 7, 7, 7, 7; then move the counts: 6 → s = 2, 8 → 4, 6 → 6, 4 + 1 → 7')),
+         + cl('round C', 'LUT 0, 2, 4, 6, 7, 7, 7, 7; then move the counts: 6 → s = 2, 8 → 4, 6 → 6, 4 + 1 → 7')),
     ]) + '<div class="ansbig">1: 4.2426 and 6. 2–3: the grids above. 4: length 4. 5: 0, 6, 8, 6, 4, 1, 0, 0. 6: r → s = 0, 2, 4, 6, 7, 7, 7, 7; new histogram 0, 0, 6, 0, 8, 0, 6, 5.</div>'))
 
     pz = [0, 0, 0, 0.15, 0.2, 0.3, 0.2, 0.15]; Gc = 7 * np.cumsum(pz)
     H.append(set_solution(card('sl-match'), walk([
         ('(a) Equalise the input', 'L − 1 = 7, MN = 4096.', eq_table(e35['nk'])[0],
          arith(7, 790, 4096) + sheet_eq(e35['nk'])
-         + cl('round column C and write it down', 's = 1, 3, 5, 6, 6, 7, 7, 7')),
+         + cl('round C', 'write it down: s = 1, 3, 5, 6, 6, 7, 7, 7')),
         ('(b) Equalise the target', 'Running total of p<sub>z</sub> = 0, 0, 0, 0.15, 0.35, 0.65, 0.85, 1.00 → × 7 = 0, 0, 0, 1.05, 2.45, 4.55, 5.95, 7 → rounded G = 0, 0, 0, 1, 2, 5, 6, 7.', None,
-         cl('cursor to A1, type ' + ', '.join(fmt(v) for v in pz) + ' over the old counts (EXE after each)', 'column B recalculates itself: it is now the running total of p<sub>z</sub>')
+         cl('retype A1:A8', 'cursor to A1, type ' + ', '.join(fmt(v) for v in pz) + ' over the old counts (EXE after each); column B recalculates itself: it is now the running total of p<sub>z</sub>')
          + cl(K('TOOLS', '>Fill Formula'), 'Form: <b>7×B1</b>, Range: <b>C1:C8</b>, OK → no ÷ MN, because the p<sub>z</sub> already add up to 1', lcdmat('B | C', [[fmt(round(b, 4)), fmt(round(c, 4))] for b, c in zip(np.cumsum(pz), Gc)]))),
         ('Connect each s to the closest G', 'Rule: closest G; on a tie the smaller z.', table(['s', 'closest G', 'z'], [[1, 'G(3) = 1', '3'], [3, 'G(4) = 2', '4'], [5, 'G(5) = 5', '5'], [6, 'G(6) = 6', '6'], [7, 'G(7) = 7', '7']])),
         ('Chain r → s → z', 'r = 0 … 7 → s = 1, 3, 5, 6, 6, 7, 7, 7 → z = 3, 4, 5, 6, 6, 7, 7, 7.', None),
@@ -218,9 +218,9 @@ def section(card):
          cl(K('2', '+', '3', '+', '5', '+', '6', '+', '9', '+', '12', '+', '14', '+', '13', 'EXE'), 'tally check: screen must show 64 = 8 × 8')),
         ('Equalise the input', 's = 7 × running ÷ 64, rounded: 0, 1, 1, 2, 3, 4, 6, 7.', eq_table(e25['nk'])[0],
          arith(7, 5, 64) + sheet_eq(e25['nk'])
-         + cl('round column C and write it down', 's = 0, 1, 1, 2, 3, 4, 6, 7')),
+         + cl('round C', 'write it down: s = 0, 1, 1, 2, 3, 4, 6, 7')),
         ('Equalise the target (13, 12, 14, 14, 11, 0, 0, 0)', 'Same formula, same MN = 64: G rounded = 1, 3, 4, 6, 7, 7, 7, 7.', eq_table(tg)[0],
-         cl('cursor to A1, type 13, 12, 14, 14, 11, 0, 0, 0 over the old counts (EXE after each)', 'B and C recalculate by themselves — column C is now G before rounding',
+         cl('retype A1:A8', 'cursor to A1, type 13, 12, 14, 14, 11, 0, 0, 0 over the old counts (EXE after each); B and C recalculate by themselves — column C is now G before rounding',
             lcdmat('A | B | C', [[v, int(r), f4(x)] for v, r, x in zip(tg, np.cumsum(tg), 7 * np.cumsum(tg) / 64)]))),
         ('Connect each s to the closest G (tie → smaller z)', 'G rounded = 1, 3, 4, 6, 7, 7, 7, 7 for z = 0 … 7.', table(['s', 'distance to each G', 'z'], [[0, 'G(0) = 1 is closest (distance 1)', '0'], [1, 'G(0) = 1 exactly', '0'], [2, 'G(0) = 1 and G(1) = 3 are both 1 away → <b>tie → smaller z</b>', '0'], [3, 'G(1) = 3', '1'], [4, 'G(2) = 4', '2'], [6, 'G(3) = 6', '3'], [7, 'G(4) = 7 (and 5, 6, 7) → smallest', '4']])),
         ('Rewrite the image', 'r → z: 0→0, 1→0, 2→0, 3→0, 4→1, 5→2, 6→3, 7→4.', gsvg(e25['g'], {}, cell=34, idx=False, label='g(x, y)')),
