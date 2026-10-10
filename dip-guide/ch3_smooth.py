@@ -2,6 +2,7 @@
 step-by-step walk (window, kernel, products, sum, then the whole output)."""
 from ch3lib import *
 import math
+import numpy as np
 
 I44 = [[1, 2, 4, 5], [5, 2, 5, 2], [1, 1, 3, 6], [2, 4, 6, 7]]
 W121 = [[1, 2, 1], [2, 4, 2], [1, 2, 1]]
@@ -52,10 +53,33 @@ def section(card):
     H.append('<h3 id="ch3-smooth-q">Questions on smoothing</h3>')
     fq = [[2, 1.5, 1, 3.2], [4, 4.3, math.pi, 2], [3, 0.5, math.e, math.sqrt(2)]]
     fig, tot = window_fig(fq, 0, 3, G07, 'replicate', label_kernel='Gaussian weights (not yet divided)')
+    vq = np.array([a07, 1, a07]); Wq = np.array([[1, 3.2, 3.2], [1, 3.2, 3.2], [math.pi, 2, 2]])
+    prod = np.outer(vq, vq) * Wq; S = float(vq @ Wq @ vq); ksum = (1 + 2 * a07) ** 2
     H.append(set_solution(card('qz1'), walk([
-        ('Build the kernel', 'σ = 0.7, c = 1: edge = e<sup>−1/(2·0.49)</sup> = 0.3604, corner = 0.3604² = 0.1299, centre 1. Sum = 1 + 4(0.3604) + 4(0.1299) = <b>2.9612</b>.', None),
-        ('Build the window with replicate padding', 'g(0, 3) is the top-right pixel: the row above (−1) copies row 0, the column to the right (4) copies column 3. Window = [1 3.2 3.2; 1 3.2 3.2; π 2 2].', fig),
-        ('Add the products, then normalise', f'Sum of products = {fmt(round(tot, 4))}; divide by the kernel sum: {fmt(round(tot, 4))} / 2.9612 = <b>2.6345</b>.', None),
+        ('Build the kernel: only one number to compute',
+         'On a 3×3 grid the squared distance s² + t² is 0 (centre), 1 (4 edges) or 2 (4 corners). So the weights are 1, a, a² with a = e<sup>−1/(2σ²)</sup> = e<sup>−1/0.98</sup> = <b>0.3604</b>, corner a² = 0.1299. Kernel sum = 1 + 4a + 4a² = (1 + 2a)² = <b>2.9615</b>.',
+         gsvg([[fmt(round(v, 4)) for v in r] for r in G07], {(i, j): 'n4' for i in range(3) for j in range(3)}, cell=76, idx=False, label='weights before dividing'),
+         cl(K('SHIFT', '8', 'x^■', '(', 'SHIFT', '−', '1', '÷', '(', '2', '×', '0.7', 'x²', ')', ')', 'EXE'), 'computes a = e<sup>−1/(2·0.7²)</sup>; screen shows 0.360447788')
+         + cl(K('VARIABLE', '>A=', '>Store'), 'saves a in A, so you never retype the decimals')
+         + cl(K('(', '1', '+', '2', 'A', ')', 'x²', 'EXE'), 'kernel sum (1 + 2a)² = 2.961481588 — the number you divide by at the end')),
+        ('Write the kernel as column × row',
+         'Because e<sup>−(s²+t²)/2σ²</sup> = e<sup>−s²/2σ²</sup> · e<sup>−t²/2σ²</sup>, the kernel is v·vᵀ with v = (a, 1, a). Check: a·a = corner, a·1 = edge, 1·1 = centre.',
+         figs(gsvg([['a'], ['1'], ['a']], {}, cell=40, idx=False, label='v (column)'), gsvg([['a', '1', 'a']], {}, cell=40, idx=False, label='vᵀ (row)')),
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app')
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '1×3, type A, 1, A (the letter A, not 0.36) — this is vᵀ')
+         + cl(K('TOOLS', '>MatC', 'OK', '>Define New'), '3×1, type A, 1, A — this is v')),
+        ('Build the window with replicate padding',
+         'g(0, 3) is the top-right pixel. The row above (−1) copies row 0; the column to the right (4) copies column 3. Window = [1 3.2 3.2; 1 3.2 3.2; π 2 2].',
+         fig,
+         cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '3×3, type 1, 3.2, 3.2, 1, 3.2, 3.2, π, 2, 2 — the window (red cells are the copied padding)', lcdmat('MatA = 3×3', [[1, 3.2, 3.2], [1, 3.2, 3.2], [3.1416, 2, 2]]))),
+        ('Multiply and add all nine products in one go',
+         f'MatA × MatC weights each window row by (a, 1, a) and adds it; MatB × that weights the three row results by (a, 1, a). Together that is the sum of the nine products = <b>{S:.4f}</b>.',
+         gsvg([[fmt(round(v, 4)) for v in r] for r in prod], {(i, j): 'n8' for i in range(3) for j in range(3)}, cell=76, idx=False, label='the nine products being added'),
+         cl(K('MatB', '×', 'MatA', '×', 'MatC', 'EXE'), 'sum of products, before normalising', lcdmat('MatAns', [[round(S, 9)]]))),
+        ('Normalise: divide by the kernel sum',
+         f'{S:.4f} ÷ {ksum:.4f} = <b>{S / ksum:.4f}</b>. (With weights rounded to 4 decimals you get 2.9612 as the sum; the answer is still 2.6345.)',
+         None,
+         cl(K('Ans', '÷', '(', '1', '+', '2', 'A', ')', 'x²', 'EXE'), f'screen shows {S / ksum:.9f} → report 2.6345')),
     ]) + '<div class="ansbig">g(0, 3) = 2.6345.</div>'))
 
     for cid, A, B, pa, pb in [('m23q2', W121, LAP, 'zero', 'replicate'), ('m24q2', W121, LAP, 'replicate', 'zero')]:

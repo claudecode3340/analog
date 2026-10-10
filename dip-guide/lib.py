@@ -149,12 +149,19 @@ def lesson(title, what, body, use=None, tag=None):
     return f'<div class="lesson"><h4>{t}<span>{title}</span></h4><p class="what">{what}</p>{body}{u}</div>'
 
 
+def cl(keys, means='', screen=''):
+    """one calculator line inside a walk step: the keys, what they mean, and (optionally) the screen"""
+    return f'<div class="cline"><div class="ckeys">{keys}</div>' + (f'<div class="cmean">{means}</div>' if means else '') + '</div>' + (f'<div class="cscreen">{screen}</div>' if screen else '')
+
+
 def walk(steps):
-    """step-by-step solution: steps = [(title, text, figure_html_or_None)]"""
+    """step-by-step solution: steps = [(title, text, figure_html_or_None, calculator_html_or_None)]"""
     out = ['<div class="walk">']
     for n, st in enumerate(steps, 1):
-        title, text, fig = (st + (None,))[:3] if len(st) < 3 else st
-        out.append(f'<div class="wstep"><div class="wn">{n}</div><div class="wt">' + (f'<div class="wh">{title}</div>' if title else '') + f'<div>{text}</div></div>' + (f'<div class="wf">{fig}</div>' if fig else '') + '</div>')
+        st = tuple(st) + (None,) * (4 - len(st))
+        title, text, fig, cal = st[:4]
+        calbox = f'<div class="wcalc"><div class="wcl">On the fx-991CW</div>{cal}</div>' if cal else ''
+        out.append(f'<div class="wstep"><div class="wn">{n}</div><div class="wt">' + (f'<div class="wh">{title}</div>' if title else '') + f'<div>{text}</div>{calbox}</div>' + (f'<div class="wf">{fig}</div>' if fig else '') + '</div>')
     out.append('</div>')
     return ''.join(out)
 
@@ -174,7 +181,14 @@ def set_solution(card_html, new_inner):
     """replace the card's Full solution with new content"""
     i = card_html.find('<details class="s s-sol">')
     if i < 0: raise ValueError('no solution block')
-    j = card_html.find('</details>', i) + len('</details>')
+    import re as _re
+    depth, j = 0, -1
+    for m in _re.finditer(r'<details\b|</details>', card_html[i:]):
+        depth += 1 if m.group(0) != '</details>' else -1
+        if depth == 0: j = i + m.end(); break
+    if 'class="wcalc"' in new_inner:
+        card_html = card_html.replace('<details class="calc-hint" open><summary>fx-991CW makes this much faster — how to use it here', '<details class="calc-hint"><summary>Calculator steps only (the same steps are inside the solution below, next to what each one means)', 1)
+        k = card_html.find('<details class="s s-sol">'); j += k - i; i = k
     return card_html[:i] + f'<details class="s s-sol" open><summary>Full solution, step by step</summary><div>{new_inner}</div></details>' + card_html[j:]
 
 
