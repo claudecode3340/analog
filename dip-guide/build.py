@@ -104,6 +104,6 @@ s = labs_help.add_help(s)
 s = labs_help.patch_path_lab(s)
 s = s.replace('</style></head>', style_extra.CSS + cheat.CSS + '</style></head>', 1)
 
-out = os.path.join(HERE, 'DIP_Mid-sem_Master_Guide.html')
+out = os.environ.get('DIP_OUT') or os.path.join(HERE, 'DIP_Mid-sem_Master_Guide.html')
 open(out, 'w', encoding='utf-8').write(s)
 print('wrote', out, f'{len(s) / 1e6:.2f} MB', s.count('<div class="prob" id='), 'question cards')
