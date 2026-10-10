@@ -23,7 +23,8 @@ def section(card):
         '<p><b>Example</b> (Mid-sem 2023-24 image, kernel ¹⁄₁₆[1 2 1; 2 4 2; 1 2 1], output at pixel (1, 1)):</p>' + fig +
         f'<p>Sum of the products = {fmt(tot)}; times ¹⁄₁₆ → <b>{fmt(tot / 16)}</b>. Every output pixel is computed the same way, always from the <b>original</b> image (never from outputs already computed).</p>'
         '<div class="cols"><div><p><b>Words from the slides:</b> the kernel is also called a <b>mask</b> or <b>window</b>, and it is the filter’s <b>impulse response</b> (what the filter outputs for an image that is a single 1). A filter is <b>linear</b> if the output is a weighted sum like this; the median filter (Section 3.5) is <b>nonlinear</b>.</p></div>'
-        '<div><p><b>Calculator for one pixel:</b> if the kernel is a column × a row (separable), MatB = row, MatA = window, MatC = column → MatB × MatA × MatC (calculator recipe C′). Otherwise type the nine products in one line.</p></div></div>',
+        '<div><p><b>Calculator for one pixel (separable kernel w = u·vᵀ):</b> MatB = u written as a <b>1×3 row</b>, MatA = the 3×3 window, MatC = v as a <b>3×1 column</b>. Then MatB × MatA × MatC gives a 1×1 answer = the sum of the nine products (before the ¹⁄₁₆). Why: MatA × MatC weights each window row by v and adds it (a column of 3 row sums); MatB × that weights those 3 sums by u and adds them.</p>'
+        '<p><b>Here:</b> u = v = (1, 2, 1). Window × [1; 2; 1] = [1+4+4; 5+4+5; 1+2+3] = [9; 14; 6]; then [1 2 1] × [9; 14; 6] = 9 + 28 + 6 = <b>43</b> ✓ → × ¹⁄₁₆ = 2.6875. Not separable? Use Trn(MatA) × MatB and add the diagonal, or type the nine products.</p></div></div>',
         use='every filtering question: weighted mean, box, Gaussian, Laplacian, Sobel — only the kernel changes.', tag='1'))
 
     L = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
