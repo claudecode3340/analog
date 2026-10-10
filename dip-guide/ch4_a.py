@@ -1,6 +1,6 @@
 """Chapter 4, first half, rebuilt: convolution (linear / circular), Fourier transforms and sampling, the 1-D DFT.
 Plain-words lessons with small worked numbers and pictures; past papers as step-by-step walks."""
-import re
+import re, math
 import numpy as np
 from ch3lib import *
 
@@ -93,29 +93,54 @@ def conv(card, old):
 
     H.append('<h3 id="ch4-conv-q">Questions on convolution</h3>')
     f5 = np.array([[1, 0, 2], [3, 1, 0], [0, 4, 2]]); h5 = np.array([[0, 5, 7], [6, 8, 0], [1, 0, 5]])
-    rk = [(0 - k) % 3 for k in range(3)]; cl = [(2 - l) % 3 for l in range(3)]
-    ht = h5[np.ix_(rk, cl)]; pr = f5 * ht
+    rk = [(0 - k) % 3 for k in range(3)]; ck = [(2 - l) % 3 for l in range(3)]
+    ht = h5[np.ix_(rk, ck)]; pr = f5 * ht; TA = (f5.T @ ht)
     H.append(set_solution(card('qz5'), walk([
-        ('What we compute', 'g(0, 2) = Σ<sub>k,l</sub> f(k, l) · h((0 − k) mod 3, (2 − l) mod 3). We need, for every f-entry, which h-entry it meets.', None),
-        ('Lookup tables', f'Rows: k = 0, 1, 2 → (0 − k) mod 3 = <b>{", ".join(map(str, rk))}</b>. Columns: l = 0, 1, 2 → (2 − l) mod 3 = <b>{", ".join(map(str, cl))}</b>. So h̃ row 0 = h row 0 read in column order 2, 1, 0; h̃ row 1 = h row 2 (same order); h̃ row 2 = h row 1.',
-         figs(rows(h5.tolist(), {(i, j): 'n4' for i in range(3) for j in range(3)}, 'h as given'), rows(ht.tolist(), {(i, j): 'n8' for i in range(3) for j in range(3)}, 'h̃ for pixel (0, 2)'))),
+        ('What we compute', 'g(0, 2) = Σ<sub>k,l</sub> f(k, l) · h((0 − k) mod 3, (2 − l) mod 3). We need, for every f-entry, which h-entry it meets.', None,
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app (we will let it do the nine multiplications and the adding)')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '3×3, type f row by row: 1, 0, 2, 3, 1, 0, 0, 4, 2', lcdmat('MatA = f', f5.tolist()))),
+        ('Lookup tables', f'Rows: k = 0, 1, 2 → (0 − k) mod 3 = <b>{", ".join(map(str, rk))}</b>. Columns: l = 0, 1, 2 → (2 − l) mod 3 = <b>{", ".join(map(str, ck))}</b>. So h̃ row 0 = h row 0 read in column order 2, 1, 0; h̃ row 1 = h row 2 (same order); h̃ row 2 = h row 1.',
+         figs(rows(h5.tolist(), {(i, j): 'n4' for i in range(3) for j in range(3)}, 'h as given'), rows(ht.tolist(), {(i, j): 'n8' for i in range(3) for j in range(3)}, 'h̃ for pixel (0, 2)')),
+         cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '3×3, type h̃ (not h!) row by row: 7, 5, 0, 5, 0, 1, 0, 8, 6 — the calculator cannot do the rearranging, you do it on paper first', lcdmat('MatB = h̃', ht.tolist()))),
         ('Multiply entry by entry and add', f'Products: 1·7 + 3·5 + 4·8 + 2·6 (the rest are 0) = 7 + 15 + 32 + 12 = <b>{int(pr.sum())}</b>.',
-         figs(rows(f5.tolist(), {}, 'f'), rows(pr.tolist(), {(i, j): 'hl' for i in range(3) for j in range(3) if pr[i, j]}, 'f × h̃'))),
+         figs(rows(f5.tolist(), {}, 'f'), rows(pr.tolist(), {(i, j): 'hl' for i in range(3) for j in range(3) if pr[i, j]}, 'f × h̃')),
+         cl(K('CATALOG', '>Matrix Calc', '>Trn(') + ' ' + K('MatA', ')', '×', 'MatB', 'EXE'), 'Trn(MatA) × MatB: its diagonal entry (i, i) is column i of f times column i of h̃, entry by entry, added — so the diagonal holds the three column sums of f × h̃', lcdmat('MatAns', TA.tolist()))
+         + cl('add the <b>diagonal only</b>: ' + ' + '.join(str(int(TA[i, i])) for i in range(3)) + f' = <b>{int(np.trace(TA))}</b>', 'the off-diagonal numbers are junk (mixed columns) — ignore them')),
     ]) + f'<div class="ansbig">g(0, 2) = {int(pr.sum())}.</div>'))
 
     lb = np.convolve([1, 0, 1, 1], [1, 2, 3, 1]).tolist() + [0]
     wb = [lb[i] + lb[i + 4] for i in range(4)]
     lc = np.convolve([2, 5, 0, 4], [4, 1, 3]).tolist()
+    circm = lambda v: [[v[(i - j) % len(v)] for j in range(len(v))] for i in range(len(v))]
+    Ca, Cb = circm([1, 2, 3]), circm([1, 0, 1, 1])
     H.append(set_solution(card('sl-circ'), walk([
-        ('(a) Circular, n = 3', 'Linear {1, 2, 3} ∗ {1, 0, 2} = {1, 2, 5, 4, 6}; wrap indices 3, 4 onto 0, 1 → {5, 8, 5}. (Or the circulant matrix in lesson 3.)', None),
+        ('(a) Circular, n = 3', 'Linear {1, 2, 3} ∗ {1, 0, 2} = {1, 2, 5, 4, 6}; wrap indices 3, 4 onto 0, 1 → {5, 8, 5}. (Or the circulant matrix in lesson 3.)', None,
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '3×3 circulant C<sub>f</sub>: column 0 = f = (1, 2, 3), each next column = the previous one pushed down one place (the bottom number comes back to the top)', lcdmat('MatA = C_f', Ca))
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '3×1, type h = 1, 0, 2 as a column')
+         + cl(K('MatA', '×', 'MatB', 'EXE'), 'row x of C<sub>f</sub> times h is exactly Σ f(k) h((x − k) mod 3) = g(x)', lcdmat('MatAns', [[v] for v in (np.array(Ca) @ [1, 0, 2]).tolist()]))),
         ('(b) Linear first', 'Shift-and-add f = {1, 0, 1, 1} with h = {1, 2, 3, 1}: length 4 + 4 − 1 = 7.', row(lb[:7], label='f ∗ h')),
         ('(b) Wrap to 4 points', 'Put the linear result in two rows of 4 (pad with a 0) and add the columns.',
-         figs(rows([lb[:4], lb[4:8]], {(1, j): 'nd' for j in range(4)}, 'first 4 | the tail (red) under it'), row(wb, {j: 'hl' for j in range(4)}, '4-point circular'))),
-        ('(c) Linear from circular: pad', 'Lengths 4 and 3 → pad both to 4 + 3 − 1 = 6. The 6-point circular convolution then has nothing to wrap, so it equals the linear one.',
+         figs(rows([lb[:4], lb[4:8]], {(1, j): 'nd' for j in range(4)}, 'first 4 | the tail (red) under it'), row(wb, {j: 'hl' for j in range(4)}, '4-point circular')),
+         cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '4×4 circulant of f = (1, 0, 1, 1): column j is f shifted down j places', lcdmat('MatA = C_f', Cb))
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '4×1, type h = 1, 2, 3, 1')
+         + cl(K('MatA', '×', 'MatB', 'EXE'), 'the 4-point circular convolution directly — must equal the wrapped result', lcdmat('MatAns', [[v] for v in (np.array(Cb) @ [1, 2, 3, 1]).tolist()]))),
+        ('(c) Linear from circular: pad', 'Lengths 4 and 3 → pad both to 4 + 3 − 1 = 6. The 6-point circular convolution then has nothing to wrap, so it equals the linear one. (A 6×6 circulant is too big for the calculator — its matrices stop at 4×4 — so do this one by shift-and-add.)',
          figs(row([2, 5, 0, 4, 0, 0], {4: 'out', 5: 'out'}, 'f padded'), row([4, 1, 3, 0, 0, 0], {3: 'out', 4: 'out', 5: 'out'}, 'h padded'), row(lc, {3: 'hl'}, 'result'))),
         ('(c) Put the origin back', 'f’s origin (↑ under 0) is at index 2, h’s (↑ under 1) at index 1, so the output origin is at index 2 + 1 = 3 → the value 31.', None),
     ]) + '<div class="ansbig">(a) {5, 8, 5}. (b) {1, 2, 4, 4, 5, 4, 1} → {6, 6, 5, 4}. (c) {8, 22, 11, 31↑, 4, 12}.</div>'))
-    H.append(card('dr-circ4'))
+    Cd = circm([1, 2, 0, 1])
+    H.append(set_solution(card('dr-circ4'), walk([
+        ('(a) Linear convolution', 'Slide h = (2, 1) over f (shift and add): 2·1, 2·2 + 1·1, 2·0 + 1·2, 2·1 + 1·0, 1·1 → <b>{2, 5, 2, 2, 1}</b> (length 4 + 2 − 1 = 5 non-zero values; 7 if you count h’s two zeros).',
+         row([2, 5, 2, 2, 1], {4: 'nd'}, 'f ∗ h (red part wraps in (b))')),
+        ('(b) Wrap to 4 points', 'Index 4 falls past the end, so add it onto index 0: 2 + 1 = 3 → <b>{3, 5, 2, 2}</b>. Check by the cyclic definition: g(0) = f(0)h(0) + f(3)h(1) = 2 + 1 = 3 ✓.',
+         row([3, 5, 2, 2], {0: 'hl'}, '4-point circular'),
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '4×4 circulant of f = (1, 2, 0, 1): column j is f pushed down j places, wrapping', lcdmat('MatA = C_f', Cd))
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '4×1, type h = 2, 1, 0, 0')
+         + cl(K('MatA', '×', 'MatB', 'EXE'), 'the circular convolution in one product — confirms the wrapped answer', lcdmat('MatAns', [[v] for v in (np.array(Cd) @ [2, 1, 0, 0]).tolist()]))),
+        ('(c) How much padding', 'Circular = linear when nothing wraps: n ≥ n₁ + n₂ − 1 = 4 + 4 − 1 = <b>7</b> (or 4 + 2 − 1 = 5 if you count only the non-zero part of h).', None),
+    ]) + '<div class="ansbig">(a) {2, 5, 2, 2, 1}. (b) {3, 5, 2, 2}. (c) 7 (5 using only the non-zero lengths 4 and 2).</div>'))
     H.append('</section>')
     return '\n'.join(H)
 
@@ -259,10 +284,21 @@ def dft(card, old):
     H.append(old_lab(old, 'dft'))
 
     H.append('<h3 id="ch4-dft-q">Practice on the 1-D DFT</h3>')
+    C4 = [[round(math.cos(math.radians(90 * u * x))) for x in range(4)] for u in range(4)]
+    S4 = [[round(math.sin(math.radians(90 * u * x))) for x in range(4)] for u in range(4)]
     H.append(set_solution(card('dr-dft4'), walk([
-        ('Write D<sub>4</sub>', 'Exponent table ux mod 4 → W-values 1, −i, −1, i (lesson 2).', rows([[W4[e] for e in r] for r in E4], {(i, j): 'n4' for i in range(4) for j in range(4)}, 'D<sub>4</sub>')),
+        ('Write D<sub>4</sub>', 'Exponent table ux mod 4 → W-values 1, −i, −1, i (lesson 2). Split each W-value into real and imaginary parts: W<sup>ux</sup> = cos(90ux°) − i·sin(90ux°). So Re F = C<sub>4</sub> f and Im F = −S<sub>4</sub> f with C<sub>4</sub> = cos table, S<sub>4</sub> = sin table — two real matrix products.',
+         rows([[W4[e] for e in r] for r in E4], {(i, j): 'n4' for i in range(4) for j in range(4)}, 'D<sub>4</sub>'),
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app (it handles real numbers only, hence the cos/sin split)')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '4×1, type f = 1, 2, 3, 4')
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '4×4 C<sub>4</sub>: entry (u, x) = cos(90ux°) — only 1, 0, −1 appear', lcdmat('MatB = C4', C4))
+         + cl(K('TOOLS', '>MatC', 'OK', '>Define New'), '4×4 S<sub>4</sub>: entry (u, x) = sin(90ux°)', lcdmat('MatC = S4', S4))),
         ('Row by row', 'F(0) = 1 + 2 + 3 + 4 = 10. F(1) = 1 + 2(−i) + 3(−1) + 4(i) = −2 + 2i. F(2) = 1 − 2 + 3 − 4 = −2. F(3) = 1 + 2i − 3 − 4i = −2 − 2i.',
-         table(['u', 'x = 0', 'x = 1', 'x = 2', 'x = 3', 'F(u)'], [[u] + r for u, r in enumerate(trs)])),
+         table(['u', 'x = 0', 'x = 1', 'x = 2', 'x = 3', 'F(u)'], [[u] + r for u, r in enumerate(trs)]),
+         cl(K('MatB', '×', 'MatA', 'EXE'), 'real parts of F(0) … F(3)', lcdmat('MatAns = Re F', [[10], [-2], [-2], [-2]]))
+         + cl(K('SHIFT', '−', 'MatC', '×', 'MatA', 'EXE'), 'imaginary parts (note the minus: W = cos − i sin)', lcdmat('MatAns = Im F', [[0], [2], [0], [-2]]))
+         + cl(K('HOME', '>Complex') + ' ' + K('SETTINGS', '>Calc Settings', '>Angle Unit', '>Degree'), 'or one value at a time: Complex app in degrees')
+         + cl('type <code>1 + 2×1∠−90 + 3×1∠−180 + 4×1∠−270</code>, ∠ is ' + K('CATALOG', '>Complex', '>∠') + ', then ' + K('EXE'), 'F(1) directly: each sample times W<sup>x</sup> = 1∠(−90x)° (the minus before 90 is SHIFT −)', lcd('Complex', '<div>−2+2<i>i</i></div>'))),
         ('Check', 'Real f ⇒ F(3) must be F*(1): conj(−2 + 2i) = −2 − 2i ✓. F(0) = sum ✓.', None),
     ]) + '<div class="ansbig">F = {10, −2 + 2i, −2, −2 − 2i}.</div>'))
     H.append(card('sl-cs'))

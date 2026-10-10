@@ -90,7 +90,7 @@ def section(card, old):
     H.append('<div class="lab" data-lab="interp" data-init=\'{"f": [[10, 20, 30], [40, 50, 60], [70, 80, 90], [100, 110, 120]], "pt": "0.5 0.5", "title": "Interpolation lab: any point, its weights, and the 2× enlargement"}\'></div>')
 
     H.append('<h3 id="ch2-sq-q">Questions on sampling, storage and interpolation</h3>')
-    H.append(card('ex-lin'))
+    H.append(woven('ex-lin', card('ex-lin')))
     big = [[10, 15, 20, 25, 30], [25, 30, 35, 40, 45], [40, 45, 50, 55, 60], [55, 60, 65, 70, 75], [70, 75, 80, 85, 90], [85, 90, 95, 100, 105], [100, 105, 110, 115, 120]]
     orig = {(i, j): 'in' for i in range(0, 7, 2) for j in range(0, 5, 2)}
     hz = {(i, j): 'n4' for i in range(0, 7, 2) for j in range(1, 5, 2)}
@@ -100,19 +100,24 @@ def section(card, old):
     q = set_solution(q, walk([
         ('Draw the enlarged grid', 'Insert a new row between every two rows and a new column between every two columns: 4×3 becomes 7×5. Blue = the 12 original pixels (unchanged). The new pixels are of three kinds.', gsvg([[v if (i % 2 == 0 and j % 2 == 0) else '?' for j, v in enumerate(r)] for i, r in enumerate(big)], {**orig, **hz, **vt, **ct}, cell=42, label='blue original · green between two across · red between two down · purple between four')),
         ('Translate the index', 'M<sub>g</sub>(2, 2) is counted <b>from 1</b>: second row, second column of the 7×5 grid. That is a purple pixel — between f(0,0), f(0,1), f(1,0), f(1,1) — at original-grid position (½, ½).', None),
-        ('Bilinear through the four corners', 'Fit g = a x + b y + c x y + d through the four corners: (0,0) → 10 gives d = 10; (0,1) → 20 gives b = 10; (1,0) → 40 gives a = 30; (1,1) → 50 gives 30 + 10 + c + 10 = 50, so c = 0.', None),
-        ('Evaluate at (½, ½)', 'g = 30·½ + 10·½ + 0 + 10 = 15 + 5 + 10 = <b>30</b>. (Shortcut: at the exact centre bilinear = average of the four corners = (10 + 20 + 40 + 50)/4 = 30.)', gsvg(big, {**orig, (1, 1): 'hl'}, cell=42, label='the whole enlarged image; highlighted: M_g(2,2) = 30')),
+        ('Bilinear through the four corners', 'Fit g = a x + b y + c x y + d through the four corners: (0,0) → 10 gives d = 10; (0,1) → 20 gives b = 10; (1,0) → 40 gives a = 30; (1,1) → 50 gives 30 + 10 + c + 10 = 50, so c = 0.', None,
+         cl(K('HOME', '>Equation', '>Simul Equation', '>4 unknowns'), 'opens the Coefficient Editor for four unknowns a, b, c, d (one row per equation)')
+         + cl(K('0', 'EXE', '0', 'EXE', '0', 'EXE', '1', 'EXE', '10', 'EXE'), 'row 1 = corner (0, 0): its x, y, x·y, 1 and the pixel value 10. Rows 2–4 the same way for (0, 1) → 20, (1, 0) → 40, (1, 1) → 50', lcdmat('Coefficient Editor', [[0, 0, 0, 1, 10], [0, 1, 0, 1, 20], [1, 0, 0, 1, 40], [1, 1, 1, 1, 50]]))
+         + cl(K('EXE'), 'solves the four equations: screen lists a = 30, b = 10, c = 0, d = 10')),
+        ('Evaluate at (½, ½)', 'g = 30·½ + 10·½ + 0 + 10 = 15 + 5 + 10 = <b>30</b>. (Shortcut: at the exact centre bilinear = average of the four corners = (10 + 20 + 40 + 50)/4 = 30.)', gsvg(big, {**orig, (1, 1): 'hl'}, cell=42, label='the whole enlarged image; highlighted: M_g(2,2) = 30'),
+         cl(K('30', '×', '0.5', '+', '10', '×', '0.5', '+', '0', '+', '10', 'EXE'), 'puts x = y = ½ into g = 30x + 10y + 0·xy + 10; screen shows 30')
+         + cl(K('(', '10', '+', '20', '+', '40', '+', '50', ')', '÷', '4', 'EXE'), 'the exam shortcut: plain average of the four corners, also 30')),
     ]) + '<div class="ansbig">M<sub>g</sub>(2, 2) = g(½, ½) = <b>30</b>.</div>')
     H.append(q)
     H.append(card_raw_tb25())
-    for cid in ['tb2-9', 'dr-store', 'tb2-10', 'tb2-12']: H.append(card(cid))
+    for cid in ['tb2-9', 'dr-store', 'tb2-10', 'tb2-12']: H.append(woven(cid, card(cid)))
 
     H.append(lesson('Quantisation error (older papers): rms error and rms SNR',
         'After quantisation every pixel is a little off. The <b>rms error</b> summarises how far off on average; the <b>rms signal-to-noise ratio</b> compares the size of the signal with the size of that error.',
         '<div class="cols"><div><ol class="how"><li>Quantise each value (4 bits on 0 … 255: keep the multiple of 16 just below it, i.e. drop the last 4 bits).</li><li>Error e = quantised − original for each pixel.</li><li><b>rms error</b> = √(average of e²).</li><li><b>rms SNR</b> = √( Σ quantised² ÷ Σ e² ).</li></ol></div>'
         '<div><p><b>Mini example:</b> values 37 and 250 → quantised 32 and 240 → errors −5, −10 → e² = 25, 100 → rms error = √(125/2) = <b>7.91</b>; SNR = √((32² + 240²)/125) = √(58624/125) = <b>21.66</b>.</p><p>State your quantiser in one line (truncation to multiples of 16, or mid-point +8) — the answer depends on it.</p></div></div>',
         use='Mid-sem 2018-19 Q6 and Mid-sem 2023 Q3 (both older instructor).', tag='7'))
-    for cid in ['s18q6', 'm23q3']: H.append(card(cid))
+    for cid in ['s18q6', 'm23q3']: H.append(woven(cid, card(cid)))
     H.append('</section>')
     return '\n'.join(H)
 
@@ -127,3 +132,100 @@ def card_raw_tb25():
 
 
 from lib import card as card_new  # the card builder (the section’s “card” argument fetches existing cards)
+
+
+# ── solutions with the fx-991CW steps woven in (numbers checked with Python) ──
+WOVEN = {
+    'ex-lin': ([
+        ('Forward: α = m·y + x',
+         'Column-major stacking: each full column before column y contributes m = 5 entries, then you count x down the column. α = 5·4 + 3 = <b>23</b>.',
+         None,
+         cl(K('5', '×', '4', '+', '3', 'EXE'), 'rows per column × column number + row number; screen shows 23')),
+        ('Backward: which pixel has α = 22?',
+         'Divide by m: the whole part is the column, the remainder is the row. 22 = 5·4 + 2 → y = 4, x = 2 → <b>f(2, 4)</b>.',
+         None,
+         cl(K('22', '÷', '5', 'EXE'), 'screen shows 4.4: the whole part 4 is the column y')
+         + cl(K('22', '−', '5', '×', '4', 'EXE'), 'what is left over is the row x: screen shows 2')),
+    ], 'α = 5·4 + 3 = 23. α = 22 → f(2, 4).'),
+    's18q6': ([
+        ('Quantise: keep the multiple of 16 just below',
+         '4 bits on 0 … 255 = 16 levels, 16 apart. f̂ = 16⌊f/16⌋: 255→240, 118→112, 129→128, 182→176, 18→16, 178→176, 82→80, 53→48.',
+         None,
+         cl(K('255', '÷', '16', 'EXE'), 'screen shows 15.9375: keep the whole part 15, and 15 × 16 = 240. Repeat for each value (or just drop f mod 16)')),
+        ('Errors and the sum of their squares',
+         'e = f̂ − f: −15, −6, −1, −6, −2, −2, −2, −5. Squares: 225 + 36 + 1 + 36 + 4 + 4 + 4 + 25 = <b>335</b>.',
+         None,
+         cl(K('HOME', '>Statistics', '>1-Variable'), 'opens the data table (column x)')
+         + cl(K('15', 'EXE', '6', 'EXE', '1', 'EXE', '6', 'EXE', '2', 'EXE', '2', 'EXE', '2', 'EXE', '5', 'EXE'), 'the eight errors, one per row. The minus signs can be left out: they disappear when squared')
+         + cl(K('OK', '>1-Var Results', 'OK'), 'the results list; read Σx² = 335 (the sum of squared errors) and n = 8', lcd('1-Var Results', '<div>Σx² = 335</div><div>n = 8</div>'))),
+        ('rms error',
+         'e<sub>rms</sub> = √(Σe²/N) = √(335/8) = <b>6.4711</b>.',
+         None,
+         cl(K('√(', '335', '÷', '8', ')', 'EXE'), 'square root of the average squared error; screen shows 6.471089553')),
+        ('rms signal-to-noise ratio',
+         'Σf̂² = 240² + 112² + 128² + 176² + 16² + 176² + 80² + 48² = <b>157440</b>. SNR<sub>rms</sub> = √(Σf̂²/Σe²) = √(157440/335) = <b>21.68</b>.',
+         None,
+         cl(K('HOME', '>Statistics', '>1-Variable'), 'back in the table, type the 8 quantised values 240, 112, … 48 over the errors (each followed by EXE)')
+         + cl(K('OK', '>1-Var Results', 'OK'), 'now Σx² = 157440 — the energy of the quantised signal')
+         + cl(K('√(', '157440', '÷', '335', ')', 'EXE'), 'signal energy ÷ error energy, square-rooted; screen shows 21.67879492')),
+    ], 'Quantised: 240, 112, 128, 176, 16, 176, 80, 48. Σe² = 335 → e<sub>rms</sub> = √(335/8) = 6.4711; SNR<sub>rms</sub> = √(157440/335) = 21.68.'),
+    'tb2-9': ([
+        ('Bits on the line per pixel',
+         '256 levels = 8 bits = one byte per pixel. Each byte travels with a start bit and a stop bit → <b>10 bits</b> per pixel.',
+         None, None),
+        ('Total bits for 500 images',
+         '500 × 1024 × 1024 pixels × 10 bits = <b>5.243 × 10<sup>9</sup></b> bits.',
+         None,
+         cl(K('500', '×', '1024', 'x²', '×', '10', 'EXE'), 'images × pixels per image × bits per pixel; screen shows 5242880000')),
+        ('(a) 3 M-baud line',
+         'Time = bits ÷ bits per second = 5.243 × 10<sup>9</sup> ÷ 3 × 10<sup>6</sup> = <b>1747.6 s ≈ 29.1 min</b>.',
+         None,
+         cl(K('Ans', '÷', '3', '×10ˣ', '6', 'EXE'), 'seconds on the 3×10⁶ bits/s line; screen shows 1747.626667')
+         + cl(K('Ans', '÷', '60', 'EXE'), 'seconds → minutes; screen shows 29.12711111')),
+        ('(b) 30 G-baud line',
+         'Same bits ÷ 3 × 10<sup>10</sup> = <b>0.175 s</b>.',
+         None,
+         cl(K('500', '×', '1024', 'x²', '×', '10', '÷', '3', '×10ˣ', '10', 'EXE'), 'the whole job in one line for the fast link; screen shows 0.1747626667')),
+    ], '(a) 1747.6 s ≈ 29.1 min. (b) 0.175 s.'),
+    'dr-store': ([
+        ('Bits per pixel for 256 levels',
+         '256 = 2<sup>8</sup>, so k = <b>8</b> bits per pixel.',
+         None, None),
+        ('(a) Total storage',
+         'b = 1024 × 1024 × 8 = <b>8,388,608 bits</b>; ÷ 8 = 1,048,576 bytes = 2<sup>20</sup> bytes = <b>1 MB</b>.',
+         None,
+         cl(K('1024', 'x²', '×', '8', 'EXE'), 'pixels × bits per pixel; screen shows 8388608')
+         + cl(K('Ans', '÷', '8', '÷', '2', 'x^■', '20', 'EXE'), 'bits → bytes (÷ 8) → MB (÷ 2²⁰); screen shows 1')),
+        ('(b) Bits for 32 levels',
+         'k = log<sub>2</sub>32 = <b>5</b>.',
+         None,
+         cl(K('log■□'), 'log with a base box: type 2 in the small base box, 32 in the main box, then EXE; screen shows 5')),
+        ('(c) Largest grey value with 5 bits',
+         'Levels run 0 … 2<sup>5</sup> − 1 = <b>31</b>.',
+         None, None),
+    ], '(a) 8,388,608 bits = 1 MB. (b) 5 bits. (c) 31.'),
+    'tb2-10': ([
+        ('Pixels per line',
+         'Aspect ratio 16:9 → (16/9) × 1125 = <b>2000</b> pixels per line.',
+         None,
+         cl(K('1125', '×', '16', '÷', '9', 'EXE'), 'pixels on one line; screen shows 2000')),
+        ('Bits per image',
+         '1125 lines × 2000 pixels × 24 bits = <b>5.4 × 10<sup>7</sup></b> bits.',
+         None,
+         cl(K('Ans', '×', '1125', '×', '24', 'EXE'), 'bits in one full frame; screen shows 54000000')),
+        ('Images in 2 hours',
+         'Interlaced: two fields of 1/60 s make one full image every 1/30 s → 30 images per second; 2 h = 7200 s → <b>216,000</b> images.',
+         None,
+         cl(K('30', '×', '7200', 'EXE'), 'frames in the movie; screen shows 216000')),
+        ('Total',
+         '5.4 × 10<sup>7</sup> × 216,000 = <b>1.1664 × 10<sup>13</sup> bits</b>.',
+         None,
+         cl(K('1125', '×', '2000', '×', '24', '×', '30', '×', '7200', 'EXE'), 'everything in one line; screen shows 1.1664×10<sup>13</sup>')),
+    ], '1125 · 2000 · 24 · 30 · 7200 = 1.1664 × 10<sup>13</sup> bits.'),
+}
+
+
+def woven(cid, c):
+    if cid not in WOVEN: return c
+    steps, ans = WOVEN[cid]
+    return set_solution(c, walk(steps) + f'<div class="ansbig">{ans}</div>')

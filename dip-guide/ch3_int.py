@@ -1,6 +1,7 @@
 """Chapter 3.1–3.2 rebuilt: intensity transformations and bit planes — plain words, curves, photos, numbers; bit-plane
 past papers as step-by-step walks."""
 from ch3lib import *
+from ch3_hist import stats_cl, DEC
 import math
 
 c_log = 255 / math.log10(256)
@@ -59,7 +60,41 @@ def section(card):
         '<li><b>With background preserved</b>: brighten (or darken) only [A, B]; every other level stays as it was.</li></ul><p>Your slide’s example: highlighting the blood vessels in an aortic angiogram.</p></div>'
         '<div>' + figs(tcurve(lambda r: 255 if 100 <= r <= 160 else 40, 'binary slicing of 100–160'), tcurve(lambda r: 255 if 100 <= r <= 160 else r, 'background preserved'), img('cam_slice2', 130, 'background preserved')) + '</div></div>',
         use='Mid-sem 2019 Q6 (the broken line), textbook 3.1 (full stretch), Compre 2025 Q6 (thresholds), slicing theory.', tag='3'))
-    for cid in ['s19q6', 'tb3-1', 'dr-thresh', 'dr-log']: H.append(card(cid))
+    H.append(set_solution(card('s19q6'), walk([
+        ('Slope of each piece', 'Slope = Δs/Δr: piece 1 (0 → 30): 20/30 = 2/3; piece 2 (30 → 180): 190/150 = 19/15 ≈ 1.2667; piece 3 (180 → 255): 45/75 = 0.6. So T(r) = ⅔r for r ≤ 30; 20 + (19/15)(r − 30) for 30 &lt; r ≤ 180; 210 + 0.6(r − 180) above.', tcurve(pwf, 'the broken line', pts=[(30, 20, '(30,20)'), (180, 210, '(180,210)')]),
+         cl(K('190', '÷', '150', 'EXE'), 'middle slope; screen shows 19/15 → FORMAT → Decimal → 1.266666667')
+         + cl(K('45', '÷', '75', 'EXE'), 'top slope; screen shows 3/5 = 0.6')),
+        ('T(10): first piece', '10 ≤ 30, so s = ⅔ × 10 = <b>6.67 → 7</b>.', None,
+         cl(K('2', '÷', '3', '×', '10', 'EXE'), 'screen shows 20/3 → FORMAT → Decimal → 6.666666667')),
+        ('T(100): middle piece', '30 &lt; 100 ≤ 180: s = 20 + 1.2667 × (100 − 30) = <b>108.67 → 109</b>.', None,
+         cl(K('20', '+', '19', '÷', '15', '×', '(', '100', '−', '30', ')', 'EXE'), 'start of the piece + slope × distance into the piece; screen shows 326/3 → Decimal 108.6666667')),
+        ('T(200): last piece', '200 &gt; 180: s = 210 + 0.6 × 20 = <b>222</b>.', None,
+         cl(K('210', '+', '0.6', '×', '(', '200', '−', '180', ')', 'EXE'), 'screen shows 222')),
+        ('What it does', 'A <b>contrast stretch</b>: the middle range 30–180 has slope &gt; 1 (more contrast), the dark (0–30) and bright (180–255) ends have slope &lt; 1 (compressed).', None,
+         cl(K('HOME', '>Table'), 'optional, for many values at once: in the Table app use TOOLS → Define f(x)/g(x) → Define f(x), f(x) = 20 + 19÷15×(x − 30), table from 30 to 180 step 10 → every middle-piece value in one list')),
+    ]) + '<div class="ansbig">Slopes 2/3, 19/15 ≈ 1.267, 3/5. T(10) = 6.67 → 7, T(100) = 108.67 → 109, T(200) = 222. A contrast stretch of the mid-range 30–180.</div>'))
+    H.append(card('tb3-1'))
+    q21i = [[4, 2, 3, 2, 5], [1, 1, 2, 3, 4], [1, 3, 2, 3, 4], [2, 2, 3, 1, 3], [2, 2, 1, 1, 4]]
+    th = [[7 if v >= 3 else 0 for v in r] for r in q21i]
+    H.append(set_solution(card('dr-thresh'), walk([
+        ('Mean of the image', 'Counts: 1 × 6, 2 × 8, 3 × 6, 4 × 4, 5 × 1 (25 pixels). Mean = 61/25 = <b>2.44</b>.', gsvg(q21i, {}, cell=36, idx=False, label='the 5×5 image'),
+         stats_cl(range(1, 6), [6, 8, 6, 4, 1], 25)),
+        ('Apply the threshold', 'r₁ = r₂ = 2.44: a pixel above the mean becomes L − 1 = 7, below it becomes 0. No pixel equals 2.44, so every 3, 4, 5 → <b>7</b> and every 1, 2 → 0.', gsvg(th, {(i, j): 'hl' for i in range(5) for j in range(5) if th[i][j]}, cell=36, idx=False, label='thresholded')),
+    ]) + '<div class="ansbig">Mean = 61/25 = 2.44 → every pixel with value ≥ 3 becomes 7, the rest 0.</div>'))
+    H.append(set_solution(card('dr-log'), walk([
+        ('(a) Choose c so 255 → 255', 'c · log₁₀(1 + 255) = 255 → c = 255 / log₁₀ 256 = <b>105.89</b>. (With ln: 45.99 — same mapping; the base does not matter once c is fixed.)', tcurve(lambda r: c_log * math.log10(1 + r), 's = c·log(1 + r)'),
+         cl(K('255', '÷', 'SHIFT', 'x²', '256', ')', 'EXE'), 'SHIFT x² is log₁₀; screen shows 105.886458')
+         + cl(K('VARIABLE', '>A=', '>Store'), 'stores c in A so you never retype it')
+         + cl(K('255', '÷', 'SHIFT', 'log■□', '256', ')', 'EXE'), 'optional: the ln version, 45.98590443')),
+        ('(a) s for r = 100', 's = 105.89 × log₁₀(101) = <b>212.2</b>: a dark level 100 is pushed far up.', None,
+         cl(K('A', '×', 'SHIFT', 'x²', '101', ')', 'EXE'), 'c × log(1 + r); screen shows 212.230491')),
+        ('(b) γ = 0.4 on r = 0.5', '0.5<sup>0.4</sup> = <b>0.758</b> &gt; 0.5 → brighter (× 255 ≈ 193).', tcurve(lambda r: 255 * (r / 255) ** 0.4, 'γ = 0.4'),
+         cl(K('0.5', 'x^■', '0.4', 'EXE'), 'r<sup>γ</sup>; screen shows 0.7578582833')
+         + cl(K('Ans', '×', '255', 'EXE'), 'back to 8-bit: 193.2538622')),
+        ('(b) γ = 2.5 on r = 100/255', '(100/255)<sup>2.5</sup> = <b>0.0963</b> &lt; 0.392 → darker (× 255 ≈ 24.6).', tcurve(lambda r: 255 * (r / 255) ** 2.5, 'γ = 2.5'),
+         cl(K('(', '100', '÷', '255', ')', 'x^■', '2.5', 'EXE'), 'normalise first, then the power; screen shows 0.09630515818')
+         + cl(K('Ans', '×', '255', 'EXE'), 'back to 8-bit: 24.55781534')),
+    ]) + '<div class="ansbig">(a) c = 255/log₁₀256 = 105.89; s(100) = 212.2. (b) 0.5<sup>0.4</sup> = 0.758 → brighter (≈ 193); (100/255)<sup>2.5</sup> = 0.0963 → darker (≈ 24.6).</div>'))
 
     # 4 bit planes
     H.append(lesson('Bit planes: splitting an image by binary digit',
@@ -82,15 +117,21 @@ def section(card):
     orig1 = ['223.78', '45.3', '166.9', '95.87', '71.4']
     H.append(set_solution(card('qz2'), walk([
         ('Quantise to 8 bits = round every value', 'Each value is rounded to the nearest whole number 0 … 255. Row 1 (the second row, counted from 0): ' + ', '.join(f'{a} → {b}' for a, b in zip(orig1, q['M'][1])) + '.', gsvg(q['M'], {(1, j): 'hl' for j in range(5)}, cell=50, label='after rounding; row 1 highlighted')),
-        ('Keep the top 3 bit planes', 'Top 3 planes = keep the first three binary digits (worth 128, 64, 32) and set the rest to 0. Same as 32 × (value ÷ 32 with decimals dropped).<br>' + '<br>'.join(f'{v} = {format(v, "08b")} → {format(v, "08b")[:3]}00000 = <b>{t}</b>' for v, t in zip(q['M'][1], q['row1'])), gsvg(q['top3'], {(1, j): 'hl' for j in range(5)}, cell=50, label='g = the image rebuilt from the top 3 planes')),
-        ('Add up row 1', '224 + 32 + 160 + 96 + 64 = <b>576</b>.', None),
+        ('Keep the top 3 bit planes', 'Top 3 planes = keep the first three binary digits (worth 128, 64, 32) and set the rest to 0. Same as 32 × (value ÷ 32 with decimals dropped).<br>' + '<br>'.join(f'{v} = {format(v, "08b")} → {format(v, "08b")[:3]}00000 = <b>{t}</b>' for v, t in zip(q['M'][1], q['row1'])), gsvg(q['top3'], {(1, j): 'hl' for j in range(5)}, cell=50, label='g = the image rebuilt from the top 3 planes'),
+         ''.join(cl(K(str(v), '÷', '32', 'EXE'), f'{v} ÷ 32 = ' + (f'{v // 32}' if v % 32 == 0 else f'{v / 32:g}') + f' → drop decimals → {v // 32} → × 32 = <b>{t}</b>' + (' (FORMAT → Decimal if a fraction appears)' if k == 1 else '')) for k, (v, t) in enumerate(zip(q['M'][1], q['row1'])))
+         + cl(K('HOME', '>Base-N', 'OK'), 'optional check: type 167 in Dec, press FORMAT until Bin → 10100111; top three digits 101 → 10100000 = 160 ✓')),
+        ('Add up row 1', '224 + 32 + 160 + 96 + 64 = <b>576</b>.', None,
+         cl(K('224', '+', '32', '+', '160', '+', '96', '+', '64', 'EXE'), 'screen shows 576')),
     ]) + '<div class="ansbig">Row 1 of g = [224, 32, 160, 96, 64]; Σ g(1, y) = <b>576</b>.</div>'))
 
     img34 = [[0, 1, 8, 6], [2, 2, 1, 1], [1, 15, 14, 12], [3, 6, 9, 10]]
     p = ANS['p34']
     binv = [[format(v, '04b') for v in r] for r in img34]
     H.append(set_solution(card('tb3-4'), walk([
-        ('(a) Method', 'Write every pixel as a 4-bit binary number (4-bit image: values 0 … 15). Plane 4 (MSB, worth 8) is the first digit of every pixel, plane 3 (worth 4) the second, plane 2 (worth 2) the third, plane 1 (LSB, worth 1) the last.', gsvg(binv, {}, cell=64, label='every pixel in binary')),
+        ('(a) Method', 'Write every pixel as a 4-bit binary number (4-bit image: values 0 … 15). Plane 4 (MSB, worth 8) is the first digit of every pixel, plane 3 (worth 4) the second, plane 2 (worth 2) the third, plane 1 (LSB, worth 1) the last.', gsvg(binv, {}, cell=64, label='every pixel in binary'),
+         cl(K('HOME', '>Base-N', 'OK'), 'opens Base-N in Dec')
+         + cl(K('14', 'EXE', 'FORMAT'), 'type a value, press FORMAT until Bin: 14 → 1110; read the last 4 digits (leading zeros are just more 0s)')
+         + cl('repeat for 15, 12, 9, 10, 8, 6, 3', '15 = 1111, 12 = 1100, 9 = 1001, 10 = 1010, 8 = 1000, 6 = 0110, 3 = 0011 — the small ones (0, 1, 2) you know by heart')),
         ('(b) The four planes', 'Read one digit position from every pixel.', figs(gsvg(p['plane4'], {(i, j): 'hl' for i in range(4) for j in range(4) if p['plane4'][i][j]}, cell=34, idx=False, label='plane 4 (MSB, 8)'), gsvg(p['plane3'], {(i, j): 'hl' for i in range(4) for j in range(4) if p['plane3'][i][j]}, cell=34, idx=False, label='plane 3 (4)'), gsvg(p['plane2'], {(i, j): 'hl' for i in range(4) for j in range(4) if p['plane2'][i][j]}, cell=34, idx=False, label='plane 2 (2)'), gsvg(p['plane1'], {(i, j): 'hl' for i in range(4) for j in range(4) if p['plane1'][i][j]}, cell=34, idx=False, label='plane 1 (LSB, 1)'))),
         ('Check one pixel', '14 = 1110 → planes 4, 3, 2 are 1, plane 1 is 0: 8 + 4 + 2 = 14 ✓.', None),
     ]) + '<div class="ansbig">The four 0/1 images shown in step 2 (plane 4 = MSB … plane 1 = LSB).</div>'))
@@ -98,10 +139,23 @@ def section(card):
     o = ANS['m24_3']
     o_img = [[7, 6, 1, 0, 2], [5, 5, 2, 3, 1], [4, 3, 1, 0, 2], [2, 3, 4, 7, 7], [1, 2, 4, 6, 6]]
     H.append(set_solution(card('o24q3i'), walk([
-        ('Make the Gray-code table once', 'Only 8 values exist (3-bit), so convert each once: g = b XOR (b shifted right). 0→000, 1→001, 2→011, 3→010, 4→110, 5→111, 6→101, 7→100.', None),
+        ('Make the Gray-code table once', 'Only 8 values exist (3-bit), so convert each once: g = b XOR (b shifted right). 0→000, 1→001, 2→011, 3→010, 4→110, 5→111, 6→101, 7→100.', table(['b', 'binary', 'b shifted right', 'Gray = XOR'], [[v, format(v, '03b'), format(v >> 1, '03b'), format(v ^ (v >> 1), '03b')] for v in range(8)]),
+         cl(K('HOME', '>Base-N', 'OK'), 'opens Base-N; press FORMAT until Bin so you type and read binary')
+         + cl(K('110', 'CATALOG', '>Logic Operation', '>xor', '11', 'EXE'), 'Gray code of 6: 110 XOR 011 (6 shifted right = 3 = 11); screen shows 101')
+         + cl('repeat for the other 7 values', 'only 8 values exist, so make the table once and read every pixel from it')),
         ('Convert every pixel', 'Replace each value by its Gray code (shown as the decimal value of the Gray bits).', figs(gsvg(o_img, {}, cell=40, idx=False, label='the image'), gsvg(o['gray'], {}, cell=40, idx=False, label='its Gray codes (as numbers)'))),
         ('Read the two planes', 'LSB plane = last Gray bit (1 for values 1, 2, 5, 6). MSB plane = first Gray bit = the normal MSB (1 for values 4 … 7).', figs(gsvg(o['lsb'], {(i, j): 'hl' for i in range(5) for j in range(5) if o['lsb'][i][j]}, cell=40, idx=False, label='f_LSB (Gray)'), gsvg(o['msb'], {(i, j): 'hl' for i in range(5) for j in range(5) if o['msb'][i][j]}, cell=40, idx=False, label='f_MSB'))),
     ]) + '<div class="ansbig">f<sub>LSB</sub> and f<sub>MSB</sub> as in step 3. Shortcut: Gray LSB = 1 when the value is 1, 2, 5 or 6; MSB = 1 when the value is 4 or more.</div>'))
-    for cid in ['tb3-3', 'tb3-5', 'dr-top', 'e23q3b', 'd25q6']: H.append(card(cid))
+    for cid in ['tb3-3', 'tb3-5']: H.append(card(cid))
+    H.append(set_solution(card('dr-top'), walk([
+        ('(a) 214 in binary', '214 = 128 + 64 + 16 + 4 + 2 = <b>1101 0110</b>.', None,
+         cl(K('HOME', '>Base-N', 'OK'), 'opens Base-N; type 214 in Dec')
+         + cl(K('214', 'EXE', 'FORMAT'), 'press FORMAT until Bin is shown: the screen reads 11010110 (ignore leading zeros)')),
+        ('(b) Keep the top t planes', 'Keep the first t binary digits, set the rest to 0: top 2 → 11 000000 = <b>192</b>; top 3 → 110 00000 = <b>192</b> (the third digit is 0); top 4 → 1101 0000 = <b>208</b>.', None,
+         cl(K('214', 'CATALOG', '>Logic Operation', '>and', '224', 'EXE'), 'AND with the mask 11100000 (= 224) keeps only the top 3 digits → 192; mask 192 for top 2 → 192, mask 240 for top 4 → 208')
+         + cl(K('214', '÷', '16', 'EXE'), 'without Base-N (top 4): 214 ÷ 2<sup>4</sup> = 13.375 → drop decimals → 13 × 16 = 208')),
+        ('(c) Rebuild and compression', 'Rebuild: r = Σ 2<sup>k</sup> · b<sub>k</sub> — multiply plane k by 2<sup>k</sup> and add. Compression: keeping only the top 4 planes stores 4 of 8 bits (≥ 50 % saving) and still looks almost the same, because the top planes carry the visible structure.', None),
+    ]) + '<div class="ansbig">(a) 214 = 11010110. (b) top 2 → 192; top 3 → 192; top 4 → 208. (c) r = Σ 2<sup>k</sup>b<sub>k</sub>; top 4 planes ≈ same picture at half the bits.</div>'))
+    for cid in ['e23q3b', 'd25q6']: H.append(card(cid))
     H.append('</section>')
     return '\n'.join(H)

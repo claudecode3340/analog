@@ -119,21 +119,34 @@ def section(card):
 
     e = card('e23q2')
     e = set_solution(e, walk([
-        ('What is unknown', r'A has six unknowns: \(A=\begin{bmatrix}a&b&c\\d&e&f\\0&0&1\end{bmatrix}\). The first row (a, b, c) makes x′, the second row (d, e, f) makes y′. Each of the 3 point pairs gives one equation for each row.', None),
-        ('Row 1 from the three x′ values', 'f(1,1) → x′ = 3: a + b + c = 3. f(0,2) → x′ = −1: 2b + c = −1. f(−1,1) → x′ = 1: −a + b + c = 1.<br>First − third: 2a = 2 → <b>a = 1</b>. First − second: a − b = 4 → <b>b = −3</b>. Then c = 3 − 1 + 3 = <b>5</b>.', None),
-        ('Row 2 from the three y′ values', 'y′ values −4, −1, 0: d + e + f = −4; 2e + f = −1; −d + e + f = 0.<br>First − third: 2d = −4 → <b>d = −2</b>. First − second: d − e = −3 → <b>e = 1</b>. Then f = −4 + 2 − 1 = <b>−3</b>.', None),
+        ('What is unknown', r'A has six unknowns: \(A=\begin{bmatrix}a&b&c\\d&e&f\\0&0&1\end{bmatrix}\). The first row (a, b, c) makes x′, the second row (d, e, f) makes y′. Each of the 3 point pairs gives one equation for each row. Matrix view: A·X = Y, with the start points as the columns of X and the end points as the columns of Y (each with a 1 underneath), so <b>A = Y X<sup>−1</sup></b>.', None,
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '3×3 = X: the start points (1,1), (0,2), (−1,1) as columns, a row of 1s underneath (negative sign = SHIFT −)', lcdmat('MatA = 3×3', [[1, 0, -1], [1, 2, 1], [1, 1, 1]]))
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '3×3 = Y: their images (3,−4), (−1,−1), (1,0) as columns, row of 1s underneath', lcdmat('MatB = 3×3', [[3, -1, 1], [-4, -1, 0], [1, 1, 1]]))),
+        ('Row 1 from the three x′ values', 'f(1,1) → x′ = 3: a + b + c = 3. f(0,2) → x′ = −1: 2b + c = −1. f(−1,1) → x′ = 1: −a + b + c = 1.<br>First − third: 2a = 2 → <b>a = 1</b>. First − second: a − b = 4 → <b>b = −3</b>. Then c = 3 − 1 + 3 = <b>5</b>.', None,
+         cl(K('MatB', '×', 'MatA', 'SHIFT', 'x^■', 'EXE'), 'Y × X<sup>−1</sup> (SHIFT x^■ types the inverse x<sup>−1</sup>) = the whole of A at once; its top row is (a, b, c) = (1, −3, 5)', lcdmat('MatAns = 3×3', [[1, -3, 5], [-2, 1, -3], [0, 0, 1]]))),
+        ('Row 2 from the three y′ values', 'y′ values −4, −1, 0: d + e + f = −4; 2e + f = −1; −d + e + f = 0.<br>First − third: 2d = −4 → <b>d = −2</b>. First − second: d − e = −3 → <b>e = 1</b>. Then f = −4 + 2 − 1 = <b>−3</b>.', None,
+         cl(K('TOOLS', '>Store', '>MatC'), 'the same screen’s middle row is (d, e, f) = (−2, 1, −3); bottom row 0 0 1 confirms you inverted the right matrix. Store the answer as MatC for part (b)')),
         ('Check one pair', '(0, 2): x′ = 1·0 − 3·2 + 5 = −1 ✓, y′ = −2·0 + 1·2 − 3 = −1 ✓.', None),
-        ('(b) Map (6, −8)', 'x′ = 1·6 − 3·(−8) + 5 = 6 + 24 + 5 = <b>35</b>; y′ = −2·6 + 1·(−8) − 3 = −12 − 8 − 3 = <b>−23</b>.', None),
+        ('(b) Map (6, −8)', 'x′ = 1·6 − 3·(−8) + 5 = 6 + 24 + 5 = <b>35</b>; y′ = −2·6 + 1·(−8) − 3 = −12 − 8 − 3 = <b>−23</b>.', None,
+         cl(K('TOOLS', '>MatD', 'OK', '>Define New'), '3×1 = the point in homogeneous form (6, −8, 1)')
+         + cl(K('MatC', '×', 'MatD', 'EXE'), 'A × point = the mapped point; read x′ = 35, y′ = −23 (the last 1 is just the homogeneous 1)', lcdmat('MatAns = 3×1', [[35], [-23], [1]]))),
     ]) + r'<div class="ansbig">(a) \(A=\begin{bmatrix}1&-3&5\\-2&1&-3\\0&0&1\end{bmatrix}\). (b) f(6, −8) = (35, −23).</div>')
     H.append(e)
     r = card('dr-rot')
     r = set_solution(r, walk([
-        ('Write the rotation for 30°', r'cos 30° = 0.8660, sin 30° = 0.5. \(x\'=0.866x-0.5y\), \(y\'=0.5x+0.866y\).', None),
-        ('Forward: where does (4, 2) go?', "x′ = 0.866·4 − 0.5·2 = 3.4641 − 1 = <b>2.4641</b>; y′ = 0.5·4 + 0.866·2 = 2 + 1.7321 = <b>3.7321</b>.", None),
-        ('Inverse: where did (4, 2) come from?', r'Undo the rotation = rotate by −30°, i.e. use \(A^{-1}=A^T\): \(x=0.866x\'+0.5y\'\), \(y=-0.5x\'+0.866y\'\). With (4, 2): x = 3.4641 + 1 = <b>4.4641</b>, y = −2 + 1.7321 = <b>−0.2679</b>.', None),
+        ('Write the rotation for 30°', r'cos 30° = 0.8660, sin 30° = 0.5. \(x\'=0.866x-0.5y\), \(y\'=0.5x+0.866y\).', None,
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app (calculator in Degree mode, so cos(30) means 30°)')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '2×2 rotation matrix: type cos(30), −sin(30), sin(30), cos(30) in the cells', lcdmat('MatA = 2×2', [[0.866, -0.5], [0.5, 0.866]]))),
+        ('Forward: where does (4, 2) go?', "x′ = 0.866·4 − 0.5·2 = 3.4641 − 1 = <b>2.4641</b>; y′ = 0.5·4 + 0.866·2 = 2 + 1.7321 = <b>3.7321</b>.", None,
+         cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '2×1 = the point (4, 2)')
+         + cl(K('MatA', '×', 'MatB', 'EXE'), 'rotation × point = where the point goes', lcdmat('MatAns = 2×1', [[2.4641], [3.7321]]))),
+        ('Inverse: where did (4, 2) come from?', r'Undo the rotation = rotate by −30°, i.e. use \(A^{-1}=A^T\): \(x=0.866x\'+0.5y\'\), \(y=-0.5x\'+0.866y\'\). With (4, 2): x = 3.4641 + 1 = <b>4.4641</b>, y = −2 + 1.7321 = <b>−0.2679</b>.', None,
+         cl(K('CATALOG', '>Matrix Calc', '>Trn('), 'types Trn( — the transpose, which for a rotation is the inverse')
+         + cl(K('MatA', ')', '×', 'MatB', 'EXE'), 'Trn(MatA) × MatB = where (4, 2) came from', lcdmat('MatAns = 2×1', [[4.4641], [-0.2679]]))),
     ]) + '<div class="ansbig">Forward (2.4641, 3.7321); inverse (4.4641, −0.2679).</div>')
     H.append(r)
-    for cid in ['tb2-36', 'tb2-37']: H.append(card(cid))
+    for cid in ['tb2-36', 'tb2-37']: H.append(woven(cid, card(cid)))
 
     # 7 registration
     H.append(lesson('Image registration: lining up two images of the same scene',
@@ -145,7 +158,7 @@ def section(card):
         '<div><p><b>Example</b> (the practice card below): tie points (0,0)→(1,2), (0,10)→(2,13), (10,0)→(11,1), (10,10)→(13,12) give c₁…c₄ = 1, 0.1, 0.01, 1 and c₅…c₈ = −0.1, 1.1, 0, 2. So the input point (5, 5) belongs at (6.75, 7) in the reference.</p>'
         '<p><b>If the result is not good enough:</b> split the images into smaller pieces and register each piece with its own four tie points, or use a higher-order (polynomial) model.</p></div></div>',
         use='theory (why 4 tie points? what is the model?) and the c₁…c₈ computation (Equation app, Simul Equation with 4 unknowns, twice).', tag='7'))
-    H.append(card('dr-reg'))
+    H.append(woven('dr-reg', card('dr-reg')))
 
     # 8 transforms in matrix form
     H.append(lesson('Image transforms in matrix form (T = A F A)',
@@ -158,12 +171,18 @@ def section(card):
         use='Compre 2025 Q4 (both parts), Quiz-1 2026 Q3 (DFT by matrices).', tag='8'))
     d = card('d25q4')
     d = set_solution(d, walk([
-        ('Left product: transform the columns', r'\(HF=\tfrac1{\sqrt2}\begin{bmatrix}1&1\\1&-1\end{bmatrix}\begin{bmatrix}4&-1\\2&3\end{bmatrix}=\tfrac1{\sqrt2}\begin{bmatrix}6&2\\2&-4\end{bmatrix}\)', None),
-        ('Right product: transform the rows', r'\(\tfrac1{\sqrt2}\begin{bmatrix}6&2\\2&-4\end{bmatrix}\cdot\tfrac1{\sqrt2}\begin{bmatrix}1&1\\1&-1\end{bmatrix}=\tfrac12\begin{bmatrix}8&4\\-2&6\end{bmatrix}\)', None),
-        ('Simplify', r'\(\tfrac12\begin{bmatrix}8&4\\-2&6\end{bmatrix}=\begin{bmatrix}4&2\\-1&3\end{bmatrix}\). (The two \(1/\sqrt2\) factors make ½.)', None),
+        ('Left product: transform the columns', r'\(HF=\tfrac1{\sqrt2}\begin{bmatrix}1&1\\1&-1\end{bmatrix}\begin{bmatrix}4&-1\\2&3\end{bmatrix}=\tfrac1{\sqrt2}\begin{bmatrix}6&2\\2&-4\end{bmatrix}\)', None,
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '2×2 = the image f', lcdmat('MatA = 2×2', [[4, -1], [2, 3]]))
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '2×2 = H without its 1/√2 (type 1, 1, 1, −1); the factors are put back at the end', lcdmat('MatB = 2×2', [[1, 1], [1, -1]]))
+         + cl(K('MatB', '×', 'MatA', 'EXE'), 'the left product (columns transformed), still without 1/√2', lcdmat('MatAns = 2×2', [[6, 2], [2, -4]]))),
+        ('Right product: transform the rows', r'\(\tfrac1{\sqrt2}\begin{bmatrix}6&2\\2&-4\end{bmatrix}\cdot\tfrac1{\sqrt2}\begin{bmatrix}1&1\\1&-1\end{bmatrix}=\tfrac12\begin{bmatrix}8&4\\-2&6\end{bmatrix}\)', None,
+         cl(K('MatB', '×', 'MatA', '×', 'MatB', 'EXE'), 'both products (H is symmetric, so Hᵀ = H), still without the factors', lcdmat('MatAns = 2×2', [[8, 4], [-2, 6]]))),
+        ('Simplify', r'\(\tfrac12\begin{bmatrix}8&4\\-2&6\end{bmatrix}=\begin{bmatrix}4&2\\-1&3\end{bmatrix}\). (The two \(1/\sqrt2\) factors make ½.)', None,
+         cl(K('MatB', '×', 'MatA', '×', 'MatB', '÷', '2', 'EXE'), 'the whole transform in one line: ÷ 2 puts back the two 1/√2 factors', lcdmat('MatAns = 2×2', [[4, 2], [-1, 3]]))),
     ]) + r'<div class="ansbig">\(F=\begin{bmatrix}4&2\\-1&3\end{bmatrix}\)</div>')
     H.append(d)
-    H.append(card('d25q4a'))
+    H.append(woven('d25q4a', card('d25q4a')))
 
     # 9 statistics
     H.append(lesson('Mean and variance of an image',
@@ -187,3 +206,70 @@ def section(card):
         tag='10'))
     H.append('</section>')
     return '\n'.join(H)
+
+
+# ── solutions with the fx-991CW steps woven in (numbers checked with Python) ──
+WOVEN = {
+    'd25q4a': ([
+        ('Each coefficient = pattern × image, added up',
+         'The patterns are orthonormal, so tᵢ = sum over the 4 pixels of Hᵢ × f. Every Hᵢ is ½ × (a sign pattern), so tᵢ = ½(±6 ±4 ±2 ±1) with the signs of Hᵢ: t₁ = ½(6 + 4 + 2 + 1) = <b>6.5</b>, t₂ = ½(6 − 4 + 2 − 1) = <b>1.5</b>, t₃ = ½(6 + 4 − 2 − 1) = <b>3.5</b>, t₄ = ½(6 − 4 − 2 + 1) = <b>0.5</b>.',
+         None,
+         cl(K('(', '6', '+', '4', '+', '2', '+', '1', ')', '÷', '2', 'EXE'), 't₁ with signs + + + + : screen shows 6.5')
+         + cl(K('(', '6', '−', '4', '+', '2', '−', '1', ')', '÷', '2', 'EXE'), 't₂ with signs + − + − : screen shows 1.5')
+         + cl(K('(', '6', '+', '4', '−', '2', '−', '1', ')', '÷', '2', 'EXE'), 't₃ with signs + + − − : screen shows 3.5')
+         + cl(K('(', '6', '−', '4', '−', '2', '+', '1', ')', '÷', '2', 'EXE'), 't₄ with signs + − − + : screen shows 0.5')),
+        ('Keep the two largest',
+         'The largest are t₁ = 6.5 and t₃ = 3.5, so f̂ = 6.5 H₁ + 3.5 H₃.',
+         None, None),
+        ('Rebuild the image',
+         r'\(6.5\cdot\tfrac12\begin{bmatrix}1&1\\1&1\end{bmatrix}+3.5\cdot\tfrac12\begin{bmatrix}1&1\\-1&-1\end{bmatrix}=\begin{bmatrix}3.25+1.75&3.25+1.75\\3.25-1.75&3.25-1.75\end{bmatrix}=\begin{bmatrix}5&5\\1.5&1.5\end{bmatrix}\). (Keeping all four coefficients gives back f exactly.)',
+         None,
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '2×2 = the sign pattern of H₁: 1, 1, 1, 1')
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '2×2 = the sign pattern of H₃: 1, 1, −1, −1')
+         + cl(K('6.5', '×', 'MatA', '÷', '2', '+', '3.5', '×', 'MatB', '÷', '2', 'EXE'), 't₁H₁ + t₃H₃ (the ÷ 2 is the ½ in each Hᵢ)', lcdmat('MatAns = 2×2', [[5, 5], [1.5, 1.5]]))),
+    ], r'\(t_1=6.5,\ t_2=1.5,\ t_3=3.5,\ t_4=0.5\). From the two largest: \(\hat f=6.5H_1+3.5H_3=\begin{bmatrix}5&5\\1.5&1.5\end{bmatrix}\).'),
+    'tb2-36': ([
+        ('A point is a column; the first operation sits rightmost',
+         r'Write the point as (x, y, 1)ᵀ. Each matrix acts on what is to its right, so the operation applied first is nearest the point. \(T=\begin{bmatrix}1&0&t_x\\0&1&t_y\\0&0&1\end{bmatrix},\ S=\begin{bmatrix}c_x&0&0\\0&c_y&0\\0&0&1\end{bmatrix}\).',
+         None, None),
+        ('(a), (b), (c) the composite matrices',
+         r'(a) scale then translate: \(A=TS=\begin{bmatrix}c_x&0&t_x\\0&c_y&t_y\\0&0&1\end{bmatrix}\). (b) scale, translate, rotate: \(A=R\,T\,S\). (c) shear, scale, translate, rotate: \(A=R\,T\,S\,V\) (V = vertical shear).',
+         None, None),
+        ('(d) Order matters: a numerical check',
+         'Take c<sub>x</sub> = c<sub>y</sub> = 2, t<sub>x</sub> = 1, t<sub>y</sub> = 0 and the point (1, 1). Scale then move: TS(1, 1, 1)ᵀ = <b>(3, 2, 1)</b>. Move then scale: ST(1, 1, 1)ᵀ = <b>(4, 2, 1)</b>. Different, because matrix products do not commute.',
+         None,
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '3×3 = T (shift x by 1)', lcdmat('MatA = 3×3', [[1, 0, 1], [0, 1, 0], [0, 0, 1]]))
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '3×3 = S (scale ×2)', lcdmat('MatB = 3×3', [[2, 0, 0], [0, 2, 0], [0, 0, 1]]))
+         + cl(K('TOOLS', '>MatC', 'OK', '>Define New'), '3×1 = the point (1, 1, 1)')
+         + cl(K('MatA', '×', 'MatB', '×', 'MatC', 'EXE'), 'scale first, then shift', lcdmat('MatAns = 3×1', [[3], [2], [1]]))
+         + cl(K('MatB', '×', 'MatA', '×', 'MatC', 'EXE'), 'shift first, then scale — a different point', lcdmat('MatAns = 3×1', [[4], [2], [1]]))),
+    ], '(a) A = TS. (b) A = RTS. (c) A = RTSV. (d) Yes: TS(1,1,1)ᵀ = (3, 2, 1) but ST(1,1,1)ᵀ = (4, 2, 1).'),
+    'dr-reg': ([
+        ('One row per tie point',
+         'Each tie point gives one equation for c₁…c₄ (x values) with the row (v, w, vw, 1): (0, 0, 0, 1), (0, 10, 0, 1), (10, 0, 0, 1), (10, 10, 100, 1). The y equations use the same rows.',
+         None,
+         cl(K('HOME', '>Equation', '>Simul Equation', '>4 unknowns'), 'opens the Coefficient Editor for four unknowns (here c₁, c₂, c₃, c₄)')
+         + cl(K('0', 'EXE', '0', 'EXE', '0', 'EXE', '1', 'EXE', '1', 'EXE'), 'row 1 = tie point (0,0) → x = 1: v, w, vw, 1 | x. Rows 2–4 the same way', lcdmat('Coefficient Editor', [[0, 0, 0, 1, 1], [0, 10, 0, 1, 2], [10, 0, 0, 1, 11], [10, 10, 100, 1, 13]]))),
+        ('Solve for c₁…c₄ (x values 1, 2, 11, 13)',
+         'c₄ = 1; 10c₂ + 1 = 2 → c₂ = 0.1; 10c₁ + 1 = 11 → c₁ = 1; 10 + 1 + 100c₃ + 1 = 13 → c₃ = 0.01.',
+         None,
+         cl(K('EXE'), 'solves: screen lists 1, 0.1, 0.01, 1 = c₁, c₂, c₃, c₄')),
+        ('Solve for c₅…c₈ (y values 2, 13, 1, 12)',
+         'c₈ = 2; 10c₆ + 2 = 13 → c₆ = 1.1; 10c₅ + 2 = 1 → c₅ = −0.1; −1 + 11 + 100c₇ + 2 = 12 → c₇ = 0.',
+         None,
+         cl(K('EXE'), 'after going back to the Coefficient Editor, change only the last column to 2, 13, 1, 12 (the left side is the same); solving lists −0.1, 1.1, 0, 2 = c₅…c₈')),
+        ('Map (5, 5)',
+         'x = 1·5 + 0.1·5 + 0.01·25 + 1 = <b>6.75</b>; y = −0.1·5 + 1.1·5 + 0·25 + 2 = <b>7</b>.',
+         None,
+         cl(K('5', '+', '0.1', '×', '5', '+', '0.01', '×', '25', '+', '1', 'EXE'), 'x = c₁v + c₂w + c₃vw + c₄ at v = w = 5 (vw = 25); screen shows 6.75')
+         + cl(K('SHIFT', '−', '0.1', '×', '5', '+', '1.1', '×', '5', '+', '2', 'EXE'), 'y = c₅v + c₆w + c₇vw + c₈ (c₇ = 0 drops out); screen shows 7')),
+    ], 'c₁…c₄ = 1, 0.1, 0.01, 1; c₅…c₈ = −0.1, 1.1, 0, 2. (5, 5) → (6.75, 7).'),
+}
+
+
+def woven(cid, c):
+    if cid not in WOVEN: return c
+    steps, ans = WOVEN[cid]
+    return set_solution(c, walk(steps) + f'<div class="ansbig">{ans}</div>')

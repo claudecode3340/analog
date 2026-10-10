@@ -2,6 +2,7 @@
 picture and numbers; the sharpening past papers as step-by-step walks."""
 from ch3lib import *
 import math
+from ch3_filt import mdef, sep_lines, MAT_APP, _q
 
 LAP4 = [[0, 1, 0], [1, -4, 1], [0, 1, 0]]
 SOBX = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]]
@@ -137,12 +138,17 @@ def section(card):
     sq = {(i, j): 'in' for i in range(10) for j in range(10) if im[i][j]}
     fw, tw = window_fig(im, 2, 4, SOBX, label_kernel='Sobel H<sub>y</sub> (as printed)')
     fc, tc = window_fig(im, 2, 2, SOBX, label_kernel='Sobel H<sub>y</sub>')
+    wA = pad(im, 1, 'zero')[2:5, 4:7]; wB = pad(im, 1, 'zero')[2:5, 2:5]
+    assert (wA * np.array(SOBX)).sum() == tw and (wB * np.array(SOBX)).sum() == tc
     gc = {(i, j): ('c1' if g[i][j] > 0 else 'nd') for i in range(10) for j in range(10) if g[i][j]}
     H.append(set_solution(card('e23q4'), walk([
         ('Picture the image and read the kernel', 'The white 4×4 square sits in rows 3–6, columns 3–6 (0-based). H<sub>y</sub> = (row below, weights 1 2 1) − (row above, weights 1 2 1). So it fires only where the row below differs from the row above: on the <b>top and bottom</b> edges of the square. Left and right edges give 0.',
          gsvg([[int(v) for v in r] for r in im], sq, cell=34, idx=True, label='10×10 input, square = 1')),
-        ('One pixel just above the top edge: (2, 4)', f'Row above (row 1) is all 0. Row below (row 3) has 1 1 1 under the window. Sum = 1·1 + 2·1 + 1·1 = <b>{fmt(tw)}</b>.', fw),
-        ('A pixel at the corner: (2, 2)', f'Only the right-most cell of the row below is inside the square: 1 × 1 = <b>{fmt(tc)}</b>. Moving right along row 2 the window covers 1, then 2, then 3 cells of the square → 1, 3, 4, 4, 3, 1.', fc),
+        ('One pixel just above the top edge: (2, 4)', f'Row above (row 1) is all 0. Row below (row 3) has 1 1 1 under the window. Sum = 1·1 + 2·1 + 1·1 = <b>{fmt(tw)}</b>. H<sub>y</sub> = (−1, 0, 1)ᵀ × (1, 2, 1), so the calculator does one pixel as row × window × column.', fw,
+         MAT_APP + sep_lines([-1, 0, 1], wA, [1, 2, 1])[0]),
+        ('A pixel at the corner: (2, 2)', f'Only the right-most cell of the row below is inside the square: 1 × 1 = <b>{fmt(tc)}</b>. Moving right along row 2 the window covers 1, then 2, then 3 cells of the square → 1, 3, 4, 4, 3, 1.', fc,
+         mdef('MatA', wB, 'only the window changes; MatB and MatC stay')
+         + cl(K('MatB', '×', 'MatA', '×', 'MatC', 'EXE'), 'the response at (2, 2)', lcdmat('MatAns', [[int(tc)]]))),
         ('Row 3 too', 'At row 3 the row above (2) is 0 and the row below (4) is inside the square → the same 1 3 4 4 3 1. Rows 4–5: above and below are both inside → 0. Rows 6–7 mirror the top edge with the opposite sign (row below is 0, row above is 1).', None),
         ('The whole output', 'Green = positive (dark above, bright below), red = negative. Every row in the interior of the square and everything far away is 0. If you use convolution instead of correlation the kernel flips and all signs swap — magnitudes stay the same.',
          gsvg([[int(v) for v in r] for r in g], gc, cell=38, idx=True, label='Sobel H<sub>y</sub> output (correlation, zero padding)')),
@@ -153,11 +159,27 @@ def section(card):
         ('Subtract the kernels entry by entry', 'Centre: 2 − 1/9 = <b>17/9</b>. Every other entry: 0 − 1/9 = <b>−1/9</b>. Check: the weights add to 17/9 − 8/9 = 1, so flat areas keep their brightness.',
          figs(gsvg([[0, 0, 0], [0, 2, 0], [0, 0, 0]], all_cls(3, 3, 'n4'), cell=44, idx=False, label='2δ'),
               gsvg([['1/9'] * 3] * 3, all_cls(3, 3, 'n8'), cell=44, idx=False, label='box'),
-              gsvg([['−1/9', '−1/9', '−1/9'], ['−1/9', '17/9', '−1/9'], ['−1/9', '−1/9', '−1/9']], all_cls(3, 3, 'hl'), cell=52, idx=False, label='2δ − box'))),
+              gsvg([['−1/9', '−1/9', '−1/9'], ['−1/9', '17/9', '−1/9'], ['−1/9', '−1/9', '−1/9']], all_cls(3, 3, 'hl'), cell=52, idx=False, label='2δ − box')),
+         cl(K('2', '−', '1', '÷', '9', 'EXE'), 'centre weight; the calculator shows the fraction 17/9')
+         + cl(K('17', '÷', '9', '−', '8', '÷', '9', 'EXE'), 'check: all nine weights add to 1')),
         ('Highboost in general', 'g = f + c(f − f̄) → centre 1 + c − c/9, others −c/9.', None),
     ]) + '<div class="ansbig">¹⁄₉ [−1 −1 −1; −1 17 −1; −1 −1 −1].</div>'))
 
     H.append('<h3>More questions on derivatives and sharpening</h3>')
-    for cid in ['sl-deriv', 'tb3-38', 'tb3-40', 'tb3-42', 'dr-unsharp', 'dr-sobel']: H.append(card(cid))
+    for cid in ['sl-deriv', 'tb3-38', 'tb3-40', 'tb3-42', 'dr-unsharp']: H.append(card(cid))
+    Z = [[1, 2, 3], [4, 5, 6], [9, 9, 9]]
+    cgx, gx = sep_lines([-1, 0, 1], Z, [1, 2, 1]); cgy, gy = sep_lines([1, 2, 1], Z, [-1, 0, 1])
+    assert (gx, gy) == (28, 6)
+    H.append(set_solution(card('dr-sobel'), walk([
+        ('g<sub>x</sub>: bottom row − top row, weights 1 2 1', f'(9 + 2·9 + 9) − (1 + 2·2 + 3) = 36 − 8 = <b>{fmt(gx)}</b>. The kernel is (−1, 0, 1)ᵀ × (1, 2, 1): row weights −1, 0, 1 (top, middle, bottom), column weights 1, 2, 1.', None,
+         MAT_APP + cgx),
+        ('g<sub>y</sub>: right column − left column, weights 1 2 1', f'(3 + 2·6 + 9) − (1 + 2·4 + 9) = 24 − 18 = <b>{fmt(gy)}</b>. Kernel (1, 2, 1)ᵀ × (−1, 0, 1): swap the roles of the row and the column.', None,
+         mdef('MatB', [[1, 2, 1]], 'new row weights (1 2 1)') + mdef('MatC', [[-1], [0], [1]], 'new column weights (−1 0 1)')
+         + cl(K('MatB', '×', 'MatA', '×', 'MatC', 'EXE'), 'MatA (the window) is unchanged', lcdmat('MatAns', [[int(gy)]]))),
+        ('Magnitude and the cheap approximation', f'M = √(28² + 6²) = √820 = <b>{math.hypot(gx, gy):.3f}</b>; |g<sub>x</sub>| + |g<sub>y</sub>| = <b>{int(abs(gx) + abs(gy))}</b> (bigger than M — it overestimates diagonal-ish gradients).', None,
+         cl(K('CATALOG', '>Angle/Coord/Sexa', '>Rect to Polar'), 'types Pol( — enter 28, 6 (comma = SHIFT )) and EXE: r is the magnitude M')
+         + cl(K('√', '28', 'x²', '+', '6', 'x²', ')', 'EXE'), f'or directly: {math.hypot(gx, gy):.6f}')),
+        ('Roberts cross-gradients', 'Number the window z₁ … z₉ row by row, so z₅ = 5 is the centre. Roberts: z₉ − z₅ = 9 − 5 = <b>4</b> and z₈ − z₆ = 9 − 6 = <b>3</b> (diagonal differences — by hand).', None),
+    ]) + '<div class="ansbig">g<sub>x</sub> = 28, g<sub>y</sub> = 6, M = 28.636, |g<sub>x</sub>| + |g<sub>y</sub>| = 34; Roberts 4 and 3.</div>'))
     H.append('</section>')
     return '\n'.join(H)

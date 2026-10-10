@@ -76,11 +76,23 @@ def fft(card, old):
     F1 = np.fft.fft(S, axis=0); W = np.exp(-2j * np.pi / 12)
     E = np.array([[W ** (p * q) for q in range(3)] for p in range(4)]); F2 = F1 * E; F3 = np.fft.fft(F2, axis=1)
     G = lambda A, lab, c='n4', cell=None: f'<figure class="gfig">' + table(['', 'q = 0', 'q = 1', 'q = 2'], [[f'p = {p}'] + [cf(v, 4) for v in r] for p, r in enumerate(A)]) + f'<figcaption>{lab}</figcaption></figure>'
+    C4 = [[round(math.cos(math.radians(90 * u * x))) for x in range(4)] for u in range(4)]
+    S4 = [[round(math.sin(math.radians(90 * u * x))) for x in range(4)] for u in range(4)]
     H.append(set_solution(card('sl-mr'), walk([
-        ('Fill a 4 × 3 table row by row', 'k = 4 rows, ℓ = 3 columns.', rows(S.astype(int).tolist(), ALL(4, 3, 'n8'), 'S')),
-        ('4-point DFT of every column', 'Column 0 = (1, 2, 7, 2): sum 12; with (1, −i, −1, i): 1 − 2i − 7 + 2i = −6; alternating: 1 − 2 + 7 − 2 = 4; last = conjugate of the second → −6. Same for the other two columns.', G(F1, 'F̂<sub>1</sub>')),
-        ('Twiddle: multiply (p, q) by W<sub>12</sub><sup>pq</sup>', 'Row 0 and column 0 are unchanged (exponent 0). E.g. (1, 1): (1 − i)·W<sub>12</sub><sup>1</sup>.', G(F2, 'F̂<sub>2</sub> = F̂<sub>1</sub> × E', 'c4', 120)),
-        ('3-point DFT of every row', 'Row p gives F(p), F(p + 4), F(p + 8).', G(F3, 'rows transformed', 'hl', 100)),
+        ('Fill a 4 × 3 table row by row', 'k = 4 rows, ℓ = 3 columns.', rows(S.astype(int).tolist(), ALL(4, 3, 'n8'), 'S'),
+         cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '4×3, type f row by row: 1, 4, 5, 2, 6, 3, 7, 3, 6, 2, 5, 4', lcdmat('MatA = S', S.astype(int).tolist()))),
+        ('4-point DFT of every column', 'Column 0 = (1, 2, 7, 2): sum 12; with (1, −i, −1, i): 1 − 2i − 7 + 2i = −6; alternating: 1 − 2 + 7 − 2 = 4; last = conjugate of the second → −6. Same for the other two columns.', G(F1, 'F̂<sub>1</sub>'),
+         cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '4×4 C<sub>4</sub>, entry (u, x) = cos(90ux°)', lcdmat('MatB = C4', C4))
+         + cl(K('TOOLS', '>MatC', 'OK', '>Define New'), '4×4 S<sub>4</sub>, entry (u, x) = sin(90ux°)', lcdmat('MatC = S4', S4))
+         + cl(K('MatB', '×', 'MatA', 'EXE'), 'real parts of all three column DFTs at once (column q of the answer = DFT of column q)', lcdmat('Re F̂1', np.round(F1.real, 4).tolist()))
+         + cl(K('SHIFT', '−', 'MatC', '×', 'MatA', 'EXE'), 'imaginary parts (minus, because W = cos − i sin)', lcdmat('Im F̂1', (np.round(F1.imag, 4) + 0).tolist()))),
+        ('Twiddle: multiply (p, q) by W<sub>12</sub><sup>pq</sup>', 'Row 0 and column 0 are unchanged (exponent 0). E.g. (1, 1): (1 − i)·W<sub>12</sub><sup>1</sup>. In polar form 1 − i = √2∠−45° and W<sub>12</sub> = 1∠−30°, so the product is √2∠−75° = 0.3660 − 1.3660i.', G(F2, 'F̂<sub>2</sub> = F̂<sub>1</sub> × E', 'c4', 120),
+         cl(K('HOME', '>Complex') + ' ' + K('SETTINGS', '>Calc Settings', '>Angle Unit', '>Degree'), 'Complex app, degrees')
+         + cl('type <code>√2∠−45 × 1∠−30</code> (∠ is ' + K('CATALOG', '>Complex', '>∠') + ', minus is ' + K('SHIFT', '−') + ') ' + K('EXE'), 'one twiddled entry: multiplying by W<sup>pq</sup> = 1∠(−30pq)° just turns the number by 30pq° clockwise', lcd('Complex', '<div>0.3660254038−1.366025404<i>i</i></div>'))),
+        ('3-point DFT of every row', 'Row p gives F(p), F(p + 4), F(p + 8): F(p + 4r) = a + b·W<sub>3</sub><sup>r</sup> + c·W<sub>3</sub><sup>2r</sup> with (a, b, c) the row and W<sub>3</sub> = 1∠−120°. Row 1 = (−6, √2∠−75°, √2∠75°): F(1) = −6 + 0.366 + 0.366 = −5.2679 (b, c conjugate → imaginary parts cancel).', G(F3, 'rows transformed', 'hl', 100),
+         cl('type <code>−6 + √2∠−75 × 1∠−120 + √2∠75 × 1∠−240</code> ' + K('EXE'), 'F(5) = row 1 with r = 1 (b turned by 120°, c by 240°)', lcd('Complex', '<div>−8.732050808</div>'))
+         + cl('change the angles to −240 and −480, ' + K('EXE'), 'F(9) = row 1 with r = 2', lcd('Complex', '<div>−4</div>'))),
         ('Read down the columns', 'Column 0 → F(0 … 3), column 1 → F(4 … 7), column 2 → F(8 … 11). The result is real and symmetric because f is real and even under circular reversal (f(x) = f(12 − x)).', row([cf(v, 4) for v in F3.T.flatten()], {0: 'hl'}, 'F(0) … F(11)', cell=70)),
     ]) + '<div class="ansbig">F = {48, −5.2679, 0, −4, −6, −8.7321, 12, −8.7321, −6, −4, 0, −5.2679}.</div>'))
     H.append(card('dr-flop'))
@@ -135,22 +147,45 @@ def twod(card, old):
     fq = np.array([[0, 0, 1, 1], [0, 0, 1, 1], [1, 1, 0, 0]])
     c4 = np.array([1, -1j, -1, 1j]); col = fq @ c4
     Wc = np.exp(-2j * np.pi / 3); r3 = np.array([1, Wc, Wc ** 2]); F11 = r3 @ col
+    MB = [[math.cos(math.radians(120 * x)) for x in range(3)], [math.sin(math.radians(120 * x)) for x in range(3)]]
+    MC = [[math.cos(math.radians(90 * y)), math.sin(math.radians(90 * y))] for y in range(4)]
+    P = np.array(MB) @ fq @ np.array(MC); r4 = lambda A: (np.round(np.array(A), 4) + 0).tolist()
     H.append(set_solution(card('qz3'), walk([
-        ('Pick one row and one column', 'F(1, 1) = (row u = 1 of D<sub>3</sub>) × M<sub>f</sub> × (column v = 1 of D<sub>4</sub>). Row of D<sub>3</sub>: (1, W, W²) with W = −½ − (√3/2)i. Column of D<sub>4</sub>: (1, −i, −1, i).', None),
+        ('Pick one row and one column', 'F(1, 1) = (row u = 1 of D<sub>3</sub>) × M<sub>f</sub> × (column v = 1 of D<sub>4</sub>). Row of D<sub>3</sub>: (1, W, W²) with W = −½ − (√3/2)i. Column of D<sub>4</sub>: (1, −i, −1, i).', None,
+         cl(K('SETTINGS', '>Calc Settings', '>Angle Unit', '>Degree'), 'degrees, so cos(120) is the 120° we need (W<sub>3</sub> is a third of a turn, W<sub>4</sub> a quarter)')
+         + cl(K('HOME', '>Matrix', 'OK'), 'opens the Matrix app (real numbers only — so we carry cos and sin separately)')
+         + cl(K('TOOLS', '>MatA', 'OK', '>Define New'), '3×4, type the image row by row', lcdmat('MatA = f', fq.tolist()))),
         ('Do the 4-point side first (no arithmetic)', 'Each image row times (1, −i, −1, i): row [0 0 1 1] → 0 + 0 − 1 + i = −1 + i; row 1 the same; row [1 1 0 0] → 1 − i.',
-         figs(rows(fq.tolist(), {}, 'M<sub>f</sub>'), rows([[cf(v)] for v in col], ALL(3, 1, 'n8'), 'M<sub>f</sub> × column', cell=80))),
-        ('Then the 3-point side', 'F(1, 1) = 1·(−1 + i) + W·(−1 + i) + W²·(1 − i) = (−1 + i)(1 + W) + (1 − i)W². Since 1 + W + W² = 0, 1 + W = −W², so F = (−1 + i)(−W²) + (1 − i)W² = 2(1 − i)W².', None),
-        ('Magnitude', f'|W²| = 1 and |1 − i| = √2, so |F(1, 1)| = 2√2 = <b>{abs(F11):.4f}</b>. (Explicitly F(1, 1) = {cf(F11)}.)', None),
+         figs(rows(fq.tolist(), {}, 'M<sub>f</sub>'), rows([[cf(v)] for v in col], ALL(3, 1, 'n8'), 'M<sub>f</sub> × column', cell=80)),
+         cl(K('TOOLS', '>MatC', 'OK', '>Define New'), '4×2: row y = [cos(90y), sin(90y)] for y = 0 … 3 — the real and (minus) imaginary parts of column v = 1 of D<sub>4</sub>', lcdmat('MatC', r4(MC)))),
+        ('Then the 3-point side', 'F(1, 1) = 1·(−1 + i) + W·(−1 + i) + W²·(1 − i) = (−1 + i)(1 + W) + (1 − i)W². Since 1 + W + W² = 0, 1 + W = −W², so F = (−1 + i)(−W²) + (1 − i)W² = 2(1 − i)W².', None,
+         cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '2×3: top row cos(0), cos(120), cos(240); bottom row sin(0), sin(120), sin(240) — type cos(120) etc. straight into the cells', lcdmat('MatB', r4(MB)))
+         + cl(K('MatB', '×', 'MatA', '×', 'MatC', 'EXE'), 'P = every cos/sin combination of the double sum in one product', lcdmat('MatAns = P', r4(P)))
+         + cl(f'Re = P<sub>11</sub> − P<sub>22</sub> = {P[0,0]:.0f} + {-P[1,1]:.4f} = <b>{P[0,0]-P[1,1]:.4f}</b>; Im = −(P<sub>12</sub> + P<sub>21</sub>) = <b>{-(P[0,1]+P[1,0]):.4f}</b>', 'because (cos α − i sin α)(cos β − i sin β) = (cos α cos β − sin α sin β) − i(sin α cos β + cos α sin β)')),
+        ('Magnitude', f'|W²| = 1 and |1 − i| = √2, so |F(1, 1)| = 2√2 = <b>{abs(F11):.4f}</b>. (Explicitly F(1, 1) = {cf(F11)}.)', None,
+         cl(K('CATALOG', '>Angle/Coord/Sexa', '>Rect to Polar') + f' then type 0.7321 {K("SHIFT", ")")} 2.7321 ) ' + K('EXE'), 'Pol(Re, Im) gives r = √(Re² + Im²) (and the angle); the comma is SHIFT )', lcd('Pol', '<div>r=2.828427125, θ=75</div>'))),
     ]) + '<div class="ansbig">|F(1, 1)| = 2√2 ≈ 2.8284.</div>'))
 
     fo = np.array([[0, 0, 0, 0, 0], [0, 15, 7, 0, 0], [0, 7, 15, 7, 0], [0, 0, 7, 15, 0], [0, 0, 0, 0, 0]])
     Gc = np.abs(np.fft.fftshift(np.fft.fft2(fo) / 25))
+    blk = [[15, 7, 0], [7, 15, 7], [0, 7, 15]]
+    oB = [[math.cos(math.radians(288 * x)) for x in (1, 2, 3)], [math.sin(math.radians(288 * x)) for x in (1, 2, 3)]]
+    oC = [[math.cos(math.radians(72 * y)), math.sin(math.radians(72 * y))] for y in (1, 2, 3)]
+    oP = np.array(oB) @ np.array(blk) @ np.array(oC); r4 = lambda A: (np.round(np.array(A), 4) + 0).tolist()
     H.append(set_solution(card('o23q1'), walk([
-        ('Note the printed formula', 'This paper puts 1/MN = 1/25 in front of the forward DFT — use it. DC: F(0, 0) = (15·3 + 7·4)/25 = 73/25 = <b>2.92</b>.', rows(fo.tolist(), {(i, j): 'in' for i in range(5) for j in range(5) if fo[i, j]}, 'f (5 × 5)')),
+        ('Note the printed formula', 'This paper puts 1/MN = 1/25 in front of the forward DFT — use it. DC: F(0, 0) = (15·3 + 7·4)/25 = 73/25 = <b>2.92</b>.', rows(fo.tolist(), {(i, j): 'in' for i in range(5) for j in range(5) if fo[i, j]}, 'f (5 × 5)'),
+         cl(K('(', '15', '×', '3', '+', '7', '×', '4', ')', '÷', '25', 'EXE'), 'DC = sum of all pixels ÷ 25', lcd('Calculate', '<div>2.92</div>'))),
         ('How to centre an odd size', 'n = 5 is odd, so (−1)<sup>x+y</sup> does not work (it shifts by 2.5). Rotate instead by ⌊5/2⌋ = 2: display row i shows u = (i − 2) mod 5 → rows show u = 3, 4, 0, 1, 2; same for columns.',
          figs(row(['u=3', 'u=4', 'u=0', 'u=1', 'u=2'], {2: 'hl'}, 'display order (rows and columns)', cell=54))),
-        ('Compute |F(u, v)| and place it', 'Use |F(u, v)| = |F(5 − u, 5 − v)| (real image) to halve the work. Each value goes to display position ((u + 2) mod 5, (v + 2) mod 5).',
-         gsvg([[fmt(round(v, 4)) for v in r] for r in Gc], {**{(i, j): 'hl' for i in range(3) for j in range(5)}, (2, 2): 'c1'}, cell=84, idx=True, label='centred |F|; first three rows asked (yellow), DC in green')),
+        ('Compute |F(u, v)| and place it', 'Use |F(u, v)| = |F(5 − u, 5 − v)| (real image) to halve the work. Each value goes to display position ((u + 2) mod 5, (v + 2) mod 5). Each term is pixel × W<sub>5</sub><sup>ux + vy</sup> = pixel × 1∠(−72(ux + vy))° (360/5 = 72).',
+         gsvg([[fmt(round(v, 4)) for v in r] for r in Gc], {**{(i, j): 'hl' for i in range(3) for j in range(5)}, (2, 2): 'c1'}, cell=84, idx=True, label='centred |F|; first three rows asked (yellow), DC in green'),
+         cl(K('HOME', '>Complex') + ' ' + K('SETTINGS', '>Calc Settings', '>Angle Unit', '>Degree'), 'Complex app in degrees — for one coefficient at a time')
+         + cl('type <code>(15×1∠−72 + 7×1∠−144 + 7×1∠−72 + 15×1∠−144 + 7×1∠−216 + 7×1∠−144 + 15×1∠−216) ÷ 25</code> ' + K('EXE') + ' (∠ is ' + K('CATALOG', '>Complex', '>∠') + ', minus is ' + K('SHIFT', '−') + ')', 'F(0, 1): u = 0, so each non-zero pixel at column y gets 1∠(−72y)°', lcd('Complex', '<div>−1.378459713−1.001509605<i>i</i></div>'))
+         + cl(K('FORMAT', '>Polar Coord'), 'shows |F| and the angle → |F(0, 1)| = 1.7039; it goes to display (2, 3) and, by symmetry, |F(0, 4)| to (2, 1)', lcd('Complex', '<div>1.70386991∠−144</div>'))
+         + cl(K('HOME', '>Matrix', 'OK') + ' ' + K('TOOLS', '>MatA', 'OK', '>Define New'), 'matrix route (faster for many values): MatA = the 3×3 non-zero block (it sits at x, y = 1, 2, 3)', lcdmat('MatA', blk))
+         + cl(K('TOOLS', '>MatB', 'OK', '>Define New'), '2×3 for u = 4: rows cos(288x), sin(288x) for x = 1, 2, 3 (288 = 72·4)', lcdmat('MatB', r4(oB)))
+         + cl(K('TOOLS', '>MatC', 'OK', '>Define New'), '3×2 for v = 1: row y = [cos(72y), sin(72y)], y = 1, 2, 3', lcdmat('MatC', r4(oC)))
+         + cl(K('MatB', '×', 'MatA', '×', 'MatC', 'EXE'), f'Re = (P<sub>11</sub> − P<sub>22</sub>) ÷ 25 = {(oP[0,0]-oP[1,1])/25:.4f}, Im = −(P<sub>12</sub> + P<sub>21</sub>) ÷ 25 = 0 → |F(4, 1)| = 2.1461, display (1, 3)', lcdmat('MatAns = P', r4(oP)))),
         ('About the official key', 'The key multiplied by (−1)<sup>x+y</sup> anyway, so its “centre” is 1.877, not the DC value 2.92 — it is sampling between the DFT frequencies. With the slides’ ordering the answer is the table above.', None),
     ]) + '<div class="ansbig">Rows 0–2: [0.0647 0.6508 0.2639 0.6908 0.8939], [0.6508 0.0247 1.7039 2.1461 0.6908], [0.2639 1.7039 2.92 1.7039 0.2639].</div>'))
 
@@ -169,7 +204,17 @@ def twod(card, old):
         ('Write (−1) as a wave', '(−1)<sup>m</sup> = e<sup>jπm</sup> = W<sub>M</sub><sup>−m·M/2</sup>: multiplying by a wave of half the sampling rate. The modulation property slides the spectrum by (M/2, N/2).', None),
         ('Result', 'G(u, v) = F(u − M/2, v − N/2) for even M, N — the spectrum is centred.', figs(img('f_spec_uncentred', 120, 'F'), img('f_spec', 120, 'G: shifted by half the size'))),
     ]) + '<div class="ansbig">g = (−1)<sup>m+n</sup> f; G(u, v) = F(u − M/2, v − N/2).</div>'))
-    for cid in ['tb4-21', 'tb4-36', 'tb4-44', 'tb4-29', 'tb4-43']: H.append(card(cid))
+    H.append(set_solution(card('tb4-21'), walk([
+        ('Where the spikes sit', 'A spike’s distance from the dc term = how many stripe periods fit across the image. Check in 1-D with M = 4 pixels and one period of 2-pixel stripes, 1 1 0 0: F(1) = 1 + W<sub>4</sub> = 1 − i ≠ 0 and F(2) = 1 + W<sub>4</sub><sup>2</sup> = 0 — the energy sits at u = 1 (one period per 4 pixels). With 16 pixels the same stripes (period 4) give spikes at u = 4 and 12 (= −4).', None,
+         cl(K('HOME', '>Complex') + ' ' + K('SETTINGS', '>Calc Settings', '>Angle Unit', '>Degree'), 'Complex app in degrees')
+         + cl('type <code>1 + 1∠−90</code> ' + K('EXE') + ' (∠ is ' + K('CATALOG', '>Complex', '>∠') + ')', 'F(1) = f(0)·1 + f(1)·W<sub>4</sub>; the two zero pixels add nothing', lcd('Complex', '<div>1−<i>i</i></div>'))
+         + cl('type <code>1 + 1∠−180</code> ' + K('EXE'), 'F(2): W<sub>4</sub><sup>2</sup> = −1 cancels the 1 → no spike here', lcd('Complex', '<div>0</div>'))),
+        ('(a) 4-pixel stripes', 'The period doubles (4 → 8 pixels), so half as many periods fit: the spikes move <b>closer to the centre</b>, at half the distance from the dc term.', None),
+        ('(b) Only the horizontal axis', 'Each column is constant: the image changes only left↔right, so the vertical frequency is 0 for all its content — every spike lies on the horizontal frequency axis.', None),
+        ('(c) 1-pixel stripes', 'Period 2 = the fastest possible change: spikes at u = M/2, the very <b>edges</b> of the spectrum (for a real image u = ±M/2 is one and the same spike).', None),
+        ('(d) dc terms', 'dc = sum (average) of the image; every stripe pattern is half black, half white → the <b>same</b> dc term.', None),
+    ]) + '<div class="ansbig">(a) Spikes move closer to the centre (half the distance). (b) The image varies only horizontally. (c) Spikes at the edges u = ±M/2. (d) Same dc term.</div>'))
+    for cid in ['tb4-36', 'tb4-44', 'tb4-29', 'tb4-43']: H.append(card(cid))
     H.append('</section>')
     return '\n'.join(H)
 
@@ -227,7 +272,11 @@ def filt(card, old):
         ('Each shift becomes an exponential', 'f(x ± 1, y) → e<sup>±j2πu/M</sup> F; f(x, y ± 1) → e<sup>±j2πv/N</sup> F.', None),
         ('Pair them into cosines', 'H = ¼[(e<sup>jθ</sup> + e<sup>−jθ</sup>) + (e<sup>jψ</sup> + e<sup>−jψ</sup>)] = ¼[2cos θ + 2cos ψ] = ½(cos θ + cos ψ).', None),
         ('Decide the type', 'H(0, 0) = 1: the average passes unchanged. Moving away from DC, H falls (to 0 at θ = ψ = π/2 and −1 at the highest frequency). Low frequencies pass, high are weakened → <b>lowpass</b>.',
-         gsvg([[fmt(round(v, 3)) for v in r] for r in Hv], {(0, 0): 'c1'}, cell=62, idx=True, label='H(u, v) for M = N = 8, u, v = 0 … 4')),
+         gsvg([[fmt(round(v, 3)) for v in r] for r in Hv], {(0, 0): 'c1'}, cell=62, idx=True, label='H(u, v) for M = N = 8, u, v = 0 … 4'),
+         cl(K('SETTINGS', '>Calc Settings', '>Angle Unit', '>Degree'), 'degrees: for M = 8, 2πu/M is 45u°')
+         + cl(K('0.5', '(', 'cos', '0', ')', '+', 'cos', '0', ')', ')', 'EXE'), 'H(0, 0) = 1: the average passes', lcd('Calculate', '<div>1</div>'))
+         + cl(K('0.5', '(', 'cos', '90', ')', '+', 'cos', '0', ')', ')', 'EXE'), 'H(2, 0) (u = M/4) = 0.5: already halved', lcd('Calculate', '<div>0.5</div>'))
+         + cl(K('0.5', '(', 'cos', '180', ')', '+', 'cos', '180', ')', ')', 'EXE'), 'H(4, 4), the highest frequency = −1: falls with frequency → lowpass', lcd('Calculate', '<div>−1</div>'))),
     ]) + '<div class="ansbig">H(u, v) = ½[cos(2πu/M) + cos(2πv/N)] — a lowpass (smoothing) filter.</div>'))
 
     H.append(set_solution(card('d25q2a'), walk([
@@ -235,7 +284,10 @@ def filt(card, old):
         ('Uncentred H', 'H = 8 − 2cos(2πu/3) − 2cos(2πv/3) − 2cos(2π(u + v)/3) − 2cos(2π(u − v)/3).', None),
         ('Read the taps', 'Constant 8 → centre tap 8. Each −2cos(…) is a symmetric pair of −1 taps: along u → (±1, 0); along v → (0, ±1); u + v → (1, 1) and (−1, −1); u − v → (1, −1) and (−1, 1).',
          rows([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]], {**ALL(3, 3, 'nd'), (1, 1): 'c1'}, 'h')),
-        ('Mean of the output', 'The output mean = H(0, 0) × input mean. H(0, 0) = 8 − 8 = 0 (the kernel sums to 0), so the mean is 0.', None),
+        ('Mean of the output', 'The output mean = H(0, 0) × input mean. H(0, 0) = 8 − 8 = 0 (the kernel sums to 0), so the mean is 0. In the printed (centred) form, DC is at u = v = 3/2, where every cosine has angle 0.', None,
+         cl(K('SETTINGS', '>Calc Settings', '>Angle Unit', '>Degree'), 'degrees: 2π/3 is 120°')
+         + cl(K('8', '−', '2', 'cos', '0', ')', '−', '2', 'cos', '0', ')', '−', '2', 'cos', '0', ')', '−', '2', 'cos', '0', ')', 'EXE'), 'H at DC: all four angles are 0 → 8 − 8', lcd('Calculate', '<div>0</div>'))
+         + cl(K('8', '−', '2', 'cos', '0', ')', '−', '2', 'cos', '120', ')', '−', '2', 'cos', '120', ')', '−', '2', 'cos', 'SHIFT', '−', '120', ')', 'EXE'), 'optional check one step from DC (u = 3/2, v = 5/2): 9 — the same value the DFT of the kernel h gives at (0, 1), so h is right', lcd('Calculate', '<div>9</div>'))),
     ]) + '<div class="ansbig">h = [−1 −1 −1; −1 8 −1; −1 −1 −1]; output mean = 0.</div>'))
 
     H.append(set_solution(card('c23q1'), walk([

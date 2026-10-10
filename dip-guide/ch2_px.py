@@ -150,6 +150,19 @@ def section(card):
     st = [[''] * 5 for _ in range(4)]
     for cid in ['tb2-19', 'tb2-20', 'dr-dist']:
         c = card(cid)
+        if cid == 'dr-dist':
+            g = [[''] * 6 for _ in range(7)]
+            n4 = {(2, 1): 'p', **{z: 'n4' for z in [(1, 1), (3, 1), (2, 0), (2, 2)]}}
+            n8 = {(2, 1): 'p', **{(i, j): 'n8' for i in range(1, 4) for j in range(0, 3) if (i, j) != (2, 1)}}
+            c = set_solution(c, walk([
+                ('Coordinate differences', 'Only the coordinates matter, not the grey values. Δx = 6 − 2 = <b>4</b> rows, Δy = 4 − 1 = <b>3</b> columns.', gsvg(g, {(2, 1): 'p', (6, 4): 'q'}, path=[(2, 1), (3, 2), (4, 3), (5, 4), (6, 4)], label='p = (2, 1) to q = (6, 4): a king’s walk of 4 moves'), None),
+                ('Euclidean distance', 'D<sub>e</sub> = √(4² + 3²) = √25 = <b>5</b>.', None,
+                 cl(K('CATALOG', '>Angle/Coord/Sexa', '>Rect to Polar'), 'puts Pol( on the screen: it turns (Δx, Δy) into a length and an angle')
+                 + cl(K('4', 'SHIFT', ')', '3', ')', 'EXE'), 'Pol(4, 3) (SHIFT ) is the comma): r = 5 is D<sub>e</sub>; θ = 36.86989765 is only the direction, ignore it')
+                 + cl(K('√(', '4', 'x²', '+', '3', 'x²', ')', 'EXE'), 'the same without the menu: screen shows 5')),
+                ('City-block and chessboard', 'D<sub>4</sub> = 4 + 3 = <b>7</b>; D<sub>8</sub> = max(4, 3) = <b>4</b>. Check the order: D<sub>8</sub> = 4 ≤ D<sub>e</sub> = 5 ≤ D<sub>4</sub> = 7 ✓.', None, None),
+                ('Pixels within distance 1 of p', 'D<sub>4</sub> ≤ 1: p and its 4 side-neighbours (a diamond, 5 pixels). D<sub>8</sub> ≤ 1: p and all 8 neighbours (a 3×3 square, 9 pixels).', figs(gsvg(g, n4, cell=34, label='D₄ ≤ 1'), gsvg(g, n8, cell=34, label='D₈ ≤ 1')), None),
+            ]) + '<div class="ansbig">D<sub>e</sub> = 5, D<sub>4</sub> = 7, D<sub>8</sub> = 4. D<sub>4</sub> ≤ 1: p and its 4-neighbours (diamond); D<sub>8</sub> ≤ 1: p and its 8-neighbours (3×3 square).</div>')
         if cid == 'tb2-19':
             c = set_solution(c, walk([
                 ('Why D₄ is a lower limit', 'Every side step changes either the row or the column by 1. To get from p to q you need |Δx| row-steps and |Δy| column-steps, so every 4-path has at least D<sub>4</sub> = |Δx| + |Δy| steps.', None),

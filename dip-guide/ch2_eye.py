@@ -112,7 +112,7 @@ def section(card, old):
         '<p>The same triangle answers the camera questions (textbook 2.6, 2.8) with the camera’s focal length in place of 17 mm, and the smallest-visible-dot question (2.2).</p>'
         '</div><div>' + triangles() + '</div></div>',
         use='slide example, textbook 2.2, 2.6, 2.8. Keep both distances in the same units.', tag='4'))
-    for cid in ['ex-tree', 'tb2-2']: H.append(card(cid))
+    for cid in ['ex-tree', 'tb2-2']: H.append(woven(cid, card(cid)))
 
     H.append(lesson('Brightness is not what the eye reports',
         'The eye does not measure light like a meter. It adapts to the average light level, and the brightness we perceive depends on the surroundings. Four effects from your slides:',
@@ -134,7 +134,7 @@ def section(card, old):
         '<div><p><b>Light words:</b> <b>radiance</b> = energy leaving the source; <b>luminance</b> = how much of it an observer perceives; <b>brightness</b> = the subjective impression. Light with no colour is <b>monochromatic</b>; its only property is intensity, measured in grey levels from black to white.</p>'
         '<p><b>Colour models:</b> <b>RGB</b> adds coloured light to black (screens); <b>CMYK</b> starts from white paper and adds inks that absorb light (printing); <b>HSV/HSI</b> describes colour as hue (which colour), saturation (how strong) and value/intensity (how bright) — handy for processing.</p></div></div>',
         tag='6'))
-    H.append(card('tb2-3'))
+    H.append(woven('tb2-3', card('tb2-3')))
 
     H.append(lesson('How a camera captures an image',
         'An image needs a source of energy, a scene that reflects or lets it through, and a sensor that turns the arriving energy into a voltage. Then sampling and quantisation (Section 2.4) turn the voltage into numbers.',
@@ -149,7 +149,7 @@ def section(card, old):
         '<div class="cols"><div><div class="formula">\\(f(x,y)=i(x,y)\\cdot r(x,y)\\), with \\(0<i<\\infty\\), \\(0<r<1\\)<span class="say">what the camera records = light falling on the point × the fraction the point reflects.</span></div></div>'
         '<div><p><b>Example.</b> A white wall (r = 0.80) on a sunny day (i = 90,000 lx) gives f = 72,000; the same wall under a full moon (i = 0.1 lx) gives f = 0.08. Black velvet (r = 0.01) in the sun gives 900. This huge range is why cameras (and eyes) must adapt.</p></div></div>',
         use='theory (“how is a 2-D image acquired with a single sensor / strip / array?”, “what is demosaicing?”), and textbook 2.4, 2.6, 2.8 below.', tag='7'))
-    for cid in ['tb2-4', 'tb2-6', 'tb2-8']: H.append(card(cid))
+    for cid in ['tb2-4', 'tb2-6', 'tb2-8']: H.append(woven(cid, card(cid)))
 
     H.append(h3('Quick recall (cover the right column)'))
     H.append(table(['Prompt', 'Answer'], [
@@ -159,3 +159,62 @@ def section(card, old):
         ['CMOS vs CCD', 'CMOS: faster readout, lower power'], ['f(x, y) =', 'illumination × reflectance, 0 < r < 1'], ['Demosaicing', 'rebuilding full RGB from the Bayer-filtered data']]))
     H.append('</section>')
     return '\n'.join(H)
+
+
+# ── solutions with the fx-991CW steps woven in (numbers checked with Python) ──
+WOVEN = {
+    'ex-tree': ([
+        ('Set up similar triangles',
+         'Light from the top of the tree passes straight through the lens centre. The retina is 17 mm behind the lens, so the small triangle inside the eye has the same shape as the big one outside: 15/100 = h/17.',
+         None, None),
+        ('Solve for h',
+         'h = 17 × 15 ÷ 100 = <b>2.55 mm</b> (the slide rounds it to 2.5 mm).',
+         None,
+         cl(K('17', '×', '15', '÷', '100', 'EXE'), '15 ÷ 100 is the angle-ratio of the tree; times 17 mm gives the image height. Screen shows 2.55 (mm)')),
+    ], 'h = 17 × 15/100 = 2.55 mm (slide: ≈ 2.5 mm).'),
+    'tb2-2': ([
+        ('How many cones along one side?',
+         '337,000 cones fill a square, so one side holds √337000 = <b>580.5</b> cones.',
+         None,
+         cl(K('√(', '337000', ')', 'EXE'), 'cones along one side of the fovea square; screen shows 580.5170109')),
+        ('Width of one cone',
+         'Cones and the gaps between them are equally wide: 580.5 cones + 579.5 gaps ≈ 2 × 580.5 − 1 = <b>1160</b> equal pieces in 1.5 mm. One piece = 1.5 ÷ 1160 = 0.001293 mm = <b>1.29 µm</b>.',
+         None,
+         cl(K('2', '×', 'Ans', '−', '1', 'EXE'), 'number of equal pieces (cones + gaps) along one side: 1160.034022')
+         + cl(K('1.5', '÷', 'Ans', 'EXE'), 'width of one cone in mm: 1.293065524×10<sup>−3</sup> (= 1.29 µm)')),
+        ('Smallest dot on the page',
+         'The dot is visible only if its image is at least one cone wide. Same triangles as the palm tree, all in mm (0.2 m = 200 mm): x/200 = 0.001293/17 → x = <b>0.0152 mm</b> (about 15 µm).',
+         None,
+         cl(K('Ans', '×', '200', '÷', '17', 'EXE'), 'scales the cone width up from the retina (17 mm away) to the page (200 mm away); screen shows 0.01521253557 → 0.0152 mm')),
+    ], 'Cone width ≈ 1.5 mm ÷ 1160 ≈ 1.29 µm → smallest dot ≈ 200 × 0.001293 ÷ 17 ≈ 0.0152 mm (≈ 15 µm).'),
+    'tb2-3': ([
+        ('Wavelength = speed ÷ frequency',
+         'Every EM wave obeys speed = wavelength × frequency, so λ = c/ν = 2.998 × 10<sup>8</sup> ÷ 60 = <b>4.997 × 10<sup>6</sup> m</b>.',
+         None,
+         cl(K('2.998', '×10ˣ', '8', '÷', '60', 'EXE'), 'speed of light ÷ 60 Hz = wavelength in metres; screen shows 4996666.667')),
+        ('Convert to km',
+         'Divide by 1000: <b>≈ 4997 km</b> (about 5000 km).',
+         None,
+         cl(K('Ans', '÷', '1000', 'EXE'), 'metres → kilometres; screen shows 4996.666667')),
+    ], 'λ = 2.998×10⁸/60 ≈ 5.0×10⁶ m ≈ 4997 km (≈ 5000 km).'),
+    'tb2-6': ([
+        ('How big is the scene the chip sees?',
+         'Similar triangles with the 35 mm lens in place of the eye’s 17 mm: x/500 = 7/35 → x = <b>100 mm</b>.',
+         None,
+         cl(K('7', '×', '500', '÷', '35', 'EXE'), 'chip size × distance ÷ focal length = width of the scene in mm; screen shows 100')),
+        ('Elements per mm of scene',
+         '1024 elements spread over 100 mm → <b>10.24 elements per mm</b>.',
+         None,
+         cl(K('1024', '÷', 'Ans', 'EXE'), 'sensor elements per mm of the scene; screen shows 10.24')),
+        ('Line pairs per mm',
+         'One line pair = one dark + one light line = 2 elements → 10.24 ÷ 2 = <b>5.12 lp/mm</b>.',
+         None,
+         cl(K('Ans', '÷', '2', 'EXE'), 'two elements per line pair; screen shows 5.12')),
+    ], '≈ 5.12 line pairs per mm (≈ 5 lp/mm).'),
+}
+
+
+def woven(cid, c):
+    if cid not in WOVEN: return c
+    steps, ans = WOVEN[cid]
+    return set_solution(c, walk(steps) + f'<div class="ansbig">{ans}</div>')
