@@ -10,7 +10,7 @@
 :root{
   --bg:#F3F4F7; --surface:#FFFFFF; --panel:#F8F9FB; --line:#E1E5EC; --ink:#141A26; --muted:#5C6678; --faint:#8D96A6;
   --accent:#B06A12; --accent-wash:#FBF1E2; --good:#1C8A57; --good-wash:#E5F5EC; --bad:#C2413F; --bad-wash:#FBE9E8;
-  --info:#2F62D0; --info-wash:#E9F0FD; --shadow:0 1px 2px rgba(20,26,38,.06),0 12px 32px -16px rgba(20,26,38,.18);
+  --info:#2F62D0; --info-wash:#E9F0FD; --weak:#D9A21B; --okay:#8FD3AE; --shadow:0 1px 2px rgba(20,26,38,.06),0 12px 32px -16px rgba(20,26,38,.18);
   --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",system-ui,Roboto,sans-serif;
   --display:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
@@ -19,12 +19,12 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0E121B; --surface:#151B27; --panel:#121823; --line:#242D3D; --ink:#E8ECF3; --muted:#95A0B4; --faint:#677388;
   --accent:#F0B35A; --accent-wash:#2A2112; --good:#4CC38A; --good-wash:#11271D; --bad:#F06B68; --bad-wash:#2C1617;
-  --info:#7EA6FF; --info-wash:#152038; --shadow:0 1px 2px rgba(0,0,0,.35),0 16px 40px -18px rgba(0,0,0,.7); color-scheme:dark;
+  --info:#7EA6FF; --info-wash:#152038; --weak:#E3B341; --okay:#2E7D57; --shadow:0 1px 2px rgba(0,0,0,.35),0 16px 40px -18px rgba(0,0,0,.7); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
   --bg:#0E121B; --surface:#151B27; --panel:#121823; --line:#242D3D; --ink:#E8ECF3; --muted:#95A0B4; --faint:#677388;
   --accent:#F0B35A; --accent-wash:#2A2112; --good:#4CC38A; --good-wash:#11271D; --bad:#F06B68; --bad-wash:#2C1617;
-  --info:#7EA6FF; --info-wash:#152038; --shadow:0 1px 2px rgba(0,0,0,.35),0 16px 40px -18px rgba(0,0,0,.7); color-scheme:dark;
+  --info:#7EA6FF; --info-wash:#152038; --weak:#E3B341; --okay:#2E7D57; --shadow:0 1px 2px rgba(0,0,0,.35),0 16px 40px -18px rgba(0,0,0,.7); color-scheme:dark;
 }
 
 *{box-sizing:border-box}
@@ -44,7 +44,7 @@ mjx-container[display="true"]{margin:.25em 0!important}
 .app.rail-off .side.l{opacity:0;margin-right:0;pointer-events:none;overflow:hidden;visibility:hidden;transition:opacity .15s,margin .32s cubic-bezier(.3,.7,.2,1),visibility 0s .32s}
 .side{display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto}
 .main{min-width:0;min-height:0;display:flex;flex-direction:column}
-@media (max-width:1180px){.app,.app.rail-off{height:auto;grid-template-columns:minmax(0,1fr);padding:14px 0 28px}.side{overflow:visible}.side.l,.side.r{margin:0}.app.rail-off .side.l{opacity:1;visibility:visible;pointer-events:auto}.side.l{order:2}.side.r{order:3}.main{order:1}.tracker,#railoff{display:none!important}}
+@media (max-width:1180px){.cardtop{flex-wrap:wrap}.app,.app.rail-off{height:auto;grid-template-columns:minmax(0,1fr);padding:14px 0 28px}.side{overflow:visible}.side.l,.side.r{margin:0}.app.rail-off .side.l{opacity:1;visibility:visible;pointer-events:auto}.side.l{order:2}.side.r{order:3}.main{order:1}.tracker,#railoff{display:none!important}}
 
 .brand{display:flex;align-items:center;gap:10px;font:800 16px/1 var(--display);letter-spacing:-.01em;justify-content:space-between}
 .brand>span{display:flex;align-items:center;gap:10px}
@@ -83,7 +83,7 @@ mjx-container[display="true"]{margin:.25em 0!important}
 .confirm{display:flex;gap:8px;align-items:center;font-size:13px}
 
 /* ---- card ---- */
-.card{flex:1;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:20px 28px 16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.card{flex:1;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:20px 28px 16px;display:flex;flex-direction:column;gap:9px;overflow-y:auto}
 .card.enter{animation:in .2s cubic-bezier(.2,.8,.2,1)}
 @keyframes in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.card.enter{animation:none}.ring,.topic .bar i{transition:none}}
@@ -113,7 +113,7 @@ mjx-container[display="true"]{margin:.25em 0!important}
 .opt.wrong{border-color:var(--bad);background:var(--bad-wash)} .opt.wrong .k{background:var(--bad);color:var(--surface);border-color:var(--bad)}
 .opt.dim{opacity:.8}
 
-.fb{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:12px;flex:none}
+.fb{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:11px;flex:none}
 .fb-head h3,.fb-head .concept{flex:none}
 .fb-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
 .fb-head h3{margin:0;font:800 18px/1.2 var(--display)}
@@ -345,7 +345,29 @@ details.wsd>div{padding:4px 14px 14px}
 .tracker .mode{padding:4px 4px;font-size:12px}
 .tracker .ibtn{width:30px;height:30px}
 @media (max-width:1560px){.tk-brand span,.tk-stat.acc{display:none}}
-@media (max-width:1380px){.tk-topics,.tracker .seg{display:none}}
+@media (max-width:1380px){.tracker .seg{display:none}}
+
+/* ---- card heat map (GitHub-style): one square per card ---- */
+.heat{display:flex;gap:5px;align-items:flex-start;min-width:0}
+.heat .hg{display:grid;grid-auto-flow:column;grid-template-rows:repeat(var(--rows),var(--cs));grid-auto-columns:var(--cs);gap:var(--cg)}
+.heat i{display:block;border-radius:2px;background:var(--line);cursor:pointer;transition:background .3s,transform .1s}
+.heat i:hover{transform:scale(1.35);outline:1px solid var(--ink);outline-offset:0}
+.heat i.miss{background:var(--bad)} .heat i.weak{background:var(--weak)} .heat i.okay{background:var(--okay)} .heat i.safe{background:var(--good)}
+.heat i.cur{outline:1.5px solid var(--accent);outline-offset:1px}
+.heat.big{--rows:10;--cs:7px;--cg:2px;gap:4px;justify-content:space-between}
+.box .hleg{font-size:10.5px;gap:2px 8px}
+.hleg{display:flex;flex-wrap:wrap;gap:3px 10px;font-size:11px;color:var(--muted)}
+.hleg span{display:inline-flex;align-items:center;gap:4px}
+.hleg em{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--line)}
+.hleg em.miss{background:var(--bad)} .hleg em.weak{background:var(--weak)} .hleg em.okay{background:var(--okay)} .hleg em.safe{background:var(--good)}
+.tk-heat{display:grid;gap:4px;flex:none}
+.cardtop{display:flex;align-items:flex-start;gap:8px 16px;flex:none;min-width:0}
+.cardtop .chips{flex:1 1 auto;min-width:0}
+.cardtop .tk-heat{display:grid;grid-template-columns:auto auto;gap:6px;align-items:center}
+.cardtop .hleg{display:grid;grid-template-columns:auto auto;gap:0 8px;font-size:9.5px;line-height:10px}
+.cardtop .hleg em{width:7px;height:7px}
+.heat.mini{--rows:4;--cs:6px;--cg:2px;gap:4px}
+.tk-heat .hleg{font-size:10.5px;gap:2px 8px}
 </style>
 </head>
 <body>
@@ -391,12 +413,11 @@ details.wsd>div{padding:4px 14px 14px}
         <div class="tk-leg"><span><em style="background:var(--good)"></em><b id="tk-safe">0</b> safe</span><span><em style="background:var(--bad)"></em><b id="tk-learn">0</b> relearning</span><span><em style="background:var(--accent)"></em><b id="tk-seen">0</b> / <b id="tk-total">0</b> seen</span></div>
       </div>
       <div class="tk-stat acc"><small>Accuracy</small><b id="tk-acc">–</b></div>
-      <button class="tk-topics" id="tk-topics" title="Topic readiness · click to open the panel and focus a topic" aria-label="Topic readiness"></button>
       <div class="seg"><button class="mode" data-mode="smart">Smart</button><button class="mode" data-mode="final">Final</button><button class="mode" data-mode="confusions">Mix-ups</button></div>
       <button class="ibtn" id="gear2" title="Settings, exam time, how it works" aria-label="Settings">⚙</button>
     </header>
     <article class="card" id="card" aria-live="polite">
-      <div class="chips"><span class="chip" id="chip-why"></span><span class="chip" id="chip-topic"></span><span class="chip" id="chip-w"></span><span class="chip" id="chip-hist"></span></div>
+      <div class="cardtop"><div class="chips"><span class="chip" id="chip-why"></span><span class="chip" id="chip-topic"></span><span class="chip" id="chip-w"></span><span class="chip" id="chip-hist"></span></div><div class="tk-heat" title="Every card, grouped by topic. Tap a square to drill that card."><div class="heat mini" id="heat-top" aria-label="Every card: grey not seen, red missed, yellow weak, light green okay, green safe"></div><div class="hleg"><span><em></em>not seen</span><span><em class="miss"></em>missed</span><span><em class="weak"></em>weak</span><span><em class="okay"></em>okay</span><span><em class="safe"></em>safe</span></div></div></div>
       <div class="q" id="q">Loading…</div>
       <div class="opts" id="opts"></div>
       <section class="fb" id="fb" hidden>
@@ -3460,6 +3481,31 @@ function renderTop() {
   var bi = $("#tk-bar").children, T = c.total || 1, other = Math.max(0, c.seen - c.safe - c.learning);
   bi[0].style.width = (100 * c.safe / T) + "%"; bi[1].style.width = (100 * c.learning / T) + "%"; bi[2].style.width = (100 * other / T) + "%";
   $("#tk-acc").textContent = a == null ? "–" : pct(a);
+  renderHeat();
+}
+/* GitHub-style map: one square per card, grouped by topic */
+var HEATW = { miss: "missed · relearning", weak: "weak", okay: "okay", safe: "safe for the exam", none: "not seen yet" };
+function heatState(id) {
+  var c = X.state.cards[id]; if (!c || !c.reps) return "none";
+  if (c.step >= 0) return "miss";
+  var r = X.rExam(c); return r >= 0.95 ? "safe" : r >= 0.8 ? "okay" : "weak";
+}
+function renderHeat() {
+  ["#heat-top"].forEach(function (sel) {
+    var box = $(sel); if (!box) return; box.innerHTML = "";
+    Object.keys(X.TOPICS).forEach(function (k) {
+      var g = el("div", "hg"); g.title = X.TOPICS[k];
+      CARDS.forEach(function (cd) {
+        if (cd.t !== k) return;
+        var st = heatState(cd.id), c = X.state.cards[cd.id];
+        var i = el("i", (st === "none" ? "" : st) + (cur && cur.id === cd.id ? " cur" : ""));
+        i.dataset.id = cd.id;
+        i.title = cd.n + " · " + X.TOPICS[k] + " · " + HEATW[st] + (c && c.reps ? " · " + pct(X.rExam(c)) + " at exam" : "");
+        g.appendChild(i);
+      });
+      box.appendChild(g);
+    });
+  });
 }
 function setRail(off, save) {
   $(".app").classList.toggle("rail-off", off); $("#tracker").hidden = !off;
@@ -3497,10 +3543,6 @@ function renderSide() {
   var tc = X.topConfusions(5);
   if (!tc.length) cf.appendChild(el("p", "empty", "Pick another concept's formula and the pair is logged here, then drilled side by side."));
   tc.forEach(function (p) { cf.appendChild(el("div", "cp", '<span>' + X.BY[p.a].n + '</span><b>⇄</b><span>' + X.BY[p.b].n + '</span><em>×' + p.n + '</em>')); });
-  var tt = $("#tk-topics"); tt.innerHTML = "";
-  Object.keys(X.TOPICS).forEach(function (k) {
-    var r = X.readiness(k), i = el("i", X.state.topics[k] ? "on" : ""); i.style.setProperty("--h", (r * 100).toFixed(1) + "%"); i.title = X.TOPICS[k] + " · " + pct(r); tt.appendChild(i);
-  });
   document.querySelectorAll(".mode").forEach(function (m) { m.classList.toggle("on", m.dataset.mode === X.state.mode); m.setAttribute("aria-pressed", m.dataset.mode === X.state.mode ? "true" : "false"); });
   $("#mdesc").textContent = MDESC[X.state.mode] || "";
   renderPlan();
@@ -3653,7 +3695,13 @@ function initControls() {
   var dlg = $("#dlg");
   $("#gear").onclick = $("#gear2").onclick = function () { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); };
   $("#railoff").onclick = function () { setRail(true, true); };
-  $("#railon").onclick = $("#tk-topics").onclick = function () { setRail(false, true); };
+  $("#railon").onclick = function () { setRail(false, true); };
+  ["#heat-top"].forEach(function (sel) {
+    $(sel).addEventListener("click", function (e) {
+      var id = e.target && e.target.dataset && e.target.dataset.id; if (!id || !X.BY[id]) return;
+      var c = X.state.cards[id]; show(X.BY[id], c && c.reps ? "at-risk" : "new"); renderHeat();
+    });
+  });
   var rs = null; try { rs = localStorage.getItem("comsys-drill-rail"); } catch (e) {}
   setRail(rs === "off", false);
   $("#primerd").addEventListener("toggle", function () {
