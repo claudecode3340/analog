@@ -37,10 +37,14 @@ mjx-container{color:inherit}
 mjx-container[display="true"]{margin:.25em 0!important}
 
 /* one screen: rails left and right, card in the middle, nothing scrolls the page on a desktop */
-.app{max-width:1760px;margin:0 auto;height:100vh;display:grid;grid-template-columns:256px minmax(0,1fr) 340px;gap:22px;padding:14px 0}
-.side{display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;scrollbar-width:thin}
+.app{max-width:1760px;margin:0 auto;height:100vh;display:grid;grid-template-columns:256px minmax(0,1fr) 340px;column-gap:0;row-gap:22px;padding:14px 0;transition:grid-template-columns .32s cubic-bezier(.3,.7,.2,1)}
+.side.l{margin-right:22px;transition:opacity .2s,margin .32s cubic-bezier(.3,.7,.2,1)}
+.side.r{margin-left:22px}
+.app.rail-off{grid-template-columns:0px minmax(0,1fr) 340px}
+.app.rail-off .side.l{opacity:0;margin-right:0;pointer-events:none;overflow:hidden;visibility:hidden;transition:opacity .15s,margin .32s cubic-bezier(.3,.7,.2,1),visibility 0s .32s}
+.side{display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto}
 .main{min-width:0;min-height:0;display:flex;flex-direction:column}
-@media (max-width:1180px){.app{height:auto;grid-template-columns:minmax(0,1fr);padding:14px 0 28px}.side{overflow:visible}.side.l{order:2}.side.r{order:3}.main{order:1}}
+@media (max-width:1180px){.app,.app.rail-off{height:auto;grid-template-columns:minmax(0,1fr);padding:14px 0 28px}.side{overflow:visible}.side.l,.side.r{margin:0}.app.rail-off .side.l{opacity:1;visibility:visible;pointer-events:auto}.side.l{order:2}.side.r{order:3}.main{order:1}.tracker,#railoff{display:none!important}}
 
 .brand{display:flex;align-items:center;gap:10px;font:800 16px/1 var(--display);letter-spacing:-.01em;justify-content:space-between}
 .brand>span{display:flex;align-items:center;gap:10px}
@@ -79,7 +83,7 @@ mjx-container[display="true"]{margin:.25em 0!important}
 .confirm{display:flex;gap:8px;align-items:center;font-size:13px}
 
 /* ---- card ---- */
-.card{flex:1;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:20px 28px 16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;scrollbar-width:thin}
+.card{flex:1;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:20px 28px 16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
 .card.enter{animation:in .2s cubic-bezier(.2,.8,.2,1)}
 @keyframes in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.card.enter{animation:none}.ring,.topic .bar i{transition:none}}
@@ -293,13 +297,62 @@ details.wsd>div{padding:4px 14px 14px}
 @media (max-width:720px){.symkey .skr{grid-template-columns:minmax(0,1fr)}}
 .src.sk .skb{padding:4px 14px 14px}
 .src.sk .symkey{max-width:none}
+
+/* ---- scrollbars: thin, rounded, themed; rails show theirs on hover ---- */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
+::-webkit-scrollbar-button{display:none;width:0;height:0}
+::-webkit-scrollbar-thumb{background-color:color-mix(in srgb,var(--faint) 38%,transparent);border-radius:99px;border:3px solid transparent;background-clip:padding-box;min-height:40px}
+::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--faint) 70%,transparent)}
+.side::-webkit-scrollbar-thumb{background-color:transparent}
+.side:hover::-webkit-scrollbar-thumb{background-color:color-mix(in srgb,var(--faint) 38%,transparent)}
+.card::-webkit-scrollbar{width:12px}
+.card::-webkit-scrollbar-thumb{border-width:4px}
+@supports (-moz-appearance:none){*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--faint) 45%,transparent) transparent}}
+/* ---- rail toggle + top tracker ---- */
+.brand .bacts{display:flex;gap:6px}
+.main{gap:10px}
+.app.rail-off{padding-top:10px}
+.app.rail-off .card{padding-top:15px;padding-bottom:12px}
+.tracker{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:5px 10px 5px 6px;box-shadow:var(--shadow);flex:none;min-width:0;animation:trk .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes trk{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tracker{animation:none}.app,.side.l{transition:none}}
+.tracker .tk-open{width:30px;height:30px;border-radius:10px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;color:var(--muted);font-size:15px;flex:none}
+.tracker .tk-open:hover{color:var(--ink);border-color:var(--faint)}
+.tk-brand{display:flex;align-items:center;gap:8px;font:800 14px/1 var(--display);white-space:nowrap;flex:none}
+.tk-brand i{width:22px;height:22px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:var(--surface);font-style:normal;font-size:12px}
+.tk-sep{width:1px;align-self:stretch;background:var(--line);flex:none}
+.tk-ring{--p:0;width:32px;height:32px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*360deg),var(--line) 0);display:grid;place-items:center;flex:none;transition:background .4s}
+.tk-ring b{width:25px;height:25px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font:800 10.5px/1 var(--display);font-variant-numeric:tabular-nums}
+.tk-ready{display:flex;align-items:center;gap:9px;flex:none}
+.tk-ready small{display:block;font:600 9.5px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.tk-ready span{font:700 13px/1.25 var(--sans)}
+.tk-prog{flex:1 1 220px;min-width:150px;display:grid;gap:5px}
+.tk-bar{display:flex;height:7px;border-radius:99px;overflow:hidden;background:var(--line)}
+.tk-bar i{display:block;height:100%;transition:width .4s}
+.tk-bar .s{background:var(--good)} .tk-bar .l{background:var(--bad)} .tk-bar .o{background:color-mix(in srgb,var(--accent) 70%,transparent)}
+.tk-leg{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:12px;color:var(--muted);white-space:nowrap}
+.tk-leg b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700}
+.tk-leg em{font-style:normal;display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px;vertical-align:1px}
+.tk-stat{display:grid;gap:3px;flex:none;text-align:right}
+.tk-stat small{font:600 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.tk-stat b{font:800 16px/1 var(--display);font-variant-numeric:tabular-nums}
+.tk-topics{display:flex;align-items:flex-end;gap:3px;height:26px;flex:none;cursor:pointer;padding:0 2px;border:0;background:transparent}
+.tk-topics i{display:block;width:7px;border-radius:2px;background:var(--line);position:relative;height:100%;overflow:hidden}
+.tk-topics i::after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--h);background:var(--accent);border-radius:2px;transition:height .4s}
+.tk-topics i.on{outline:1.5px solid var(--accent);outline-offset:1px}
+.tracker .seg{flex:none;width:200px}
+.tracker .mode{padding:4px 4px;font-size:12px}
+.tracker .ibtn{width:30px;height:30px}
+@media (max-width:1560px){.tk-brand span,.tk-stat.acc{display:none}}
+@media (max-width:1380px){.tk-topics,.tracker .seg{display:none}}
 </style>
 </head>
 <body>
 <div class="app">
 
   <aside class="side l">
-    <div class="brand"><span><i>∿</i>COMSYS Formula Drill</span><button class="ibtn" id="gear" title="Settings, exam time, how it works" aria-label="Settings">⚙</button></div>
+    <div class="brand"><span><i>∿</i>COMSYS Drill</span><span class="bacts"><button class="ibtn" id="railoff" title="Hide this panel ( [ )" aria-label="Hide side panel">«</button><button class="ibtn" id="gear" title="Settings, exam time, how it works" aria-label="Settings">⚙</button></span></div>
     <section class="box">
       <div class="ready">
         <div class="ring" id="ring"><div><span><b id="ringv">0%</b><small>at exam</small></span></div></div>
@@ -328,6 +381,20 @@ details.wsd>div{padding:4px 14px 14px}
   </aside>
 
   <main class="main">
+    <header class="tracker" id="tracker" hidden>
+      <button class="tk-open" id="railon" title="Show the side panel ( [ )" aria-label="Show side panel">»</button>
+      <div class="tk-brand"><i>∿</i><span>COMSYS Drill</span></div>
+      <span class="tk-sep"></span>
+      <div class="tk-ready" title="Predicted recall at exam time"><div class="tk-ring" id="tk-ring"><b id="tk-ringv">0%</b></div><div><small>at exam</small><span id="tk-left">–</span></div></div>
+      <div class="tk-prog">
+        <div class="tk-bar" id="tk-bar"><i class="s"></i><i class="l"></i><i class="o"></i></div>
+        <div class="tk-leg"><span><em style="background:var(--good)"></em><b id="tk-safe">0</b> safe</span><span><em style="background:var(--bad)"></em><b id="tk-learn">0</b> relearning</span><span><em style="background:var(--accent)"></em><b id="tk-seen">0</b> / <b id="tk-total">0</b> seen</span></div>
+      </div>
+      <div class="tk-stat acc"><small>Accuracy</small><b id="tk-acc">–</b></div>
+      <button class="tk-topics" id="tk-topics" title="Topic readiness · click to open the panel and focus a topic" aria-label="Topic readiness"></button>
+      <div class="seg"><button class="mode" data-mode="smart">Smart</button><button class="mode" data-mode="final">Final</button><button class="mode" data-mode="confusions">Mix-ups</button></div>
+      <button class="ibtn" id="gear2" title="Settings, exam time, how it works" aria-label="Settings">⚙</button>
+    </header>
     <article class="card" id="card" aria-live="polite">
       <div class="chips"><span class="chip" id="chip-why"></span><span class="chip" id="chip-topic"></span><span class="chip" id="chip-w"></span><span class="chip" id="chip-hist"></span></div>
       <div class="q" id="q">Loading…</div>
@@ -392,7 +459,7 @@ details.wsd>div{padding:4px 14px 14px}
     </div>
     <div>
       <div class="lab" style="margin-bottom:8px">Keys</div>
-      <p class="hint" style="margin:0 0 14px"><span class="keys"><kbd>1</kbd>–<kbd>6</kbd> pick · <kbd>Enter</kbd> next · <kbd>G</kbd> I guessed · <kbd>S</kbd> open the exam question</span></p>
+      <p class="hint" style="margin:0 0 14px"><span class="keys"><kbd>1</kbd>–<kbd>6</kbd> pick · <kbd>Enter</kbd> next · <kbd>G</kbd> I guessed · <kbd>S</kbd> open the exam question · <kbd>[</kbd> hide / show the side panel</span></p>
       <div class="lab" style="margin-bottom:8px">How the scheduler works, and the research behind it</div>
       <ul class="how">
         <li><b>Memory model:</b> FSRS-6 (your revision algorithm) estimates each formula's stability and difficulty, and predicts your recall <i>at exam time</i>. The target is 95%.</li>
@@ -3386,6 +3453,17 @@ function renderTop() {
   $("#cnt-safe").textContent = c.safe; $("#cnt-learn").textContent = c.learning; $("#cnt-seen").textContent = c.seen + " / " + c.total;
   var acc = X.state.hist.slice(-20); var a = acc.length ? acc.filter(function (x) { return x.ok; }).length / acc.length : null;
   $("#acc").textContent = a == null ? "–" : pct(a);
+  // top tracker (shown when the side panel is hidden)
+  $("#tk-ring").style.setProperty("--p", r.toFixed(3)); $("#tk-ringv").textContent = pct(r);
+  $("#tk-left").textContent = fmtLeft() + " left";
+  $("#tk-safe").textContent = c.safe; $("#tk-learn").textContent = c.learning; $("#tk-seen").textContent = c.seen; $("#tk-total").textContent = c.total;
+  var bi = $("#tk-bar").children, T = c.total || 1, other = Math.max(0, c.seen - c.safe - c.learning);
+  bi[0].style.width = (100 * c.safe / T) + "%"; bi[1].style.width = (100 * c.learning / T) + "%"; bi[2].style.width = (100 * other / T) + "%";
+  $("#tk-acc").textContent = a == null ? "–" : pct(a);
+}
+function setRail(off, save) {
+  $(".app").classList.toggle("rail-off", off); $("#tracker").hidden = !off;
+  if (save) try { localStorage.setItem("comsys-drill-rail", off ? "off" : "on"); } catch (e) {}
 }
 function renderPlan() {
   var ul = $("#plan"); ul.innerHTML = "";
@@ -3419,6 +3497,10 @@ function renderSide() {
   var tc = X.topConfusions(5);
   if (!tc.length) cf.appendChild(el("p", "empty", "Pick another concept's formula and the pair is logged here, then drilled side by side."));
   tc.forEach(function (p) { cf.appendChild(el("div", "cp", '<span>' + X.BY[p.a].n + '</span><b>⇄</b><span>' + X.BY[p.b].n + '</span><em>×' + p.n + '</em>')); });
+  var tt = $("#tk-topics"); tt.innerHTML = "";
+  Object.keys(X.TOPICS).forEach(function (k) {
+    var r = X.readiness(k), i = el("i", X.state.topics[k] ? "on" : ""); i.style.setProperty("--h", (r * 100).toFixed(1) + "%"); i.title = X.TOPICS[k] + " · " + pct(r); tt.appendChild(i);
+  });
   document.querySelectorAll(".mode").forEach(function (m) { m.classList.toggle("on", m.dataset.mode === X.state.mode); m.setAttribute("aria-pressed", m.dataset.mode === X.state.mode ? "true" : "false"); });
   $("#mdesc").textContent = MDESC[X.state.mode] || "";
   renderPlan();
@@ -3569,7 +3651,11 @@ function guessed() {
 function toLocalInput(ms) { var d = new Date(ms); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); }
 function initControls() {
   var dlg = $("#dlg");
-  $("#gear").onclick = function () { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); };
+  $("#gear").onclick = $("#gear2").onclick = function () { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); };
+  $("#railoff").onclick = function () { setRail(true, true); };
+  $("#railon").onclick = $("#tk-topics").onclick = function () { setRail(false, true); };
+  var rs = null; try { rs = localStorage.getItem("comsys-drill-rail"); } catch (e) {}
+  setRail(rs === "off", false);
   $("#primerd").addEventListener("toggle", function () {
     var p = $("#primer");
     if (!this.open || p.dataset.ready || !window.WS) return;
@@ -3605,6 +3691,7 @@ function initControls() {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (!answered && /^[1-6]$/.test(e.key)) { var i = +e.key - 1; if (i < opts.length) { e.preventDefault(); answer(i); } }
     else if (answered && (e.key === "Enter" || e.key === "ArrowRight" || (e.key === " " && !(e.target && e.target.tagName === "SUMMARY")))) { if (e.target && e.target.tagName === "SUMMARY" && e.key === "Enter") return; e.preventDefault(); next(); }
+    else if (e.key === "[") { e.preventDefault(); setRail(!$(".app").classList.contains("rail-off"), true); }
     else if (answered && (e.key === "g" || e.key === "G")) { e.preventDefault(); guessed(); }
     else if (answered && (e.key === "s" || e.key === "S")) { var d = document.querySelector("#srcs details"); if (d) { e.preventDefault(); d.open = !d.open; if (d.open) d.scrollIntoView({ block: "nearest", behavior: "smooth" }); } }
   });
