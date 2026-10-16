@@ -3021,28 +3021,229 @@ FIG.antenna = function (t, p) {
   T("a high carrier makes the antenna practical", 10, H - 14, { s: 11.5, c: col.muted });
 };
 
+
+/* ---------- figure types added so every card has its own picture ---------- */
+FIG.db = function (t, p) {
+  if (p.m === "dbm") {   // a power ladder: W, mW, dBW, dBm
+    var rows = [[1e-6, "1 μW"], [1e-3, "1 mW"], [1, "1 W"], [1e3, "1 kW"]], x0 = 18, top = 30, step = (H - 90) / 3;
+    var k = Math.floor((t / 2.2) % 4);
+    rows.forEach(function (r, i) {
+      var y = top + (3 - i) * step, on = i === k, dbw = 10 * Math.log10(r[0]);
+      if (on) { ctx.save(); ctx.fillStyle = col.accent; ctx.globalAlpha = .12; ctx.fillRect(8, y - 16, W - 16, 26); ctx.restore(); }
+      T(r[1], x0, y, { s: 14, w: 700, c: on ? col.ink : col.muted });
+      T(dbw.toFixed(0) + " dBW", W * .45, y, { s: 13, w: 600, c: on ? col.info : col.faint, a: "center" });
+      T((dbw + 30).toFixed(0) + " dBm", W - 18, y, { s: 13, w: 700, c: on ? col.accent : col.faint, a: "right" });
+    });
+    T("dBm = 10 log(P / 1 mW) = dBW + 30", 10, H - 30, { s: 12, c: col.ink, w: 700 });
+    T("1 W = 1000 mW → 10 log 1000 = 30", 10, H - 11, { s: 11.5, c: col.muted });
+    return;
+  }
+  // voltage ratio vs power ratio
+  var r = 1 + 9 * hold(t, 7), pw = r * r, bw = W - 120, x0 = 100;
+  T("voltage ratio", 10, 42, { s: 11.5, c: col.info, w: 700 }); T("power ratio", 10, 92, { s: 11.5, c: col.accent, w: 700 });
+  ctx.save(); ctx.fillStyle = col.info; ctx.fillRect(x0, 30, bw * r / 100, 16); ctx.fillStyle = col.accent; ctx.fillRect(x0, 80, bw * pw / 100, 16); ctx.restore();
+  T("× " + r.toFixed(1), x0 + bw * r / 100 + 6, 43, { s: 12, c: col.info, w: 700 }); T("× " + pw.toFixed(0), Math.min(W - 48, x0 + bw * pw / 100 + 6), 116, { s: 12, c: col.accent, w: 700 });
+  var dB = 20 * Math.log10(r);
+  T("power ∝ voltage², so", 10, 136, { s: 12, c: col.muted });
+  T("10 log(" + pw.toFixed(0) + ") = 20 log(" + r.toFixed(1) + ") = " + dB.toFixed(1) + " dB", 10, 158, { s: 13, c: col.ink, w: 700 });
+  T("voltage ×10 → power ×100 → 20 dB", 10, H - 14, { s: 11.5, c: col.good, w: 700 });
+};
+
+FIG.energy = function (t, p) { // finite energy pulse vs forever periodic wave
+  var x0 = 10, w = W - 20, u = (t / 6) % 1;
+  rowLab("energy signal: a pulse that dies out", 16); axis(x0, 64, w);
+  var g1 = function (v) { return v < .15 ? 0 : Math.exp(-(v - .15) * 9); };
+  curve(x0, 64, w, 36, g1, col.info, 2);
+  L(x0 + u * w, 22, x0 + u * w, H - 8, col.faint, 1, [2, 3]);
+  var E1 = 0, E2 = 0; for (var i = 0; i < 200; i++) { var v = u * i / 200; E1 += g1(v) * g1(v) / 200 * u; var c = Math.cos(TAU * 6 * v); E2 += c * c / 200 * u; }
+  rowLab("power signal: goes on forever", 104); axis(x0, 142, w);
+  curve(x0, 142, w, 30, function (v) { return Math.cos(TAU * 6 * v); }, col.accent, 1.8);
+  var bx = W - 120; T("energy so far", bx, 194, { s: 10.5, c: col.faint });
+  ctx.save(); ctx.fillStyle = col.info; ctx.fillRect(10, 202, Math.min(W - 20, E1 * 900), 8); ctx.fillStyle = col.accent; ctx.fillRect(10, 214, Math.min(W - 20, E2 * 280), 8); ctx.restore();
+  T("pulse: energy settles (finite), power → 0", 10, H - 2, { s: 10.5, c: col.ink, w: 600 });
+};
+
+FIG.tshift = function (t, p) { // delay changes phase only
+  var x0 = 10, w = W - 20, d = 0.25 * hold(t, 6);
+  rowLab("g(t) and g(t − t₀)", 16); axis(x0, 70, w);
+  var g = function (c) { return function (v) { var x = (v - c) / .07; return Math.exp(-x * x); }; };
+  curve(x0, 70, w, 40, g(.3), col.faint, 1.6, .8); curve(x0, 70, w, 40, g(.3 + d), col.info, 2.2);
+  T("t₀", x0 + (.3 + d / 2) * w, 84, { a: "center", s: 11, c: col.info, w: 700 });
+  rowLab("|G(f)|: unchanged", 108); axis(x0, 150, w); curve(x0, 150, w, 34, function (v) { var f = (v - .5) * 4; return Math.exp(-f * f * .6); }, col.good, 2);
+  rowLab("phase: a straight line, slope −2πt₀", 172); axis(x0, 198, w);
+  curve(x0, 198, w, 18, function (v) { return -(v - .5) * 8 * d; }, col.accent, 2);
+  T("g(t − t₀) ↔ G(f)·e^{−j2πft₀}", 10, H - 2, { s: 11, c: col.ink, w: 700 });
+};
+
+FIG.ampower = function (t, p) { // where the AM power goes
+  var mu = 0.15 + 0.85 * hold(t, 7), Pc = 1, Ps = mu * mu / 4, tot = Pc + 2 * Ps, x0 = 14, bw = W - 28, y = 40;
+  var seg = [[Pc, col.faint, "carrier"], [Ps, col.accent, "LSB"], [Ps, col.accent, "USB"]], x = x0;
+  seg.forEach(function (s, i) { var ww = bw * s[0] / 1.5; ctx.save(); ctx.fillStyle = s[1]; ctx.globalAlpha = i ? .85 : .5; ctx.fillRect(x, y, ww - 2, 34); ctx.restore(); if (ww > 34) T(s[2], x + ww / 2, y + 22, { a: "center", s: 11, c: col.ink, w: 700 }); x += ww; });
+  T("μ = " + mu.toFixed(2), 10, 100, { s: 13, c: col.ink, w: 700 });
+  T("each sideband = μ²/4 · P_c = " + Ps.toFixed(3) + " P_c", 10, 122, { s: 11.5, c: col.accent, w: 600 });
+  T("total P_t = P_c(1 + μ²/2) = " + tot.toFixed(3) + " P_c", 10, 142, { s: 11.5, c: col.ink, w: 600 });
+  if (p.m === "save") {
+    T("drop carrier (DSB-SC): save " + (100 * 2 / (2 + mu * mu)).toFixed(0) + "%", 10, 172, { s: 12, c: col.good, w: 700 });
+    T("drop carrier + one sideband (SSB): save " + (100 * (4 + mu * mu) / (2 * (2 + mu * mu))).toFixed(0) + "%", 10, 192, { s: 12, c: col.good, w: 700 });
+  } else {
+    T("efficiency η = μ²/(2 + μ²) = " + (100 * mu * mu / (2 + mu * mu)).toFixed(1) + "%", 10, 172, { s: 12, c: col.good, w: 700 });
+    T("even at μ = 1 only 33% carries the message", 10, 192, { s: 11.5, c: col.muted });
+  }
+  T("several tones: use μ_t² = μ₁² + μ₂² + …", 10, H - 12, { s: 11, c: col.muted });
+};
+
+FIG.ssbshift = function (t, p) { // SSB with a carrier frequency error: tone slides
+  var df = 0.6 * Math.sin(t * .6), yb = 100, x0 = 14, w = W - 28, sx = function (f) { return x0 + w * f / 6; };
+  axis(x0, yb, w, "kHz"); spike(sx(1), yb, 30, col.faint, "1 kHz sent"); spike(sx(1 + df), yb, 54, col.accent, "heard");
+  T("Δf = " + (df >= 0 ? "+" : "") + df.toFixed(2) + " kHz", 10, 134, { s: 13, c: col.ink, w: 700 });
+  T("SSB: one copy of each tone → it just slides by Δf", 10, 160, { s: 11.5, c: col.ink, w: 600 });
+  T("(\"Donald Duck\" voice). DSB instead beats: m cos Δωt", 10, 180, { s: 11, c: col.muted });
+  T("output tone = f_m ± Δf", 10, H - 14, { s: 12, c: col.good, w: 700 });
+};
+
+FIG.peaks = function (t, p) { // peak of a multi-tone message = sum of amplitudes
+  var x0 = 10, w = W - 20, y0 = 100, amp = 5.2, sh = .25 * Math.sin(t * .5);
+  var a = function (u) { return 8 * Math.cos(TAU * 1.5 * (u - .5 - sh)); }, b = function (u) { return 6 * Math.cos(TAU * 3 * (u - .5 - sh)); };
+  axis(x0, y0, w); curve(x0, y0, w, amp, a, col.info, 1.4, .7); curve(x0, y0, w, amp, b, col.accent, 1.4, .7);
+  curve(x0, y0, w, amp, function (u) { return a(u) + b(u); }, col.ink, 2.2);
+  var px = x0 + (.5 + sh) * w; ctx.save(); ctx.fillStyle = col.bad; ctx.beginPath(); ctx.arc(px, y0 - 14 * amp, 4, 0, TAU); ctx.fill(); ctx.restore();
+  T("peak 8 + 6 = 14", px > W / 2 ? px - 8 : px + 8, y0 - 14 * amp + 4, { s: 12, c: col.bad, w: 700, a: px > W / 2 ? "right" : "left" });
+  T("8 cos ω₁t + 6 cos ω₂t: both peak together", 10, H - 52, { s: 11.5, c: col.ink, w: 700 });
+  T("m_p = sum of amplitudes = 14 (use for Δ, Δf)", 10, H - 32, { s: 11.5, c: col.good, w: 700 });
+  T("power = 8²/2 + 6²/2 = 50 (use for SQNR)", 10, H - 12, { s: 11.5, c: col.muted });
+};
+
+FIG.phasewrap = function (t, p) { // PM phase must stay inside ±π
+  var cx = 80, cy = H / 2, r = 56, lim = 0.5 + 3.2 * hold(t, 7), ph = lim * Math.sin(t * 2.2);
+  ctx.save(); ctx.strokeStyle = col.line; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
+  ctx.fillStyle = lim > Math.PI ? col.bad : col.good; ctx.globalAlpha = .15; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, -Math.min(lim, Math.PI * 2), Math.min(lim, Math.PI * 2)); ctx.fill(); ctx.restore();
+  L(cx, cy, cx + r * Math.cos(ph), cy - r * Math.sin(ph), lim > Math.PI ? col.bad : col.accent, 3);
+  T("k_p m_p = " + lim.toFixed(2) + " rad", 160, 50, { s: 13, c: col.ink, w: 700 });
+  T(lim > Math.PI ? "> π: ambiguous!" : "< π: unique ✓", 160, 74, { s: 12, c: lim > Math.PI ? col.bad : col.good, w: 700 });
+  T(lim > Math.PI ? "two m values, one angle" : "", 160, 94, { s: 11, c: col.bad, w: 700 });
+  T("rule: k_p m_p < π  →  k_p < π/m_p", 10, H - 12, { s: 12, c: col.ink, w: 700 });
+};
+
+FIG.preemph = function (t, p) { // FM noise rises with frequency
+  var x0 = 14, w = W - 28, yb = 150, ph = hold(t, 7);
+  axis(x0, yb, w, "audio f");
+  if (p.m === "interf") {
+    curve(x0, yb, w, 110, function (u) { return u; }, col.bad, 2.4);
+    T("FM detector output ∝ I ω_I / A", 10, 22, { s: 12, c: col.ink, w: 700 });
+    T("interference grows with its offset ω_I", 10, 42, { s: 11.5, c: col.muted });
+    T("(PM detector: I/A, flat)", 10, 62, { s: 11.5, c: col.muted });
+    L(x0, yb - 30, x0 + w, yb - 30, col.info, 1.8, [5, 4]); T("PM", x0 + w - 2, yb - 36, { a: "right", s: 11, c: col.info, w: 700 });
+    T("bigger signal A → less interference", 10, H - 12, { s: 11.5, c: col.good, w: 700 }); return;
+  }
+  fillc(x0, yb, w, 100, function (u) { return u * u * (1 - .8 * ph) * .9; }, col.bad, .25);
+  curve(x0, yb, w, 100, function (u) { return u * u * (1 - .8 * ph) * .9; }, col.bad, 2);
+  curve(x0, yb, w, 100, function (u) { return .7 * Math.exp(-u * 2.2); }, col.info, 2);
+  T("message (falls off)", x0 + 6, yb - 66, { s: 11, c: col.info, w: 700 }); T("FM noise ∝ f²", x0 + w - 4, yb - 92 * (1 - .8 * ph) - 4, { a: "right", s: 11, c: col.bad, w: 700 });
+  T(ph > .5 ? "boost highs before TX, cut after RX → noise drops" : "worst noise where the message is weakest", 10, 22, { s: 11.5, c: ph > .5 ? col.good : col.ink, w: 700 });
+  T("pre-emphasis / de-emphasis", 10, H - 12, { s: 12, c: col.ink, w: 700 });
+};
+
+FIG.capture = function (t, p) { // stronger FM signal captures the receiver
+  var rr = 0.4 + 1.2 * hold(t, 8), x0 = 10, w = W - 20;
+  var s1 = function (u) { return Math.sin(TAU * 1.2 * u); }, s2 = function (u) { return 0.8 * Math.sin(TAU * 2.6 * u + 1); };
+  T("signal B / signal A = " + rr.toFixed(2), 10, 20, { s: 13, c: col.ink, w: 700 });
+  rowLab("A's message", 44); curve(x0, 64, w, 14, s1, col.info, 1.6); rowLab("B's message", 92); curve(x0, 112, w, 14, s2, col.accent, 1.6);
+  rowLab("what you hear", 142); axis(x0, 170, w);
+  var mix = clamp((rr - 0.85) / 0.3, 0, 1); curve(x0, 170, w, 22, function (u) { return (1 - mix) * s1(u) + mix * s2(u); }, mix < .5 ? col.info : col.accent, 2.4);
+  T(rr < .85 ? "A is stronger → you hear only A" : rr > 1.15 ? "B is stronger → B takes over" : "nearly equal → they fight", 10, H - 12, { s: 12, c: col.good, w: 700 });
+};
+
+FIG.pll = function (t, p) { // phase-locked loop demodulator
+  var bx = [[12, 30, "phase\ndetector"], [W / 2 - 42, 30, "loop\nfilter"], [W - 96, 30, "VCO"]], k = Math.floor((t * 1.2) % 4);
+  bx.forEach(function (b, i) { ctx.save(); ctx.fillStyle = col.panel; ctx.strokeStyle = i === k ? col.accent : col.line; ctx.lineWidth = i === k ? 2 : 1; ctx.fillRect(b[0], b[1], 84, 44); ctx.strokeRect(b[0], b[1], 84, 44); ctx.restore();
+    b[2].split("\n").forEach(function (s, j) { T(s, b[0] + 42, b[1] + 19 + j * 15, { a: "center", s: 11, c: col.ink, w: 700 }); }); });
+  L(96, 52, W / 2 - 42, 52, col.faint, 1.5); L(W / 2 + 42, 52, W - 96, 52, col.faint, 1.5);
+  ctx.save(); ctx.strokeStyle = col.faint; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(W - 54, 74); ctx.lineTo(W - 54, 92); ctx.lineTo(54, 92); ctx.lineTo(54, 74); ctx.stroke(); ctx.restore();
+  T("FM in", 12, 22, { s: 10.5, c: col.faint });
+  rowLab("VCO control voltage = the message", 120); axis(10, 160, W - 20);
+  curve(10, 160, W - 20, 26, function (u) { return Math.sin(TAU * (1.3 * u - t * .1)); }, col.good, 2.2);
+  T("the loop keeps the VCO locked to the input frequency,", 10, H - 30, { s: 11, c: col.ink, w: 600 });
+  T("so the voltage it needs follows f_i(t) → m(t)", 10, H - 12, { s: 11, c: col.muted });
+};
+
+FIG.limiter = function (t, p) { // clip, then band-pass: amplitude noise removed
+  var x0 = 10, w = W - 20, sh = t * .05;
+  var ph = function (u) { return TAU * (14 * u + 1.5 * Math.sin(TAU * (u - sh))); };
+  var am = function (u) { return 0.6 + 0.4 * Math.sin(TAU * 3.3 * u + 1) * Math.cos(TAU * 1.1 * u); };
+  rowLab("FM with fading / noise on the amplitude", 16); axis(x0, 52, w); curve(x0, 52, w, 24, function (u) { return am(u) * Math.cos(ph(u)); }, col.info, 1.3, 1, 900);
+  rowLab("hard limiter: clip to ±1 (zero crossings kept)", 96); axis(x0, 128, w); curve(x0, 128, w, 18, function (u) { return Math.cos(ph(u)) >= 0 ? 1 : -1; }, col.accent, 1.3, 1, 1400);
+  rowLab("band-pass at f_c: clean, constant height", 170); axis(x0, 204, w); curve(x0, 204, w, 20, function (u) { return Math.cos(ph(u)); }, col.good, 1.6, 1, 900);
+};
+
+FIG.pulsemod = function (t, p) { // PAM, PWM, PPM following one message
+  var x0 = 10, w = W - 20, N = 12, sh = t * .08, m = function (u) { return 0.5 + 0.4 * Math.sin(TAU * (u - sh)); };
+  [["PAM: height ∝ m", 62], ["PWM: width ∝ m", 132], ["PPM: position ∝ m", 202]].forEach(function (r, i) {
+    rowLab(r[0], r[1] - 42); L(x0, r[1], x0 + w, r[1], col.faint);
+    for (var k = 0; k < N; k++) { var u = (k + .5) / N, v = m(u), bx = x0 + k * w / N, cw = w / N;
+      ctx.save(); ctx.fillStyle = [col.info, col.accent, col.good][i];
+      if (i === 0) ctx.fillRect(bx + cw * .3, r[1] - 34 * v, cw * .4, 34 * v);
+      else if (i === 1) ctx.fillRect(bx + cw * .1, r[1] - 26, cw * .8 * v, 26);
+      else ctx.fillRect(bx + cw * .75 * v, r[1] - 26, cw * .18, 26);
+      ctx.restore(); }
+  });
+  T("sample changes: height, width or position?", 10, H - 4, { s: 10.5, c: col.ink, w: 600 });
+};
+
+FIG.uniform = function (t, p) { // mean square of a uniform signal
+  var x0 = 30, w = W - 60, yb = 120, a = 1;
+  axis(x0 - 10, yb, w + 20); ctx.save(); ctx.fillStyle = col.info; ctx.globalAlpha = .2; ctx.fillRect(x0, yb - 40, w, 40); ctx.restore();
+  T("−a", x0, yb + 14, { a: "center", s: 11 }); T("+a", x0 + w, yb + 14, { a: "center", s: 11 }); T("0", x0 + w / 2, yb + 14, { a: "center", s: 11 });
+  T("values spread evenly on [−a, a]", x0 + w / 2, yb - 48, { a: "center", s: 11, c: col.info, w: 700 });
+  curve(x0, yb, w, 80, function (u) { var x = 2 * u - 1; return x * x; }, col.accent, 2, .8);
+  var q = hold(t, 5); L(x0, yb - 80 * q, x0 + w, yb - 80 * q, col.faint, 1, [3, 3]);
+  L(x0, yb - 80 / 3, x0 + w, yb - 80 / 3, col.good, 2, [6, 4]); T("average of x² = a²/3", x0 + w, yb - 80 / 3 - 5, { a: "right", s: 11.5, c: col.good, w: 700 });
+  T("x² (peak a² at the edges)", x0, yb - 84, { s: 11, c: col.accent, w: 600 });
+  T("power = a²/3, not a²/2 (that's for a sine)", 10, H - 30, { s: 11.5, c: col.ink, w: 700 });
+  T("2026 Q5B: uniform on [−1, 1] → power 1/3", 10, H - 12, { s: 11, c: col.muted });
+};
+
+FIG.rectdet = function (t, p) { // diode rectifier detector
+  var x0 = 10, w = W - 20, env = function (u) { return 1 + .6 * Math.cos(TAU * 1.4 * (u - t * .03)); };
+  rowLab("AM in", 16); axis(x0, 58, w); curve(x0, 58, w, 18, function (u) { return env(u) * Math.cos(TAU * 26 * u); }, col.info, 1, 1, 1200);
+  rowLab("diode keeps the positive halves", 96); axis(x0, 150, w); curve(x0, 150, w, 30, function (u) { return Math.max(0, env(u) * Math.cos(TAU * 26 * u)); }, col.accent, 1, 1, 1200);
+  curve(x0, 150, w, 30, function (u) { return env(u) / Math.PI; }, col.good, 2.4);
+  T("low-pass: average of a half-wave = peak/π", 10, H - 30, { s: 11.5, c: col.ink, w: 700 });
+  T("output = (A + m)/π → block DC → m/π", 10, H - 12, { s: 11.5, c: col.good, w: 700 });
+};
+
+FIG.envc = function (t, p) { // SSB+C envelope = length of the (A+m, m_h) vector
+  var cx = 24, cy = H - 70, s = (W - 70) / 2.9, m = .6 * Math.cos(t * 1.1), mh = .6 * Math.sin(t * 1.1) * 1.6, A = 2.2;
+  L(cx, cy, cx + (A + m) * s, cy - mh * s, col.good, 5, null, .25);
+  L(cx, cy, cx + (A + m) * s, cy, col.info, 3); L(cx + (A + m) * s, cy, cx + (A + m) * s, cy - mh * s, col.accent, 3);
+  L(cx, cy, cx + (A + m) * s, cy - mh * s, col.good, 2.4, [5, 3]);
+  T("A + m", cx + (A + m) * s / 2, cy + 16, { a: "center", s: 11.5, c: col.info, w: 700 }); T("m_h", cx + (A + m) * s + 6, cy - mh * s / 2, { s: 11.5, c: col.accent, w: 700 });
+  T("envelope = √((A+m)² + m_h²)", 10, 24, { s: 12.5, c: col.good, w: 700 });
+  T("if A ≫ |m|: ≈ A + m (detectable)", 10, 44, { s: 11.5, c: col.muted });
+  T("big carrier → the m_h side barely tilts it", 10, H - 12, { s: 11.5, c: col.ink, w: 600 });
+};
+
 /* ---------------- which picture for which card ---------------- */
 var MAP = {
-  "fnd.tonepow": ["power"], "fnd.sumpow": ["power"], "fnd.dc": ["power", { dc: 1 }], "fnd.dbm": ["power"], "fnd.db20": ["power"], "fnd.energy": ["rectsinc", { k: "exp" }],
+  "fnd.tonepow": ["power"], "fnd.sumpow": ["power"], "fnd.dc": ["power", { dc: 1 }], "fnd.dbm": ["db", { m: "dbm" }], "fnd.db20": ["db"], "fnd.energy": ["energy"],
   "fnd.coscos": ["trig", { k: "cc" }], "fnd.sinsin": ["trig", { k: "ss" }], "fnd.sincos": ["trig", { k: "sc" }], "fnd.cos2": ["trig", { k: "c2" }], "fnd.cos3": ["trig", { k: "c3" }],
   "fnd.rect": ["rectsinc"], "fnd.sincband": ["rectsinc"], "fnd.tri": ["rectsinc", { k: "tri" }], "fnd.exp": ["rectsinc", { k: "exp" }], "fnd.scale": ["rectsinc"],
-  "fnd.mod": ["spec", { m: "dsb" }], "fnd.fshift": ["spec", { m: "fshift" }], "fnd.tshift": ["lti", { m: "distless" }], "fnd.multconv": ["bw"],
+  "fnd.mod": ["spec", { m: "dsb" }], "fnd.fshift": ["spec", { m: "fshift" }], "fnd.tshift": ["tshift"], "fnd.multconv": ["bw"],
   "fnd.lti": ["lti"], "fnd.psd": ["lti", { m: "psd" }], "fnd.distless": ["lti", { m: "distless" }], "fnd.gd": ["lti", { m: "gd" }], "fnd.nonlin": ["lti", { m: "nonlin" }], "fnd.multipath": ["lti", { m: "multipath" }], "fnd.antenna": ["antenna"],
   "dsb.spec": ["spec", { m: "dsb" }], "dsb.coh": ["spec", { m: "demod" }], "dsb.phase": ["coh"], "dsb.freq": ["coh", { m: "freq" }], "dsb.w01": ["switch"], "dsb.ring": ["switch", { m: "ring" }], "dsb.sw": ["switch"], "dsb.bal": ["lti", { m: "nonlin" }], "dsb.swdemod": ["switch"],
-  "am.spec": ["spec", { m: "am" }], "am.mu": ["am"], "am.muenv": ["am"], "am.muasym": ["am"], "am.muka": ["am"], "am.pt": ["am"], "am.eta": ["am"], "am.etagen": ["am"], "am.sbamp": ["spec", { m: "am" }], "am.mut": ["am"], "am.savedsb": ["am"], "am.savessb": ["spec", { m: "ssb" }],
-  "am.cond": ["am"], "am.rc": ["envdet"], "am.rctone": ["envdet"], "am.rect": ["switch"], "am.sq": ["lti", { m: "nonlin" }], "am.cohany": ["am"], "am.gen": ["lti", { m: "nonlin" }],
-  "ssb.hilb": ["phasor"], "ssb.hcos": ["phasor"], "ssb.form": ["spec", { m: "ssb" }], "ssb.spot": ["spec", { m: "ssb" }], "ssb.bw": ["spec", { m: "vsb" }], "ssb.envc": ["spec", { m: "ssb" }], "ssb.freqerr": ["coh", { m: "freq" }],
+  "am.spec": ["spec", { m: "am" }], "am.mu": ["am"], "am.muenv": ["am"], "am.muasym": ["am"], "am.muka": ["am"], "am.pt": ["ampower"], "am.eta": ["ampower"], "am.etagen": ["ampower"], "am.sbamp": ["spec", { m: "am" }], "am.mut": ["ampower"], "am.savedsb": ["ampower", { m: "save" }], "am.savessb": ["ampower", { m: "save" }],
+  "am.cond": ["am"], "am.rc": ["envdet"], "am.rctone": ["envdet"], "am.rect": ["rectdet"], "am.sq": ["lti", { m: "nonlin" }], "am.cohany": ["am"], "am.gen": ["lti", { m: "nonlin" }],
+  "ssb.hilb": ["phasor"], "ssb.hcos": ["phasor"], "ssb.form": ["spec", { m: "ssb" }], "ssb.spot": ["spec", { m: "ssb" }], "ssb.bw": ["spec", { m: "vsb" }], "ssb.envc": ["envc"], "ssb.freqerr": ["ssbshift"],
   "ssb.qam": ["phasor", { m: "qam" }], "ssb.qamerr": ["phasor", { m: "qam", err: 1 }], "ssb.vsb": ["spec", { m: "vsb" }], "ssb.vsbcond": ["spec", { m: "vsb" }], "ssb.weaver": ["spec", { m: "ssb" }],
   "ang.fi": ["fm"], "ang.fmsig": ["fm"], "ang.pmsig": ["fm", { m: "pm" }], "ang.fmfi": ["fm"], "ang.pmfi": ["fm", { m: "pm" }], "ang.fmdf": ["fm"], "ang.pmdf": ["fm", { m: "pm" }], "ang.dphi": ["fm", { m: "pm" }], "ang.units": ["fm"],
-  "ang.beta": ["bessel"], "ang.pmbeta": ["bessel"], "ang.carson": ["bessel"], "ang.nb": ["bessel"], "ang.wb": ["bessel"], "ang.power": ["power"], "ang.bessel": ["bessel"], "ang.kplim": ["fm", { m: "pm" }], "ang.swap": ["fm", { m: "pm" }], "ang.bmax": ["bessel"], "ang.multitone": ["fm"], "ang.stretch": ["fm", { m: "pm" }],
-  "rx.vco": ["fm"], "rx.square": ["chain", { m: "mult" }], "rx.mixer": ["chain", { m: "mixer" }], "rx.arm": ["chain"], "rx.armbeta": ["chain"], "rx.disc": ["disc"], "rx.envfm": ["disc", { m: "env" }], "rx.limiter": ["disc"], "rx.zc": ["disc", { m: "zc" }], "rx.pll": ["disc"], "rx.demodswap": ["fm", { m: "pm" }],
-  "rx.interf": ["disc"], "rx.preemph": ["disc"], "rx.capture": ["disc"], "rx.hiside": ["superhet"], "rx.img": ["superhet"], "rx.loside": ["superhet", { m: "low" }], "rx.noimg": ["superhet"], "rx.ifs": ["superhet"], "rx.iftrade": ["superhet"], "rx.double": ["superhet"], "rx.dial": ["superhet"],
+  "ang.beta": ["bessel"], "ang.pmbeta": ["bessel"], "ang.carson": ["bessel"], "ang.nb": ["bessel"], "ang.wb": ["bessel"], "ang.power": ["power"], "ang.bessel": ["bessel"], "ang.kplim": ["phasewrap"], "ang.swap": ["fm", { m: "pm" }], "ang.bmax": ["bessel"], "ang.multitone": ["peaks"], "ang.stretch": ["fm", { m: "pm" }],
+  "rx.vco": ["fm"], "rx.square": ["chain", { m: "mult" }], "rx.mixer": ["chain", { m: "mixer" }], "rx.arm": ["chain"], "rx.armbeta": ["chain"], "rx.disc": ["disc"], "rx.envfm": ["disc", { m: "env" }], "rx.limiter": ["limiter"], "rx.zc": ["disc", { m: "zc" }], "rx.pll": ["pll"], "rx.demodswap": ["fm", { m: "pm" }],
+  "rx.interf": ["preemph", { m: "interf" }], "rx.preemph": ["preemph"], "rx.capture": ["capture"], "rx.hiside": ["superhet"], "rx.img": ["superhet"], "rx.loside": ["superhet", { m: "low" }], "rx.noimg": ["superhet"], "rx.ifs": ["superhet"], "rx.iftrade": ["superhet"], "rx.double": ["superhet"], "rx.dial": ["superhet"],
   "smp.nyq": ["sampling"], "smp.edge": ["alias", { edge: 1 }], "smp.spec": ["sampling"], "smp.lpf": ["sampling"], "smp.alias": ["alias"], "smp.aaf": ["sampling"], "smp.sum": ["bw"], "smp.prod": ["bw"], "smp.sq": ["bw", { sq: 1 }], "smp.deriv": ["bw", { m: "deriv" }],
   "smp.bwscale": ["rectsinc"], "smp.sinc2": ["bw", { sq: 1 }], "smp.list": ["bw"], "smp.timelim": ["rectsinc"], "smp.interp": ["interp"], "smp.energy": ["interp"], "smp.eq": ["interp", { m: "zoh" }], "smp.zoh": ["interp", { m: "zoh" }], "smp.foh": ["interp", { m: "foh" }],
-  "smp.nat": ["interp", { m: "flat" }], "smp.flat": ["interp", { m: "flat" }], "smp.pam": ["interp", { m: "flat" }], "smp.tdm": ["bits", { tdm: 1 }],
+  "smp.nat": ["interp", { m: "flat" }], "smp.flat": ["interp", { m: "flat" }], "smp.pam": ["pulsemod"], "smp.tdm": ["bits", { tdm: 1 }],
   "pcm.chain": ["quant"], "pcm.delta": ["quant"], "pcm.maxerr": ["quant"], "pcm.lspec": ["quant"], "pcm.nq": ["quant"], "pcm.sqnr": ["quant"], "pcm.176": ["quant"], "pcm.6db": ["quant"], "pcm.rb": ["bits"], "pcm.bt": ["bits"], "pcm.trade": ["bits"],
-  "pcm.mu": ["mulaw"], "pcm.alpha": ["mulaw"], "pcm.comp": ["mulaw"], "pcm.idx": ["quant"], "pcm.mp": ["power"],
-  "dm.dpcm": ["dpcm"], "dm.predmq": ["dpcm"], "dm.gp": ["dpcm"], "dm.tone": ["dpcm"], "dm.adpcm": ["dpcm"], "dm.rule": ["dm"], "dm.slope": ["dm"], "dm.gran": ["dm"], "dm.nq": ["dm"], "dm.no": ["dm"], "dm.sig": ["quant"], "dm.adm": ["dm", { m: "adm" }], "dm.exp": ["dm", { m: "exp" }], "dm.compare": ["dm"]
+  "pcm.mu": ["mulaw"], "pcm.alpha": ["mulaw"], "pcm.comp": ["mulaw"], "pcm.idx": ["quant"], "pcm.mp": ["peaks"],
+  "dm.dpcm": ["dpcm"], "dm.predmq": ["dpcm"], "dm.gp": ["dpcm"], "dm.tone": ["dpcm"], "dm.adpcm": ["dpcm"], "dm.rule": ["dm"], "dm.slope": ["dm"], "dm.gran": ["dm"], "dm.nq": ["dm"], "dm.no": ["dm"], "dm.sig": ["uniform"], "dm.adm": ["dm", { m: "adm" }], "dm.exp": ["dm", { m: "exp" }], "dm.compare": ["dm"]
 };
 
 function size() {
