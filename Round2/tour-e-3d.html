@@ -441,9 +441,6 @@ body.clean .exitclean { display: block; }
       spots.find(s => s.id === 'charge').p = portHit.p.clone().addScaledVector(portHit.n, 0.05).toArray();
     }
 
-    // 7. slim roof pod for the rider-controlled rear AC
-    const pod = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.045, 1.05), piano); pod.position.set(0, 1.72, 0.66); car.add(pod);
-    const podLine = new THREE.Mesh(new THREE.BoxGeometry(0.87, 0.004, 1.06), chrome); podLine.position.set(0, 1.698, 0.66); car.add(podLine);
 
     // 8. kerb-side rear door becomes a powered sliding door; tailgate on a hinge
     doorNode = handles.door_lr || null;
@@ -518,9 +515,9 @@ body.clean .exitclean { display: block; }
       eyebrow: 'Front-wheel drive', title: 'e VITARA eAxle', lead: 'Motor, inverter and reducer in one unit, carried over from the HEARTECT-e platform.',
       specs: [['Power', '106 kW (142 bhp)'], ['Drive', 'Front'], ['Maintenance', '₹0.55 / km vs ₹0.95 CNG'], ['2031 target', 'Reduced rare-earth motor']],
       why: 'No oil, filters or clutch to service, so fewer days off the road.' },
-    { id: 'ac', n: 6, name: 'Rear AC', p: [0, 1.80, 0.66], nrm: [0, 1, 0], cam: [-3.2, 4.4, 2.6], tgt: [0, 1.25, 0.4], act: {},
-      eyebrow: 'India Heat Pack', title: 'Rider-controlled rear AC', lead: 'A roof pod feeds the rear seats, and riders set their own temperature from the app or a rear panel. The cabin and battery pre-cool while the car is still plugged in.',
-      specs: [['Rear AC', 'Roof pod, rider-controlled'], ['Pre-cooling', 'On the plug, before a shift'], ['Battery', 'Liquid cooling, heat pump'], ['AC energy', 'Inside the 150 Wh/km figure']],
+    { id: 'ac', n: 6, name: 'Rear AC', p: [0, 1.69, 0.66], nrm: [0, 1, 0], cam: [-3.2, 4.4, 2.6], tgt: [0, 1.25, 0.4], act: {},
+      eyebrow: 'India Heat Pack', title: 'Rider-controlled rear AC', lead: 'A second evaporator behind the rear trim feeds ducts in the roof liner, with a vent over every seat. Riders set their own temperature from the app or a panel on the pillar, and the cabin pre-cools while the car is still plugged in.',
+      specs: [['Rear AC', 'Roof-liner ducts, vent per seat'], ['Control', 'Rider app or pillar panel'], ['Pre-cooling', 'On the plug, before a shift'], ['Battery', 'Liquid cooling, heat pump'], ['AC energy', 'Inside the 150 Wh/km figure']],
       why: 'AC disputes are a top rider complaint; on an EV the driver has no fuel reason to switch it off.' },
     { id: 'safety', n: 7, name: 'Safety', p: [0.05, 1.47, -0.94], nrm: [0, 0.3, -1], cam: [2.6, 2.0, -4.8], tgt: [0, 1.0, -0.6], act: { xray: true },
       eyebrow: '5★ Bharat NCAP target', title: 'Safety kit', lead: 'Built on HEARTECT-e, which earned the e VITARA five stars. A physical SOS button in every row, self-tested daily by FleetOS.',
@@ -683,7 +680,8 @@ body.clean .exitclean { display: block; }
   if (window.MeshoptDecoder) loader.setMeshoptDecoder(window.MeshoptDecoder);
   let t0 = 0;
   (window.MeshoptDecoder && MeshoptDecoder.ready ? MeshoptDecoder.ready : Promise.resolve()).then(() => {
-    loader.load('tour-e.glb', gltf => {
+    // the model ships as tour-e.glb, or as base64 text where binary files can't be served
+    const loadArgs = [gltf => {
       const root = gltf.scene;
       // quantised attributes: expand to floats so raycasts and bounds read true positions
       root.traverse(o => { if (!o.isMesh) return; const g = o.geometry; ['position', 'normal'].forEach(k => { const a = g.attributes[k]; if (!a || !a.normalized) return;
@@ -713,7 +711,11 @@ body.clean .exitclean { display: block; }
       if (location.hash === '#tour') setTimeout(startTour, INTRO + 300);
       if (location.hash === '#film') setTimeout(startFilm, 400);
     }, ev => { if (ev.total) lprog.style.width = Math.round(ev.loaded / ev.total * 100) + '%'; },
-    err => { lnote.textContent = 'The 3D model could not load. Refresh the page to try again.'; console.error(err); });
+    err => { lnote.textContent = 'The 3D model could not load. Refresh the page to try again.'; console.error(err); }];
+    fetch('tour-e.glb').then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); })
+      .catch(() => fetch('tour-e.glb.txt').then(r => r.text()).then(t => { const b = atob(t.trim()), u = new Uint8Array(b.length); for (let q = 0; q < b.length; q++) u[q] = b.charCodeAt(q); return u.buffer; }))
+      .then(buf => loader.parse(buf, '', loadArgs[0], loadArgs[2] || loadArgs[1]))
+      .catch(e => (loadArgs[2] || loadArgs[1] || console.error)(e));
   });
 
   const tmp = new THREE.Vector3(), toCam = new THREE.Vector3(), wtmp = new THREE.Vector3();

@@ -14,12 +14,12 @@ The film already has this voiceover mixed in (`tour-e-film.mp4`). Let it play an
 | Time | On screen | Voiceover |
 |---|---|---|
 | 0:00 – 0:01 | Black, the front face fades in | *(silence while the lights come on)* |
-| 0:01 – 0:04 | Light bar and "e" badge ignite | "By 2030, every aggregator cab in Delhi has to be **electric**." |
-| 0:04 – 0:08 | Camera tracks along the sill to the rear wheel | "Today, most of them are Marutis… running on **CNG**." |
+| 0:01 – 0:04 | Light bar and "e" badge ignite | "By 2030, every cab in Delhi must be **electric**." |
+| 0:04 – 0:08 | Camera tracks along the sill to the rear wheel | "Today, most of them are Marutis… on **CNG**." |
 | 0:08 – 0:12 | Rear, TOUR·e plate and lit emblem | "This is **Tour-e**. Maruti's electric MPV." |
 | 0:12 – 0:16 | Top-down over the roof | "A flat floor. **Three hundred** kilometres of city range." |
 | 0:17 – 0:22 | Side view, sliding door opens at 0:17 | "A **sliding door**. Room for a wheelchair. SOS, in every row." |
-| 0:22 – 0:26 | Orbit, X-ray on | "The operator sees **everything**… so no car takes a trip it can't finish." |
+| 0:22 – 0:26 | Orbit, X-ray on | "The operator sees **everything**. So no trip is cut short." |
 | 0:26 – 0:29 | Hero front three-quarter | "Designed for the driver. Built for the **fleet**." |
 | 0:30 – 0:36 | Black, TOUR·e title, then the line | "Tour-e." … "Cheaper on day one. Cheaper every kilometre." |
 
