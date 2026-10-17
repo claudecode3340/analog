@@ -1,0 +1,144 @@
+<section class="lesson" id="s0-how" data-book="Read this first">
+<p class="lede">This page is a course, a textbook and a lab bench in one file. Before you start, spend fifteen minutes learning how it works: where to read, where to type, how the practice is checked, and how the flashcards keep what you learn from fading.</p>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>say what each kind of lesson is for (tools, maths, ISLP, Prince, projects) and in which order to do them;</li>
+<li>run a Python cell in this page, read its output, and fix a simple error;</li>
+<li>use predictions, exercises with hints, book problems with layered solutions, quizzes and flashcards.</li></ul></div>
+
+<h3 id="s0-how-plan">The plan: three books, one path, twelve weeks</h3>
+<p>You are learning machine learning (ML), then deep learning (DL), then computer vision (CV). Three books carry you, and each has one job:</p>
+<div class="tw"><table class="t"><thead><tr><th>Book</th><th>Its job</th><th>Used in months 1–3</th></tr></thead><tbody>
+<tr><td><b>ISLP</b>: <i>An Introduction to Statistical Learning with Python</i> (James, Witten, Hastie, Tibshirani, Taylor, 2023)</td><td>How to choose a model and judge it honestly on data it has not seen.</td><td>Chapters 2, 3, 4, 5 and 6, every exercise solved</td></tr>
+<tr><td><b>Prince</b>: <i>Understanding Deep Learning</i> (Simon Prince, 2023; your copy is the March 2025 revision)</td><td>How a neural network represents functions and how it learns.</td><td>Chapters 2 to 7 and the maths appendices, every problem solved</td></tr>
+<tr><td><b>Szeliski</b>: <i>Computer Vision: Algorithms and Applications</i>, 2nd ed.</td><td>Cameras, images and geometry.</td><td>Starts in month 4. You are building the foundations it needs now.</td></tr>
+</tbody></table></div>
+<p>Around the books you will learn the tools they assume: Python, NumPy, pandas, matplotlib, Git and, in month 3, PyTorch. You will also learn the maths they assume: vectors and matrices, derivatives and gradients, probability. Nothing is assumed. If a lesson needs something, an earlier lesson teaches it, and the “You'll use” links at the top of each lesson send you straight back to it.</p>
+
+<div class="callout key"><p><b>One rule makes this work:</b> do the lessons in the order of the contents list on the left. Tool and maths lessons sit <i>just before</i> the book sections that need them, so you never meet a symbol or a line of code you haven't been taught.</p></div>
+
+<h3 id="s0-how-kinds">Five kinds of lesson, one colour each</h3>
+<div class="symbols">
+<div class="row h"><span>Colour</span><span>Kind of lesson</span><span>What you do in it</span></div>
+<div class="row"><span class="s" style="color:var(--tool)">● Blue</span><span><b>Python &amp; tools</b></span><span class="eg">Learn exactly the code the next book section uses, typing and running every line.</span></div>
+<div class="row"><span class="s" style="color:var(--math)">● Orange</span><span><b>Maths</b></span><span class="eg">Each idea in plain words, then a fully worked example with every number shown, then practice.</span></div>
+<div class="row"><span class="s" style="color:var(--isl)">● Green</span><span><b>ISLP</b></span><span class="eg">The book section explained from scratch, its figures, its lab run line by line, every exercise solved.</span></div>
+<div class="row"><span class="s" style="color:var(--udl)">● Violet</span><span><b>Prince (UDL)</b></span><span class="eg">The chapter explained slowly, its figures brought to life, every problem solved step by step.</span></div>
+<div class="row"><span class="s" style="color:var(--proj)">● Teal</span><span><b>Project</b></span><span class="eg">Build the method yourself from scratch, then check it against the professional library.</span></div>
+</div>
+
+<h3 id="s0-how-rhythm">The rhythm of every lesson</h3>
+<p>Every lesson follows the same steps, so you always know what comes next:</p>
+<ol>
+<li><b>Why it matters</b>: one short paragraph at the top.</li>
+<li><b>The idea in plain words</b>, then <b>the precise version</b>. Every new symbol is read out loud for you, for example “\(\hat{y}\) is read <i>y-hat</i>: our <i>guess</i> for \(y\)”.</li>
+<li><b>A worked example small enough for pencil and paper</b>, with every intermediate number shown, in the style of the DIP guide.</li>
+<li><b>The book's own figures</b>, each with a caption that tells you what to look at.</li>
+<li><b>Code you can run</b> (predict first, then run, then explain), and <b>interactive figures</b> you can drag.</li>
+<li><b>Practice</b>: exercises checked automatically, the book's exercises with layered solutions, a quiz, and flashcards.</li>
+<li><b>A checklist</b> of “I can…” statements. Tick the lesson done only when they are all true.</li>
+</ol>
+
+<h3 id="s0-how-cells">Code cells: your lab bench</h3>
+<p>The grey boxes with a blue <b>Run</b> button contain real Python. Your browser runs it: the first time you press Run it downloads Python (about 15 seconds), and after that every run is instant. You can edit the code, and your edits are saved automatically. <b>Reset</b> puts the original code back. Press <kbd class="k">Shift</kbd> + <kbd class="k">Enter</kbd> inside a cell to run it.</p>
+<p>Before you press anything, each cell already shows a <b>reference output</b>, produced when this guide was built by running exactly the same code. If you are offline you can still read everything.</p>
+
+<div class="py" id="c-s0-how-01"><pre class="src">
+# Lines that start with # are comments: Python ignores them. They are notes for you.
+print("Hello! Python is running inside your browser.")
+2 + 3
+</pre><div class="pynote"><b>What you see:</b> <code>print(...)</code> writes text. When the <i>last</i> line of a cell is a value such as <code>2 + 3</code>, the cell shows that value too, here <code>5</code>. Change <code>2 + 3</code> to <code>7 * 6</code> and run it again.</div></div>
+
+<h4>Predict first, then run</h4>
+<p>Some cells are locked behind a question. Guessing what code will do <i>before</i> you run it is one of the best-proven ways to learn: being surprised makes the correction stick. A wrong guess costs nothing. If you're short on time you can skip the question.</p>
+
+<div class="predict" data-correct="2"><p>What will this cell print?</p><ol class="opts"><li><code>2 + 3</code></li><li><code>5</code></li><li><code>23</code></li></ol><div class="why"><code>print</code> shows the <i>value</i> of what is inside the brackets. Python works out <code>2 + 3</code> first, then prints the result, <code>5</code>. Text in quotes would be printed as typed: <code>print("2 + 3")</code> prints <code>2 + 3</code>.</div></div>
+<div class="py" id="c-s0-how-02"><pre class="src">
+print(2 + 3)
+</pre></div>
+
+<h4>Errors are normal, and this guide explains them</h4>
+<p>When code fails, Python prints an error message. The <b>last line</b> of the message is the important one. This guide adds a plain-English explanation underneath. This next cell fails <i>on purpose</i> so you can see what an error looks like:</p>
+<div class="py" id="c-s0-how-03" data-error="NameError" data-mode="expect-error"><pre class="src">
+print(total)   # we never created anything called total
+</pre><div class="pynote">Fix it: put a new line <code>total = 10</code> at the top, then run again.</div></div>
+
+<h3 id="s0-how-ex">Exercises that check themselves</h3>
+<p>Yellow-bordered boxes are exercises. Write the code, press <b>Check</b>, and hidden tests run against it. If a test fails, you get a message saying what was expected. Hints open one at a time, and the full solution is always one click away. Try to get there without it first: struggling a little is exactly when you learn most.</p>
+
+<div class="ex" id="x-s0-how-01" data-title="your first function"><div class="task"><p>Complete the function <code>double</code> so it returns twice the number it is given. For example <code>double(4)</code> should give <code>8</code>. (A function is a named machine: a value goes in, a value comes out. You will learn them properly in Python I. For now, replace <code>...</code> with the right expression.)</p></div>
+<pre class="src">
+def double(x):
+    return ...
+</pre>
+<pre class="check">
+assert double(4) == 8, f"double(4) should be 8, got {double(4)}"
+assert double(-1.5) == -3.0, "it should work for negative decimals too"
+</pre>
+<div class="hint"><p><code>return</code> sends a value back out of the function. Which expression means “x times 2”?</p></div>
+<div class="hint"><p>In Python, multiplication is the star: <code>x * 2</code>.</p></div>
+<pre class="solution">
+def double(x):
+    return x * 2
+</pre>
+<div class="explain"><p>Whatever number arrives as <code>x</code>, <code>return x * 2</code> sends back twice it. The checks tried <code>4</code> and <code>-1.5</code> to make sure it works for any number, not just one.</p></div>
+</div>
+
+<h3 id="s0-how-worked">Worked examples with every number shown</h3>
+<p>Maths is always shown the way the DIP guide does it: what is given, then numbered steps, each with the numbers written out. Highlights show which numbers combine. Some examples reveal one step at a time so you can try the next step yourself first.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>the average of four exam marks</b></div>
+<div class="given">Given marks \(x_1=62,\ x_2=75,\ x_3=81,\ x_4=70\). Find the mean \(\bar{x}\) (read <i>x-bar</i>).</div>
+<ol class="steps">
+<li><div>Write the formula and say it out loud: \[\bar{x}=\frac{1}{n}\sum_{i=1}^{n}x_i\] “Add up every \(x_i\) for \(i\) from 1 to \(n\), then divide by \(n\).” Here \(n=4\) marks.<span class="why">The big \(\Sigma\) (sigma) is just a short way to write “add these up”.</span></div></li>
+<li><div>Add them: \(62+75+81+70 = \mathbf{288}\).</div></li>
+<li><div>Divide by \(n\): \(\bar{x} = \dfrac{288}{4} = \mathbf{72}\).</div></li>
+</ol>
+<div class="result">\(\bar{x}=72\)</div></div>
+
+<div class="widget" data-w="s0-mean-drag" data-title="Drag the marks, watch the mean" data-args='{"values":[62,75,81,70]}'><div class="wn">Drag one mark far to the right, to 100. The mean moves towards it, but only by a quarter of the distance, because it is shared between four marks.</div></div>
+
+<div class="mathblock" data-sheet="Mean"><div class="eqlabel">The mean (average)</div>\[\bar{x}=\frac{1}{n}\sum_{i=1}^{n}x_i\]<p class="say">Add all \(n\) values, divide by how many there are.</p></div>
+
+<h3 id="s0-how-book">The books' figures, and their exercises</h3>
+<p>Figures taken from the books sit on white cards labelled “From the book”, with a caption that tells you <i>what to look at</i>. Click a figure to enlarge it. The book's original caption is one click away under it.</p>
+<figure class="book" data-fig="islp-2.1"><figcaption>Three scatter plots of sales against advertising budgets (TV, radio, newspaper), each with a straight line fitted through the points. <b>Look at the slopes:</b> TV and radio lines rise clearly, the newspaper line is almost flat. Chapter 2 asks the question this picture raises: can we predict sales from the budgets, and which budget matters?</figcaption></figure>
+
+<p>Every exercise from the books appears in a card like the one below. Work it on paper first. Then open the layers one at a time: a hint, the final answer (to check yourself), the full step-by-step solution, and common mistakes. Press <b>Mark solved</b> when you could do it alone.</p>
+<div class="prob" id="p-s0-how-01" data-src="Practice" data-title="Mean of five numbers"><div class="stmt"><p>Find the mean of \(4,\ 8,\ 15,\ 16,\ 23\).</p></div>
+<div class="ansin" data-answer="13.2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Add the five numbers, then divide by 5.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\bar{x}=13.2\)</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><ol class="steps"><li><div>Sum: \(4+8+15+16+23=66\).</div></li><li><div>Divide by \(n=5\): \(66/5=13.2\).</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Dividing by 4 (one less than the count). The mean divides by \(n\), the number of values.</p></div></details>
+</div>
+
+<h3 id="s0-how-stick">Making it stick: quizzes, flashcards, tests</h3>
+<p>Reading something feels like learning, but <b>pulling it back out of your memory</b> is what makes it last. So every lesson ends with a short quiz, and every lesson adds flashcards to one deck. The deck uses <b>FSRS-6</b>, the same memory model as your COMSYS Formula Drill. It shows each card again just before you would forget it. Ten minutes a day with <a href="#review-deck">the deck</a> keeps months of work alive. At the end of each month, a <a href="#review-tests">month test</a> draws one question from every lesson.</p>
+
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">You meet a symbol you don't recognise in an ISLP section. What should you do first?</p><ol class="opts"><li>Skip it and hope it doesn't matter</li><li>Search the internet</li><li>Use the “You'll use” links and the maths lessons: the guide teaches every symbol before it is needed</li></ol><div class="why">Every symbol is introduced before its first use, and <a href="#s0-maths">How to read the maths</a> lists the common ones with how to say them out loud.</div></div>
+<div class="q" data-type="num" data-answer="72" data-tol="0.001"><p class="stem">The mean of 62, 75, 81 and 70 is…</p><div class="why">\(288/4=72\).</div></div>
+<div class="q" data-type="open"><p class="stem">In your own words: why does this guide ask you to predict a cell's output before running it?</p><div class="model">Making a guess and then seeing the real answer creates a small surprise when you're wrong. Surprise makes the correction memorable, so you learn more than you would by just reading the output.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">What does the mean \(\bar{x}\) of \(n\) numbers equal?</div><div class="b">\(\bar{x}=\frac{1}{n}\sum_{i=1}^n x_i\): add them all, divide by how many there are.</div></div>
+<div class="fc"><div class="f">In a Python error message, which line should you read first?</div><div class="b">The <b>last</b> line: it names the error type and the reason.</div></div>
+<div class="fc"><div class="f">How do you run a code cell from the keyboard?</div><div class="b">Click inside it and press Shift + Enter.</div></div>
+</div>
+
+<h3 id="s0-how-mac">On your Mac, too</h3>
+<p>Everything runs in this page, but you should also learn to work the way professionals do: in a code editor on your own computer. The next lesson, <a href="#s0-setup">Set up your Mac</a>, walks you through installing Python and VS Code one click at a time. At the bottom of every lesson with code there is a <b>Download as a Jupyter notebook</b> button, so you can run the same lesson on your Mac. PyTorch, in month 3, runs <i>only</i> on your Mac, because it is too big to run inside a browser.</p>
+
+<h3 id="s0-how-week">How much, how often</h3>
+<p>The plan assumes about <b>15–18 hours a week</b>: roughly two hours on weekdays and a longer weekend session. Each lesson shows its estimated time at the top. A good daily routine is:</p>
+<ol><li><b>10 minutes</b>: flashcards that are due.</li><li><b>90 minutes</b>: one lesson, typing every cell yourself rather than only pressing Run.</li><li><b>20 minutes</b>: the lesson's exercises without opening the solutions.</li></ol>
+<div class="callout pitfall"><p><b>The trap to avoid:</b> watching yourself understand. If you read a solution and think “yes, that makes sense”, you have not learned it yet. You have learned it when you can close the solution and produce it yourself.</p></div>
+
+<div class="checklist">
+<label><input type="checkbox"> I ran a cell, changed its code and ran it again.</label>
+<label><input type="checkbox"> I solved the <code>double</code> exercise (with or without hints).</label>
+<label><input type="checkbox"> I know where the flashcard deck and the month tests are.</label>
+</div>
+</section>
