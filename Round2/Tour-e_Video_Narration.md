@@ -30,7 +30,7 @@ The film already has this voiceover mixed in (`tour-e-film.mp4`). Let it play an
 | 0:36 – 0:44 | 1 · The law | "Delhi's aggregator rule makes the fleet fully electric by 2030, and from 2027 CAFE III counts every EV three times." |
 | 0:44 – 0:52 | 2 · The market | "Maruti has about 3% of India's EV sales. Tata has about 42%. In taxis, that gap puts Maruti's biggest segment at risk." |
 | 0:52 – 1:00 | 3 · The concept | "Tour-e is built around the driver and the rider: six seats, a sliding door, rear AC the rider controls, wheelchair access." |
-| 1:00 – 1:08 | 4 · Powertrain | "A 49 kWh pack, 46 usable, gives just over 300 km in the city. Long-route fleets get a 57 kWh option." |
+| 1:00 – 1:08 | 4 · Powertrain | "A 49 kWh pack, 46 usable, gives just over 300 km in the city. Long-route fleets get the 61 kWh Tour-e Long." |
 | 1:08 – 1:16 | 5 · Features | "We went through driver and rider forums. So: SOS in every row, no child locks, break reminders from the driver camera." |
 | 1:16 – 1:26 | 6 · Fleet TCO | "For a fleet, Tour-e costs ₹7.33 a kilometre against ₹8.86 on CNG. That's ₹1.22 lakh a car a year, over ₹12 crore for a thousand cars." |
 | 1:26 – 1:35 | 7 · Driver and hubs | "An owner-driver who charges at a Maruti hub keeps about ₹5,600 more every month. That's ₹67,000 a year." |
@@ -48,7 +48,7 @@ All of these come from `Tour-e_TCO_Model_R2.xlsx`.
 | Line | Figure | Sheet |
 |---|---|---|
 | City range | 307 km (46 kWh usable at 0.150 kWh/km) | Inputs |
-| Long-route pack | 57 kWh usable, 317 km highway | Inputs |
+| Long-route pack | 61 kWh (57 usable), 317 km highway | Inputs |
 | Fleet cost per km | ₹7.33 (battery EMI) vs ₹8.86 (CNG) | TCO |
 | Fleet saving | ₹1.22 lakh per car per year; ₹12.2 crore per 1,000 cars | Fleet_Economics |
 | Driver gain | ₹5,600 a month at hub tariff, car bought outright = ₹67,200 a year | Driver_Economics |
