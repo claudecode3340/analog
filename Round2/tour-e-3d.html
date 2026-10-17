@@ -700,6 +700,11 @@ body.clean .exitclean { display: block; }
           // old model script and the maker's badges, front and rear
           if (inR(-0.62, -0.2, 0.74, 0.98, 2.05, 9, 0.14) || inR(-0.16, 0.16, 0.96, 1.2, 2.1, 9, 0.2) || inR(-0.16, 0.16, 0.45, 1.0, -9, -1.9, 0.2) || inR(0.36, 0.72, 1.12, 1.26, 2.0, 9, 0.2)) kill.add(r); });
         if (kill.size) { for (let t = 0; t < idx.length; t += 3) if (kill.has(find(idx[t]))) { idx[t + 1] = idx[t]; idx[t + 2] = idx[t]; } g.index.needsUpdate = true;  } });
+      // steering boss: paint the maker's badge out of the interior texture
+      { const done = new Set(); root.traverse(o => { const m = o.isMesh && o.material; if (!m || m.name !== 'movsteer_1.0.8' || !m.map || !m.map.image || done.has(m.map)) return; done.add(m.map);
+        const img = m.map.image, c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+        const k = img.width / 1024, px = g.getImageData(Math.round(785 * k), Math.round(495 * k), 1, 1).data; g.fillStyle = `rgb(${px[0]},${px[1]},${px[2]})`; g.beginPath(); g.arc(752 * k, 495 * k, 23 * k, 0, Math.PI * 2); g.fill();
+        const t = new THREE.CanvasTexture(c); t.flipY = m.map.flipY; t.encoding = m.map.encoding; t.wrapS = m.map.wrapS; t.wrapT = m.map.wrapT; m.map = t; m.needsUpdate = true; window.__sw = 1; }); }
       styleModel(root);
       car.add(root);
       addTourEStyling();
