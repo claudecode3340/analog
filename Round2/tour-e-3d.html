@@ -297,6 +297,7 @@ body.clean .exitclean { display: block; }
 
   // ---------- systems shown in X-ray
   const xrayParts = [];
+  let safetyGroup = null; const sosHalos = [];
   const glowTeal = new THREE.MeshStandardMaterial({ color: C.teal, emissive: C.teal, emissiveIntensity: 0.9, transparent: true, opacity: 0.92 });
 
   const car = new THREE.Group(); scene.add(car);
@@ -473,6 +474,25 @@ body.clean .exitclean { display: block; }
     const cable = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.26), glowTeal); cable.position.set(0.25, 0.37, -1.12); car.add(cable); xrayParts.push(cable);
     const dms = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 12), glowTeal); dms.position.set(0.05, 1.47, -0.92); car.add(dms); xrayParts.push(dms);
     xrayParts.forEach(p => p.visible = false);
+
+    // 10. safety layer, shown on the Safety hotspot: SOS over every row, six airbag zones, the driver camera's view
+    safetyGroup = new THREE.Group(); safetyGroup.visible = false; car.add(safetyGroup);
+    const sosMat = new THREE.MeshBasicMaterial({ color: HOT(2.4, 0.08, 0.12), toneMapped: false, depthTest: false, transparent: true });
+    const haloMat = new THREE.MeshBasicMaterial({ color: HOT(1.8, 0.1, 0.14), toneMapped: false, transparent: true, opacity: 0.6, depthWrite: false, depthTest: false, side: THREE.DoubleSide });
+    [-0.62, 0.15, 0.95].forEach(z => {
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.014, 32), sosMat); b.position.set(0, 1.555, z); b.renderOrder = 20; safetyGroup.add(b);
+      const h = new THREE.Mesh(new THREE.RingGeometry(0.042, 0.05, 48), haloMat.clone()); h.rotation.x = Math.PI / 2; h.position.set(0, 1.548, z); h.renderOrder = 19; safetyGroup.add(h); sosHalos.push(h); });
+    const bagMat = new THREE.MeshBasicMaterial({ color: HOT(1.25, 0.72, 0.32), toneMapped: false, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide });
+    const bag = (x, y, z, sx, sy, sz) => { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), bagMat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); safetyGroup.add(m); };
+    bag(0.33, 1.0, -0.42, 0.16, 0.16, 0.07);          // driver
+    bag(-0.35, 1.03, -0.6, 0.21, 0.16, 0.12);         // front passenger
+    bag(0.62, 0.86, -0.3, 0.035, 0.15, 0.12); bag(-0.62, 0.86, -0.3, 0.035, 0.15, 0.12); // side torso
+    [-1, 1].forEach(sd => { const c = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.26, 2.1), bagMat); c.position.set(sd * 0.69, 1.36, 0.22); safetyGroup.add(c); }); // curtains, all rows
+    { const from = new THREE.Vector3(0.05, 1.47, -0.92), to = new THREE.Vector3(0.33, 1.17, -0.2), dir = to.clone().sub(from), L = dir.length();
+      const g = new THREE.ConeGeometry(0.13, L, 32, 1, true); g.translate(0, -L / 2, 0);
+      const cone = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: C.teal, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
+      cone.position.copy(from); cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir.normalize()); safetyGroup.add(cone);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 12), new THREE.MeshBasicMaterial({ color: HOT(1.2, 2.6, 2.4), toneMapped: false })); eye.position.copy(from); safetyGroup.add(eye); }
   }
 
   // ---------- dimensions overlay
@@ -519,8 +539,8 @@ body.clean .exitclean { display: block; }
       eyebrow: 'India Heat Pack', title: 'Rider-controlled rear AC', lead: 'A second evaporator behind the rear trim feeds ducts in the roof liner, with a vent over every seat. Riders set their own temperature from the app or a panel on the pillar, and the cabin pre-cools while the car is still plugged in.',
       specs: [['Rear AC', 'Roof-liner ducts, vent per seat'], ['Control', 'Rider app or pillar panel'], ['Pre-cooling', 'On the plug, before a shift'], ['Battery', 'Liquid cooling, heat pump'], ['AC energy', 'Inside the 150 Wh/km figure']],
       why: 'AC disputes are a top rider complaint; on an EV the driver has no fuel reason to switch it off.' },
-    { id: 'safety', n: 7, name: 'Safety', p: [0.05, 1.47, -0.94], nrm: [0, 0.3, -1], cam: [2.6, 2.0, -4.8], tgt: [0, 1.0, -0.6], act: { xray: true },
-      eyebrow: '5★ Bharat NCAP target', title: 'Safety kit', lead: 'Built on HEARTECT-e, which earned the e VITARA five stars. A physical SOS button in every row, self-tested daily by FleetOS.',
+    { id: 'safety', n: 7, name: 'Safety', p: [0.32, 1.64, 0.55], nrm: [0, 1, 0], cam: [3.1, 3.4, -2.2], tgt: [0, 1.1, 0.05], act: { xray: true, safety: true },
+      eyebrow: '5★ Bharat NCAP target', title: 'Safety kit', lead: 'Red: a physical SOS button over every row, self-tested daily by FleetOS. Amber: six airbags, with curtains that cover all three rows. Teal: the camera that watches the driver for drowsiness. Built on HEARTECT-e, which earned the e VITARA five stars.',
       specs: [['Airbags', '6'], ['Stability', 'ESP, ABS / EBD'], ['Driver', 'AEB + drowsiness camera'], ['Riders', 'SOS in every row, route alerts'], ['Option', 'Level 2 ADAS']],
       why: 'Women riders and night trips are where a ride-hailing brand earns trust.' },
     { id: 'access', n: 8, name: 'Accessibility', amber: true, p: [0, 1.0, 2.33], nrm: [0, 0, 1], cam: [0.8, 1.7, 5.6], tgt: [0, 0.85, 1.4], act: { boot: true },
@@ -596,9 +616,9 @@ body.clean .exitclean { display: block; }
     const s = spots.find(x => x.id === id) || null;
     state.active = s;
     spots.forEach(x => x.el.classList.toggle('active', x === s));
-    if (!s) { overviewCard(); flyTo(OVERVIEW.cam, OVERVIEW.tgt); setXray(false); setDoor(false); setBoot(false); flow.visible = false; return; }
+    if (!s) { overviewCard(); flyTo(OVERVIEW.cam, OVERVIEW.tgt); setXray(false); setDoor(false); setBoot(false); flow.visible = false; if (safetyGroup) safetyGroup.visible = false; return; }
     spotCard(s); flyTo(s.cam, s.tgt);
-    setXray(!!s.act.xray); setDoor(!!s.act.door); setBoot(!!s.act.boot); flow.visible = !!s.act.charge;
+    setXray(!!s.act.xray); setDoor(!!s.act.door); setBoot(!!s.act.boot); flow.visible = !!s.act.charge; if (safetyGroup) safetyGroup.visible = !!s.act.safety;
   }
 
   let tour = null;
@@ -760,6 +780,7 @@ body.clean .exitclean { display: block; }
       piano.transparent = tr; piano.opacity = 1 - 0.85 * xrayT;
     }
     xrayParts.forEach(m => m.visible = xrayT > 0.08);
+    if (safetyGroup && safetyGroup.visible) { const ph = (now / 1000) % 1.4 / 1.4; sosHalos.forEach(h => { h.scale.setScalar(1 + ph * 1.6); h.material.opacity = 0.7 * (1 - ph); }); }
     doorT += ((state.door ? 1 : 0) - doorT) * sm(2.4);
     if (doorNode && doorP0) {
       const out = Math.min(1, doorT * 2.5), slide = Math.max(0, (doorT - 0.28) / 0.72);
