@@ -1,0 +1,8 @@
+{
+"edge-case": {"term": "edge case", "def": "An input at the boundary of what is allowed (empty list, one item, all equal, negatives, the largest size). Most bugs hide here, so always test them.", "at": "code1"},
+"big-o": {"term": "Big-O notation", "def": "A way to say how the number of steps grows with the input size \\(n\\), ignoring constants and smaller terms: \\(3n^2+5n+2=O(n^2)\\).", "at": "code1"},
+"space-complexity": {"term": "space complexity", "def": "How much extra memory an algorithm needs on top of its input, written in Big-O. A few variables: \\(O(1)\\); a new list as long as the input: \\(O(n)\\).", "at": "code1"},
+"two-pointers": {"term": "two pointers", "def": "Two index variables that move through a list (from both ends, or one behind the other) so that one pass solves the problem.", "at": "code1"},
+"palindrome": {"term": "palindrome", "def": "A sequence that reads the same forwards and backwards, such as <i>level</i> or 12321.", "at": "code1"},
+"set": {"term": "set (Python)", "def": "An unordered collection of distinct items with \\(O(1)\\) average-time <code>add</code> and <code>in</code>. Made with <code>set()</code> or <code>{1, 2, 3}</code>.", "at": "code1"}
+}

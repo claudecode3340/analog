@@ -1,0 +1,17 @@
+{
+"setup-terminal": {"term": "Terminal", "def": "The Mac app where you control the computer by typing commands instead of clicking.", "at": "s0-setup"},
+"setup-prompt": {"term": "prompt", "def": "The text Terminal shows when it is ready for a command, e.g. <code>you@MacBook-Air ~ %</code>: user, computer, current folder, then <code>%</code>.", "at": "s0-setup"},
+"setup-shell": {"term": "shell (zsh)", "def": "The program inside Terminal that reads and runs your commands. On a Mac it is zsh.", "at": "s0-setup"},
+"setup-path": {"term": "path", "def": "The list of folders from the top of the disk down to a place, joined by slashes, e.g. <code>/Users/you/ml-course</code>. <code>~</code> is your home folder, <code>..</code> the folder above.", "at": "s0-setup"},
+"setup-flag": {"term": "option (flag)", "def": "Extra words starting with dashes that change what a command does, e.g. <code>--version</code> or <code>-a</code>.", "at": "s0-setup"},
+"setup-uv": {"term": "uv", "def": "A fast tool that downloads Python, creates virtual environments and installs libraries (<code>uv venv</code>, <code>uv pip install</code>).", "at": "s0-setup"},
+"setup-pipe": {"term": "pipe ( | )", "def": "Sends the output of the command on its left into the command on its right.", "at": "s0-setup"},
+"setup-path-var": {"term": "PATH", "def": "The list of folders the shell searches when you type a program's name. Activating a .venv puts its <code>bin</code> folder first.", "at": "s0-setup"},
+"setup-venv": {"term": "virtual environment (.venv)", "def": "A private, self-contained copy of Python plus libraries for one project, stored in a folder (here <code>~/ml-course/.venv</code>).", "at": "s0-setup"},
+"setup-activate": {"term": "activate (an environment)", "def": "<code>source .venv/bin/activate</code>: makes this Terminal window use the environment's Python. The prompt then starts with <code>(.venv)</code>.", "at": "s0-setup"},
+"setup-library": {"term": "library (package)", "def": "Code written and shared by others that you install and <code>import</code>, e.g. numpy, pandas, scikit-learn.", "at": "s0-setup"},
+"setup-mps": {"term": "MPS", "def": "Metal Performance Shaders: lets PyTorch use the GPU of an Apple Silicon Mac (<code>device=\"mps\"</code>).", "at": "s0-setup"},
+"setup-vscode": {"term": "VS Code", "def": "Visual Studio Code, a free code editor; with the Python and Jupyter extensions it runs notebooks.", "at": "s0-setup"},
+"setup-notebook": {"term": "notebook (.ipynb)", "def": "A document of text cells and code cells; each code cell's output appears under it.", "at": "s0-setup"},
+"setup-kernel": {"term": "kernel", "def": "The Python program that runs a notebook's cells. Pick the .venv one so the notebook sees your libraries.", "at": "s0-setup"}
+}

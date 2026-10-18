@@ -1,0 +1,732 @@
+<section class="lesson" id="code1" data-book="Interview practice · original problems">
+<p class="lede">Every ML job interview, from a start-up to Google, has at least one round where you write a small program while someone watches. The problems are not hard maths; they test whether you can turn a plain-English request into correct, tidy code and say how fast it runs. This lesson teaches you a calm, repeatable method for doing that, gives you a first feel for “how fast” (Big-O), and then walks you through ten warm-up problems.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#py1">Python I</a> (lists, strings, functions) <a href="#py2">Python II</a> (loops, dictionaries, comprehensions)</div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>solve a small coding problem with the five-step method: read, work examples by hand, brute force first, improve, test the edge cases;</li>
+<li>write your own tests with <code>assert</code> before you press Check;</li>
+<li>say the running time of a short function in Big-O (O(1), O(log n), O(n), O(n log n), O(n²)) and explain it in plain words;</li>
+<li>solve ten classic warm-up problems (running sum, maximum, vowels, reversing, palindromes, BitByte, second largest, de-duplication, merging, missing number) and trace each one by hand.</li></ul></div>
+
+<h3 id="code1-why">What a coding interview actually checks</h3>
+<p>In a coding round you get a short problem, such as “given a list of numbers, return the second largest”. You have 20 to 45 minutes. You talk while you think, you write a function, and you test it. The interviewer is watching four things:</p>
+<ol>
+<li><b>Understanding.</b> Did you ask about the unclear parts (What if the list is empty? Can numbers repeat?) before you started typing?</li>
+<li><b>Correctness.</b> Does the code give the right answer for every allowed input, including the awkward ones?</li>
+<li><b>Efficiency.</b> Can you say how the running time grows when the input gets bigger, and can you do better than the slowest obvious method?</li>
+<li><b>Communication.</b> Can they follow your thinking? Clear names, a short explanation, a hand trace of one example.</li>
+</ol>
+<p>Notice that “knowing a trick” is not on the list. Tricks help, and over these four practice lessons you will collect the dozen patterns that solve most interview problems. But the biggest difference between candidates is <b>method</b>: the people who do well follow the same calm steps every time. So we start there.</p>
+
+<div class="callout exam"><p><b>For ML roles in particular:</b> the coding round is usually easier than for pure software roles (think “easy” and “medium” problems on practice sites), but ML interviewers add their own favourites: compute a mean and standard deviation without a library, one-hot encode labels, build a confusion matrix, compute the overlap of two bounding boxes. You will write all of those in <a href="#code4">Coding practice 4</a>. Today is about the habits that make them easy.</p></div>
+
+<h3 id="code1-method">The five-step method</h3>
+<p>Here is the method. Learn its five names; you will use them in every problem of this lesson and in every interview.</p>
+<div class="symbols">
+<div class="row h"><span>Step</span><span>What you do</span><span>What you say out loud</span></div>
+<div class="row"><span class="s">1. Read</span><span>Read the problem twice. Name the input (what type? can it be empty?) and the output (what type? what if there is no answer?).</span><span class="eg">“So I get a list of integers, possibly empty, and I return one integer, or None if…”</span></div>
+<div class="row"><span class="s">2. Examples by hand</span><span>Take a tiny example and solve it with pencil and paper, slowly. Watch what <i>you</i> do: that is your algorithm.</span><span class="eg">“For [3, 1, 4] I would look at 3, then 1, then 4, remembering the biggest so far…”</span></div>
+<div class="row"><span class="s">3. Brute force first</span><span>Write the simplest correct method, even if it is slow. A slow correct answer beats a fast wrong one.</span><span class="eg">“The obvious way is to try every pair; that is O(n²).”</span></div>
+<div class="row"><span class="s">4. Improve</span><span>Ask: what work am I repeating? Can I remember something instead of recomputing it? Can one pass do it?</span><span class="eg">“I keep re-adding the same numbers. If I keep a running total, one pass is enough: O(n).”</span></div>
+<div class="row"><span class="s">5. Test edge cases</span><span>Run the examples, then the awkward inputs: empty, one element, all the same, negatives, very large.</span><span class="eg">“Empty list gives 0. One element gives itself. All negatives still works because I start from the first element, not from 0.”</span></div>
+</div>
+<p>An <dfn data-g="edge-case">edge case</dfn> is an input at the boundary of what is allowed: the empty list, a list with one item, the largest allowed number, a string with only spaces. Most bugs in interview code live in edge cases, because the brain naturally tests the “normal” example and forgets the rest.</p>
+
+<h4>The method on a real problem</h4>
+<p>Let us use the method once, slowly, on a problem that is not one of the ten. Read each step, and try to say the next one before you reveal it.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>count the warmer days</b></div>
+<div class="given">Problem: you are given a list of daily temperatures, for example <code>[30, 32, 31, 35, 35, 36]</code>. Return how many days were <i>strictly warmer</i> than the day before.</div>
+<ol class="steps">
+<li><div><b>Read.</b> Input: a list of numbers (temperatures in °C), maybe empty. Output: one whole number, a count. The first day has no “day before”, so it can never count. “Strictly warmer” means equal does not count.<span class="why">Saying the input and output types out loud catches half of all misunderstandings.</span></div></li>
+<li><div><b>Example by hand.</b> Compare each day with the one before it:
+<div class="tw"><table class="t"><thead><tr><th>day i</th><th>temps[i−1]</th><th>temps[i]</th><th>warmer?</th><th>count so far</th></tr></thead><tbody>
+<tr><td class="n">1</td><td class="n">30</td><td class="n">32</td><td>yes</td><td class="n">1</td></tr>
+<tr><td class="n">2</td><td class="n">32</td><td class="n">31</td><td>no</td><td class="n">1</td></tr>
+<tr><td class="n">3</td><td class="n">31</td><td class="n">35</td><td>yes</td><td class="n">2</td></tr>
+<tr><td class="n">4</td><td class="n">35</td><td class="n">35</td><td>no (equal)</td><td class="n">2</td></tr>
+<tr><td class="n">5</td><td class="n">35</td><td class="n">36</td><td>yes</td><td class="n">3</td></tr>
+</tbody></table></div>
+The answer is <b>3</b>. What did my hand do? It walked from day 1 to the last day, compared with the previous day, and kept a count.<span class="why">The table you make by hand is the algorithm. Each column becomes a variable.</span></div></li>
+<li><div><b>Brute force.</b> Here the obvious method is already good: one loop over <code>i = 1, 2, …, n−1</code>, add 1 to a counter when <code>temps[i] &gt; temps[i-1]</code>.</div></li>
+<li><div><b>Improve.</b> Each day is looked at a fixed number of times (twice), so the work grows in step with the number of days. That is the best possible: we must at least look at every day once. Nothing to improve.<span class="why">Knowing when to stop improving is part of the skill.</span></div></li>
+<li><div><b>Edge cases.</b> Empty list: the loop runs zero times, answer 0. One day: the loop <code>range(1, 1)</code> is empty, answer 0. All equal, e.g. <code>[20, 20, 20]</code>: answer 0. Falling temperatures, negative numbers such as <code>[-5, -3]</code>: answer 1, because −3 is warmer than −5.</div></li>
+</ol>
+<div class="result">One loop, one counter: answer 3 for the example, and 0 for the empty list.</div></div>
+
+<p>Now the code. Two Python tools appear that you may not have used yet, so read the “New in this lesson” box first.</p>
+
+<div class="callout key"><div class="ct">New in this lesson</div>
+<p><b><code>assert condition, message</code></b> checks that <code>condition</code> is true. If it is, nothing happens. If it is false, Python stops with an <code>AssertionError</code> and shows your <code>message</code>. It is the quickest way to write a test: <code>assert add(2, 2) == 4, "2 + 2 should be 4"</code>. The Check button of every exercise is just a list of asserts.</p>
+<p><b><code>range(1, n)</code></b> gives 1, 2, …, n−1 (it starts at the first number and stops <i>before</i> the second). <code>range(1, 1)</code> and <code>range(1, 0)</code> are empty, which is why the loop above is safe for short lists.</p>
+<p><b><code>a, b = b, a</code></b> swaps two variables in one line: Python first builds the pair on the right, (b, a), then unpacks it into the names on the left.</p>
+<p><b><code>None</code></b> is Python's value for “no answer”. Test for it with <code>x is None</code>.</p></div>
+
+<div class="py" id="c-code1-01"><pre class="src">
+def count_warmer(temps):
+    count = 0
+    for i in range(1, len(temps)):      # i = 1, 2, ..., n-1: every day that has a day before it
+        if temps[i] &gt; temps[i - 1]:
+            count = count + 1
+    return count
+
+# Step 5: test the example AND the edge cases, before anyone else does
+assert count_warmer([30, 32, 31, 35, 35, 36]) == 3, "the worked example should give 3"
+assert count_warmer([]) == 0, "empty list: no days, no warmer days"
+assert count_warmer([25]) == 0, "one day: there is no day before it"
+assert count_warmer([20, 20, 20]) == 0, "equal is not warmer"
+assert count_warmer([-5, -3]) == 1, "-3 is warmer than -5"
+print("all my tests pass")
+count_warmer([30, 32, 31, 35, 35, 36])
+</pre><div class="pynote"><b>Read the output:</b> the asserts printed nothing, which means they all passed; then the print ran and the last line showed the answer, <code>3</code>. Try breaking the function on purpose: change <code>&gt;</code> to <code>&gt;=</code> and run again. Which assert catches the bug, and what does its message say?</div></div>
+
+<div class="callout pitfall"><p><b>The classic interview mistake:</b> starting to type in the first minute. Spend the first three to five minutes on steps 1 and 2. Interviewers reward the question “can the list be empty?” far more than fast typing. And when you are stuck, go back to step 2: do one more example by hand and watch what you do.</p></div>
+
+<h3 id="code1-bigo">How fast is it? Counting steps, then Big-O</h3>
+<p>Two correct programs can differ enormously in speed. To compare them without a stopwatch (which depends on your laptop), we count <b>basic steps</b>: one addition, one comparison, one look-up of <code>xs[i]</code>. Then we ask a single question: <i>when the input gets bigger, how fast does the number of steps grow?</i></p>
+
+<h4>Counting steps by hand</h4>
+<p>Let \(n\) (read <i>n</i>) be the size of the input, for example the length of the list. Look at these three functions and count how many times the innermost line runs:</p>
+<div class="tw"><table class="t"><thead><tr><th>Code shape</th><th>How many times the inner line runs</th><th>n = 10</th><th>n = 1000</th></tr></thead><tbody>
+<tr><td><code>return xs[0]</code></td><td>once, whatever n is</td><td class="n">1</td><td class="n">1</td></tr>
+<tr><td><code>for x in xs:</code> one line inside</td><td>once per element: \(n\)</td><td class="n">10</td><td class="n">1,000</td></tr>
+<tr><td><code>for x in xs:</code> then <code>for y in xs:</code> inside</td><td>\(n\) times for each of the \(n\) outer passes: \(n\times n=n^2\)</td><td class="n">100</td><td class="n">1,000,000</td></tr>
+</tbody></table></div>
+<p>The code can show you the same thing: we add a counter that goes up by one every time the inner line runs.</p>
+
+<div class="predict" data-correct="3"><p>For a list of length 1000, how many times does the inner line of <code>all_pairs</code> run?</p><ol class="opts"><li>1,000</li><li>2,000</li><li>1,000,000</li><li>It depends on the values in the list</li></ol><div class="why">The outer loop runs 1000 times, and <i>each</i> of those runs the inner loop 1000 times: \(1000\times1000=1{,}000{,}000\). Two loops one after the other would be 2,000; two loops one <i>inside</i> the other multiply. The values do not matter here because nothing in the loops depends on them.</div></div>
+<div class="py" id="c-code1-02"><pre class="src">
+def single_pass(xs):
+    steps = 0
+    for x in xs:
+        steps += 1          # "steps += 1" is short for "steps = steps + 1"
+    return steps
+
+def all_pairs(xs):
+    steps = 0
+    for x in xs:
+        for y in xs:
+            steps += 1
+    return steps
+
+for n in [10, 100, 1000]:
+    xs = list(range(n))
+    print(f"n = {n:5d}   single pass: {single_pass(xs):8d} steps   all pairs: {all_pairs(xs):9d} steps")
+</pre><div class="pynote"><b>Read the output:</b> each time \(n\) grows ten times, the single pass grows ten times too, but all pairs grows a <b>hundred</b> times. That difference, not the exact counts, is what Big-O describes. (<code>f"{n:5d}"</code> prints the number right-aligned in 5 characters so the columns line up.)</div></div>
+
+<h4>Big-O in plain words</h4>
+<p><dfn data-g="big-o">Big-O notation</dfn> is a short way to say how the number of steps grows with \(n\), ignoring details that do not matter when \(n\) is large. We write \(O(n)\), read <i>“big-O of n”</i> or <i>“order n”</i>, for “the steps grow in proportion to \(n\)”, and \(O(n^2)\), read <i>“order n squared”</i>, for “the steps grow like \(n\) times \(n\)”.</p>
+<p>Two rules turn an exact count into a Big-O:</p>
+<ol>
+<li><b>Keep only the biggest term.</b> If the count is \(n^2+n\), then for \(n=1000\) that is \(1{,}000{,}000+1{,}000\); the \(n\) part is a rounding error. So \(n^2+n\) is \(O(n^2)\).</li>
+<li><b>Drop constant multipliers.</b> \(3n\) and \(n\) grow the same way: doubling \(n\) doubles both. So \(3n\) is \(O(n)\). Constants depend on the computer and the language; growth does not.</li>
+</ol>
+
+<div class="mathblock" data-sheet="Big-O (informal definition)"><div class="eqlabel">What \(f(n)=O(g(n))\) means</div>
+\[f(n)=O\big(g(n)\big)\quad\text{if there is a constant } c \text{ with } f(n)\le c\,g(n)\ \text{for all large enough } n\]
+<p class="say">Read: “f of n is big-O of g of n” if, once n is big enough, f is never more than some fixed multiple of g. In words: g is a <i>ceiling on the growth</i> of f, up to a constant factor.</p></div>
+
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(n\)</span><span>“n”: the size of the input (length of the list or string)</span><span class="eg">\(n=5\) for <code>[3,1,4,1,5]</code></span></div>
+<div class="row"><span class="s">\(f(n)\)</span><span>“f of n”: the exact number of steps your code takes for size \(n\)</span><span class="eg">\(f(n)=3n+2\)</span></div>
+<div class="row"><span class="s">\(O(\cdot)\)</span><span>“big-O of …”: grows no faster than …, ignoring constants</span><span class="eg">\(3n+2=O(n)\)</span></div>
+<div class="row"><span class="s">\(\log_2 n\)</span><span>“log base two of n”: how many times you can halve \(n\) before reaching 1</span><span class="eg">\(\log_2 8=3\): 8→4→2→1</span></div>
+</div>
+
+<div class="worked"><div class="wt">Worked example · <b>turning a step count into Big-O</b></div>
+<div class="given">A function does 2 set-up steps, then a loop with 5 steps per element, then a double loop with 3 steps per pair: \(f(n)=3n^2+5n+2\).</div>
+<ol class="steps">
+<li><div>Put in numbers to see which term wins. At \(n=10\): \(3\cdot100+5\cdot10+2=300+50+2=352\); the \(n^2\) term is already \(300/352\approx 85\%\) of the total.</div></li>
+<li><div>At \(n=1000\): \(3{,}000{,}000+5{,}000+2=3{,}005{,}002\); the \(n^2\) term is \(99.8\%\). The smaller terms vanish.<span class="why">This is rule 1: keep only the biggest term.</span></div></li>
+<li><div>Keep \(3n^2\), drop the 3 (rule 2): \(f(n)=O(n^2)\). Check the definition: with \(c=4\), is \(3n^2+5n+2\le 4n^2\)? That needs \(5n+2\le n^2\), which is true for every \(n\ge 6\) (at \(n=6\): \(32\le 36\)).</div></li>
+</ol>
+<div class="result">\(3n^2+5n+2=O(n^2)\): doubling \(n\) roughly quadruples the work.</div></div>
+
+<h4>The five growth rates you will meet</h4>
+<p>Almost every interview answer is one of these five. Learn them as a ladder, from fastest to slowest:</p>
+<div class="tw"><table class="t"><thead><tr><th>Big-O</th><th>Name, said aloud</th><th>Typical code</th><th>Steps at n = 1,000</th><th>Steps at n = 1,000,000</th></tr></thead><tbody>
+<tr><td>\(O(1)\)</td><td>constant: “order one”</td><td><code>xs[i]</code>, <code>len(xs)</code>, <code>xs.append(v)</code>, a dict look-up</td><td class="n">1</td><td class="n">1</td></tr>
+<tr><td>\(O(\log n)\)</td><td>logarithmic: “order log n”</td><td>halving the search range each step (binary search, <a href="#code3">Coding practice 3</a>)</td><td class="n">10</td><td class="n">20</td></tr>
+<tr><td>\(O(n)\)</td><td>linear: “order n”</td><td>one loop over the input; <code>sum(xs)</code>; <code>v in xs</code> for a list</td><td class="n">1,000</td><td class="n">1,000,000</td></tr>
+<tr><td>\(O(n\log n)\)</td><td>“n log n”</td><td><code>sorted(xs)</code>; good sorting algorithms</td><td class="n">10,000</td><td class="n">20,000,000</td></tr>
+<tr><td>\(O(n^2)\)</td><td>quadratic: “order n squared”</td><td>a loop inside a loop over the same input; trying every pair</td><td class="n">1,000,000</td><td class="n">1,000,000,000,000</td></tr>
+</tbody></table></div>
+<p>Python does roughly ten million simple steps per second. So at \(n\) = one million, an \(O(n)\) method takes about a tenth of a second, an \(O(n\log n)\) method two seconds, and an \(O(n^2)\) method about <b>28 hours</b>. That is why interviewers care.</p>
+
+<p><b>Where does \(\log n\) come from?</b> Whenever each step <i>halves</i> what is left. Start with \(n=1000\) and halve: 1000, 500, 250, 125, 63, 32, 16, 8, 4, 2, 1. That is 10 halvings, and indeed \(\log_2 1000\approx 9.97\). The logarithm answers “how many halvings?”. Since it grows so slowly (a million needs only 20), \(O(\log n)\) is almost as good as \(O(1)\).</p>
+
+<div class="callout ece"><p><b>You have met this before.</b> The DFT computed straight from its definition multiplies every one of the \(N\) inputs by every one of the \(N\) twiddle factors: \(N^2\) multiplications. The FFT splits the problem in half again and again, giving \(\log_2 N\) stages of butterflies with about \(N\) operations each: \(N\log_2 N\). For \(N=1024\) that is about a million operations versus about ten thousand, a hundredfold speed-up. That gap between \(O(N^2)\) and \(O(N\log N)\) is exactly the gap between a slow and a good interview answer.</p></div>
+
+<div class="widget" data-w="code1-bigo" data-title="How the five growth rates pull apart" data-args='{"nmax":64,"n":16,"mode":"zoom"}'><div class="wn">Start in “zoom in”: for small n all five curves look close. Drag n from 4 to 8 to 16: the O(n) dot doubles each time, the O(n²) dot quadruples and soon leaves the window. Switch to “y up to n²”: now O(1), O(log n) and even O(n) look flat on the floor. Finally try “log scale”, where each grid line is ten times the one below; the curves become well separated and you can read all of them at once.</div></div>
+
+<h4>Space complexity</h4>
+<p>The same notation also measures <dfn data-g="space-complexity">memory</dfn>: how much <i>extra</i> storage your code needs on top of the input. A loop with two or three number variables uses \(O(1)\) extra space. Building a new list as long as the input uses \(O(n)\) extra space. When an interviewer asks “can you do it in place?”, they mean “with \(O(1)\) extra space, changing the input list itself”.</p>
+
+<h4>Measuring it for real</h4>
+<p>Counting steps is the theory; a stopwatch confirms it. <code>time.perf_counter()</code> reads a precise clock in seconds. If doubling \(n\) doubles the time, the method behaves like \(O(n)\); if it quadruples, like \(O(n^2)\).</p>
+<div class="py" id="c-code1-03"><pre class="src">
+import time
+
+def time_it(func, xs):
+    start = time.perf_counter()
+    func(xs)
+    return time.perf_counter() - start
+
+for n in [500, 1000, 2000]:
+    xs = list(range(n))
+    t1 = time_it(single_pass, xs)
+    t2 = time_it(all_pairs, xs)
+    print(f"n = {n:4d}   single pass {t1*1000:7.3f} ms   all pairs {t2*1000:8.1f} ms")
+</pre><div class="pynote"><b>Read the output:</b> your exact milliseconds will differ from the reference output (they depend on the computer), but the <i>ratios</i> should not: each doubling of n roughly doubles the single-pass time and roughly quadruples the all-pairs time. Small timings are noisy, so the single-pass column may wobble.</div></div>
+
+<div class="callout pitfall"><p><b>Hidden loops.</b> Some single lines of Python are loops in disguise. <code>v in xs</code> on a <i>list</i> checks the items one by one: \(O(n)\). <code>xs.index(v)</code>, <code>xs.count(v)</code>, <code>sum(xs)</code>, <code>max(xs)</code>, <code>xs[a:b]</code> (copies \(b-a\) items) and <code>xs.insert(0, v)</code> are all \(O(n)\) too. So <code>for x in xs: if x in other_list: …</code> is a loop inside a loop: \(O(n^2)\), even though you only typed one <code>for</code>.</p></div>
+
+<h3 id="code1-problems">Ten warm-up problems</h3>
+<p>Each problem below has a statement with examples, starter code, hidden tests (press <b>Check</b>), up to three hints, and a full solution with a hand trace and its Big-O. Use the method every time: read, examples by hand, brute force, improve, edge cases. Write a few <code>assert</code> lines of your own in the box before pressing Check; it is the habit that will save you in an interview.</p>
+<div class="callout key"><p><b>How to practise:</b> give yourself 10 minutes per problem before opening a hint. If you needed the solution, come back tomorrow and solve the same problem again from a blank function. Solving a problem a second time, from memory, is what turns it into a skill.</p></div>
+
+<h4 id="code1-p1">Problem 1 · Running sum</h4>
+<div class="ex" id="x-code1-01" data-title="running sum"><div class="task"><p>Write <code>running_sum(nums)</code> that returns a <b>new</b> list whose item <i>i</i> is the sum of <code>nums[0]</code> up to and including <code>nums[i]</code>. Do not change <code>nums</code>.</p>
+<ul><li><code>running_sum([1, 2, 3, 4])</code> → <code>[1, 3, 6, 10]</code></li>
+<li><code>running_sum([5, -2, 7])</code> → <code>[5, 3, 10]</code></li>
+<li><code>running_sum([])</code> → <code>[]</code></li></ul>
+<p>Your function must handle 20,000 numbers in a fraction of a second.</p></div>
+<pre class="src">
+def running_sum(nums):
+    result = []
+    # your code here
+    return result
+
+# your own tests:
+print(running_sum([1, 2, 3, 4]))
+</pre>
+<pre class="check">
+import time, random
+assert running_sum([1, 2, 3, 4]) == [1, 3, 6, 10], f"[1,2,3,4] should give [1, 3, 6, 10], got {running_sum([1, 2, 3, 4])}"
+assert running_sum([5, -2, 7]) == [5, 3, 10], f"[5,-2,7] should give [5, 3, 10], got {running_sum([5, -2, 7])}"
+assert running_sum([]) == [], f"the empty list should give [], got {running_sum([])}"
+assert running_sum([42]) == [42], f"one element should give [42], got {running_sum([42])}"
+assert running_sum([-1, -1, -1]) == [-1, -2, -3], f"all negatives: expected [-1, -2, -3], got {running_sum([-1, -1, -1])}"
+_a = [3, 3, 3]; _r = running_sum(_a)
+assert _a == [3, 3, 3], f"running_sum must not change its input; the input became {_a}"
+assert _r is not _a, "return a NEW list, not the input list itself"
+_big = [random.Random(1).randint(-100, 100) for _ in range(20000)]
+_t = time.perf_counter(); _out = running_sum(_big); _dt = time.perf_counter() - _t
+_exp, _s = [], 0
+for _v in _big:
+    _s += _v; _exp.append(_s)
+assert _out == _exp, "wrong answer on a long random list"
+assert _dt &lt; 0.25, f"20,000 numbers took {_dt:.2f} s: are you re-adding a slice each time (O(n²))? Keep a running total instead."
+</pre>
+<div class="hint"><p>Do <code>[1, 2, 3, 4]</code> by hand. To get the third answer, 6, do you need to add 1 + 2 + 3 again, or can you use the previous answer, 3?</p></div>
+<div class="hint"><p>Keep one variable <code>total</code>, starting at 0. For each number: add it to <code>total</code>, then append <code>total</code> to <code>result</code>.</p></div>
+<div class="hint"><p><code>sum(nums[:i+1])</code> for every <i>i</i> gives the right numbers but is \(O(n^2)\): each slice re-adds everything before it. The tests will time out on that.</p></div>
+<pre class="solution">
+def running_sum(nums):
+    result = []
+    total = 0
+    for x in nums:
+        total += x            # total is now nums[0] + ... + x
+        result.append(total)
+    return result
+</pre>
+<div class="explain"><p><b>The idea.</b> The sum up to position <i>i</i> equals the sum up to position <i>i</i>−1, plus <code>nums[i]</code>. So we never need to start adding from the beginning again; we carry the previous total forward. This “remember what you already computed” move is the most common improvement in all of algorithm design.</p>
+<p><b>Trace on <code>[1, 2, 3, 4]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>step</th><th>x</th><th>total before</th><th>total after</th><th>result</th></tr></thead><tbody>
+<tr><td class="n">start</td><td>–</td><td>–</td><td class="n">0</td><td>[]</td></tr>
+<tr><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td>[1]</td></tr>
+<tr><td class="n">2</td><td class="n">2</td><td class="n">1</td><td class="n">3</td><td>[1, 3]</td></tr>
+<tr><td class="n">3</td><td class="n">3</td><td class="n">3</td><td class="n">6</td><td>[1, 3, 6]</td></tr>
+<tr><td class="n">4</td><td class="n">4</td><td class="n">6</td><td class="n">10</td><td>[1, 3, 6, 10]</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> One pass, constant work per number: <b>O(n) time</b>. The output list has <i>n</i> items: <b>O(n) space</b> for the result (and O(1) extra besides it). The brute force with slices does \(1+2+\dots+n=\frac{n(n+1)}{2}\) additions, which is \(O(n^2)\).</p>
+<p><b>Edge cases.</b> Empty input: the loop never runs and <code>[]</code> comes back. Negatives need nothing special.</p>
+<div class="callout ece"><p>A running sum is a discrete-time <b>integrator</b>, \(y[n]=y[n-1]+x[n]\): an IIR filter with one state variable. You will meet it again as the “prefix sum” trick in <a href="#code4">Coding practice 4</a>.</p></div></div></div>
+
+<h4 id="code1-p2">Problem 2 · The largest number, without <code>max()</code></h4>
+<div class="ex" id="x-code1-02" data-title="largest without max"><div class="task"><p>Write <code>largest(nums)</code> that returns the largest number in the list, <b>without</b> using <code>max()</code> or <code>sorted()</code>. If the list is empty, return <code>None</code>.</p>
+<ul><li><code>largest([3, 7, 2])</code> → <code>7</code></li>
+<li><code>largest([-5, -2, -9])</code> → <code>-2</code></li>
+<li><code>largest([])</code> → <code>None</code></li></ul></div>
+<pre class="src">
+def largest(nums):
+    # your code here
+    ...
+
+print(largest([3, 7, 2]))
+</pre>
+<pre class="check">
+def _banned(*a, **k):
+    raise AssertionError("please write the loop yourself: max() and sorted() are switched off for this exercise")
+max = _banned; sorted = _banned
+try:
+    assert largest([3, 7, 2]) == 7, f"[3, 7, 2] should give 7, got {largest([3, 7, 2])}"
+    assert largest([-5, -2, -9]) == -2, f"[-5, -2, -9] should give -2, got {largest([-5, -2, -9])}  (did you start your 'best so far' at 0?)"
+    assert largest([]) is None, f"the empty list should give None, got {largest([])}"
+    assert largest([4]) == 4, f"one element [4] should give 4, got {largest([4])}"
+    assert largest([2, 2, 2]) == 2, "all equal should give that value"
+    assert largest([1, 5, 3, 9]) == 9, "the largest can be the last item"
+    assert largest([9, 5, 3, 1]) == 9, "the largest can be the first item"
+    assert largest([0.5, 2.25, -1.0]) == 2.25, "decimals should work too"
+finally:
+    del max, sorted
+</pre>
+<div class="hint"><p>By hand, you look at the numbers one by one and keep the biggest you have seen so far in your head. Make that a variable.</p></div>
+<div class="hint"><p>What should “biggest so far” start as? If you start it at 0, what happens for <code>[-5, -2, -9]</code>? Start it at the <i>first</i> number instead, after dealing with the empty list.</p></div>
+<pre class="solution">
+def largest(nums):
+    if len(nums) == 0:          # edge case first: no numbers, no answer
+        return None
+    best = nums[0]              # the biggest we have seen so far
+    for x in nums[1:]:
+        if x &gt; best:
+            best = x
+    return best
+</pre>
+<div class="explain"><p><b>The idea.</b> Keep a single “champion”, <code>best</code>. Each new number challenges it; the winner stays. After the last challenger, the champion is the largest. Starting from <code>nums[0]</code> rather than 0 is the key detail: 0 would wrongly beat every number of an all-negative list.</p>
+<p><b>Trace on <code>[3, 7, 2]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>step</th><th>x</th><th>x &gt; best?</th><th>best after</th></tr></thead><tbody>
+<tr><td class="n">start</td><td>–</td><td>–</td><td class="n">3</td></tr>
+<tr><td class="n">1</td><td class="n">7</td><td>7 &gt; 3: yes</td><td class="n">7</td></tr>
+<tr><td class="n">2</td><td class="n">2</td><td>2 &gt; 7: no</td><td class="n">7</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> Every number is compared once: <b>O(n) time</b>, and <b>O(1) extra space</b> (one variable). Strictly, <code>nums[1:]</code> makes a copy, which is O(n) space; if you want to avoid it, loop with <code>for i in range(1, len(nums))</code> and use <code>nums[i]</code>. No method can be faster than O(n): any number you skip might be the largest.</p></div></div>
+
+<h4 id="code1-p3">Problem 3 · Count the vowels</h4>
+<div class="ex" id="x-code1-03" data-title="count vowels"><div class="task"><p>Write <code>count_vowels(text)</code> that returns how many characters of <code>text</code> are vowels (a, e, i, o, u), counting capitals too.</p>
+<ul><li><code>count_vowels("Machine Learning")</code> → <code>6</code> (a, i, e, e, a, i)</li>
+<li><code>count_vowels("rhythm")</code> → <code>0</code></li>
+<li><code>count_vowels("AEIOU aeiou")</code> → <code>10</code></li></ul></div>
+<pre class="src">
+def count_vowels(text):
+    # your code here
+    ...
+
+print(count_vowels("Machine Learning"))
+</pre>
+<pre class="check">
+assert count_vowels("Machine Learning") == 6, f"'Machine Learning' has 6 vowels, got {count_vowels('Machine Learning')}"
+assert count_vowels("rhythm") == 0, f"'rhythm' has no vowels, got {count_vowels('rhythm')}"
+assert count_vowels("AEIOU aeiou") == 10, f"capitals count too: expected 10, got {count_vowels('AEIOU aeiou')}"
+assert count_vowels("") == 0, f"the empty string has 0 vowels, got {count_vowels('')}"
+assert count_vowels("e") == 1, "a single vowel should give 1"
+assert count_vowels("Signal-to-noise ratio, 3 dB!") == 9, f"punctuation and digits are not vowels: expected 9, got {count_vowels('Signal-to-noise ratio, 3 dB!')}"
+assert count_vowels("aaaa") == 4, "repeated vowels each count"
+</pre>
+<div class="hint"><p>Loop over the string: <code>for ch in text:</code> gives you one character at a time.</p></div>
+<div class="hint"><p>Lower-case each character with <code>ch.lower()</code>, then test membership with <code>ch.lower() in "aeiou"</code>.</p></div>
+<pre class="solution">
+def count_vowels(text):
+    count = 0
+    for ch in text:
+        if ch.lower() in "aeiou":
+            count += 1
+    return count
+</pre>
+<div class="explain"><p><b>The idea.</b> Visit each character once and ask one yes/no question. <code>ch.lower()</code> turns <code>"A"</code> into <code>"a"</code> and leaves other characters alone, so one test covers both cases. <code>"a" in "aeiou"</code> asks whether the text <code>"a"</code> appears inside <code>"aeiou"</code>.</p>
+<p><b>Trace on <code>"Idea"</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>ch</th><th>ch.lower()</th><th>in "aeiou"?</th><th>count</th></tr></thead><tbody>
+<tr><td>"I"</td><td>"i"</td><td>yes</td><td class="n">1</td></tr>
+<tr><td>"d"</td><td>"d"</td><td>no</td><td class="n">1</td></tr>
+<tr><td>"e"</td><td>"e"</td><td>yes</td><td class="n">2</td></tr>
+<tr><td>"a"</td><td>"a"</td><td>yes</td><td class="n">3</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> One pass: <b>O(n) time</b> for a string of length <i>n</i>. The check <code>in "aeiou"</code> scans at most 5 letters, a constant, so it does not change the Big-O. <b>O(1) extra space</b>. A one-line version with a comprehension is <code>sum(1 for ch in text if ch.lower() in "aeiou")</code>; same complexity.</p>
+<p><b>Edge case worth mentioning in an interview:</b> is “y” a vowel? Here it is not; always ask.</p></div></div>
+
+<h4 id="code1-p4">Problem 4 · Reverse a list in place</h4>
+<div class="ex" id="x-code1-04" data-title="reverse in place"><div class="task"><p>Write <code>reverse_in_place(xs)</code> that reverses the list <code>xs</code> <b>itself</b> (no new list) and returns nothing. Do not use <code>.reverse()</code>, <code>reversed()</code> or slicing such as <code>xs[::-1]</code>: swap items instead.</p>
+<ul><li><code>a = [1, 2, 3, 4]; reverse_in_place(a)</code> → afterwards <code>a</code> is <code>[4, 3, 2, 1]</code></li>
+<li><code>b = ["x", "y", "z"]; reverse_in_place(b)</code> → <code>b</code> is <code>["z", "y", "x"]</code></li>
+<li><code>c = []; reverse_in_place(c)</code> → <code>c</code> is still <code>[]</code></li></ul></div>
+<pre class="src">
+def reverse_in_place(xs):
+    # your code here: swap items, change xs itself
+    pass
+
+a = [1, 2, 3, 4]
+reverse_in_place(a)
+print(a)
+</pre>
+<pre class="check">
+class _Strict(list):
+    def reverse(self): raise AssertionError("please swap items yourself instead of calling .reverse()")
+    def __reversed__(self): raise AssertionError("please swap items yourself instead of using reversed()")
+    def __getitem__(self, i):
+        if isinstance(i, slice): raise AssertionError("please swap items instead of slicing (xs[::-1] builds a new list)")
+        return list.__getitem__(self, i)
+for _case, _exp in [([1, 2, 3, 4], [4, 3, 2, 1]), (["x", "y", "z"], ["z", "y", "x"]), ([], []), ([7], [7]), ([1, 2], [2, 1]), ([5, 5, 1, 5], [5, 1, 5, 5]), ([-1, 0, 1, 2, 3], [3, 2, 1, 0, -1])]:
+    _xs = _Strict(_case)
+    _ret = reverse_in_place(_xs)
+    assert list(_xs) == _exp, f"{_case} should become {_exp}, but the list is now {list(_xs)}"
+    assert _ret is None, f"reverse_in_place should change the list and return None, but it returned {_ret!r}"
+</pre>
+<div class="hint"><p>By hand: swap the first and last items, then the second and second-to-last, and so on. When do you stop?</p></div>
+<div class="hint"><p>Use two positions: <code>left = 0</code> and <code>right = len(xs) - 1</code>. While <code>left &lt; right</code>: swap <code>xs[left], xs[right] = xs[right], xs[left]</code>, then move <code>left</code> up by one and <code>right</code> down by one.</p></div>
+<pre class="solution">
+def reverse_in_place(xs):
+    left, right = 0, len(xs) - 1
+    while left &lt; right:                       # stop when the two positions meet or cross
+        xs[left], xs[right] = xs[right], xs[left]
+        left += 1
+        right -= 1
+</pre>
+<div class="explain"><p><b>The idea.</b> This is your first <dfn data-g="two-pointers">two-pointer</dfn> algorithm: two positions start at the two ends and walk towards each other. Each swap puts two items in their final places, so after about \(n/2\) swaps everything is reversed. The loop condition <code>left &lt; right</code> stops exactly when the pointers meet (odd length: the middle item stays put) or cross (even length).</p>
+<p><b>Trace on <code>[1, 2, 3, 4, 5]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>step</th><th>left</th><th>right</th><th>swap</th><th>xs after</th></tr></thead><tbody>
+<tr><td class="n">1</td><td class="n">0</td><td class="n">4</td><td>1 ↔ 5</td><td>[5, 2, 3, 4, 1]</td></tr>
+<tr><td class="n">2</td><td class="n">1</td><td class="n">3</td><td>2 ↔ 4</td><td>[5, 4, 3, 2, 1]</td></tr>
+<tr><td class="n">3</td><td class="n">2</td><td class="n">2</td><td colspan="2">left &lt; right is false: stop (3 stays in the middle)</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> \(\lfloor n/2\rfloor\) swaps (read: “n over two, rounded down”): <b>O(n) time</b>, and <b>O(1) extra space</b> because we only keep two numbers. Building <code>xs[::-1]</code> would also be O(n) time but O(n) extra space.</p>
+<p><b>Why “returns nothing”?</b> Python's own <code>list.sort()</code> and <code>list.reverse()</code> follow the same convention: a function that changes its input returns <code>None</code>, so nobody mistakes it for a function that makes a copy.</p></div></div>
+
+<h4 id="code1-p5">Problem 5 · Is it a palindrome?</h4>
+<div class="ex" id="x-code1-05" data-title="palindrome"><div class="task"><p>A <dfn data-g="palindrome">palindrome</dfn> reads the same forwards and backwards. Write <code>is_palindrome(text)</code> that returns <code>True</code> or <code>False</code>, <b>ignoring capital letters and every character that is not a letter or a digit</b> (spaces, commas, apostrophes…).</p>
+<ul><li><code>is_palindrome("Step on no pets!")</code> → <code>True</code> (letters: steponnopets)</li>
+<li><code>is_palindrome("Signal")</code> → <code>False</code></li>
+<li><code>is_palindrome("No 'x' in Nixon")</code> → <code>True</code></li></ul>
+<p>New tool: <code>ch.isalnum()</code> is <code>True</code> when the character is a letter or a digit (“alphanumeric”).</p></div>
+<pre class="src">
+def is_palindrome(text):
+    # your code here
+    ...
+
+print(is_palindrome("Step on no pets!"))
+</pre>
+<pre class="check">
+for _t, _e in [("Step on no pets!", True), ("Signal", False), ("No 'x' in Nixon", True), ("", True), ("a", True),
+               ("ab", False), ("Aa", True), ("12321", True), ("1231", False), ("!!!", True), ("race a car", False), ("Was it a rat I saw?", True)]:
+    _g = is_palindrome(_t)
+    assert _g is _e, f"is_palindrome({_t!r}) should be {_e}, got {_g!r}"
+</pre>
+<div class="hint"><p>Split the job in two. First build a cleaned-up string with only lower-case letters and digits. Then decide whether that string is a palindrome.</p></div>
+<div class="hint"><p>Cleaning: <code>clean = [ch.lower() for ch in text if ch.isalnum()]</code>. Checking: two pointers from the ends, as in Problem 4, comparing instead of swapping. Return <code>False</code> at the first mismatch.</p></div>
+<pre class="solution">
+def is_palindrome(text):
+    clean = [ch.lower() for ch in text if ch.isalnum()]
+    left, right = 0, len(clean) - 1
+    while left &lt; right:
+        if clean[left] != clean[right]:
+            return False          # one mismatch is enough to say no
+        left += 1
+        right -= 1
+    return True                   # no mismatch found (also covers empty and one-letter strings)
+</pre>
+<div class="explain"><p><b>The idea.</b> Clean first, then compare mirror positions from the outside in. The first mismatch proves it is not a palindrome, so we can stop early. If the pointers meet without a mismatch, every mirror pair matched.</p>
+<p><b>Trace on <code>"No 'x' in Nixon"</code>.</b> Cleaning gives the 10 characters <code>n o x i n n i x o n</code> (positions 0 to 9).</p>
+<div class="tw"><table class="t"><thead><tr><th>step</th><th>left</th><th>right</th><th>clean[left]</th><th>clean[right]</th><th>equal?</th></tr></thead><tbody>
+<tr><td class="n">1</td><td class="n">0</td><td class="n">9</td><td>n</td><td>n</td><td>yes</td></tr>
+<tr><td class="n">2</td><td class="n">1</td><td class="n">8</td><td>o</td><td>o</td><td>yes</td></tr>
+<tr><td class="n">3</td><td class="n">2</td><td class="n">7</td><td>x</td><td>x</td><td>yes</td></tr>
+<tr><td class="n">4</td><td class="n">3</td><td class="n">6</td><td>i</td><td>i</td><td>yes</td></tr>
+<tr><td class="n">5</td><td class="n">4</td><td class="n">5</td><td>n</td><td>n</td><td>yes</td></tr>
+<tr><td class="n">6</td><td class="n">5</td><td class="n">4</td><td colspan="3">left &lt; right is false: stop, return True</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> Cleaning is one pass, O(n); the check is at most n/2 comparisons, O(n). Total <b>O(n) time</b>. The cleaned list is <b>O(n) extra space</b>. (Interview follow-up: you can get O(1) extra space by running the two pointers on the original text and skipping non-alphanumeric characters as you go.) A shorter correct answer is <code>clean == clean[::-1]</code>; it is also O(n) but always compares everything, even when the first letters differ.</p></div></div>
+
+<h4 id="code1-p6">Problem 6 · BitByte (a FizzBuzz variant)</h4>
+<div class="ex" id="x-code1-06" data-title="BitByte"><div class="task"><p>Write <code>bit_byte(n)</code> that returns a list of strings for the numbers 1 to <code>n</code>: <code>"BitByte"</code> for multiples of both 3 and 5, <code>"Bit"</code> for other multiples of 3, <code>"Byte"</code> for other multiples of 5, and otherwise the number itself as a string.</p>
+<ul><li><code>bit_byte(5)</code> → <code>["1", "2", "Bit", "4", "Byte"]</code></li>
+<li><code>bit_byte(15)[-1]</code> → <code>"BitByte"</code></li>
+<li><code>bit_byte(0)</code> → <code>[]</code></li></ul>
+<p>Reminder: <code>k % 3</code> is the remainder after dividing by 3, so <code>k % 3 == 0</code> means “k is a multiple of 3”. <code>str(7)</code> turns the number 7 into the text <code>"7"</code>.</p></div>
+<pre class="src">
+def bit_byte(n):
+    out = []
+    # your code here
+    return out
+
+print(bit_byte(15))
+</pre>
+<pre class="check">
+_exp15 = ["1", "2", "Bit", "4", "Byte", "Bit", "7", "8", "Bit", "Byte", "11", "Bit", "13", "14", "BitByte"]
+assert bit_byte(15) == _exp15, f"bit_byte(15) should be {_exp15}, got {bit_byte(15)}"
+assert bit_byte(0) == [], f"bit_byte(0) should be [], got {bit_byte(0)}"
+assert bit_byte(1) == ["1"], f"bit_byte(1) should be ['1'], got {bit_byte(1)}"
+_b = bit_byte(100)
+assert len(_b) == 100, f"bit_byte(100) should have 100 items, got {len(_b)}"
+assert _b[29] == "BitByte" and _b[44] == "BitByte" and _b[89] == "BitByte", "30, 45 and 90 are multiples of 15: they should be 'BitByte'"
+assert _b[8] == "Bit" and _b[24] == "Byte" and _b[96] == "97", "check 9 -&gt; 'Bit', 25 -&gt; 'Byte', 97 -&gt; '97'"
+assert all(isinstance(s, str) for s in _b), "every item should be a string (use str(k) for plain numbers)"
+</pre>
+<div class="hint"><p>Loop <code>for k in range(1, n + 1):</code> so that <i>n</i> itself is included.</p></div>
+<div class="hint"><p>Order matters. If you test “multiple of 3” first, then 15 becomes <code>"Bit"</code> and never reaches the “both” case. Test the most specific case, <code>k % 15 == 0</code>, first.</p></div>
+<pre class="solution">
+def bit_byte(n):
+    out = []
+    for k in range(1, n + 1):
+        if k % 15 == 0:            # multiple of both 3 and 5 (15 = 3 x 5): most specific case first
+            out.append("BitByte")
+        elif k % 3 == 0:
+            out.append("Bit")
+        elif k % 5 == 0:
+            out.append("Byte")
+        else:
+            out.append(str(k))
+    return out
+</pre>
+<div class="explain"><p><b>The idea.</b> An <code>if / elif / else</code> chain stops at the first true test, so put the most specific test first. A number is a multiple of both 3 and 5 exactly when it is a multiple of 15, because 3 and 5 share no factor.</p>
+<p><b>Trace on k = 9 to 15:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>k</th><th>k % 15</th><th>k % 3</th><th>k % 5</th><th>appended</th></tr></thead><tbody>
+<tr><td class="n">9</td><td class="n">9</td><td class="n">0</td><td>–</td><td>"Bit"</td></tr>
+<tr><td class="n">10</td><td class="n">10</td><td class="n">1</td><td class="n">0</td><td>"Byte"</td></tr>
+<tr><td class="n">11</td><td class="n">11</td><td class="n">2</td><td class="n">1</td><td>"11"</td></tr>
+<tr><td class="n">12</td><td class="n">12</td><td class="n">0</td><td>–</td><td>"Bit"</td></tr>
+<tr><td class="n">13</td><td class="n">13</td><td class="n">1</td><td class="n">3</td><td>"13"</td></tr>
+<tr><td class="n">14</td><td class="n">14</td><td class="n">2</td><td class="n">4</td><td>"14"</td></tr>
+<tr><td class="n">15</td><td class="n">0</td><td>–</td><td>–</td><td>"BitByte"</td></tr>
+</tbody></table></div>
+<p>(A dash means the test was never reached because an earlier one was true.)</p>
+<p><b>Complexity.</b> <b>O(n) time</b>, one constant-time check per number; <b>O(n) space</b> for the output list.</p></div></div>
+
+<h4 id="code1-p7">Problem 7 · Second largest</h4>
+<div class="ex" id="x-code1-07" data-title="second largest"><div class="task"><p>Write <code>second_largest(nums)</code> that returns the largest value that is <b>strictly smaller</b> than the maximum. If there is no such value (fewer than two different numbers), return <code>None</code>. Try to do it in one pass, without sorting.</p>
+<ul><li><code>second_largest([5, 1, 5, 3])</code> → <code>3</code> (the two 5s are the same value)</li>
+<li><code>second_largest([-1, -4, -2])</code> → <code>-2</code></li>
+<li><code>second_largest([2, 2, 2])</code> → <code>None</code></li></ul></div>
+<pre class="src">
+def second_largest(nums):
+    # your code here
+    ...
+
+print(second_largest([5, 1, 5, 3]))
+</pre>
+<pre class="check">
+for _c, _e in [([5, 1, 5, 3], 3), ([-1, -4, -2], -2), ([2, 2, 2], None), ([7], None), ([], None), ([1, 2], 1), ([2, 1], 1),
+               ([10, 9, 8, 7], 9), ([1, 3, 3, 2, 3], 2), ([0, -1], -1), ([4, 4, 3, 4], 3)]:
+    _g = second_largest(list(_c))
+    assert _g == _e and (_e is not None or _g is None), f"second_largest({_c}) should be {_e}, got {_g!r}"
+</pre>
+<div class="hint"><p>Problem 2 kept one champion. Keep two: <code>first</code> (the largest so far) and <code>second</code> (the largest so far that is smaller than <code>first</code>). Start both at <code>None</code>.</p></div>
+<div class="hint"><p>For each <code>x</code> there are three cases. If <code>first is None or x &gt; first</code>: the old first becomes second, and <code>x</code> becomes first. Else if <code>x &lt; first</code> and (<code>second is None or x &gt; second</code>): <code>x</code> becomes second. Otherwise (<code>x == first</code>, or <code>x</code> is too small): nothing changes.</p></div>
+<pre class="solution">
+def second_largest(nums):
+    first = None     # largest value seen so far
+    second = None    # largest value seen so far that is strictly smaller than first
+    for x in nums:
+        if first is None or x &gt; first:
+            second = first           # the old champion is now runner-up
+            first = x
+        elif x &lt; first and (second is None or x &gt; second):
+            second = x               # a new runner-up (ignores repeats of first)
+    return second
+</pre>
+<div class="explain"><p><b>The idea.</b> Keep the top two <i>different</i> values seen so far. A new champion pushes the old champion down to second place. A value equal to the champion changes nothing, which is how repeated maxima such as <code>[5, 1, 5, 3]</code> are handled.</p>
+<p><b>Trace on <code>[5, 1, 5, 3]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>x</th><th>case</th><th>first</th><th>second</th></tr></thead><tbody>
+<tr><td>–</td><td>start</td><td>None</td><td>None</td></tr>
+<tr><td class="n">5</td><td>first is None: new champion</td><td class="n">5</td><td>None</td></tr>
+<tr><td class="n">1</td><td>1 &lt; 5 and second is None: new runner-up</td><td class="n">5</td><td class="n">1</td></tr>
+<tr><td class="n">5</td><td>equal to first: ignore</td><td class="n">5</td><td class="n">1</td></tr>
+<tr><td class="n">3</td><td>3 &lt; 5 and 3 &gt; 1: new runner-up</td><td class="n">5</td><td class="n">3</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> One pass: <b>O(n) time</b>, <b>O(1) extra space</b>. The sorting answer, <code>sorted(set(nums))[-2]</code> with a length check, is correct but \(O(n\log n)\), and it builds new collections. Mention it as your brute force, then give the one-pass version.</p>
+<p><b>Why <code>is None</code>?</b> We cannot start <code>first</code> at 0 (all-negative lists) and we cannot start it at <code>nums[0]</code> without first checking for an empty list. <code>None</code> means “nothing yet”, and the tests on it handle the empty list for free.</p></div></div>
+
+<h4 id="code1-p8">Problem 8 · Remove duplicates, keep the order</h4>
+<div class="ex" id="x-code1-08" data-title="remove duplicates"><div class="task"><p>Write <code>dedupe(items)</code> that returns a new list with each item kept only the <b>first</b> time it appears, in the original order.</p>
+<ul><li><code>dedupe([3, 1, 3, 2, 1])</code> → <code>[3, 1, 2]</code></li>
+<li><code>dedupe(["b", "a", "b"])</code> → <code>["b", "a"]</code></li>
+<li><code>dedupe([])</code> → <code>[]</code></li></ul>
+<p>It must handle 20,000 different items quickly. New tool: a <dfn data-g="set">set</dfn>. <code>seen = set()</code> makes an empty set, <code>seen.add(x)</code> puts <code>x</code> in it, and <code>x in seen</code> asks whether it is there. Unlike a list, a set answers <code>in</code> in about one step, \(O(1)\), however big it is (it works like a dictionary with keys but no values).</p></div>
+<pre class="src">
+def dedupe(items):
+    result = []
+    # your code here
+    return result
+
+print(dedupe([3, 1, 3, 2, 1]))
+</pre>
+<pre class="check">
+import time
+for _c, _e in [([3, 1, 3, 2, 1], [3, 1, 2]), (["b", "a", "b"], ["b", "a"]), ([], []), ([9], [9]), ([4, 4, 4, 4], [4]),
+               ([1, 2, 3], [1, 2, 3]), ([-1, 1, -1, 0, 1], [-1, 1, 0])]:
+    _in = list(_c); _g = dedupe(_in)
+    assert _g == _e, f"dedupe({_c}) should be {_e}, got {_g}"
+    assert _in == _c, "dedupe must not change its input list"
+_big = list(range(20000)) + list(range(20000))
+_t = time.perf_counter(); _g = dedupe(_big); _dt = time.perf_counter() - _t
+assert _g == list(range(20000)), "wrong answer on a long list"
+assert _dt &lt; 0.25, f"40,000 items took {_dt:.2f} s. Checking 'x in result' on a LIST is O(n) each time, so the whole thing is O(n²). Keep a set of seen items."
+</pre>
+<div class="hint"><p>Brute force: for each item, append it if it is not already <code>in result</code>. That is correct, but <code>in</code> on a list scans the list. Why does that make it slow?</p></div>
+<div class="hint"><p>Keep a second collection, <code>seen = set()</code>, next to <code>result</code>. Ask <code>if x not in seen</code>; when true, add <code>x</code> to both.</p></div>
+<pre class="solution">
+def dedupe(items):
+    result = []
+    seen = set()               # fast membership test: "have I met x before?"
+    for x in items:
+        if x not in seen:
+            seen.add(x)
+            result.append(x)   # first time we meet x: keep it
+    return result
+</pre>
+<div class="explain"><p><b>The idea.</b> The list <code>result</code> remembers the <i>order</i>; the set <code>seen</code> answers “have I met this before?” instantly. Each tool does the job it is good at. Using two data structures together like this is very common.</p>
+<p><b>Trace on <code>[3, 1, 3, 2, 1]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>x</th><th>x in seen?</th><th>seen after</th><th>result after</th></tr></thead><tbody>
+<tr><td class="n">3</td><td>no</td><td>{3}</td><td>[3]</td></tr>
+<tr><td class="n">1</td><td>no</td><td>{3, 1}</td><td>[3, 1]</td></tr>
+<tr><td class="n">3</td><td>yes: skip</td><td>{3, 1}</td><td>[3, 1]</td></tr>
+<tr><td class="n">2</td><td>no</td><td>{3, 1, 2}</td><td>[3, 1, 2]</td></tr>
+<tr><td class="n">1</td><td>yes: skip</td><td>{3, 1, 2}</td><td>[3, 1, 2]</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> One pass with O(1) set operations: <b>O(n) time</b> (on average; sets are hash tables, which you will study in <a href="#code2">Coding practice 2</a>). <b>O(n) extra space</b> for the set and the result. The list-only brute force does up to \(0+1+2+\dots+(n-1)\approx n^2/2\) comparisons: O(n²). For 20,000 different items that is 200 million comparisons, which is why it fails the time test.</p>
+<p><b>Why not <code>list(set(items))</code>?</b> It removes duplicates, but a set has no reliable order, so the original order is lost. (A neat alternative that does keep order: <code>list(dict.fromkeys(items))</code>, because dictionaries remember insertion order.)</p></div></div>
+
+<h4 id="code1-p9">Problem 9 · Merge two sorted lists</h4>
+<div class="ex" id="x-code1-09" data-title="merge sorted lists"><div class="task"><p>You are given two lists, each already sorted from small to large. Write <code>merge_sorted(a, b)</code> that returns one new sorted list containing every item of both (duplicates kept). Do it by walking through both lists, <b>without</b> <code>sorted()</code>.</p>
+<ul><li><code>merge_sorted([1, 4, 9], [2, 3, 10])</code> → <code>[1, 2, 3, 4, 9, 10]</code></li>
+<li><code>merge_sorted([], [5, 6])</code> → <code>[5, 6]</code></li>
+<li><code>merge_sorted([1, 1], [1])</code> → <code>[1, 1, 1]</code></li></ul></div>
+<pre class="src">
+def merge_sorted(a, b):
+    merged = []
+    i, j = 0, 0        # i walks through a, j walks through b
+    # your code here
+    return merged
+
+print(merge_sorted([1, 4, 9], [2, 3, 10]))
+</pre>
+<pre class="check">
+import random
+def _banned(*a, **k):
+    raise AssertionError("please merge by walking the two lists: sorted() is switched off here")
+sorted = _banned
+try:
+    for _a, _b in [([1, 4, 9], [2, 3, 10]), ([], [5, 6]), ([5, 6], []), ([], []), ([1, 1], [1]), ([-3, 0], [-5, -4, 8]),
+                   ([1, 2, 3], [4, 5, 6]), ([4, 5, 6], [1, 2, 3]), ([2], [1])]:
+        _g = merge_sorted(list(_a), list(_b))
+        _e = list(_a) + list(_b); _e.sort()
+        assert _g == _e, f"merge_sorted({_a}, {_b}) should be {_e}, got {_g}"
+    _r = random.Random(3)
+    _a = [_r.randint(-50, 50) for _ in range(500)]; _a.sort()
+    _b = [_r.randint(-50, 50) for _ in range(300)]; _b.sort()
+    _e = _a + _b; _e.sort()
+    assert merge_sorted(_a, _b) == _e, "wrong answer on two long random sorted lists"
+finally:
+    del sorted
+</pre>
+<div class="hint"><p>By hand: put a finger at the start of each list. Which of the two numbers under your fingers goes into the output first?</p></div>
+<div class="hint"><p>While both fingers are still inside their lists (<code>i &lt; len(a) and j &lt; len(b)</code>): append the smaller of <code>a[i]</code> and <code>b[j]</code>, and move that finger forward. When one list runs out, the rest of the other list is already sorted: add it all with <code>merged.extend(a[i:])</code> and <code>merged.extend(b[j:])</code>.</p></div>
+<pre class="solution">
+def merge_sorted(a, b):
+    merged = []
+    i, j = 0, 0
+    while i &lt; len(a) and j &lt; len(b):
+        if a[i] &lt;= b[j]:          # take the smaller front item (&lt;= keeps a's item first on ties)
+            merged.append(a[i])
+            i += 1
+        else:
+            merged.append(b[j])
+            j += 1
+    merged.extend(a[i:])          # at most one of these two adds anything
+    merged.extend(b[j:])
+    return merged
+</pre>
+<div class="explain"><p><b>The idea.</b> The smallest item still waiting must be at the front of one of the two lists, because each list is sorted. So we only ever compare the two front items. This “merge” step is the heart of merge sort, which you will meet in <a href="#code3">Coding practice 3</a>.</p>
+<p><b>Trace on <code>a = [1, 4, 9]</code>, <code>b = [2, 3, 10]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>step</th><th>i</th><th>j</th><th>a[i] vs b[j]</th><th>take</th><th>merged</th></tr></thead><tbody>
+<tr><td class="n">1</td><td class="n">0</td><td class="n">0</td><td>1 vs 2</td><td>1 (from a)</td><td>[1]</td></tr>
+<tr><td class="n">2</td><td class="n">1</td><td class="n">0</td><td>4 vs 2</td><td>2 (from b)</td><td>[1, 2]</td></tr>
+<tr><td class="n">3</td><td class="n">1</td><td class="n">1</td><td>4 vs 3</td><td>3 (from b)</td><td>[1, 2, 3]</td></tr>
+<tr><td class="n">4</td><td class="n">1</td><td class="n">2</td><td>4 vs 10</td><td>4 (from a)</td><td>[1, 2, 3, 4]</td></tr>
+<tr><td class="n">5</td><td class="n">2</td><td class="n">2</td><td>9 vs 10</td><td>9 (from a)</td><td>[1, 2, 3, 4, 9]</td></tr>
+<tr><td class="n">6</td><td class="n">3</td><td class="n">2</td><td colspan="3">a is used up: extend with b[2:] = [10] → [1, 2, 3, 4, 9, 10]</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> Every comparison moves one finger forward, and the fingers can move at most \(n_a+n_b\) times in total: <b>O(n<sub>a</sub> + n<sub>b</sub>) time</b>, and <b>O(n<sub>a</sub> + n<sub>b</sub>) space</b> for the output. Gluing the lists and sorting would be \(O\big((n_a+n_b)\log(n_a+n_b)\big)\): slower, and it ignores the gift that the inputs are already sorted.</p>
+<div class="callout pitfall"><p>Forgetting the two <code>extend</code> lines is the most common bug: the loop stops as soon as <i>one</i> list runs out, and the leftovers of the other are lost. The test with <code>[1, 2, 3]</code> and <code>[4, 5, 6]</code> catches it.</p></div></div></div>
+
+<h4 id="code1-p10">Problem 10 · The missing number</h4>
+<div class="ex" id="x-code1-10" data-title="missing number"><div class="task"><p>A list contains <code>n</code> different whole numbers taken from <code>0, 1, 2, …, n</code>, in any order. Exactly one number of that range is missing. Write <code>missing_number(nums)</code> that returns it. It must work quickly for <code>n</code> = 20,000.</p>
+<ul><li><code>missing_number([3, 0, 1])</code> → <code>2</code> (here n = 3, the range is 0..3)</li>
+<li><code>missing_number([0, 1])</code> → <code>2</code></li>
+<li><code>missing_number([1])</code> → <code>0</code></li></ul></div>
+<pre class="src">
+def missing_number(nums):
+    n = len(nums)
+    # your code here
+    ...
+
+print(missing_number([3, 0, 1]))
+</pre>
+<pre class="check">
+import time, random
+for _c, _e in [([3, 0, 1], 2), ([0, 1], 2), ([1], 0), ([0], 1), ([1, 2, 3, 4], 0), ([0, 1, 2, 4], 3), ([4, 2, 0, 3], 1)]:
+    _g = missing_number(list(_c))
+    assert _g == _e, f"missing_number({_c}) should be {_e}, got {_g}"
+_n = 20000
+_big = [k for k in range(_n + 1) if k != _n - 5]
+random.Random(7).shuffle(_big)
+_t = time.perf_counter(); _g = missing_number(_big); _dt = time.perf_counter() - _t
+assert _g == _n - 5, f"on a shuffled list of 20,000 numbers the answer is {_n - 5}, got {_g}"
+assert _dt &lt; 0.25, f"20,000 numbers took {_dt:.2f} s: 'k in nums' inside a loop is O(n²). Can you do it with one sum?"
+</pre>
+<div class="hint"><p>Brute force: for each <code>k</code> in <code>range(n + 1)</code>, return it if <code>k not in nums</code>. Correct, but <code>in</code> on a list is a hidden loop. What is the total cost?</p></div>
+<div class="hint"><p>What should the numbers 0 + 1 + … + n add up to if none were missing? Compare that with what they actually add up to.</p></div>
+<div class="hint"><p>The full total is \(\frac{n(n+1)}{2}\) (in Python, <code>n * (n + 1) // 2</code>, where <code>//</code> divides and keeps a whole number). The missing number is that total minus <code>sum(nums)</code>.</p></div>
+<pre class="solution">
+def missing_number(nums):
+    n = len(nums)
+    expected = n * (n + 1) // 2      # 0 + 1 + ... + n, if nothing were missing
+    return expected - sum(nums)      # whatever is short is the missing number
+</pre>
+<div class="explain"><p><b>The idea.</b> If nothing were missing, the numbers 0 to n would add up to a known total. The list adds up to that total minus the missing number. So subtract.</p>
+<div class="mathblock" data-sheet="Sum of 0..n"><div class="eqlabel">Sum of the first n whole numbers</div>
+\[0+1+2+\dots+n=\frac{n(n+1)}{2}\]
+<p class="say">Read: “zero plus one plus … plus n equals n times n-plus-one, over two”. Write the sum forwards and backwards and add the two rows: every column gives \(n\), there are \(n+1\) columns, so twice the sum is \(n(n+1)\). For \(n=3\): \(0+1+2+3=6=\frac{3\cdot4}{2}\).</p></div>
+<p><b>Trace on <code>[3, 0, 1]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>quantity</th><th>calculation</th><th>value</th></tr></thead><tbody>
+<tr><td>n</td><td>len([3, 0, 1])</td><td class="n">3</td></tr>
+<tr><td>expected</td><td>3 × 4 // 2</td><td class="n">6</td></tr>
+<tr><td>sum(nums)</td><td>3 + 0 + 1</td><td class="n">4</td></tr>
+<tr><td>answer</td><td>6 − 4</td><td class="n">2</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> <code>sum</code> is one pass: <b>O(n) time</b>, <b>O(1) extra space</b>. The brute force does up to \(n+1\) list scans of length \(n\): O(n²), about 200 million steps for n = 20,000. A middle answer is to put <code>nums</code> into a set first and then test each <code>k</code>: O(n) time but O(n) extra space; the sum trick needs no extra memory.</p>
+<p><b>Edge cases.</b> Missing 0 (<code>[1]</code>): n = 1, expected 1, sum 1, answer \(1-1=0\), which is correct. Missing n (<code>[0, 1]</code>): expected 3, sum 1, answer 2. In Python, integers never overflow, so huge n is safe. (In C or Java, an interviewer may ask about overflow; the answer there is the XOR trick or subtracting as you go.)</p></div></div>
+
+<h3 id="code1-recap">What you collected today</h3>
+<div class="tw"><table class="t"><thead><tr><th>Idea</th><th>Where you used it</th><th>Typical gain</th></tr></thead><tbody>
+<tr><td>Carry a running value forward instead of recomputing</td><td>running sum, largest, second largest</td><td>O(n²) → O(n)</td></tr>
+<tr><td>Two pointers from the ends</td><td>reverse in place, palindrome</td><td>O(1) extra space</td></tr>
+<tr><td>Two pointers through two sorted lists</td><td>merge sorted lists</td><td>O(n log n) → O(n)</td></tr>
+<tr><td>A set for “have I seen it?”</td><td>remove duplicates</td><td>O(n²) → O(n)</td></tr>
+<tr><td>A little maths instead of a search</td><td>missing number</td><td>O(n²) → O(n), O(1) space</td></tr>
+<tr><td>Most specific case first in an if/elif chain</td><td>BitByte</td><td>correctness</td></tr>
+</tbody></table></div>
+
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">You are given a coding problem in an interview. What should you do in the first three minutes?</p><ol class="opts"><li>Start typing the fastest solution you can think of</li><li>Restate the input and output, ask about edge cases, and work a small example by hand</li><li>Write the tests first, then think</li><li>Ask the interviewer for the solution</li></ol><div class="why">Steps 1 and 2 of the method (read, examples by hand) come first: they catch misunderstandings and give you the algorithm. Typing straight away (A) is the classic mistake. Tests (C) matter, but you can't write useful tests before you understand the problem. D is not a strategy, though asking <i>clarifying</i> questions is.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">What is the Big-O of \(f(n)=4n+7n^2+100\)?</p><ol class="opts"><li>\(O(n)\)</li><li>\(O(4n)\)</li><li>\(O(n^2)\)</li><li>\(O(7n^2+100)\)</li></ol><div class="why">Keep the biggest term (\(7n^2\)) and drop its constant: \(O(n^2)\). A ignores the dominant term. B and D are not wrong as bounds but are not written in simplest form: Big-O drops constants and smaller terms.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">This function loops once over <code>xs</code>, and inside the loop does <code>if x in ys:</code> where <code>ys</code> is a list of the same length. What is its running time?</p><ol class="opts"><li>\(O(n)\): there is only one <code>for</code></li><li>\(O(n^2)\): <code>in</code> on a list is itself a loop</li><li>\(O(1)\)</li><li>\(O(\log n)\)</li></ol><div class="why"><code>x in ys</code> scans <code>ys</code> item by item, up to \(n\) steps, and it happens \(n\) times: \(O(n^2)\). This hidden loop is exactly what made the brute-force de-duplication slow. If <code>ys</code> were a set, the test would be \(O(1)\) and the whole thing \(O(n)\).</div></div>
+<div class="q" data-type="num" data-answer="20" data-tol="0.5"><p class="stem">About how many times can you halve 1,000,000 before reaching 1? (That is \(\log_2 10^6\), to the nearest whole number.)</p><div class="why">\(2^{10}=1024\approx10^3\), so \(2^{20}\approx10^6\): about 20 halvings. This is why \(O(\log n)\) is so fast.</div></div>
+<div class="q" data-type="num" data-answer="4" data-tol="0.01"><p class="stem">An \(O(n^2)\) function takes 1 second for \(n=10{,}000\). Roughly how many seconds will it take for \(n=20{,}000\)?</p><div class="why">Doubling \(n\) multiplies \(n^2\) by \(2^2=4\): about 4 seconds. An \(O(n)\) function would take about 2 seconds, and an \(O(n\log n)\) one a little over 2.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">In the second-largest problem, why do we start <code>first</code> at <code>None</code> rather than at 0?</p><ol class="opts"><li>Because 0 would beat every number in an all-negative list, giving a wrong answer</li><li>Because Python does not allow 0 as a starting value</li><li>Because <code>None</code> is faster than 0</li><li>It makes no difference</li></ol><div class="why">For <code>[-1, -4, -2]</code>, starting at 0 would leave <code>first = 0</code>, a number that is not even in the list. <code>None</code> means “nothing seen yet”. B and C are false; D is false, as the all-negative test shows.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">Which of these runs in \(O(1)\) time on a Python list <code>xs</code> of length \(n\)?</p><ol class="opts"><li><code>sum(xs)</code></li><li><code>xs[1:]</code></li><li><code>xs.insert(0, 5)</code></li><li><code>xs.append(5)</code></li></ol><div class="why">Appending at the end is \(O(1)\) (on average). <code>sum</code> visits every item; a slice copies \(n-1\) items; inserting at the front shifts every item one place right. All three are \(O(n)\).</div></div>
+<div class="q" data-type="open"><p class="stem">Explain to an interviewer, in two or three sentences, why your merge of two sorted lists is \(O(n_a+n_b)\) and why that is better than gluing them and calling <code>sorted()</code>.</p><div class="model">Each comparison puts one item into the output and moves one of the two indices forward, and together the indices can only move \(n_a+n_b\) times, so the loop does at most \(n_a+n_b\) steps. Sorting the glued list costs \(O((n_a+n_b)\log(n_a+n_b))\) because it does not use the fact that each input is already sorted; the merge uses that fact to avoid the extra log factor.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">The five steps for solving a coding problem</div><div class="b">Read (input/output/edge cases) → examples by hand → brute force first → improve → test edge cases.</div></div>
+<div class="fc"><div class="f">What does \(O(n)\) mean in plain words?</div><div class="b">The number of steps grows in proportion to the input size: double \(n\), double the work.</div></div>
+<div class="fc"><div class="f">Two rules to simplify a step count into Big-O</div><div class="b">Keep only the fastest-growing term; drop constant multipliers. \(3n^2+5n+2=O(n^2)\).</div></div>
+<div class="fc"><div class="f">Order these from fastest to slowest: \(O(n^2)\), \(O(1)\), \(O(n\log n)\), \(O(\log n)\), \(O(n)\)</div><div class="b">\(O(1)\) &lt; \(O(\log n)\) &lt; \(O(n)\) &lt; \(O(n\log n)\) &lt; \(O(n^2)\)</div></div>
+<div class="fc"><div class="f">Where does a \(\log n\) in a running time come from?</div><div class="b">From halving (or splitting) the problem at every step: \(\log_2 n\) is the number of halvings from \(n\) down to 1.</div></div>
+<div class="fc"><div class="f">Time of <code>x in some_list</code> vs <code>x in some_set</code></div><div class="b">List: \(O(n)\) (scans the items). Set: \(O(1)\) on average (hash look-up).</div></div>
+<div class="fc"><div class="f">\(0+1+\dots+n=\;?\)</div><div class="b">\(\dfrac{n(n+1)}{2}\). Used for the missing-number problem.</div></div>
+<div class="fc"><div class="f">What does “in place, O(1) extra space” mean?</div><div class="b">Change the input itself, using only a fixed number of extra variables, no new list as big as the input.</div></div>
+<div class="fc"><div class="f">Two-pointer reversal: start positions and stop condition</div><div class="b"><code>left = 0</code>, <code>right = len(xs) - 1</code>; swap and move inwards while <code>left &lt; right</code>.</div></div>
+<div class="fc"><div class="f">Merging two sorted lists: the key fact</div><div class="b">The smallest remaining item is always at the front of one of the two lists, so compare only the two front items. Remember to add the leftovers.</div></div>
+<div class="fc"><div class="f">Which edge cases should you always test?</div><div class="b">Empty input, one element, all equal / duplicates, negatives (and zero), and a large input for speed.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can apply the five-step method aloud to a problem I have not seen.</label>
+<label><input type="checkbox"> I write a few <code>assert</code> tests, including edge cases, before I press Check.</label>
+<label><input type="checkbox"> I can turn a step count such as \(2n^2+3n\) into Big-O and explain the two rules.</label>
+<label><input type="checkbox"> I can name a piece of Python code for each of O(1), O(log n), O(n), O(n log n), O(n²).</label>
+<label><input type="checkbox"> I can spot a hidden loop such as <code>x in some_list</code> inside another loop.</label>
+<label><input type="checkbox"> I solved all ten problems, and I can re-solve at least five of them tomorrow from a blank function.</label>
+</div>
+</section>
