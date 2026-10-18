@@ -567,7 +567,7 @@ rng = np.random.default_rng(1)
 x = rng.normal(size=20); y = rng.normal(size=20)
 L, dw, db = mse_grad(0.7, -0.3, x, y)
 h = 1e-6
-Lp = np.mean((0.7 + h) * x - 0.3 - y) ** 0 * np.mean(((0.7 + h) * x - 0.3 - y) ** 2)
+Lp = np.mean(((0.7 + h) * x - 0.3 - y) ** 2)
 Lm = np.mean(((0.7 - h) * x - 0.3 - y) ** 2)
 assert abs(dw - (Lp - Lm) / (2 * h)) &lt; 1e-5, f"dw disagrees with a finite-difference check: {dw} vs {(Lp - Lm) / (2 * h)}"
 Lp = np.mean((0.7 * x - 0.3 + h - y) ** 2); Lm = np.mean((0.7 * x - 0.3 - h - y) ** 2)
