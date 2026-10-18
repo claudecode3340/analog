@@ -1,0 +1,805 @@
+<section class="lesson" id="pt1" data-book="PyTorch docs (tensors, autograd) · Prince §7.6, p. 111">
+<p class="lede">Until now you have done every derivative yourself: by hand in the calculus lesson, with backpropagation in NumPy, and with your own little autograd engine. PyTorch is the professional version of all three. It stores numbers in <i>tensors</i> (NumPy arrays that can live on a GPU) and it records every operation so that one call, <code>.backward()</code>, produces every gradient. This lesson teaches you exactly those two things, slowly, on your own Mac.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#np1">NumPy I</a> <a href="#np2">NumPy II (broadcasting)</a> <a href="#m-calc">Derivatives and the chain rule</a> <a href="#proj3-autograd">Project 3a: your autograd engine</a> <a href="#udl7">Prince Ch. 7: backpropagation</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>open a PyTorch notebook on your Mac in VS Code, choose the right kernel and run it cell by cell;</li>
+<li>create tensors, read their <code>shape</code>, <code>dtype</code> and <code>device</code>, index them, reshape them and broadcast them exactly as you did with NumPy arrays;</li>
+<li>move data between NumPy and PyTorch, and between the CPU and your Mac's GPU (<code>"mps"</code>);</li>
+<li>build a small computation with <code>requires_grad=True</code>, call <code>.backward()</code>, read <code>.grad</code>, and check every number against a hand derivative and against your micrograd;</li>
+<li>explain why gradients <i>accumulate</i>, and avoid the classic bug of forgetting to zero them;</li>
+<li>use <code>torch.no_grad()</code>, <code>.detach()</code> and <code>.item()</code> correctly, and fit a straight line with a gradient-descent loop that you write yourself.</li></ul></div>
+
+<div class="callout book"><blockquote>The takeaway is that although the underlying ideas in deep learning are quite complex, implementation is relatively simple. For example, all of the details of the backpropagation are hidden in the single line of code: <code>loss.backward()</code>.</blockquote><cite>Prince, §7.6, p. 111</cite></div>
+
+<h3 id="pt1-what">What PyTorch is, in one picture</h3>
+<p>You already know three things that, put together, make PyTorch:</p>
+<ol>
+<li><b>NumPy arrays.</b> A block of numbers with a shape, and fast maths on the whole block at once. PyTorch's version is called a <dfn data-g="pt-tensor">tensor</dfn>. Almost every NumPy function has a PyTorch twin with the same name: <code>np.zeros</code> becomes <code>torch.zeros</code>, <code>np.exp</code> becomes <code>torch.exp</code>.</li>
+<li><b>A graphics card.</b> Tensors can be moved to a GPU, which does thousands of multiplications in parallel. On your Mac the GPU is reached through Apple's <i>Metal</i> system, and PyTorch calls it <code>"mps"</code>.</li>
+<li><b>Your autograd engine.</b> In Project 3a you built <code>Value</code> objects that remembered how they were made, so that <code>loss.backward()</code> could walk backwards through the chain rule. PyTorch does the same thing, but for whole tensors at once, and with derivatives written for hundreds of operations.</li>
+</ol>
+<div class="tw"><table class="t"><thead><tr><th>You built / used</th><th>PyTorch's name</th><th>What it adds</th></tr></thead><tbody>
+<tr><td>NumPy <code>ndarray</code></td><td><code>torch.Tensor</code></td><td>Can live on the GPU; can record its own history for gradients.</td></tr>
+<tr><td>micrograd <code>Value</code> with <code>.grad</code></td><td>tensor with <code>requires_grad=True</code></td><td>One object holds millions of numbers, not one.</td></tr>
+<tr><td>Your <code>backward()</code> (topological sort + chain rule)</td><td><code>loss.backward()</code></td><td>Written in C++, correct for every built-in operation.</td></tr>
+<tr><td>Your hand-written backprop in the two-layer net</td><td>nothing: it is automatic</td><td>You never write a derivative again (but you must still understand them).</td></tr>
+</tbody></table></div>
+<div class="callout intuition"><p>Think of PyTorch as <b>NumPy with a memory</b>. NumPy forgets how a number was made the moment it is computed. A PyTorch tensor that asks for gradients keeps a small note saying “I was made by multiplying these two things”. Those notes, chained together, are the computation graph that <code>.backward()</code> walks.</p></div>
+
+<h3 id="pt1-mac">Running PyTorch on your Mac, one click at a time</h3>
+<p>PyTorch is about 300 MB of compiled code. It cannot run inside a web page, so the cells in this lesson have a grey label <b>“Run this on your Mac (Jupyter) · PyTorch”</b> and no Run button. What you see under each one is a <b>reference output</b>: the build of this guide ran exactly that code on a Linux computer's CPU. Your job is to run the same code on your Mac and compare. Here is how, step by step. Do it once now; after that it takes ten seconds.</p>
+<div class="worked"><div class="wt">Step by step · <b>open this lesson as a notebook on your Mac</b></div>
+<div class="given">You need the setup from <a href="#s0-setup">Set up your Mac</a>: the folder <code>~/ml-course</code>, its virtual environment <code>.venv</code>, and VS Code with the Python and Jupyter extensions.</div>
+<ol class="steps">
+<li><div><b>Install PyTorch (once only).</b> Open the <i>Terminal</i> app (press <kbd class="k">⌘</kbd> + <kbd class="k">Space</kbd>, type <i>Terminal</i>, press <kbd class="k">Enter</kbd>). Type these three lines, pressing <kbd class="k">Enter</kbd> after each:
+<pre style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;overflow:auto;font:13.5px/1.6 var(--mono);margin:8px 0">cd ~/ml-course
+source .venv/bin/activate
+uv pip install torch torchvision</pre>
+The first line moves into your course folder. The second switches on the course's private Python (your prompt now starts with <code>(.venv)</code>). The third downloads PyTorch into it; it takes a minute or two.<span class="why">If you skip the second line, PyTorch goes into the wrong Python and the notebook will say it cannot find <code>torch</code>.</span></div></li>
+<li><div><b>Download the notebook.</b> Scroll to the very bottom of this lesson and press <b>⬇ Download as a Jupyter notebook</b>. A file <code>pt1.ipynb</code> lands in your Downloads folder. Drag it into <code>~/ml-course/notebooks</code> (make the folder if it is not there).</div></li>
+<li><div><b>Open it in VS Code.</b> In VS Code choose <i>File → Open Folder…</i>, pick <code>ml-course</code>, then click <code>notebooks/pt1.ipynb</code> in the left-hand file list. You see the same cells as on this page.</div></li>
+<li><div><b>Choose the kernel.</b> The <i>kernel</i> is the Python that runs the notebook. Click <b>Select Kernel</b> in the top-right corner of the notebook, then <i>Python Environments…</i>, then the one whose path contains <code>.venv</code>. The button now shows <code>.venv (Python 3.12…)</code>.<span class="why">Every “No module named torch” error on a Mac comes from the wrong kernel. Check this button first.</span></div></li>
+<li><div><b>Run the first cell.</b> Click inside the first code cell and press <kbd class="k">Shift</kbd> + <kbd class="k">Enter</kbd>. A small number <code>[1]</code> appears to its left and the output appears below it. <kbd class="k">Shift</kbd> + <kbd class="k">Enter</kbd> also moves you to the next cell, so you can keep pressing it to go down the notebook.</div></li>
+<li><div><b>Compare.</b> Put this page and VS Code side by side. Your numbers should match the reference outputs here, except where a note says <i>“on your Mac you will see …”</i> (for example the device name, version numbers and timings).</div></li>
+</ol><div class="result">Rule of thumb: run cells <b>top to bottom</b>. If you restart VS Code, run them again from the top, because later cells use names made by earlier ones.</div></div>
+
+<p>Now run the first cell. It imports PyTorch and asks whether your Mac's GPU is available.</p>
+<div class="py" data-mode="local" id="c-pt1-01"><pre class="src">
+import torch
+import numpy as np
+
+print("PyTorch version:", torch.__version__)
+print("Apple GPU (MPS) available:", torch.backends.mps.is_available())
+
+# Use the Apple GPU if there is one, otherwise the CPU.
+device = "mps" if torch.backends.mps.is_available() else "cpu"
+print("We will use:", device)
+</pre><div class="pynote"><b>What you should see on your Mac:</b> a version such as <code>2.x.y</code> (any 2.x is fine), <code>Apple GPU (MPS) available: True</code> on any Apple-Silicon Mac (M1, M2, M3, M4…), and <code>We will use: mps</code>. The reference output here says <code>cpu</code>, because the guide was built on a computer without an Apple GPU. The line <code>device = "mps" if … else "cpu"</code> is a one-line <code>if</code>: it picks the first value when the condition is true, otherwise the second.</div></div>
+<div class="callout mac"><p><b>If you see <code>ModuleNotFoundError: No module named 'torch'</code></b>, the notebook is using the wrong kernel. Click the kernel button (top right) and pick <code>.venv</code>. If <code>MPS available</code> says <code>False</code> on an Apple-Silicon Mac, your macOS is older than 12.3 or you installed an Intel (x86) Python by mistake; run <code>python -c "import platform; print(platform.machine())"</code> in the Terminal: it must print <code>arm64</code>.</p></div>
+
+<h3 id="pt1-tensors">Tensors: NumPy arrays with two superpowers</h3>
+<p>A <dfn data-g="pt-tensor">tensor</dfn> is a rectangular block of numbers, all of the same type. The number of directions you can move in is its <b>number of dimensions</b> (<code>ndim</code>, also called its <i>rank</i>), and the length in each direction is its <b>shape</b>. You know these already as NumPy arrays; deep learning just uses higher dimensions every day.</p>
+<div class="symbols"><div class="row h"><span>Dimensions</span><span>Name and typical use</span><span>Example shape</span></div>
+<div class="row"><span class="s">0</span><span>a <b>scalar</b>: one number, such as a loss value</span><span class="eg"><code>()</code></span></div>
+<div class="row"><span class="s">1</span><span>a <b>vector</b>: one data point's features, or a bias</span><span class="eg"><code>(64,)</code></span></div>
+<div class="row"><span class="s">2</span><span>a <b>matrix</b>: a batch of data points (rows) by features (columns), or a weight matrix</span><span class="eg"><code>(32, 64)</code></span></div>
+<div class="row"><span class="s">3</span><span>one colour image: channels × height × width</span><span class="eg"><code>(3, 32, 32)</code></span></div>
+<div class="row"><span class="s">4</span><span>a batch of colour images: N × C × H × W (read <i>“N-C-H-W”</i>)</span><span class="eg"><code>(128, 3, 32, 32)</code></span></div></div>
+<p>Notice the image order. NumPy and matplotlib usually store an image as height × width × channels; PyTorch puts the <b>channels first</b>. You will meet this again in month 4 when you build convolutional networks.</p>
+
+<h4>Making tensors</h4>
+<p>Every way of making a NumPy array has a PyTorch twin. Read the cell, then run it on your Mac.</p>
+<div class="py" data-mode="local" id="c-pt1-02"><pre class="src">
+a = torch.tensor([[1.0, 2.0, 3.0],
+                  [4.0, 5.0, 6.0]])     # from a nested Python list
+print(a)
+print("shape:", a.shape, " ndim:", a.ndim, " numel:", a.numel())
+print("dtype:", a.dtype, " device:", a.device)
+
+print(torch.zeros(2, 3))           # all zeros, shape (2, 3)
+print(torch.ones(3))               # all ones, shape (3,)
+print(torch.arange(0, 10, 2))      # 0, 2, 4, 6, 8   (like np.arange)
+print(torch.linspace(0, 1, 5))     # 5 evenly spaced points from 0 to 1
+print(torch.full((2, 2), 7.0))     # every entry 7
+print(torch.eye(3))                # 3x3 identity matrix
+</pre><div class="pynote"><b>Read the output:</b> <code>a.shape</code> prints as <code>torch.Size([2, 3])</code>. A <code>torch.Size</code> behaves exactly like a tuple: <code>a.shape[0]</code> is 2. <code>numel()</code> (“number of elements”) is \(2\times3=6\). The dtype is <code>torch.float32</code> and the device is <code>cpu</code>: every tensor starts on the CPU unless you say otherwise. Notice that PyTorch prints <code>1.</code> for the float one, just as NumPy does.</div></div>
+
+<p>Random tensors work as in NumPy, with one difference in how you fix the random seed. In NumPy you made a generator, <code>rng = np.random.default_rng(0)</code>. In PyTorch the simplest way is to set the global seed with <code>torch.manual_seed(0)</code>; every random function after it is then repeatable.</p>
+<div class="predict" data-correct="1"><p>The cell below calls <code>torch.manual_seed(0)</code>, draws two random numbers, calls <code>torch.manual_seed(0)</code> again and draws two more. What do you expect?</p><ol class="opts"><li>The second pair is identical to the first pair</li><li>The second pair is different from the first</li><li>An error: you cannot set the seed twice</li></ol><div class="why">Setting the seed rewinds the random-number generator to the same starting point, so the same sequence comes out again. This is how you make experiments repeatable: same seed, same “random” weights, same results.</div></div>
+<div class="py" data-mode="local" id="c-pt1-03"><pre class="src">
+torch.manual_seed(0)
+print(torch.randn(2))        # 2 numbers from the standard normal N(0, 1)
+torch.manual_seed(0)
+print(torch.randn(2))        # the same 2 numbers again
+
+torch.manual_seed(0)
+print(torch.rand(2, 3))      # uniform on [0, 1)
+print(torch.randint(0, 10, (5,)))   # 5 whole numbers from 0 to 9
+print(torch.zeros_like(a))   # zeros with the same shape (and dtype) as a
+</pre><div class="pynote"><b>What you should see on your Mac:</b> exactly the same numbers as here (<code>1.5410, -0.2934</code> twice). PyTorch's CPU random generator gives the same sequence on every computer for the same seed. Numbers drawn <i>directly on the GPU</i> (<code>torch.randn(2, device="mps")</code>) come from a different generator, so they would differ. That is one reason to create random weights on the CPU and then move them.</div></div>
+
+<h3 id="pt1-dtype">dtype: what kind of number each entry is</h3>
+<p>The <dfn data-g="pt-dtype">dtype</dfn> (“data type”) says how each number is stored. You met dtypes in NumPy. The important change: <b>PyTorch's default for decimals is <code>float32</code>, not <code>float64</code></b>.</p>
+<div class="tw"><table class="t"><thead><tr><th>dtype</th><th>Bytes per number</th><th>Used for</th></tr></thead><tbody>
+<tr><td><code>torch.float32</code> (= <code>torch.float</code>)</td><td class="n">4</td><td>The default for weights, inputs, activations. About 7 significant digits.</td></tr>
+<tr><td><code>torch.float64</code> (= <code>torch.double</code>)</td><td class="n">8</td><td>Checking gradients exactly; NumPy's default. About 16 digits. <b>Not supported on MPS.</b></td></tr>
+<tr><td><code>torch.float16</code>, <code>torch.bfloat16</code></td><td class="n">2</td><td>Fast “mixed precision” training on big GPUs (later in the course).</td></tr>
+<tr><td><code>torch.int64</code> (= <code>torch.long</code>)</td><td class="n">8</td><td>Class labels (0, 1, …, 9) and indices. Loss functions for classification insist on it.</td></tr>
+<tr><td><code>torch.bool</code></td><td class="n">1</td><td>Masks, such as <code>x &gt; 0</code>.</td></tr>
+</tbody></table></div>
+<div class="worked"><div class="wt">Worked example · <b>why float32 is the default</b></div>
+<div class="given">A network has one million weights. How much memory do they take in each dtype?</div>
+<ol class="steps">
+<li><div>float64: \(1{,}000{,}000 \times 8 \text{ bytes} = 8{,}000{,}000\) bytes \(= 8\) MB.</div></li>
+<li><div>float32: \(1{,}000{,}000 \times 4 = 4{,}000{,}000\) bytes \(= 4\) MB.<span class="why">Half the memory, and the GPU moves and multiplies half as many bytes, so it is roughly twice as fast.</span></div></li>
+<li><div>Training also stores a gradient for every weight, and Adam stores two more numbers per weight. With Adam in float32: \(4 \times 4 = 16\) MB. A large language model with 7 billion weights would need \(7\times10^9 \times 16 = 112\) GB the same way, which is why precision matters so much in practice.</div></li>
+</ol><div class="result">float32 halves memory and time, and its ~7 digits are plenty for noisy gradient descent.</div></div>
+<div class="py" data-mode="local" id="c-pt1-04"><pre class="src">
+i = torch.tensor([1, 2, 3])          # whole numbers in, so int64
+f = torch.tensor([1.0, 2.0, 3.0])    # decimals in, so float32
+print(i.dtype, f.dtype)
+
+print((i + f).dtype)                 # mixing: int64 + float32 gives float32
+print(i.float().dtype, f.long(), f.double().dtype)   # converting
+print(f.to(torch.float64).dtype)     # .to(dtype) does the same job
+
+print(torch.tensor([0.1]).item(), torch.tensor([0.1], dtype=torch.float64).item())
+</pre><div class="pynote"><b>Read the output:</b> the last line shows float32's limited precision: <code>0.1</code> stored in float32 comes back as <code>0.10000000149011612</code>, while float64 gives <code>0.1</code>. Neither can store 0.1 exactly (it is a recurring fraction in binary, just as 1/3 is in decimal), but float64 is about a billion times closer. <code>.item()</code> turns a one-number tensor into an ordinary Python number. <code>.long()</code> chops decimals off (it does not round).</div></div>
+<div class="callout pitfall"><p><b>dtype mismatches are the most common first error.</b> If you build a tensor from a NumPy array, it keeps NumPy's <code>float64</code>. Multiplying it by a <code>float32</code> weight matrix then fails with <i>“expected scalar type Float but found Double”</i> (or “mat1 and mat2 must have the same dtype”). The fix is <code>.float()</code> on the data. In this course: <b>data and weights in float32, labels in int64</b>.</p></div>
+
+<h3 id="pt1-shape">Shapes, indexing and reshaping</h3>
+<p>Indexing and slicing are <b>exactly</b> NumPy's: positions count from 0, <code>a[i, j]</code> picks one entry, <code>a[:, 1]</code> picks a column, <code>a[a &gt; 2]</code> picks the entries where a condition holds. If any of this feels shaky, reread <a href="#np1">NumPy I</a>; everything there carries over.</p>
+<div class="py" data-mode="local" id="c-pt1-05"><pre class="src">
+b = torch.arange(12).reshape(3, 4)   # the numbers 0..11 in a 3x4 grid
+print(b)
+print("b[1, 2] =", b[1, 2])          # row 1, column 2 (counting from 0)
+print("row 0:", b[0])                # a whole row
+print("column 1:", b[:, 1])          # a whole column
+print("last two columns:\n", b[:, -2:])
+print("entries above 6:", b[b &gt; 6])  # boolean mask, as in NumPy
+print("rows 0 and 2:\n", b[[0, 2]])  # a list of row numbers
+</pre><div class="pynote"><b>Read the output:</b> <code>b[1, 2]</code> is <code>tensor(6)</code>, a 0-dimensional tensor, not a plain number. Use <code>b[1, 2].item()</code> when you need the Python number 6. Everything else matches what NumPy would print.</div></div>
+
+<p>Deep learning code reshapes constantly: an 8×8 image becomes a vector of 64 numbers before a fully connected layer, and a single example must be given a batch dimension before it enters a network. The tools:</p>
+<div class="tw"><table class="t"><thead><tr><th>Call</th><th>What it does</th><th>Shape example</th></tr></thead><tbody>
+<tr><td><code>x.reshape(2, 3)</code> or <code>x.view(2, 3)</code></td><td>same numbers, read row by row into a new shape</td><td>(6,) → (2, 3)</td></tr>
+<tr><td><code>x.reshape(-1)</code> or <code>x.flatten()</code></td><td>one long vector; <code>-1</code> means “work this size out for me”</td><td>(2, 3) → (6,)</td></tr>
+<tr><td><code>x.flatten(1)</code></td><td>keep dimension 0 (the batch), flatten the rest</td><td>(32, 8, 8) → (32, 64)</td></tr>
+<tr><td><code>x.unsqueeze(0)</code></td><td>add a dimension of size 1 at position 0</td><td>(64,) → (1, 64)</td></tr>
+<tr><td><code>x.squeeze()</code></td><td>remove every dimension of size 1</td><td>(1, 64, 1) → (64,)</td></tr>
+<tr><td><code>x.T</code> (2-D) and <code>x.permute(2, 0, 1)</code></td><td>reorder dimensions</td><td>(32, 32, 3) → (3, 32, 32)</td></tr>
+</tbody></table></div>
+<div class="worked"><div class="wt">Worked example · <b>where each number goes in a reshape</b></div>
+<div class="given">\(x = (0, 1, 2, 3, 4, 5)\), shape (6,). Reshape to (2, 3), then to (3, 2).</div>
+<ol class="steps">
+<li><div>Reshape fills <b>row by row</b>: the first 3 numbers make row 0, the next 3 make row 1.
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(6,auto)"><span class="h1">0</span><span class="h1">1</span><span class="h1">2</span><span class="h2">3</span><span class="h2">4</span><span class="h2">5</span></span><span class="lab">x, shape (6,)</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h1">0</span><span class="h1">1</span><span class="h1">2</span><span class="h2">3</span><span class="h2">4</span><span class="h2">5</span></span><span class="lab">shape (2, 3)</span></span></div></div></li>
+<li><div>To (3, 2): rows of 2. Row 0 is (0, 1), row 1 is (2, 3), row 2 is (4, 5).
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h1">0</span><span class="h1">1</span><span class="h2">2</span><span class="h2">3</span><span class="h3">4</span><span class="h3">5</span></span><span class="lab">shape (3, 2)</span></span></div><span class="why">This is <b>not</b> the transpose. The transpose of the (2, 3) grid would have rows (0, 3), (1, 4), (2, 5). Reshape keeps the reading order; transpose swaps rows and columns.</span></div></li>
+<li><div>The product of the sizes must stay 6: \(2\times3=3\times2=6\). Asking for <code>reshape(4, 2)</code> (8 places) is an error.</div></li>
+</ol><div class="result">reshape = same numbers, same reading order, new grid. transpose = rows become columns.</div></div>
+<div class="py" data-mode="local" id="c-pt1-06"><pre class="src">
+x = torch.arange(6)
+print(x.reshape(2, 3))
+print(x.reshape(3, 2))
+print(x.reshape(2, 3).T)            # the transpose is different!
+print(x.reshape(-1, 2).shape)        # -1: PyTorch works out the 3
+
+v = torch.tensor([1.0, 2.0, 3.0])    # shape (3,)
+print(v.unsqueeze(0).shape, v.unsqueeze(1).shape)   # (1, 3) and (3, 1)
+
+imgs = torch.zeros(32, 8, 8)         # a batch of 32 grey 8x8 images
+print(imgs.flatten(1).shape)         # (32, 64): one row per image
+print(torch.zeros(32, 32, 3).permute(2, 0, 1).shape)  # HWC to CHW
+</pre><div class="pynote"><b>Read the output:</b> check the three grids against the worked example above. <code>unsqueeze(0)</code> turned a vector into a 1-row matrix, which is how you give a single example a batch dimension before passing it to a network.</div></div>
+<div class="callout pitfall"><p><b>Views share memory.</b> As in NumPy, slicing and <code>view</code>/<code>reshape</code> (usually) return a <i>view</i> of the same numbers. Changing <code>b[0, 0] = 100</code> through a view changes the original tensor too. Use <code>.clone()</code> (PyTorch's name for NumPy's <code>.copy()</code>) when you need an independent copy.</p></div>
+
+<h3 id="pt1-broadcast">Maths on tensors, and broadcasting</h3>
+<p>Arithmetic works element by element, matrix products use <code>@</code>, and broadcasting follows <b>exactly the same rules as NumPy</b> (taught in <a href="#np2">NumPy II</a>). As a reminder, line the shapes up from the right; two sizes fit if they are equal or one of them is 1; a size-1 dimension is stretched (copied) to match.</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>broadcasting a column against a row</b></div>
+<div class="given">\(c=\begin{pmatrix}1\\2\\3\end{pmatrix}\) has shape (3, 1); \(r=\begin{pmatrix}10 & 20 & 30 & 40\end{pmatrix}\) has shape (1, 4). What is \(c + r\)?</div>
+<ol class="steps">
+<li><div>Line the shapes up from the right: (3, <span class="hlb">1</span>) and (1, <span class="hlb">4</span>). Last dimension: 1 and 4 fit (one is 1), result 4. First dimension: <span class="hlc">3</span> and <span class="hlc">1</span> fit, result 3. Output shape (3, 4).</div></li>
+<li><div>Stretch \(c\) sideways into 4 equal columns, and \(r\) downwards into 3 equal rows:
+\[\begin{pmatrix}1&1&1&1\\2&2&2&2\\3&3&3&3\end{pmatrix} + \begin{pmatrix}10&20&30&40\\10&20&30&40\\10&20&30&40\end{pmatrix}\]</div></li>
+<li><div>Add entry by entry: \[c+r=\begin{pmatrix}11&21&31&41\\12&22&32&42\\13&23&33&43\end{pmatrix}\]<span class="why">No copies are really made in memory; PyTorch just reads the same number repeatedly. That is why broadcasting is fast.</span></div></li>
+</ol><div class="result">(3, 1) + (1, 4) → (3, 4): every row number plus every column number.</div></div>
+<div class="py" data-mode="local" id="c-pt1-07"><pre class="src">
+c = torch.tensor([[1.0], [2.0], [3.0]])        # shape (3, 1)
+r = torch.tensor([[10.0, 20.0, 30.0, 40.0]])   # shape (1, 4)
+print(c + r)
+
+A = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+w = torch.tensor([1.0, -1.0])
+print("A * A (element by element):\n", A * A)
+print("A @ A (matrix product):\n", A @ A)
+print("A @ w:", A @ w)                          # matrix times vector
+
+print("sum of everything:", A.sum())
+print("sum down the columns (dim=0):", A.sum(dim=0))
+print("mean of each row (dim=1):", A.mean(dim=1))
+print("keepdim:", A.sum(dim=1, keepdim=True).shape)
+</pre><div class="pynote"><b>Read the output:</b> PyTorch says <code>dim</code> where NumPy says <code>axis</code> (PyTorch also accepts <code>axis=</code>, but you will read <code>dim</code> everywhere). <code>dim=0</code> collapses the rows, leaving one number per column: \(1+3=4\) and \(2+4=6\). <code>A @ A</code> gives \(\begin{pmatrix}7&10\\15&22\end{pmatrix}\): check the top-left entry by hand, \(1\cdot1+2\cdot3=7\).</div></div>
+<div class="tw"><table class="t"><thead><tr><th>NumPy</th><th>PyTorch</th><th>Note</th></tr></thead><tbody>
+<tr><td><code>np.array(L)</code></td><td><code>torch.tensor(L)</code></td><td>always copies</td></tr>
+<tr><td><code>x.copy()</code></td><td><code>x.clone()</code></td><td></td></tr>
+<tr><td><code>x.astype(np.float32)</code></td><td><code>x.float()</code> or <code>x.to(torch.float32)</code></td><td></td></tr>
+<tr><td><code>np.concatenate([a, b], axis=0)</code></td><td><code>torch.cat([a, b], dim=0)</code></td><td></td></tr>
+<tr><td><code>np.stack</code>, <code>np.where</code>, <code>np.exp</code>, <code>np.maximum</code></td><td><code>torch.stack</code>, <code>torch.where</code>, <code>torch.exp</code>, <code>torch.maximum</code></td><td>same names</td></tr>
+<tr><td><code>x.max(axis=1)</code></td><td><code>x.max(dim=1)</code></td><td>PyTorch returns <b>two</b> things: values and their positions</td></tr>
+<tr><td><code>x.argmax(axis=1)</code></td><td><code>x.argmax(dim=1)</code></td><td>predicted class of each row</td></tr>
+<tr><td><code>rng.permutation(n)</code></td><td><code>torch.randperm(n)</code></td><td>shuffled 0..n−1</td></tr>
+</tbody></table></div>
+
+<h3 id="pt1-numpy">Moving data between NumPy and PyTorch</h3>
+<p>You will often load or prepare data with NumPy, pandas or scikit-learn and then hand it to PyTorch. Three functions do the moving, and the subtle point is <b>which ones share memory</b>.</p>
+<div class="tw"><table class="t"><thead><tr><th>Call</th><th>Direction</th><th>Shares memory?</th><th>dtype</th></tr></thead><tbody>
+<tr><td><code>torch.from_numpy(arr)</code></td><td>NumPy → torch</td><td><b>yes</b>: change one, the other changes</td><td>kept (float64 stays float64)</td></tr>
+<tr><td><code>torch.tensor(arr)</code></td><td>NumPy → torch</td><td>no, a fresh copy</td><td>kept unless you pass <code>dtype=</code></td></tr>
+<tr><td><code>t.numpy()</code></td><td>torch → NumPy</td><td><b>yes</b> (CPU tensors only)</td><td>kept</td></tr>
+</tbody></table></div>
+<div class="predict" data-correct="2"><p>The next cell makes <code>t = torch.from_numpy(arr)</code>, then sets <code>arr[0] = 100</code>. What is <code>t[0]</code> afterwards?</p><ol class="opts"><li>The old value, 1.0, because <code>t</code> is a separate tensor</li><li>100.0, because <code>t</code> and <code>arr</code> are the same numbers in memory</li><li>An error, because <code>arr</code> is now “owned” by PyTorch</li></ol><div class="why"><code>from_numpy</code> does not copy: the tensor is a new <i>label</i> on the same block of memory. That makes it free (no copying of a big dataset), but it surprises people who change the array later. <code>torch.tensor(arr)</code> would have copied and kept 1.0.</div></div>
+<div class="py" data-mode="local" id="c-pt1-08"><pre class="src">
+arr = np.array([1.0, 2.0, 3.0])        # NumPy's default: float64
+t = torch.from_numpy(arr)              # shares memory with arr
+t_copy = torch.tensor(arr)             # an independent copy
+arr[0] = 100.0
+print("t:", t)                         # changed too!
+print("t_copy:", t_copy)               # unchanged
+print("dtype carried over:", t.dtype)
+
+x32 = torch.from_numpy(arr).float()    # the usual recipe: float32 for PyTorch
+print(x32, x32.dtype)
+
+back = x32.numpy()                     # torch -&gt; NumPy (shares memory)
+print(type(back), back.dtype)
+</pre><div class="pynote"><b>Read the output:</b> <code>t</code> shows <code>100.</code> and <code>dtype=torch.float64</code>. <code>.float()</code> makes a float32 copy, which no longer shares memory with <code>arr</code>. <b>The everyday recipe</b> for data from scikit-learn or pandas: <code>X = torch.tensor(X_np, dtype=torch.float32)</code> and <code>y = torch.tensor(y_np, dtype=torch.long)</code>.</div></div>
+<p><code>.numpy()</code> refuses in two situations, and the error messages tell you the fix:</p>
+<ul>
+<li>the tensor is on the GPU: first bring it back with <code>.cpu()</code>;</li>
+<li>the tensor is part of a gradient computation (<code>requires_grad=True</code>): first cut it out of the graph with <code>.detach()</code>.</li>
+</ul>
+<p>So the safe all-purpose spelling is <code>t.detach().cpu().numpy()</code>. You will see why <code>.detach()</code> exists in a few sections.</p>
+
+<h3 id="pt1-device">Devices: the CPU and your Mac's GPU (MPS)</h3>
+<p>Every tensor lives on a <dfn data-g="pt-device">device</dfn>: the CPU, an NVIDIA GPU (<code>"cuda"</code>), or an Apple GPU (<code>"mps"</code>). <dfn data-g="pt-mps">MPS</dfn> stands for <i>Metal Performance Shaders</i>, Apple's library of fast GPU routines; PyTorch uses it to run tensor maths on the graphics part of your M-series chip.</p>
+<div class="callout ece"><p><b>Why a GPU is fast, in your language.</b> A matrix product \(\bW\bx\) is many independent dot products, each a multiply-accumulate (MAC) chain, exactly like the taps of an FIR filter. A CPU has a handful of powerful cores that do MACs one stream at a time; a GPU has thousands of small arithmetic units that do many dot products in parallel, like a massively parallel DSP array. The cost is <b>latency</b>: each GPU job has a fixed launch overhead (tens of microseconds), so a tiny job finishes sooner on the CPU. Large matrices amortise the overhead; small ones do not.</p></div>
+<p>Apple chips have <b>unified memory</b>: the CPU and GPU share the same RAM. Moving a tensor to <code>"mps"</code> is therefore cheaper than copying to a separate NVIDIA card, but it is still a copy and still costs time, so move data once, not inside every line.</p>
+<div class="mathblock" data-sheet="PyTorch device recipe"><div class="eqlabel">The device recipe you will use in every notebook</div>
+<p style="font-family:var(--mono);font-size:14px;margin:6px 0">device = "mps" if torch.backends.mps.is_available() else "cpu"<br>x = x.to(device) &nbsp;&nbsp;# data<br>model = model.to(device) &nbsp;&nbsp;# weights (next lesson)</p>
+<p class="say">Pick the GPU when there is one, then put data and model on the same device. Every operation needs all its inputs on one device.</p></div>
+<div class="py" data-mode="local" id="c-pt1-09"><pre class="src">
+x = torch.tensor([1.0, 2.0, 3.0])
+print("x lives on:", x.device)
+
+xd = x.to(device)                   # a copy on the chosen device
+print("xd lives on:", xd.device)
+print("xd * 2 =", xd * 2)           # maths happens on that device
+
+z = torch.ones(3, device=device)    # or create it there directly
+print((xd + z).device)
+
+print("back to the CPU:", (xd + z).cpu().numpy())
+</pre><div class="pynote"><b>What you should see on your Mac:</b> <code>xd lives on: mps:0</code> (the <code>:0</code> means “the first GPU”), and the printed tensors end with <code>device='mps:0'</code>. The reference output here shows <code>cpu</code> everywhere. The numbers themselves are identical.</div></div>
+<div class="callout pitfall"><p><b>The most common device error.</b> If one input is on <code>mps</code> and another on <code>cpu</code>, PyTorch stops with <i>“Expected all tensors to be on the same device, but found at least two devices, mps:0 and cpu!”</i>. It never moves data silently. Read the message, find which tensor you forgot to <code>.to(device)</code>, and move it. In a training loop that is usually the batch: <code>xb, yb = xb.to(device), yb.to(device)</code>.</p></div>
+<div class="callout mac"><p><b>MPS facts worth knowing (and what you will see on your Mac).</b></p><ul>
+<li><b>No float64.</b> <code>torch.zeros(3, dtype=torch.float64, device="mps")</code> raises <i>“Cannot convert a MPS Tensor to float64 dtype as the MPS framework doesn't support float64”</i>. Do float64 checks (like the gradient comparisons in Project 3c) on the CPU.</li>
+<li><b>Slightly different numbers.</b> The GPU adds long sums in a different order (in parallel chunks), and float32 rounding depends on the order. Expect differences around the 6th or 7th significant digit, for example a loss of <code>0.418971</code> on CPU and <code>0.418970</code> on MPS. That is normal, not a bug. Compare with a tolerance such as <code>torch.allclose(a, b, atol=1e-5)</code>, never with <code>==</code>.</li>
+<li><b>Missing operations.</b> A few rare operations are not written for MPS yet; PyTorch then says <i>“not currently implemented for the MPS device”</i>. Setting the environment variable <code>PYTORCH_ENABLE_MPS_FALLBACK=1</code> before starting Jupyter lets those operations run on the CPU instead.</li>
+<li><b>Timing needs a sync.</b> GPU work is queued and runs in the background, so to time it fairly you call <code>torch.mps.synchronize()</code> before reading the clock (Project 3c does this).</li>
+</ul></div>
+
+<h3 id="pt1-autograd">Autograd: gradients for free</h3>
+<p>Now the second superpower. If you create a tensor with <code>requires_grad=True</code>, PyTorch starts recording every operation that uses it. The record is the <dfn data-g="pt-graph">computation graph</dfn>: each result remembers which function made it (its <code>grad_fn</code>) and from which inputs. When you call <code>.backward()</code> on a final scalar, PyTorch walks this graph from the end to the start, applying the chain rule at each node, and stores \(\partial L/\partial(\text{input})\) in each input's <code>.grad</code>. This is <dfn data-g="pt-autograd">autograd</dfn> (automatic differentiation), and it is exactly the reverse-mode algorithm of Prince §7.4 and of your Project 3a engine.</p>
+<p>We start with a single data point and a single neuron, small enough to do by hand. The model predicts \(\hat y = wx + b\) (read <i>y-hat equals w times x plus b</i>) and the loss is the squared error.</p>
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Our value</span></div>
+<div class="row"><span class="s">\(x\)</span><span>“x”: the input</span><span class="eg">\(x=2\)</span></div>
+<div class="row"><span class="s">\(y\)</span><span>“y”: the true target</span><span class="eg">\(y=10\)</span></div>
+<div class="row"><span class="s">\(w,\ b\)</span><span>“w” (weight, the slope) and “b” (bias, the intercept): the parameters we learn</span><span class="eg">\(w=3,\ b=1\)</span></div>
+<div class="row"><span class="s">\(z\)</span><span>“z”: the prediction \(wx+b\)</span><span class="eg">\(z=7\)</span></div>
+<div class="row"><span class="s">\(L\)</span><span>“L”: the loss \((z-y)^2\)</span><span class="eg">\(L=9\)</span></div>
+<div class="row"><span class="s">\(\dfrac{\partial L}{\partial w}\)</span><span>“d L by d w”: how fast the loss changes when only \(w\) is nudged</span><span class="eg">\(-12\)</span></div></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>every gradient of \(L=(wx+b-y)^2\) by hand</b></div>
+<div class="given">\(x=2,\ y=10,\ w=3,\ b=1\). Find \(L\), \(\partial L/\partial w\), \(\partial L/\partial b\) and \(\partial L/\partial x\).</div>
+<ol class="steps">
+<li><div><b>Forward pass</b>, one operation at a time (these are the graph's nodes):
+\(u = w\cdot x = 3\cdot 2 = \)<span class="hlb">6</span>; \(z = u + b = 6 + 1 = \)<span class="hlb">7</span>; \(r = z - y = 7 - 10 = \)<span class="hlr">−3</span>; \(L = r^2 = (-3)^2 = \)<span class="hlc">9</span>.<span class="why">Splitting the formula into one-step pieces is exactly what PyTorch's graph does: each piece has a simple local derivative.</span></div></li>
+<li><div><b>Start at the end.</b> \(\dfrac{\partial L}{\partial L} = 1\). Square node: \(\dfrac{\partial L}{\partial r} = 2r = 2\cdot(-3) = \)<span class="hlr">−6</span>.</div></li>
+<li><div><b>Subtraction node</b> \(r=z-y\): \(\dfrac{\partial r}{\partial z}=1\), so \(\dfrac{\partial L}{\partial z} = -6\cdot 1 = -6\). (And \(\dfrac{\partial L}{\partial y} = -6\cdot(-1)= 6\), though we will not need it.)</div></li>
+<li><div><b>Addition node</b> \(z=u+b\): addition passes the gradient through unchanged to both inputs. \(\dfrac{\partial L}{\partial b} = -6\), \(\dfrac{\partial L}{\partial u} = -6\).</div></li>
+<li><div><b>Multiplication node</b> \(u=w\cdot x\): each input's gradient is the incoming gradient times the <i>other</i> input. \(\dfrac{\partial L}{\partial w} = -6\cdot x = -6\cdot 2 = \)<span class="hlg">−12</span>; \(\dfrac{\partial L}{\partial x} = -6\cdot w = -6\cdot 3 = -18\).</div></li>
+<li><div><b>Check with the one-line formula.</b> \(L=(wx+b-y)^2\) so \(\dfrac{\partial L}{\partial w}=2(wx+b-y)\,x = 2(-3)(2) = -12\). ✓ <span class="why">The negative sign says: increasing \(w\) would <i>decrease</i> the loss. Indeed the prediction 7 is below the target 10, so a steeper line helps.</span></div></li>
+</ol><div class="result">\(L=9,\quad \partial L/\partial w=-12,\quad \partial L/\partial b=-6,\quad \partial L/\partial x=-18\)</div></div>
+
+<div class="widget" data-w="pt1-graph" data-title="The computation graph, forward and backward" data-args='{}'><div class="wn">Start at the defaults (they are the worked example). Blue numbers are the forward values, red numbers are the gradients \(\partial L/\partial(\cdot)\) that <code>.backward()</code> would store. Drag \(w\) until the prediction equals 10: every gradient becomes 0, because the loss is at its minimum. Then make \(x\) larger and watch \(\partial L/\partial w\) grow: the gradient of a weight is proportional to the input it multiplies.</div></div>
+
+<p>Now let PyTorch do it. Predict the four printed numbers before you run the cell (they are in the worked example).</p>
+<div class="py" data-mode="local" id="c-pt1-10"><pre class="src">
+x = torch.tensor(2.0)
+y = torch.tensor(10.0)
+w = torch.tensor(3.0, requires_grad=True)   # parameters: track gradients
+b = torch.tensor(1.0, requires_grad=True)
+
+z = w * x + b              # forward pass, recorded in the graph
+L = (z - y) ** 2
+print("z =", z)
+print("L =", L)
+
+L.backward()               # backward pass: fills in .grad
+print("dL/dw =", w.grad)
+print("dL/db =", b.grad)
+print("x.grad =", x.grad)  # None: we never asked to track x
+</pre><div class="pynote"><b>Read the output:</b> <code>z = tensor(7., grad_fn=&lt;AddBackward0&gt;)</code>. The <code>grad_fn</code> is the note “I was made by an addition”: that is the graph being recorded. <code>L</code> has <code>grad_fn=&lt;PowBackward0&gt;</code> (power). After <code>L.backward()</code>, <code>w.grad</code> is <code>tensor(-12.)</code> and <code>b.grad</code> is <code>tensor(-6.)</code>, matching the hand calculation exactly. <code>x.grad</code> is <code>None</code> because <code>x</code> did not ask for gradients; try re-running with <code>x = torch.tensor(2.0, requires_grad=True)</code> and you will get <code>-18</code>.</div></div>
+
+<h4>The same thing with your own micrograd</h4>
+<p>In <a href="#proj3-autograd">Project 3a</a> you built a <code>Value</code> class. Here is a minimal version of it (only the four operations we need), so you can see that PyTorch is doing nothing magic. This cell is plain Python, so it <b>does</b> run in your browser: press Run.</p>
+<div class="py" id="c-pt1-11"><pre class="src">
+class Value:
+    def __init__(self, data, parents=(), local=()):
+        self.data, self.grad = data, 0.0
+        self.parents, self.local = parents, local   # inputs and d(out)/d(input)
+    def __add__(self, o):
+        o = o if isinstance(o, Value) else Value(o)
+        return Value(self.data + o.data, (self, o), (1.0, 1.0))
+    def __mul__(self, o):
+        o = o if isinstance(o, Value) else Value(o)
+        return Value(self.data * o.data, (self, o), (o.data, self.data))
+    def __sub__(self, o):
+        return self + (o * -1.0)
+    def __pow__(self, k):
+        return Value(self.data ** k, (self,), (k * self.data ** (k - 1),))
+    def backward(self):
+        order, seen = [], set()
+        def visit(v):
+            if id(v) not in seen:
+                seen.add(id(v)); [visit(p) for p in v.parents]; order.append(v)
+        visit(self); self.grad = 1.0
+        for v in reversed(order):                  # chain rule, end to start
+            for p, d in zip(v.parents, v.local):
+                p.grad += v.grad * d
+
+w, b, x = Value(3.0), Value(1.0), Value(2.0)
+L = (w * x + b - 10.0) ** 2
+L.backward()
+print("L =", L.data, " dL/dw =", w.grad, " dL/db =", b.grad, " dL/dx =", x.grad)
+</pre><div class="pynote"><b>Read the output:</b> <code>L = 9.0  dL/dw = -12.0  dL/db = -6.0  dL/dx = -18.0</code>: the same four numbers as the hand calculation and as PyTorch. Look at the line <code>p.grad += v.grad * d</code>: it says “add the incoming gradient times the local derivative”. Notice the <code>+=</code>. It will explain a famous PyTorch bug in two sections.</div></div>
+<div class="tw"><table class="t"><thead><tr><th>Your micrograd</th><th>PyTorch</th></tr></thead><tbody>
+<tr><td><code>Value(3.0)</code> (always tracked)</td><td><code>torch.tensor(3.0, requires_grad=True)</code> (tracked only if asked)</td></tr>
+<tr><td><code>v.parents</code>, <code>v.local</code></td><td><code>t.grad_fn</code> (and its <code>next_functions</code>)</td></tr>
+<tr><td>one number per <code>Value</code></td><td>any shape per tensor; the gradient has the same shape as the tensor</td></tr>
+<tr><td><code>p.grad += …</code></td><td>same: gradients are <b>added</b> into <code>.grad</code></td></tr>
+<tr><td>graph kept forever</td><td>graph freed after <code>.backward()</code> to save memory</td></tr>
+</tbody></table></div>
+
+<h4>Gradients of whole tensors: the mean squared error of a line</h4>
+<p>Real models have vectors and matrices of parameters. The rule stays the same: <b><code>w.grad</code> has the same shape as <code>w</code></b>, and entry \(i\) of it is \(\partial L/\partial w_i\). Let us fit a line to three points and check the gradient against the formula from <a href="#udl6">Prince Ch. 6</a> and <a href="#proj1">Project 1</a>.</p>
+<div class="mathblock" data-sheet="MSE gradient for a line"><div class="eqlabel">Mean squared error of a line and its gradient</div>
+\[L(w,b)=\frac1n\sum_{i=1}^{n}\big(wx_i+b-y_i\big)^2,\qquad \frac{\partial L}{\partial w}=\frac2n\sum_{i=1}^{n} r_i\,x_i,\qquad \frac{\partial L}{\partial b}=\frac2n\sum_{i=1}^{n} r_i\]
+<p class="say">Read: L is the average of the squared residuals \(r_i = wx_i+b-y_i\) (prediction minus truth). The slope's gradient is two over n times the sum of residual-times-input; the intercept's gradient is two over n times the sum of residuals.</p></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>one gradient-descent step on three points</b></div>
+<div class="given">Points \((x,y)\): \((1,2),\ (2,3),\ (3,5)\). Start at \(w=0,\ b=0\). Learning rate \(\alpha = 0.1\) (read <i>alpha</i>).</div>
+<ol class="steps">
+<li><div>Predictions \(\hat y_i = 0\cdot x_i + 0 = (0, 0, 0)\). Residuals \(r = \hat y - y = (-2, -3, -5)\).</div></li>
+<li><div>Loss: \(L = \frac13\big((-2)^2+(-3)^2+(-5)^2\big) = \frac13(4+9+25) = \frac{38}{3} = \)<span class="hlc">12.6667</span>.</div></li>
+<li><div>Slope gradient: \(\frac23\big((-2)(1)+(-3)(2)+(-5)(3)\big) = \frac23(-2-6-15) = \frac23(-23) = \)<span class="hlb">−15.3333</span>.</div></li>
+<li><div>Intercept gradient: \(\frac23(-2-3-5) = \frac23(-10) = \)<span class="hlb">−6.6667</span>.</div></li>
+<li><div>Gradient-descent update (step <i>against</i> the gradient): \(w \leftarrow 0 - 0.1\cdot(-15.3333) = \)<span class="hlg">1.5333</span>, \(b \leftarrow 0 - 0.1\cdot(-6.6667) = \)<span class="hlg">0.6667</span>.<span class="why">“\(\leftarrow\)” is read <i>becomes</i>. A negative gradient means “the loss goes down if you increase this”, so we increase it.</span></div></li>
+<li><div>Check the new loss. Predictions \(1.5333x + 0.6667 = (2.2,\ 3.7333,\ 5.2667)\); residuals \((0.2,\ 0.7333,\ 0.2667)\); \(L = \frac13(0.04 + 0.5378 + 0.0711) = \)<span class="hlc">0.2163</span>. One step took the loss from 12.67 to 0.22.</div></li>
+</ol><div class="result">\(\nabla L = (-15.3333,\ -6.6667)\); after one step \(w=1.5333,\ b=0.6667,\ L=0.2163\)</div></div>
+<div class="py" data-mode="local" id="c-pt1-12"><pre class="src">
+xs = torch.tensor([1.0, 2.0, 3.0])
+ys = torch.tensor([2.0, 3.0, 5.0])
+w = torch.tensor(0.0, requires_grad=True)
+b = torch.tensor(0.0, requires_grad=True)
+
+L = ((w * xs + b - ys) ** 2).mean()     # broadcasting: one w for all 3 points
+L.backward()
+print("L =", L.item())
+print("dL/dw =", w.grad.item(), "  dL/db =", b.grad.item())
+
+with torch.no_grad():                   # update without recording (see below)
+    w -= 0.1 * w.grad
+    b -= 0.1 * b.grad
+print("after one step: w =", w.item(), " b =", b.item())
+print("new loss:", ((w * xs + b - ys) ** 2).mean().item())
+</pre><div class="pynote"><b>Read the output:</b> <code>L = 12.666…</code>, <code>dL/dw = -15.333…</code>, <code>dL/db = -6.666…</code>, then <code>w = 1.5333</code>, <code>b = 0.6667</code> and a new loss of <code>0.2163</code>: every number of the worked example. Digits after the 7th place may look slightly “off” (for example <code>1.5333333015441895</code>): that is float32 rounding, which you met in the dtype section.</div></div>
+<p>The same gradient in NumPy, with the formula written out by hand, runs in the browser. Compare the numbers.</p>
+<div class="py" id="c-pt1-13"><pre class="src">
+import numpy as np
+xs = np.array([1.0, 2.0, 3.0]); ys = np.array([2.0, 3.0, 5.0])
+w, b = 0.0, 0.0
+r = w * xs + b - ys                     # residuals
+n = len(xs)
+print("L     =", np.mean(r ** 2))
+print("dL/dw =", 2 / n * np.sum(r * xs))
+print("dL/db =", 2 / n * np.sum(r))
+</pre><div class="pynote"><b>Read the output:</b> <code>12.666666666666666</code>, <code>-15.333333333333332</code>, <code>-6.666666666666666</code>. NumPy uses float64, so it shows more correct digits than the float32 PyTorch version. The agreement is the point: autograd computed the formula you would otherwise derive yourself.</div></div>
+
+<h4>Two rules about <code>.backward()</code></h4>
+<ul>
+<li><b>Call it on a scalar.</b> <code>L.backward()</code> works when <code>L</code> is one number (a loss). If you call it on a vector, PyTorch says <i>“grad can be implicitly created only for scalar outputs”</i>. That is why losses are always averaged or summed to one number.</li>
+<li><b>Gradients land only on <dfn data-g="pt-leaf">leaf tensors</dfn></b>: the tensors you created yourself with <code>requires_grad=True</code> (the parameters). Intermediate results such as <code>z</code> do not keep a <code>.grad</code> (PyTorch warns if you read it). If you really want one, call <code>z.retain_grad()</code> before <code>.backward()</code>.</li>
+<li>After <code>.backward()</code> the graph is <b>freed</b>. Calling <code>L.backward()</code> a second time on the same <code>L</code> raises <i>“Trying to backward through the graph a second time”</i>. Each training step builds a fresh graph with a fresh forward pass, so in practice you never need it twice.</li>
+</ul>
+<div class="py" data-mode="local" id="c-pt1-14"><pre class="src">
+w = torch.tensor(3.0, requires_grad=True)
+z = w * 2.0 + 1.0
+print("is w a leaf?", w.is_leaf, "  is z a leaf?", z.is_leaf)
+print("z was made by:", z.grad_fn)
+
+v = torch.tensor([1.0, 2.0], requires_grad=True)
+out = v * 3                                  # a vector, not a scalar
+try:
+    out.backward()
+except RuntimeError as e:
+    print("RuntimeError:", e)
+out.sum().backward()                         # make it a scalar first
+print("v.grad =", v.grad)                    # d(sum of 3v)/dv = (3, 3)
+</pre><div class="pynote"><b>Read the output:</b> <code>w</code> is a leaf, <code>z</code> is not. <code>try:</code> / <code>except RuntimeError as e:</code> runs the code under <code>try</code>, and if that raises a <code>RuntimeError</code>, runs the <code>except</code> part instead of crashing, with the error stored in <code>e</code>. We use it here only so you can read the message. Summing first gives the scalar \(3v_1+3v_2\), whose gradient is \((3, 3)\).</div></div>
+
+<h3 id="pt1-accum">Gradients accumulate: the classic bug</h3>
+<p>Remember the <code>+=</code> in your micrograd's <code>p.grad += v.grad * d</code>. PyTorch does the same: <code>.backward()</code> <b>adds</b> new gradients to whatever is already stored in <code>.grad</code>. It never resets them for you.</p>
+<div class="predict" data-correct="3"><p>We compute the worked-example loss and call <code>.backward()</code> once: <code>w.grad</code> is −12. We then do a <i>second</i> forward pass with the same numbers and call <code>.backward()</code> again, without resetting anything. What is <code>w.grad</code> now?</p><ol class="opts"><li>−12, the same as before</li><li>0, because the second call cancels the first</li><li>−24</li><li>144, because it multiplies</li></ol><div class="why">The second backward computes −12 again and <b>adds</b> it to the stored −12, giving −24. A third call would give −36. If you used that gradient in an update, your step would be twice (then three times…) too big, and in a loop it grows without limit.</div></div>
+<div class="py" data-mode="local" id="c-pt1-15"><pre class="src">
+x, y = torch.tensor(2.0), torch.tensor(10.0)
+w = torch.tensor(3.0, requires_grad=True)
+b = torch.tensor(1.0, requires_grad=True)
+
+for k in range(3):
+    L = (w * x + b - y) ** 2       # a fresh forward pass each time
+    L.backward()
+    print(f"after backward #{k + 1}: w.grad = {w.grad.item()}")
+
+w.grad.zero_()                     # reset in place (the trailing _ means in place)
+b.grad = None                      # or throw the gradient away entirely
+print("after zeroing:", w.grad, b.grad)
+</pre><div class="pynote"><b>Read the output:</b> −12, −24, −36: the gradients pile up. In PyTorch, a method whose name ends in an underscore, such as <code>zero_()</code> or <code>fill_()</code>, changes the tensor <i>in place</i> instead of returning a new one. Setting <code>.grad = None</code> also works, and is what <code>optimizer.zero_grad()</code> does by default in the next lesson.</div></div>
+<p><b>Why would anyone design it this way?</b> Because adding is exactly right in two common situations:</p>
+<ol>
+<li><b>A parameter used in several places.</b> If \(w\) appears twice in a formula, the chain rule says its total gradient is the <i>sum</i> of the gradients through each use. Accumulation is how the backward pass collects them (that is why your micrograd needed <code>+=</code>).</li>
+<li><b><dfn data-g="pt-grad-accum">Gradient accumulation</dfn></b> on purpose. If a batch of 256 images does not fit in memory, you can run four batches of 64, call <code>.backward()</code> after each (dividing each loss by 4) and update once. The gradients add up to the gradient of the whole 256-image batch.</li>
+</ol>
+<div class="callout pitfall"><p><b>The bug.</b> In a training loop, forgetting to zero the gradients means every step uses the sum of <i>all</i> previous gradients. Early on training looks fine; then the steps keep growing, the loss jumps around or explodes to <code>nan</code>. The cure is one line at the top of every step: <code>w.grad = None</code> (by hand) or <code>optimizer.zero_grad()</code> (next lesson). Interviewers love asking “what happens if you forget <code>zero_grad()</code>?”: now you can answer with numbers.</p></div>
+<div class="widget" data-w="pt1-accum" data-title="Forgetting to zero the gradients" data-args='{}'><div class="wn">Press <b>Run 40 steps</b> with “zero each step” on: the line settles onto the data and the loss falls smoothly. Switch to “forget to zero” and run again. The first few steps look normal, then the accumulated gradient overshoots, the line swings wildly and the loss grows. Then try a smaller learning rate with “forget to zero”: it fails more slowly, but it still fails.</div></div>
+
+<h3 id="pt1-nograd">Turning the recorder off: <code>torch.no_grad()</code>, <code>.detach()</code> and <code>.item()</code></h3>
+<p>Recording the graph costs memory and time. Sometimes you must <i>not</i> record:</p>
+<ul>
+<li><b>The parameter update itself.</b> <code>w -= lr * w.grad</code> is not part of the model; it is the learning rule. If PyTorch recorded it, <code>w</code> would stop being a leaf and the next step's graph would reach back through all previous updates. PyTorch actually forbids it: an in-place change to a leaf that requires grad raises an error.</li>
+<li><b>Evaluation.</b> When you only measure accuracy on validation data you need no gradients, so you save memory (often half) and time by not recording.</li>
+</ul>
+<div class="symbols"><div class="row h"><span>Tool</span><span>What it does</span><span>Typical use</span></div>
+<div class="row"><span class="s"><code>with torch.no_grad():</code></span><span>everything inside the indented block is computed without recording</span><span class="eg">updates, evaluation</span></div>
+<div class="row"><span class="s"><code>t.detach()</code></span><span>a tensor with the same numbers (shared memory) but cut off from the graph</span><span class="eg">plotting, NumPy, logging, “stop the gradient here”</span></div>
+<div class="row"><span class="s"><code>t.item()</code></span><span>a one-number tensor → a Python <code>float</code></span><span class="eg">printing and storing the loss</span></div></div>
+<p>The <code>with</code> statement opens a <i>context</i>: something is switched on at the start of the indented block and automatically switched off at its end. You met it in Python for opening files; here it switches gradient recording off and back on.</p>
+<div class="py" data-mode="local" id="c-pt1-16"><pre class="src">
+w = torch.tensor(3.0, requires_grad=True)
+try:
+    w -= 0.1                       # in-place change of a leaf, while recording
+except RuntimeError as e:
+    print("RuntimeError:", e)
+
+with torch.no_grad():
+    w -= 0.1                       # fine: not recorded
+    z = w * 2                      # computed, but no graph
+print("w =", w, "  z.requires_grad =", z.requires_grad)
+
+u = w * 2                          # recorded again outside the block
+d = u.detach()                     # same number, no history
+print("u:", u, "\nd:", d)
+print("as a plain float:", u.item(), type(u.item()))
+print("to NumPy:", u.detach().cpu().numpy())
+</pre><div class="pynote"><b>Read the output:</b> the first message says <i>“a leaf Variable that requires grad is being used in an in-place operation”</i>. Inside <code>no_grad()</code> the same update works, <code>w</code> becomes <code>2.9</code> (still with <code>requires_grad=True</code>), and <code>z</code> has no gradient tracking. <code>u</code> carries <code>grad_fn=&lt;MulBackward0&gt;</code>; <code>d</code> does not. A common mistake is storing the loss with <code>losses.append(loss)</code>: that keeps every step's whole graph alive in memory. Store <code>loss.item()</code> instead.</div></div>
+
+<h3 id="pt1-fit">Your first PyTorch training loop: fitting a line</h3>
+<p>Everything comes together. We make 50 noisy points from the line \(y = 2x + 1\) and recover the slope and intercept with plain gradient descent, written out by hand so you can see each of the four steps that every training loop has:</p>
+<ol>
+<li><b>forward</b>: compute predictions and the loss (the graph is recorded);</li>
+<li><b>backward</b>: <code>loss.backward()</code> fills <code>w.grad</code> and <code>b.grad</code>;</li>
+<li><b>update</b>: inside <code>no_grad()</code>, step each parameter against its gradient;</li>
+<li><b>zero</b>: reset the gradients for the next step.</li>
+</ol>
+<div class="mathblock" data-sheet="Gradient-descent update"><div class="eqlabel">Gradient descent</div>
+\[\theta \leftarrow \theta - \alpha\,\frac{\partial L}{\partial \theta}\]
+<p class="say">Read: theta becomes theta minus alpha times d L by d theta. \(\theta\) (theta) stands for any parameter, \(\alpha\) (alpha) is the learning rate. Example: \(w=0\), gradient \(-15.33\), \(\alpha=0.1\) gives \(w = 1.533\).</p></div>
+<div class="py" data-mode="local" id="c-pt1-17"><pre class="src">
+torch.manual_seed(0)
+X = torch.linspace(-2, 2, 50)                  # 50 inputs
+Y = 2 * X + 1 + 0.5 * torch.randn(50)          # true slope 2, intercept 1, plus noise
+
+w = torch.zeros((), requires_grad=True)        # () = a 0-dimensional tensor
+b = torch.zeros((), requires_grad=True)
+lr, history = 0.1, []
+
+for step in range(60):
+    loss = ((w * X + b - Y) ** 2).mean()       # 1. forward
+    loss.backward()                            # 2. backward
+    with torch.no_grad():                      # 3. update
+        w -= lr * w.grad
+        b -= lr * b.grad
+    w.grad = None; b.grad = None               # 4. zero
+    history.append(loss.item())
+    if step % 10 == 0:
+        print(f"step {step:2d}  loss {loss.item():.4f}  w {w.item():.4f}  b {b.item():.4f}")
+print(f"final: w = {w.item():.4f}, b = {b.item():.4f}")
+</pre><div class="pynote"><b>Read the output:</b> the loss starts near 6.5 and falls to about 0.18; \(w\) climbs towards 2 and \(b\) towards 1. They do not reach exactly 2 and 1 because of the noise: with only 50 noisy points the best line is not the true line. <code>f"{loss.item():.4f}"</code> prints a number with 4 decimals; <code>{step:2d}</code> pads a whole number to width 2.</div></div>
+<p>Is the answer right? For a straight line we know the exact least-squares solution (from <a href="#isl3-1">ISLP 3.1</a>), so we can check gradient descent against it, and plot both.</p>
+<div class="py" data-mode="local" id="c-pt1-18"><pre class="src">
+import matplotlib.pyplot as plt
+
+xm, ym = X.mean(), Y.mean()
+w_ls = ((X - xm) * (Y - ym)).sum() / ((X - xm) ** 2).sum()   # least-squares slope
+b_ls = ym - w_ls * xm
+print(f"least squares: w = {w_ls.item():.4f}, b = {b_ls.item():.4f}")
+print(f"gradient descent: w = {w.item():.4f}, b = {b.item():.4f}")
+
+fig, ax = plt.subplots(1, 2, figsize=(9, 3.4))
+ax[0].plot(history); ax[0].set_yscale("log")
+ax[0].set_xlabel("step"); ax[0].set_ylabel("MSE loss (log scale)")
+ax[1].scatter(X, Y, s=12, label="data")
+ax[1].plot(X, (w * X + b).detach(), color="C1", label="fitted by GD")
+ax[1].set_xlabel("x"); ax[1].set_ylabel("y"); ax[1].legend()
+plt.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> the two pairs of numbers agree to four decimals, so gradient descent found the least-squares line. On the left the loss falls fast and then flattens at the noise level (about 0.18, close to the noise variance \(0.5^2=0.25\) minus what a line can fit by luck). Note <code>(w * X + b).detach()</code>: matplotlib needs plain numbers, and the prediction carries a graph because <code>w</code> requires grad. Matplotlib accepts CPU tensors directly; GPU tensors must come back with <code>.cpu()</code> first.</div></div>
+<div class="callout mac"><p><b>What you should see on your Mac, and a small experiment.</b> The same numbers to at least 4 decimals. Now try the loop on the GPU: add <code>X, Y = X.to(device), Y.to(device)</code> after creating them and create <code>w</code> and <code>b</code> with <code>device=device</code>. It works unchanged, and the final numbers agree with the CPU ones to about 6 digits. It is <b>not</b> faster: with only 50 numbers, the GPU spends its time on launch overhead, not on maths. GPUs win when each operation touches millions of numbers, which you will measure in Project 3c.</p></div>
+<div class="callout key"><p><b>The four lines to remember.</b> forward → <code>loss.backward()</code> → update inside <code>torch.no_grad()</code> → zero the gradients. In the next lesson, <code>optimizer.step()</code> replaces the update and <code>optimizer.zero_grad()</code> replaces the zeroing, but the four steps stay the same in every PyTorch program you will ever read.</p></div>
+
+<h4>A curved function: autograd does the calculus you used to do</h4>
+<p>Autograd is not limited to lines. Any formula built from PyTorch operations can be differentiated. Here is a check against a derivative you can do by hand: \(f(t) = t^3 + \sin t\) has \(f'(t) = 3t^2 + \cos t\). At \(t = 1\): \(f'(1) = 3 + \cos 1 = 3 + 0.5403 = 3.5403\).</p>
+<div class="py" data-mode="local" id="c-pt1-19"><pre class="src">
+t = torch.tensor(1.0, requires_grad=True)
+f = t ** 3 + torch.sin(t)
+f.backward()
+print("autograd:", t.grad.item())
+print("by hand: ", 3 * 1.0 ** 2 + np.cos(1.0))
+
+ts = torch.linspace(-2, 2, 5, requires_grad=True)   # many points at once
+torch.sigmoid(ts).sum().backward()                  # sum: one scalar
+print("sigmoid'(t):", ts.grad)
+s = torch.sigmoid(ts.detach())
+print("s(1 - s):   ", s * (1 - s))                  # the known formula
+</pre><div class="pynote"><b>Read the output:</b> <code>3.5403…</code> both times. The second part uses a trick worth remembering: to get the derivative at many points at once, put the points in one tensor and backward through the <b>sum</b>; because each output depends only on its own input, entry \(i\) of the gradient is \(f'(t_i)\). It matches the sigmoid formula \(\sigma'(t)=\sigma(t)(1-\sigma(t))\) from <a href="#udl3">Prince Ch. 3</a>: 0.1050, 0.1966, 0.25, 0.1966, 0.1050.</div></div>
+
+<h3 id="pt1-practice">Practice</h3>
+<p>The first three exercises are NumPy exercises that check themselves in your browser: they make sure you can produce by hand what PyTorch gives you. The cards after them are PyTorch tasks: do them in your notebook on the Mac, then open the solution and compare (the solution cells also show the reference output).</p>
+
+<div class="ex" id="x-pt1-01" data-title="the line's MSE gradient by hand"><div class="task"><p>Write <code>mse_grad(w, b, x, y)</code> that returns a tuple <code>(L, dw, db)</code>: the mean squared error of the line \(wx+b\) on arrays <code>x</code>, <code>y</code>, and its two partial derivatives (use the boxed formula). For the worked example, <code>mse_grad(0, 0, np.array([1., 2, 3]), np.array([2., 3, 5]))</code> should give about <code>(12.6667, -15.3333, -6.6667)</code>.</p></div>
+<pre class="src">
+import numpy as np
+
+def mse_grad(w, b, x, y):
+    r = ...            # residuals: prediction minus truth
+    L = ...
+    dw = ...
+    db = ...
+    return L, dw, db
+</pre>
+<pre class="check">
+import numpy as np
+L, dw, db = mse_grad(0.0, 0.0, np.array([1., 2, 3]), np.array([2., 3, 5]))
+assert abs(L - 38/3) &lt; 1e-9, f"L should be 12.6667, got {L}"
+assert abs(dw + 46/3) &lt; 1e-9, f"dw should be -15.3333, got {dw}"
+assert abs(db + 20/3) &lt; 1e-9, f"db should be -6.6667, got {db}"
+rng = np.random.default_rng(1)
+x = rng.normal(size=20); y = rng.normal(size=20)
+L, dw, db = mse_grad(0.7, -0.3, x, y)
+h = 1e-6
+Lp = np.mean((0.7 + h) * x - 0.3 - y) ** 0 * np.mean(((0.7 + h) * x - 0.3 - y) ** 2)
+Lm = np.mean(((0.7 - h) * x - 0.3 - y) ** 2)
+assert abs(dw - (Lp - Lm) / (2 * h)) &lt; 1e-5, f"dw disagrees with a finite-difference check: {dw} vs {(Lp - Lm) / (2 * h)}"
+Lp = np.mean((0.7 * x - 0.3 + h - y) ** 2); Lm = np.mean((0.7 * x - 0.3 - h - y) ** 2)
+assert abs(db - (Lp - Lm) / (2 * h)) &lt; 1e-5, f"db disagrees with a finite-difference check: {db} vs {(Lp - Lm) / (2 * h)}"
+</pre>
+<div class="hint"><p><code>r = w * x + b - y</code>. The loss is the mean of <code>r ** 2</code>.</p></div>
+<div class="hint"><p><code>n = len(x)</code>; <code>dw = 2 / n * np.sum(r * x)</code>; <code>db = 2 / n * np.sum(r)</code>.</p></div>
+<pre class="solution">
+import numpy as np
+
+def mse_grad(w, b, x, y):
+    r = w * x + b - y
+    n = len(x)
+    L = np.mean(r ** 2)
+    dw = 2 / n * np.sum(r * x)
+    db = 2 / n * np.sum(r)
+    return L, dw, db
+</pre><div class="explain"><p>The checks compare your gradient with a <i>finite difference</i>, \(\frac{L(w+h)-L(w-h)}{2h}\) with \(h=10^{-6}\): the slope of the loss measured by nudging \(w\) a tiny bit each way. This is the gradient check from <a href="#cs-softmax">the softmax lesson</a>, and it is how you would test any hand-written derivative against autograd.</p></div></div>
+
+<div class="ex" id="x-pt1-02" data-title="gradient descent in NumPy"><div class="task"><p>Write <code>fit_line(x, y, lr, steps)</code> that starts at \(w=b=0\), runs <code>steps</code> steps of gradient descent on the MSE (using your <code>mse_grad</code>, or the formulas directly) and returns <code>(w, b)</code>. On the three points with <code>lr=0.1, steps=1</code> it must return <code>(1.5333…, 0.6667…)</code>, as in the worked example; with many steps it must reach the least-squares line \(w=1.5,\ b=1/3\).</p></div>
+<pre class="src">
+import numpy as np
+
+def fit_line(x, y, lr, steps):
+    w, b = 0.0, 0.0
+    for _ in range(steps):
+        pass          # your update here
+    return w, b
+</pre>
+<pre class="check">
+import numpy as np
+x = np.array([1., 2, 3]); y = np.array([2., 3, 5])
+w, b = fit_line(x, y, 0.1, 1)
+assert abs(w - 23/15) &lt; 1e-9 and abs(b - 2/3) &lt; 1e-9, f"after one step expected (1.5333, 0.6667), got ({w}, {b})"
+w, b = fit_line(x, y, 0.1, 2000)
+assert abs(w - 1.5) &lt; 1e-6 and abs(b - 1/3) &lt; 1e-6, f"after many steps expected (1.5, 0.3333), got ({w}, {b})"
+w, b = fit_line(x, y, 0.1, 0)
+assert (w, b) == (0.0, 0.0), "with 0 steps the parameters must stay at 0"
+</pre>
+<div class="hint"><p>Each step: compute residuals <code>r = w * x + b - y</code>, the two gradients, then <code>w = w - lr * dw</code> and the same for <code>b</code>.</p></div>
+<div class="hint"><p>Compute <b>both</b> gradients before changing either parameter; otherwise the <code>b</code> gradient uses the new <code>w</code>.</p></div>
+<pre class="solution">
+import numpy as np
+
+def fit_line(x, y, lr, steps):
+    w, b = 0.0, 0.0
+    n = len(x)
+    for _ in range(steps):
+        r = w * x + b - y
+        dw = 2 / n * np.sum(r * x)
+        db = 2 / n * np.sum(r)
+        w, b = w - lr * dw, b - lr * db
+    return w, b
+</pre><div class="explain"><p>This is the PyTorch loop of <code>c-pt1-17</code> with the backward pass written by hand. In NumPy you need no zeroing, because each step computes fresh gradients into new variables; in PyTorch the gradients live inside the tensors and are added to, which is why the extra “zero” step exists.</p></div></div>
+
+<div class="ex" id="x-pt1-03" data-title="predict a broadcast shape"><div class="task"><p>Write <code>bshape(s1, s2)</code> that takes two shapes (tuples) and returns the broadcast result shape as a tuple, or <code>None</code> if they cannot broadcast. Examples: <code>bshape((3, 1), (1, 4))</code> → <code>(3, 4)</code>; <code>bshape((32, 10), (10,))</code> → <code>(32, 10)</code>; <code>bshape((2, 3), (3, 2))</code> → <code>None</code>. PyTorch uses exactly these rules.</p></div>
+<pre class="src">
+def bshape(s1, s2):
+    # line the shapes up from the right; pad the shorter one with 1s on the left
+    ...
+</pre>
+<pre class="check">
+import numpy as np
+cases = [((3, 1), (1, 4)), ((32, 10), (10,)), ((2, 3), (3, 2)), ((5,), ()), ((8, 1, 6, 1), (7, 1, 5)), ((4, 3), (4,)), ((1,), (7, 1))]
+for a, b in cases:
+    try:
+        want = tuple(np.broadcast_shapes(a, b))
+    except ValueError:
+        want = None
+    got = bshape(a, b)
+    assert got == want, f"bshape({a}, {b}) should be {want}, got {got}"
+</pre>
+<div class="hint"><p>Pad: <code>n = max(len(s1), len(s2))</code>; <code>a = (1,) * (n - len(s1)) + tuple(s1)</code>, and the same for <code>b</code>.</p></div>
+<div class="hint"><p>Then for each pair of sizes <code>p, q</code> in <code>zip(a, b)</code>: if they are equal keep it; if one is 1 keep the other; otherwise return <code>None</code>.</p></div>
+<pre class="solution">
+def bshape(s1, s2):
+    n = max(len(s1), len(s2))
+    a = (1,) * (n - len(s1)) + tuple(s1)
+    b = (1,) * (n - len(s2)) + tuple(s2)
+    out = []
+    for p, q in zip(a, b):
+        if p == q or q == 1:
+            out.append(p)
+        elif p == 1:
+            out.append(q)
+        else:
+            return None
+    return tuple(out)
+</pre><div class="explain"><p>Padding with 1s on the left is the “line up from the right” rule. The check compares your answer with <code>np.broadcast_shapes</code> on seven cases, including the tricky <code>(8, 1, 6, 1)</code> with <code>(7, 1, 5)</code> → <code>(8, 7, 6, 5)</code>, and <code>(4, 3)</code> with <code>(4,)</code>, which fails because the <i>last</i> sizes 3 and 4 clash.</p></div></div>
+
+<div class="prob" id="p-pt1-01" data-src="PyTorch task · autograd" data-title="A derivative you can check by hand"><div class="stmt"><p>Let \(g(x) = x^3 + 2x\). Use PyTorch autograd to compute \(g'(2)\). First work it out by hand, then type the number.</p></div>
+<div class="ansin" data-answer="14" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Make <code>x = torch.tensor(2.0, requires_grad=True)</code>, compute <code>g = x**3 + 2*x</code>, call <code>g.backward()</code> and print <code>x.grad</code>. By hand: \(g'(x) = 3x^2 + 2\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(g'(2) = 3\cdot 4 + 2 = 14\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<ol class="steps"><li><div>By hand: the power rule gives \(\frac{d}{dx}x^3 = 3x^2\) and \(\frac{d}{dx}2x = 2\), so \(g'(x)=3x^2+2\) and \(g'(2) = 12 + 2 = 14\).</div></li>
+<li><div>In PyTorch:</div></li></ol>
+<div class="py" data-mode="local" id="c-pt1-20"><pre class="src">
+x = torch.tensor(2.0, requires_grad=True)
+g = x ** 3 + 2 * x
+g.backward()
+print("g(2) =", g.item(), "  g'(2) =", x.grad.item())
+</pre></div>
+<p>Output: <code>g(2) = 12.0   g'(2) = 14.0</code>.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Writing <code>torch.tensor(2, requires_grad=True)</code> with an integer 2: PyTorch refuses, because only floating-point tensors can have gradients. Use <code>2.0</code>.</p></div></details></div>
+
+<div class="prob" id="p-pt1-02" data-src="PyTorch task · accumulation" data-title="How big is the gradient after four backward calls?"><div class="stmt"><p>With \(x=1,\ y=4\) and parameters \(w=1,\ b=0\) (both with <code>requires_grad=True</code>), you run the forward pass \(L=(wx+b-y)^2\) and call <code>L.backward()</code> <b>four times</b> in a loop without zeroing. What is <code>w.grad</code> at the end?</p></div>
+<div class="ansin" data-answer="-24" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Work out one backward: \(\partial L/\partial w = 2(wx+b-y)\,x\). Then remember gradients add.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>One backward gives \(2(1-4)(1) = -6\); four of them add to \(-24\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<ol class="steps"><li><div>Residual \(r = 1\cdot1 + 0 - 4 = -3\). Gradient of one backward: \(2r x = 2(-3)(1) = -6\).</div></li>
+<li><div>The parameters never change (we never update), so each of the four backwards computes −6 again and adds it: \(-6\times4 = -24\).</div></li></ol>
+<div class="py" data-mode="local" id="c-pt1-21"><pre class="src">
+w = torch.tensor(1.0, requires_grad=True)
+b = torch.tensor(0.0, requires_grad=True)
+for _ in range(4):
+    L = (w * 1.0 + b - 4.0) ** 2
+    L.backward()
+print(w.grad, b.grad)
+</pre></div>
+<p>Output: <code>tensor(-24.) tensor(-24.)</code>. (\(b\)'s single-backward gradient is \(2r = -6\) too, because \(x=1\).)</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Answering −6 (forgetting accumulation) or 1296 (thinking gradients multiply).</p></div></details></div>
+
+<div class="prob" id="p-pt1-03" data-src="PyTorch task · debugging" data-title="Find the three bugs"><div class="stmt"><p>A classmate's loop to fit \(y = wx + b\) does not learn. Find three bugs.</p>
+<pre style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;overflow:auto;font:13.5px/1.6 var(--mono)">w = torch.zeros(())
+b = torch.zeros((), requires_grad=True)
+for step in range(100):
+    loss = ((w * X + b - Y) ** 2).mean()
+    loss.backward()
+    b = b - 0.1 * b.grad
+    losses.append(loss)</pre></div>
+<details class="hintd"><summary>Hint</summary><div><p>Ask of each line: does <code>w</code> track gradients? Is the update recorded? Are gradients reset? What does the list keep alive?</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><ol><li><code>w</code> has no <code>requires_grad=True</code>, so it never gets a gradient and is never updated.</li><li><code>b = b - 0.1 * b.grad</code> outside <code>no_grad()</code> makes a <i>new</i>, non-leaf tensor: on the next step <code>b.grad</code> is <code>None</code> (and PyTorch warns). Update in place inside <code>with torch.no_grad():</code>.</li><li>Gradients are never zeroed, and <code>losses.append(loss)</code> stores whole graphs; use <code>loss.item()</code>.</li></ol></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><p>The fixed loop, run on the data from <code>c-pt1-17</code>:</p>
+<div class="py" data-mode="local" id="c-pt1-22"><pre class="src">
+w = torch.zeros((), requires_grad=True)          # fix 1
+b = torch.zeros((), requires_grad=True)
+losses = []
+for step in range(100):
+    loss = ((w * X + b - Y) ** 2).mean()
+    loss.backward()
+    with torch.no_grad():                        # fix 2: in-place, unrecorded
+        w -= 0.1 * w.grad
+        b -= 0.1 * b.grad
+    w.grad = None; b.grad = None                 # fix 3a: zero
+    losses.append(loss.item())                   # fix 3b: a float, not a graph
+print(f"w = {w.item():.4f}, b = {b.item():.4f}, final loss = {losses[-1]:.4f}")
+</pre></div>
+<p>It reaches the least-squares values from <code>c-pt1-18</code>.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Fixing the update with <code>b.data -= …</code>. It works, but <code>.data</code> bypasses PyTorch's safety checks; <code>torch.no_grad()</code> is the modern, safe spelling.</p></div></details></div>
+
+<div class="prob" id="p-pt1-04" data-src="PyTorch task · autograd" data-title="Fit a parabola with autograd"><div class="stmt"><p>Make data \(y = 0.5x^2 - x + 2\) plus noise of standard deviation 0.3 at 40 points \(x\in[-3,3]\) (seed 1). Fit \(y = ax^2 + bx + c\) by gradient descent with autograd, starting from zeros. Report \(a, b, c\) and compare with the least-squares solution from <code>np.polyfit(x, y, 2)</code>.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Keep the parameters in one tensor <code>p = torch.zeros(3, requires_grad=True)</code> and predict with <code>p[0] * X**2 + p[1] * X + p[2]</code>. Because \(x^2\) reaches 9, the learning rate must be small (try 0.01) and you need a few thousand steps.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>About \(a \approx 0.49,\ b\approx -0.99,\ c\approx 2.0\), matching <code>np.polyfit</code> to 3 decimals after 3000 steps.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<div class="py" data-mode="local" id="c-pt1-23"><pre class="src">
+torch.manual_seed(1)
+Xq = torch.linspace(-3, 3, 40)
+Yq = 0.5 * Xq**2 - Xq + 2 + 0.3 * torch.randn(40)
+p = torch.zeros(3, requires_grad=True)          # a, b, c in one tensor
+for step in range(3000):
+    loss = ((p[0] * Xq**2 + p[1] * Xq + p[2] - Yq) ** 2).mean()
+    loss.backward()
+    with torch.no_grad():
+        p -= 0.01 * p.grad
+    p.grad = None
+print("gradient descent:", p.detach().numpy().round(4), " loss", round(loss.item(), 4))
+print("np.polyfit:      ", np.polyfit(Xq.numpy(), Yq.numpy(), 2).round(4))
+</pre></div>
+<p>Note <code>p -= 0.01 * p.grad</code>: one line updates all three parameters, because <code>p.grad</code> has the same shape (3,) as <code>p</code>. The intercept \(c\) converges slowest: its gradient is small relative to the \(x^2\) term's, a sign that the loss surface is an elongated valley (Prince §6.1). Standardising the inputs, or the Adam optimiser of the next lesson, fixes this.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>A learning rate of 0.1: the \(x^2\) feature has values up to 9, so the gradient for \(a\) is large and the steps overshoot until the loss becomes <code>inf</code> or <code>nan</code>. Divergence like this is a learning-rate problem, not a bug in autograd.</p></div></details></div>
+
+<div class="prob" id="p-pt1-05" data-src="PyTorch task · tensors" data-title="Shapes for a batch of images"><div class="stmt"><p>You have 16 colour images of size 32×32 stored as a NumPy array <code>imgs</code> of shape (16, 32, 32, 3) with integer pixel values 0–255 (dtype <code>uint8</code>). Write PyTorch code that (a) turns it into a float32 tensor with values in [0, 1], (b) puts channels first, (c) flattens every image into one row, and (d) computes the mean of each channel over the whole batch. State the shape after each step.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p><code>torch.from_numpy(imgs).float() / 255</code>, then <code>.permute(0, 3, 1, 2)</code>, then <code>.flatten(1)</code>. For channel means, average over dimensions 0, 2 and 3 of the channels-first tensor: <code>x.mean(dim=(0, 2, 3))</code>.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(16, 32, 32, 3) → (16, 3, 32, 32) → (16, 3072); channel means have shape (3,).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<div class="py" data-mode="local" id="c-pt1-24"><pre class="src">
+rng = np.random.default_rng(0)
+imgs = rng.integers(0, 256, size=(16, 32, 32, 3), dtype=np.uint8)  # stand-in data
+x = torch.from_numpy(imgs).float() / 255        # (a) float32 in [0, 1]
+print("a:", x.shape, x.dtype, x.min().item(), x.max().item())
+x = x.permute(0, 3, 1, 2)                       # (b) N, C, H, W
+print("b:", x.shape)
+flat = x.flatten(1)                             # (c) one row per image
+print("c:", flat.shape, " = 3 * 32 * 32 =", 3 * 32 * 32)
+print("d:", x.mean(dim=(0, 2, 3)))              # (d) one mean per channel
+</pre></div>
+<p>Dividing by 255 is done <i>after</i> <code>.float()</code>: dividing a <code>uint8</code> tensor first would also work in modern PyTorch (it promotes to float), but being explicit avoids surprises. The channel means are all close to 0.5 because the stand-in pixels are uniform on 0–255.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Using <code>reshape(16, 3, 32, 32)</code> instead of <code>permute</code>: the shape looks right but the numbers are scrambled, because reshape keeps the reading order (see the worked example on reshape vs transpose).</p></div></details></div>
+
+<h3 id="pt1-quiz">Quiz</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">What is the dtype of <code>torch.tensor([1.5, 2.5])</code>?</p><ol class="opts"><li><code>torch.float64</code>, the same as NumPy</li><li><code>torch.float32</code></li><li><code>torch.int64</code></li><li><code>torch.float16</code></li></ol><div class="why">PyTorch's default floating type is float32 (option 2). NumPy's default is float64 (option 1 is the NumPy answer, and the reason tensors made with <code>torch.from_numpy</code> are float64). int64 is the default only for whole numbers; float16 is never the default.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem"><code>arr = np.zeros(3); t = torch.from_numpy(arr); arr[1] = 5</code>. What is <code>t</code>?</p><ol class="opts"><li><code>tensor([0., 0., 0.])</code></li><li>an error</li><li><code>tensor([0., 5., 0.], dtype=torch.float64)</code></li><li><code>tensor([0., 5., 0.])</code> in float32</li></ol><div class="why"><code>from_numpy</code> shares memory, so the change shows (not option 1), and it keeps NumPy's float64 (so not option 4). Nothing is illegal about it (not option 2).</div></div>
+<div class="q" data-type="num" data-answer="-12" data-tol="0.001"><p class="stem">\(w=2,\ x=3,\ b=0,\ y=8\) and \(L=(wx+b-y)^2\). What does <code>w.grad</code> hold after one <code>L.backward()</code>?</p><div class="why">\(r = 6 - 8 = -2\); \(\partial L/\partial w = 2r\,x = 2(-2)(3) = -12\).</div></div>
+<div class="q" data-type="num" data-answer="-36" data-tol="0.001"><p class="stem">Same setting, but the forward pass and <code>L.backward()</code> are run three times without zeroing. <code>w.grad</code> is…</p><div class="why">Gradients add: \(3\times(-12) = -36\).</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Why is the parameter update written inside <code>with torch.no_grad():</code>?</p><ol class="opts"><li>The update is not part of the model; recording it would make the parameter a non-leaf and link every step's graph together (PyTorch forbids an in-place update of a leaf that requires grad)</li><li>It makes the update numerically more accurate</li><li>It moves the update to the GPU</li><li>It zeroes the gradients automatically</li></ol><div class="why">Option 1 is the reason. <code>no_grad</code> does not change numbers (2), devices (3) or gradients (4); you still zero gradients yourself.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">On your Mac, <code>a</code> is on <code>"mps"</code> and <code>b</code> on the CPU. What does <code>a + b</code> do?</p><ol class="opts"><li>Moves <code>b</code> to the GPU automatically</li><li>Moves <code>a</code> to the CPU automatically</li><li>Returns a result on the CPU, slowly</li><li>Raises an error saying the tensors are on different devices</li></ol><div class="why">PyTorch never moves data silently (the copy could be costly and hide bugs), so it raises <i>“Expected all tensors to be on the same device”</i>. You move one with <code>.to(device)</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">You run your line-fitting loop on <code>"mps"</code> and get <code>w = 2.03417</code>; on the CPU you got <code>2.03416</code>. What is the most likely explanation?</p><ol class="opts"><li>A bug in the MPS code: you should report it</li><li>Float32 rounding: the GPU adds numbers in a different order, so the last digits differ</li><li>The GPU uses a different random seed for the data</li><li>The CPU result is wrong</li></ol><div class="why">Float32 addition is not exactly associative, and GPUs sum in parallel chunks. Differences in the 6th–7th significant digit are expected. (Option 3 can also happen if you draw random numbers on the device, but here the data were made on the CPU.)</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Which line turns a scalar loss tensor into a value that is safe to append to a Python list of losses?</p><ol class="opts"><li><code>losses.append(loss)</code></li><li><code>losses.append(loss.grad)</code></li><li><code>losses.append(loss.item())</code></li><li><code>losses.append(loss.numpy())</code></li></ol><div class="why"><code>.item()</code> gives a plain float and lets the graph be freed. Option 1 keeps every graph alive (memory grows each step). Option 2 is <code>None</code> (a non-leaf). Option 4 fails because the loss requires grad (it would need <code>.detach()</code> first).</div></div>
+<div class="q" data-type="open"><p class="stem">Explain to a friend, in three or four sentences, what happens inside PyTorch between <code>loss = ((w*X + b - Y)**2).mean()</code> and the moment <code>w.grad</code> holds a number.</p><div class="model">Because <code>w</code> and <code>b</code> have <code>requires_grad=True</code>, each operation in the forward pass creates a node that remembers its inputs and how to compute its local derivative (its <code>grad_fn</code>). This makes a graph from <code>w</code> and <code>b</code> to the scalar loss. <code>loss.backward()</code> starts with \(\partial L/\partial L=1\) and walks the graph in reverse, multiplying incoming gradients by local derivatives (the chain rule) and adding them into the <code>.grad</code> of the leaf tensors. Then the graph is freed.</div></div>
+</div>
+
+<h3 id="pt1-cards">Flashcards</h3>
+<div class="cards">
+<div class="fc"><div class="f">PyTorch's default floating dtype?</div><div class="b"><code>torch.float32</code> (NumPy's is float64).</div></div>
+<div class="fc"><div class="f">Which dtype must classification labels have?</div><div class="b"><code>torch.int64</code> (<code>torch.long</code>).</div></div>
+<div class="fc"><div class="f">The one-line device choice on a Mac</div><div class="b"><code>device = "mps" if torch.backends.mps.is_available() else "cpu"</code></div></div>
+<div class="fc"><div class="f">What does MPS stand for, and what is it?</div><div class="b">Metal Performance Shaders: Apple's GPU library, which PyTorch uses to run on the Apple-Silicon GPU.</div></div>
+<div class="fc"><div class="f">Which dtype does MPS not support?</div><div class="b">float64. Do double-precision checks on the CPU.</div></div>
+<div class="fc"><div class="f"><code>torch.from_numpy(a)</code> vs <code>torch.tensor(a)</code></div><div class="b"><code>from_numpy</code> shares memory with the array; <code>torch.tensor</code> copies.</div></div>
+<div class="fc"><div class="f">Safe way to get a NumPy array out of any tensor</div><div class="b"><code>t.detach().cpu().numpy()</code></div></div>
+<div class="fc"><div class="f">What does <code>loss.backward()</code> do to existing <code>.grad</code> values?</div><div class="b">It <b>adds</b> the new gradients to them (accumulates). Zero them every step.</div></div>
+<div class="fc"><div class="f">Which tensors receive <code>.grad</code> after backward?</div><div class="b">Leaf tensors created with <code>requires_grad=True</code> (the parameters), not intermediate results.</div></div>
+<div class="fc"><div class="f">\(L=(wx+b-y)^2\): \(\partial L/\partial w\) = ?</div><div class="b">\(2(wx+b-y)\,x\)</div></div>
+<div class="fc"><div class="f">Four steps of every training step</div><div class="b">forward (loss) → <code>loss.backward()</code> → update under <code>torch.no_grad()</code> → zero gradients.</div></div>
+<div class="fc"><div class="f">reshape vs transpose of a (2, 3) grid</div><div class="b">reshape keeps the row-by-row reading order; transpose turns rows into columns. Different numbers in each place.</div></div>
+<div class="fc"><div class="f">PyTorch image layout for a batch</div><div class="b">N × C × H × W (batch, channels, height, width).</div></div>
+</div>
+
+<h3 id="pt1-check">Checklist</h3>
+<div class="checklist">
+<label><input type="checkbox"> I ran this notebook on my Mac in VS Code with the <code>.venv</code> kernel, and the first cell printed <code>mps</code>.</label>
+<label><input type="checkbox"> I can create tensors, read <code>shape</code>, <code>dtype</code> and <code>device</code>, and convert dtypes.</label>
+<label><input type="checkbox"> I can index, reshape, unsqueeze, flatten and permute, and I know reshape is not transpose.</label>
+<label><input type="checkbox"> I can predict a broadcast shape and use <code>dim=</code> in reductions.</label>
+<label><input type="checkbox"> I can move data between NumPy and PyTorch and say which calls share memory.</label>
+<label><input type="checkbox"> I can move tensors to <code>mps</code> and back, and I know MPS has no float64 and gives slightly different digits.</label>
+<label><input type="checkbox"> I can compute \(\partial L/\partial w\) by hand for a small expression and confirm it with <code>.backward()</code> and with micrograd.</label>
+<label><input type="checkbox"> I can explain gradient accumulation and why <code>zero_grad</code> is needed.</label>
+<label><input type="checkbox"> I can use <code>torch.no_grad()</code>, <code>.detach()</code> and <code>.item()</code> in the right places.</label>
+<label><input type="checkbox"> I wrote a gradient-descent loop that fits a line and checked it against least squares.</label>
+</div>
+</section>

@@ -1,0 +1,511 @@
+<section class="lesson" id="s0-setup" data-book="Setup · macOS">
+<style>
+#s0-setup pre.term{background:var(--code-bg);color:var(--code-ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:6px 0 12px;font:400 14px/1.55 var(--mono);white-space:pre;overflow-x:auto;max-width:100%}
+#s0-setup pre.term.see{background:var(--panel);color:var(--ink2);border-style:dashed}
+#s0-setup .tl{font:700 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:12px 0 2px!important}
+#s0-setup .flags{margin:6px 0 10px;padding-left:20px;font-size:16px}
+#s0-setup .flags li{margin:3px 0}
+#s0-setup svg.fig text{font-family:var(--body)}
+</style>
+<p class="lede">Before you can do machine learning on your own computer, you need four things working together: a place to type commands (Terminal), a copy of Python with the right libraries, a code editor, and the course files. This lesson installs all of them on your Mac, one small step at a time, and tells you exactly what you should see after every step, so you always know whether it worked.</p>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>open Terminal, read its prompt, and move around your folders with <code>pwd</code>, <code>ls</code>, <code>cd</code> and <code>mkdir</code>;</li>
+<li>install the Xcode Command Line Tools and <b>uv</b>, then make a private Python environment for this course;</li>
+<li>install NumPy, pandas, matplotlib, scikit-learn, statsmodels, ISLP, JupyterLab and PyTorch, and check that each one imports;</li>
+<li>open a notebook in VS Code (or JupyterLab), choose the right kernel and run a cell with <kbd class="k">Shift</kbd> + <kbd class="k">Enter</kbd>;</li>
+<li>download the course data pack and any lesson as a notebook, and fall back to Google Colab if something on your Mac breaks;</li>
+<li>fix the six most common setup errors by yourself.</li></ul></div>
+
+<div class="callout key"><p><b>How to use this lesson.</b> Do it with your Mac open next to this page. Go in order. After each step, compare your screen with the grey "What you should see" box. If yours looks different, stop there and use the troubleshooting table near the end before going on. Plan on about an hour, most of it waiting for downloads. You only do this once.</p></div>
+
+<h3 id="s0-setup-picture">The big picture: how the pieces fit</h3>
+<p>Here is everything you are about to install, and how each piece talks to the next. Don't worry if the names mean nothing yet: each one gets its own step below, and you can come back to this picture whenever you feel lost.</p>
+
+<figure>
+<svg class="fig" viewBox="0 0 470 560" style="max-width:560px" role="img" aria-label="Diagram: you type in Terminal; uv creates the .venv folder inside ml-course; the .venv holds Python 3.12 and the libraries; VS Code or JupyterLab uses the .venv as its kernel to run the notebooks and data that sit in ml-course.">
+<defs><marker id="s0-setup-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/></marker></defs>
+<rect x="60" y="8" width="350" height="62" rx="12" style="fill:var(--tool-soft);stroke:var(--tool);stroke-width:1.5"/>
+<text x="235" y="34" text-anchor="middle" style="fill:var(--ink);font-size:17px;font-weight:700">Terminal</text>
+<text x="235" y="55" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">the app where you type commands</text>
+<line x1="235" y1="72" x2="235" y2="104" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#s0-setup-arr)"/>
+<text x="248" y="93" style="fill:var(--muted);font-size:12.5px">you type: uv venv, uv pip install …</text>
+<rect x="60" y="108" width="350" height="62" rx="12" style="fill:var(--math-soft);stroke:var(--math);stroke-width:1.5"/>
+<text x="235" y="134" text-anchor="middle" style="fill:var(--ink);font-size:17px;font-weight:700">uv</text>
+<text x="235" y="155" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">fetches Python and installs libraries</text>
+<line x1="235" y1="172" x2="235" y2="206" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#s0-setup-arr)"/>
+<text x="248" y="194" style="fill:var(--muted);font-size:12.5px">creates and fills</text>
+<rect x="14" y="212" width="442" height="338" rx="16" style="fill:none;stroke:var(--line2);stroke-width:1.5;stroke-dasharray:6 5"/>
+<text x="30" y="236" style="fill:var(--muted);font-size:13.5px;font-weight:700">the folder ~/ml-course</text>
+<rect x="40" y="248" width="390" height="112" rx="12" style="fill:var(--isl-soft);stroke:var(--isl);stroke-width:1.5"/>
+<text x="235" y="274" text-anchor="middle" style="fill:var(--ink);font-size:17px;font-weight:700">.venv  (a private box for this course)</text>
+<text x="235" y="298" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">Python 3.12</text>
+<text x="235" y="320" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">numpy · pandas · matplotlib · scikit-learn</text>
+<text x="235" y="341" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">statsmodels · ISLP · jupyterlab · torch</text>
+<line x1="235" y1="362" x2="235" y2="396" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#s0-setup-arr)"/>
+<text x="248" y="384" style="fill:var(--muted);font-size:12.5px">is chosen as the "kernel" by</text>
+<rect x="40" y="400" width="390" height="56" rx="12" style="fill:var(--udl-soft);stroke:var(--udl);stroke-width:1.5"/>
+<text x="235" y="424" text-anchor="middle" style="fill:var(--ink);font-size:17px;font-weight:700">VS Code  or  JupyterLab</text>
+<text x="235" y="445" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">where you write and run code</text>
+<line x1="235" y1="458" x2="235" y2="484" style="stroke:var(--muted);stroke-width:1.6" marker-end="url(#s0-setup-arr)"/>
+<rect x="40" y="488" width="390" height="50" rx="12" style="fill:var(--proj-soft);stroke:var(--proj);stroke-width:1.5"/>
+<text x="235" y="510" text-anchor="middle" style="fill:var(--ink);font-size:16px;font-weight:700">notebooks (.ipynb) and data files</text>
+<text x="235" y="529" text-anchor="middle" style="fill:var(--ink2);font-size:13px">py1.ipynb · Advertising.csv · …</text>
+</svg>
+<figcaption>Read it top to bottom. You type commands in <b>Terminal</b>. One of those commands runs <b>uv</b>, which builds a private box called <b>.venv</b> inside your course folder and puts Python and the libraries in it. <b>VS Code</b> (or JupyterLab) then uses that box to run your <b>notebooks</b>. Everything for the course lives in one folder, <code>~/ml-course</code>.</figcaption>
+</figure>
+
+<div class="callout analogy"><p>Think of a kitchen. <b>Terminal</b> is you giving instructions out loud. <b>uv</b> is the assistant who goes shopping. The <b>.venv</b> is one labelled cupboard holding exactly the ingredients for this course, so they never get mixed up with anything else on the Mac. <b>VS Code</b> is the worktop where you cook, and <b>notebooks</b> are your recipe cards with space to write results in.</p></div>
+
+<p>Why not just "install Python"? Because different projects need different versions of the same libraries, and a Mac already has a few copies of Python inside it that macOS itself uses. If you install things into those, you can break other software, and you lose track of what is where. A <dfn data-g="setup-venv">virtual environment</dfn> (the <code>.venv</code> folder) is the professional answer: one self-contained Python per project. Every ML engineer works this way, so learning it now is part of the job.</p>
+
+<h3 id="s0-setup-mac">Step 0 · Which Mac do you have?</h3>
+<p>Click the Apple logo in the top-left corner of the screen and choose <b>About This Mac</b>. Look at the first line under the picture:</p>
+<ul>
+<li><b>Chip: Apple M1, M2, M3, M4</b> (or Pro / Max / Ultra versions): you have an <b>Apple Silicon</b> Mac. This lesson is written for you. Everything works, including fast PyTorch on the Mac's own graphics chip.</li>
+<li><b>Processor: … Intel Core i5 / i7 / i9</b>: you have an <b>Intel</b> Mac. Almost everything is the same. The few differences are marked with <b>Intel:</b> in the steps below; the biggest one is PyTorch.</li>
+</ul>
+<p>Also note the <b>macOS</b> version written in large letters (for example "Sonoma 14.5" or "Sequoia 15.1"). Anything from macOS 13 (Ventura) onward is fine. Finally, check you have at least <b>8 GB of free disk space</b>: Apple menu → System Settings → General → Storage. The libraries and PyTorch together take about 3–4 GB.</p>
+
+<h3 id="s0-setup-terminal">Step 1 · Open Terminal</h3>
+<p><dfn data-g="setup-terminal">Terminal</dfn> is an app that lets you control your Mac by typing short commands instead of clicking. It looks old-fashioned, but it is how programmers install software, run programs and manage code. You will use it a little every day, and in a week it will feel normal.</p>
+<ol>
+<li>Press <kbd class="k">⌘ Cmd</kbd> + <kbd class="k">Space</kbd>. A search bar called <b>Spotlight</b> appears in the middle of the screen.</li>
+<li>Type <code>Terminal</code>. The first result shows a small black window icon.</li>
+<li>Press <kbd class="k">Return</kbd>. A window opens with a line of text and a blinking block.</li>
+<li>So that you never have to search again: right-click (or two-finger click) the Terminal icon in the Dock at the bottom of the screen → <b>Options</b> → <b>Keep in Dock</b>.</li>
+</ol>
+<p>(The other way to find it: Finder → Applications → Utilities → Terminal.)</p>
+
+<div class="callout mac"><p class="tl">What you should see</p>
+<pre class="term see">Last login: Sat Oct 17 09:12:04 on ttys000
+you@MacBook-Air ~ %</pre>
+<p>Your name and your Mac's name will be different. The window may be white rather than black; both are fine.</p></div>
+
+<h4>Reading the prompt</h4>
+<p>The line <code>you@MacBook-Air ~ %</code> is called the <dfn data-g="setup-prompt">prompt</dfn>. It is Terminal saying "I'm ready, type a command". Each piece means something:</p>
+<div class="symbols"><div class="row h"><span>Piece</span><span>What it means</span><span>Example</span></div>
+<div class="row"><span class="s"><code>you</code></span><span>your user name on this Mac</span><span class="eg">asha, rahul, …</span></div>
+<div class="row"><span class="s"><code>@MacBook-Air</code></span><span>"at" this computer's name</span><span class="eg">@Ashas-MacBook-Pro</span></div>
+<div class="row"><span class="s"><code>~</code></span><span>the folder you are in right now. The squiggle, called <i>tilde</i>, is short for your <b>home folder</b>, <code>/Users/you</code></span><span class="eg">later it may say <code>ml-course</code></span></div>
+<div class="row"><span class="s"><code>%</code></span><span>end of the prompt: your typing starts after it. (Some guides on the internet show <code>$</code> instead; it means the same.)</span><span class="eg">never type the <code>%</code> yourself</span></div>
+</div>
+<p>The program reading your commands is called <b>zsh</b> (said "zee-shell"). It is the Mac's standard <dfn data-g="setup-shell">shell</dfn>. You'll see its name in some error messages, such as <code>zsh: command not found</code>.</p>
+
+<h4>Six habits that make Terminal friendly</h4>
+<ul>
+<li><b>Type exactly.</b> Spaces matter, and commands are written in lower case. <code>uv --version</code> has a space before the two dashes and none after.</li>
+<li><b>Press <kbd class="k">Return</kbd> to run</b> what you typed. Nothing happens until you do.</li>
+<li><b>Copy and paste are fine.</b> Select a command in this page, <kbd class="k">⌘</kbd> + <kbd class="k">C</kbd>, click in Terminal, <kbd class="k">⌘</kbd> + <kbd class="k">V</kbd>, then <kbd class="k">Return</kbd>. Copy only the command, never the prompt.</li>
+<li><b>Up arrow</b> <kbd class="k">↑</kbd> brings back the previous command, so you can fix a typo and run it again.</li>
+<li><b>Tab completes names.</b> Type <code>cd Doc</code> and press <kbd class="k">Tab</kbd>: zsh finishes it to <code>cd Documents/</code>.</li>
+<li><b><kbd class="k">Ctrl</kbd> + <kbd class="k">C</kbd> stops</b> whatever is running and gives you a fresh prompt. (Ctrl, not ⌘: this is the one place on a Mac where Control matters.)</li>
+</ul>
+
+<h3 id="s0-setup-nav">Step 2 · Your first commands: where am I, what is here, go there</h3>
+<p>Your Mac's files are arranged like an upside-down tree. At the very top is the root, written <code>/</code>. Inside it is a folder <code>Users</code>, inside that your home folder <code>you</code>, and inside that the folders you know from Finder: <code>Desktop</code>, <code>Documents</code>, <code>Downloads</code>. A <dfn data-g="setup-path">path</dfn> is the list of folders from the top down to a place, joined with slashes: <code>/Users/you/Documents</code> means "start at the root, go into Users, then you, then Documents". Terminal is always "standing" in one folder, called the <b>current folder</b> (or working directory). Four commands are enough to move around:</p>
+
+<div class="tw"><table class="t"><thead><tr><th>Command</th><th>Stands for</th><th>What it does</th><th>Example</th></tr></thead><tbody>
+<tr><td><code>pwd</code></td><td><b>p</b>rint <b>w</b>orking <b>d</b>irectory</td><td>tells you which folder you are standing in, as a full path</td><td><code>pwd</code> → <code>/Users/you</code></td></tr>
+<tr><td><code>ls</code></td><td><b>l</b>i<b>s</b>t</td><td>lists what is inside the current folder</td><td><code>ls</code> → <code>Desktop  Documents  Downloads …</code></td></tr>
+<tr><td><code>cd NAME</code></td><td><b>c</b>hange <b>d</b>irectory</td><td>walks into the folder NAME. <code>cd ..</code> goes up one level; <code>cd ~</code> (or plain <code>cd</code>) goes home from anywhere</td><td><code>cd Documents</code></td></tr>
+<tr><td><code>mkdir NAME</code></td><td><b>m</b>a<b>k</b>e <b>dir</b>ectory</td><td>creates a new, empty folder called NAME in the current folder</td><td><code>mkdir ml-course</code></td></tr>
+</tbody></table></div>
+<p>Two more you will meet: <code>ls -a</code> lists <b>a</b>ll items, including hidden ones whose names start with a dot (such as <code>.zshrc</code>, a settings file, and later <code>.venv</code>). <code>clear</code> wipes the screen when it gets messy (your files are not touched). And <code>open .</code> opens the current folder in a Finder window: the single dot <code>.</code> means "this folder here".</p>
+
+<p>Practise in the pretend Terminal below first. It is not connected to your Mac, so you cannot break anything. Type a command and press <kbd class="k">Return</kbd>, or click the buttons. Then do the same in your real Terminal.</p>
+
+<div class="widget" data-w="s0-setup-term" data-title="Practice Terminal: pwd, ls, cd, mkdir"><div class="wn">Click in the dark box and type <code>pwd</code>, then <kbd class="k">Return</kbd>. Then try to tick every mission. Try a mistake on purpose too: <code>cd Documnts</code> (misspelt) and <code>Pwd</code>. Read the error, because your real Mac will say almost exactly the same thing. Blue names are folders, white names are files.</div></div>
+
+<p>Now in your real Terminal, type these one at a time:</p>
+<div class="callout mac"><p class="tl">Type this, then press Return after each line</p>
+<pre class="term">pwd
+ls
+cd Documents
+pwd
+cd ..
+pwd</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">/Users/you
+Applications  Desktop  Documents  Downloads  Library  Movies  Music  Pictures  Public
+/Users/you/Documents
+/Users/you</pre>
+<p>Notice <code>cd</code> prints nothing when it works. Silence means success in Terminal; only problems produce messages. The prompt changes instead: it says <code>Documents %</code> while you are inside Documents.</p></div>
+
+<div class="callout pitfall"><p><b>Folder names with spaces</b> must be wrapped in quotes: <code>cd "My Projects"</code>. Without quotes, zsh thinks you typed two separate words. This is why programmers name folders with dashes, like <code>ml-course</code>, and you should too.</p></div>
+
+<h3 id="s0-setup-xcode">Step 3 · Install the Xcode Command Line Tools</h3>
+<p>The <b>Command Line Tools</b> are a free bundle from Apple with the basic programmer's tools: <code>git</code> (for saving versions of your work, used in <a href="#git1">Git and GitHub</a>), compilers that some Python libraries need, and a few others. You do <b>not</b> need the giant Xcode app, only this small bundle.</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">xcode-select --install</pre>
+<ul class="flags"><li><code>xcode-select</code> is Apple's program that manages developer tools.</li>
+<li><code>--install</code> is an <dfn data-g="setup-flag">option</dfn> (also called a <i>flag</i>): extra words starting with dashes that change what a command does. This one says "please install the tools".</li></ul>
+<p class="tl">What you should see</p>
+<p>A small window pops up asking "The xcode-select command requires the command line developer tools. Would you like to install the tools now?" Click <b>Install</b>, then <b>Agree</b> to the licence. A progress bar appears; it takes 5–20 minutes. When it says "The software was installed", click <b>Done</b>.</p>
+<p>If instead Terminal prints <code>xcode-select: note: Command line tools are already installed</code> (or <code>error: command line tools are already installed</code>), you already have them. That is good news: move on.</p></div>
+
+<p>Check it worked:</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">xcode-select -p
+git --version</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">/Library/Developer/CommandLineTools
+git version 2.39.5 (Apple Git-154)</pre>
+<p><code>-p</code> means <b>p</b>rint the path where the tools live. The git version number on your Mac may differ; any version is fine.</p></div>
+
+<h3 id="s0-setup-uv">Step 4 · Install uv, the Python manager</h3>
+<p><dfn data-g="setup-uv">uv</dfn> is a small, very fast program that does three jobs: it downloads the exact version of Python you ask for, it creates virtual environments, and it installs Python libraries into them. Older guides use separate tools for each job (<code>pyenv</code>, <code>venv</code>, <code>pip</code>, <code>conda</code>); uv does all three and is 10–100 times faster. It is what many ML teams use today.</p>
+<div class="callout mac"><p class="tl">Type (or paste) this exactly</p>
+<pre class="term">curl -LsSf https://astral.sh/uv/install.sh | sh</pre>
+<p>Every piece, one by one:</p>
+<ul class="flags">
+<li><code>curl</code>: a program that downloads a file from a web address (<b>c</b>lient for <b>URL</b>s).</li>
+<li><code>-LsSf</code>: four one-letter options squeezed together, the same as <code>-L -s -S -f</code>.
+ <code>-L</code> follow redirects (if the address says "moved, look over there", follow it);
+ <code>-s</code> silent (no progress bar);
+ <code>-S</code> but still show an error if something goes wrong;
+ <code>-f</code> fail quietly on a server error instead of saving an error page as if it were the script.</li>
+<li><code>https://astral.sh/uv/install.sh</code>: the address of uv's official installer script, from Astral, the company that makes uv.</li>
+<li><code>|</code>: the <dfn data-g="setup-pipe">pipe</dfn> (<kbd class="k">Shift</kbd> + <kbd class="k">\</kbd>). It sends the output of the command on its left straight into the command on its right.</li>
+<li><code>sh</code>: the shell, which runs the script it receives. So the whole line means "download uv's installer and run it".</li></ul>
+<p class="tl">What you should see (version numbers will be newer)</p>
+<pre class="term see">downloading uv 0.9.5 aarch64-apple-darwin
+no checksums to verify
+installing to /Users/you/.local/bin
+  uv
+  uvx
+everything's installed!
+
+To add $HOME/.local/bin to your PATH, either restart your shell or run:
+
+    source $HOME/.local/bin/env (sh, bash, zsh)</pre>
+<p><code>aarch64-apple-darwin</code> means "Apple Silicon Mac". <b>Intel:</b> you will see <code>x86_64-apple-darwin</code> instead. Both are right.</p></div>
+
+<div class="callout pitfall"><p><b>Only pipe scripts into <code>sh</code> from sources you trust.</b> Running a downloaded script gives it the same power over your account as you have. uv's official site is trustworthy; a random forum post is not. When in doubt, ask before you paste.</p></div>
+
+<h4>Restart Terminal, then check</h4>
+<p>The installer put uv in a hidden folder, <code>~/.local/bin</code>, and told your shell to look there for programs. The list of folders the shell searches for programs is called the <dfn data-g="setup-path-var">PATH</dfn>. Your open Terminal window read the PATH when it started, so it doesn't know about the change yet. Quit Terminal completely (<kbd class="k">⌘</kbd> + <kbd class="k">Q</kbd>), open it again from the Dock, and type:</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">uv --version</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">uv 0.9.5 (d5f39331a 2025-10-21)</pre>
+<p>Any version number means success. If you get <code>zsh: command not found: uv</code>, you didn't fully restart Terminal; quit with ⌘Q (closing the window is not enough) and try again. Still failing? Run <code>source $HOME/.local/bin/env</code>, then <code>uv --version</code> again.</p></div>
+
+<div class="callout mac"><div class="ct">If you already use Homebrew</div><p>Homebrew is a popular installer for Mac software. If you have it (<code>brew --version</code> prints a number), <code>brew install uv</code> works just as well. If you don't have Homebrew, you don't need it for this course.</p></div>
+
+<h3 id="s0-setup-venv">Step 5 · Make the course folder and its private Python</h3>
+<p>Now you make one folder for the whole course and give it its own Python. Type each line and press <kbd class="k">Return</kbd> after it:</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">cd ~
+mkdir ml-course
+cd ml-course
+uv venv --python 3.12</pre>
+<ul class="flags">
+<li><code>cd ~</code>: go to your home folder first, so the course folder ends up in a predictable place, <code>/Users/you/ml-course</code>. From now on, <code>~/ml-course</code> is its short name.</li>
+<li><code>mkdir ml-course</code>: make the folder. <code>cd ml-course</code>: walk into it.</li>
+<li><code>uv venv</code>: "uv, make a virtual environment here". It creates a folder named <code>.venv</code> (the dot makes it hidden in Finder).</li>
+<li><code>--python 3.12</code>: put Python version 3.12 inside it. If your Mac doesn't have 3.12, uv downloads it for you (about 20 MB). We use 3.12 because every library in this course supports it fully.</li></ul>
+<p class="tl">What you should see</p>
+<pre class="term see">Using CPython 3.12.12
+Creating virtual environment at: .venv
+Activate with: source .venv/bin/activate</pre>
+<p>You may also see a line like <code>Downloading cpython-3.12.12-macos-aarch64-none (16.3MiB)</code> first. That is uv fetching Python. <b>CPython</b> is the name of the standard Python program.</p></div>
+
+<h4>Activate the environment, and what <code>(.venv)</code> means</h4>
+<p>The environment exists, but your Terminal isn't using it yet. <dfn data-g="setup-activate">Activating</dfn> it tells this Terminal window: "when I say <code>python</code>, I mean the Python inside <code>.venv</code>".</p>
+<div class="callout mac"><p class="tl">Type this (you must be inside ~/ml-course)</p>
+<pre class="term">source .venv/bin/activate</pre>
+<ul class="flags">
+<li><code>source</code>: run the commands in a file <i>inside the current shell</i>, so their changes stick to this window.</li>
+<li><code>.venv/bin/activate</code>: the path to a small script uv made, in the <code>bin</code> folder of <code>.venv</code>. It puts <code>.venv/bin</code> at the front of your PATH.</li></ul>
+<p class="tl">What you should see</p>
+<pre class="term see">(.venv) you@MacBook-Air ml-course %</pre>
+<p>The <b><code>(.venv)</code></b> at the start of the prompt is the sign that the environment is active. <b>Look for it every time before you install or run anything.</b> If it's not there, you are using the wrong Python.</p></div>
+
+<p>Prove which Python you're now using:</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">which python
+python --version</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">/Users/you/ml-course/.venv/bin/python
+Python 3.12.12</pre>
+<p><code>which</code> answers "which program will run if I type this name?". The answer is inside your <code>.venv</code>: exactly right.</p></div>
+
+<div class="callout key"><p><b>The two lines you'll type at the start of every work session</b>, in every new Terminal window:</p>
+<pre class="term">cd ~/ml-course
+source .venv/bin/activate</pre>
+<p>Activation lasts only for that window. Close the window and it's gone (that is normal, nothing is lost). To leave the environment without closing the window, type <code>deactivate</code>.</p></div>
+
+<h3 id="s0-setup-libs">Step 6 · Install the libraries</h3>
+<p>A <dfn data-g="setup-library">library</dfn> (Python people also say <i>package</i>) is code that other people wrote and shared so you don't have to write it yourself. Python on its own can do arithmetic and handle text. The libraries turn it into a machine-learning workbench:</p>
+<div class="tw"><table class="t"><thead><tr><th>Library</th><th>What it gives you</th><th>First used in</th></tr></thead><tbody>
+<tr><td><b>numpy</b></td><td>fast arrays of numbers: vectors, matrices, maths on whole arrays at once</td><td><a href="#np1">NumPy I</a></td></tr>
+<tr><td><b>pandas</b></td><td>tables of data with named columns, like a spreadsheet you control with code</td><td><a href="#pd1">pandas</a></td></tr>
+<tr><td><b>matplotlib</b></td><td>plots and charts</td><td><a href="#plt1">matplotlib</a></td></tr>
+<tr><td><b>scikit-learn</b> (imported as <code>sklearn</code>)</td><td>ready-made ML models: regression, classification, cross-validation</td><td>ISLP chapters 3–6</td></tr>
+<tr><td><b>statsmodels</b></td><td>statistics: regression tables with standard errors and p-values</td><td>ISLP chapter 3</td></tr>
+<tr><td><b>ISLP</b></td><td>the ISLP book's own datasets and helper functions. It also brings PyTorch with it.</td><td>ISLP chapter 2 onwards</td></tr>
+<tr><td><b>jupyterlab</b>, <b>ipykernel</b></td><td>notebooks, and the bridge that lets a notebook use your <code>.venv</code> Python</td><td>this lesson</td></tr>
+</tbody></table></div>
+
+<div class="callout mac"><p class="tl">Type this (check for (.venv) in the prompt first)</p>
+<pre class="term">uv pip install numpy pandas matplotlib scikit-learn statsmodels ISLP jupyterlab ipykernel</pre>
+<ul class="flags">
+<li><code>uv pip install</code>: "uv, install these packages into the active environment". (<code>pip</code> is the name of Python's classic installer; uv copies its commands so that instructions written for pip work with uv too.)</li>
+<li>Then the list of package names, separated by spaces. uv also installs everything <i>they</i> need, so expect around a hundred packages.</li></ul>
+<p class="tl">What you should see (after 1–5 minutes, depending on your internet)</p>
+<pre class="term see">Resolved 104 packages in 2.31s
+Prepared 104 packages in 48.20s
+Installed 104 packages in 412ms
+ + contourpy==1.3.3
+ + ipykernel==7.0.1
+ + islp==0.4.2
+ + jupyterlab==4.4.9
+ + matplotlib==3.10.7
+ + numpy==2.3.4
+ + pandas==2.3.3
+ + scikit-learn==1.7.2
+ + statsmodels==0.14.5
+ + torch==2.9.0
+ …(about a hundred lines)…</pre>
+<p><b>Resolved</b> means uv worked out which versions fit together; <b>Prepared</b> means downloaded; <b>Installed</b> means copied into <code>.venv</code>. Each <code>+</code> line is one package and its version. Your numbers will differ: that's fine.</p></div>
+
+<div class="callout mac"><div class="ct">Intel Macs only</div><p>New versions of PyTorch are no longer built for Intel Macs, and ISLP asks for PyTorch, so the command above can fail with a message containing <code>no wheels with a matching platform tag</code> or mentioning <code>torch</code>. If that happens, install the last Intel-compatible PyTorch explicitly, together with a NumPy it works with:</p>
+<pre class="term">uv pip install "numpy&lt;2" "torch==2.2.2" "torchvision==0.17.2" pandas matplotlib scikit-learn statsmodels ISLP jupyterlab ipykernel</pre>
+<p>The quotes are needed because <code>&lt;</code> means something special to zsh. Everything in months 1 and 2 works perfectly with this. For the PyTorch lessons in month 3 you can use these versions, or use Google Colab (Step 11), which also gives you a free GPU.</p></div>
+
+<h3 id="s0-setup-check">Step 7 · Check that everything imports</h3>
+<p>To <b>import</b> a library means to load it into Python so you can use it. If every import works, the installation worked. You can run a tiny Python program straight from Terminal:</p>
+<div class="callout mac"><p class="tl">Type (or paste) this as one line</p>
+<pre class="term">python -c "import numpy, pandas, sklearn, statsmodels, ISLP; print('all good')"</pre>
+<ul class="flags">
+<li><code>python</code>: start the Python inside <code>.venv</code> (because it's active).</li>
+<li><code>-c</code>: "the <b>c</b>ode to run comes next, in quotes", instead of from a file.</li>
+<li><code>import numpy, pandas, sklearn, statsmodels, ISLP</code>: load five libraries. Note that scikit-learn is imported as <code>sklearn</code>.</li>
+<li><code>;</code> separates two Python statements on one line. <code>print('all good')</code> prints a message, which only happens if every import before it worked.</li></ul>
+<p class="tl">What you should see</p>
+<pre class="term see">all good</pre>
+<p>It may take 5–10 seconds the first time, because Python prepares each library on first import. Later imports are faster.</p></div>
+
+<p><b>If it fails</b>, Python stops at the first problem and prints an error ending in a line like <code>ModuleNotFoundError: No module named 'ISLP'</code>. Read the <b>last line</b>; it names the culprit. Then:</p>
+<div class="tw"><table class="t"><thead><tr><th>The last line says</th><th>What it means</th><th>What to do</th></tr></thead><tbody>
+<tr><td><code>No module named 'numpy'</code> (or any of them, even the first one)</td><td>Python can't find the libraries. Almost always: the environment isn't active, so you're using a different Python.</td><td>Look for <code>(.venv)</code>. If missing: <code>cd ~/ml-course</code> then <code>source .venv/bin/activate</code>, then try again.</td></tr>
+<tr><td><code>No module named 'ISLP'</code> but the others worked</td><td>That one package didn't install (often a network hiccup, or the Intel PyTorch problem).</td><td>Run <code>uv pip install ISLP</code> on its own and read its last lines. On Intel, use the Intel command above.</td></tr>
+<tr><td><code>No module named 'sklearn'</code></td><td>scikit-learn isn't installed.</td><td><code>uv pip install scikit-learn</code> (install with the long name, import with the short one).</td></tr>
+<tr><td><code>zsh: command not found: python</code></td><td>No environment is active and macOS only knows <code>python3</code>.</td><td>Activate the environment. Inside it, <code>python</code> always exists.</td></tr>
+<tr><td>a long error mentioning <code>numpy</code> and "compiled using NumPy 1.x"</td><td>Two libraries disagree about NumPy versions (mostly Intel Macs).</td><td><code>uv pip install "numpy&lt;2"</code>, then check again.</td></tr>
+</tbody></table></div>
+
+<p>A more informative check prints each library's version. You'll paste this into a notebook in Step 9, and you can run it right here in the page now. It uses the same code your Mac will run:</p>
+<div class="py" id="c-s0-setup-01"><pre class="src">
+import sys
+import numpy, pandas, matplotlib, sklearn, statsmodels, ISLP
+
+print("Python      ", sys.version.split()[0])
+for lib in [numpy, pandas, matplotlib, sklearn, statsmodels, ISLP]:
+    print(f"{lib.__name__:12}", lib.__version__)
+print("all good")
+</pre><div class="pynote"><b>What you see:</b> one line per library with its version number. In this page the versions are the ones built into the browser; on your Mac they will usually be a little newer, which is fine. Don't worry about understanding every word of this code yet: <code>for</code> loops and the <code>f"..."</code> text formatting are taught in <a href="#py1">Python I</a>.</div></div>
+
+<h3 id="s0-setup-torch">Step 8 · PyTorch, and your Mac's graphics chip</h3>
+<p><b>PyTorch</b> is the library for building and training neural networks; you start it in month 3. ISLP already brought PyTorch with it, but we also want <b>torchvision</b>, its companion for images. Install both now so it's done (uv will skip whatever is already there):</p>
+<div class="callout mac"><p class="tl">Type this (with (.venv) active)</p>
+<pre class="term">uv pip install torch torchvision</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">Resolved 30 packages in 1.20s
+Prepared 1 package in 2.05s
+Installed 1 package in 38ms
+ + torchvision==0.24.0</pre>
+<p>If both were already present you'll see <code>Audited 2 packages</code>, which means "nothing to do".</p></div>
+
+<p>Apple Silicon Macs have a built-in graphics chip (GPU) that PyTorch can use through Apple's <dfn data-g="setup-mps">MPS</dfn> (<b>M</b>etal <b>P</b>erformance <b>S</b>haders) system. Training on it is often 5–20 times faster than on the main processor. Check that PyTorch can see it:</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">python -c "import torch; print(torch.__version__, torch.backends.mps.is_available())"</pre>
+<p class="tl">What you should see on Apple Silicon</p>
+<pre class="term see">2.9.0 True</pre>
+<p><code>True</code> means PyTorch can use the GPU. <b>Intel:</b> you'll see <code>2.2.2 False</code>. That is expected: Intel Macs have no MPS. PyTorch then uses the main processor (CPU), which is fine for the small networks in this course; Colab gives you a GPU when you want one.</p></div>
+
+<p>The cell below is a PyTorch cell. Cells like this are marked to run <b>only on your Mac</b>, because PyTorch is too big for the browser. The output shown was made on a computer without an Apple chip, so it says <code>mps available: False</code>; on your Apple Silicon Mac it should say <code>True</code>.</p>
+<div class="py" id="c-s0-setup-02" data-mode="local"><pre class="src">
+import torch
+
+print("torch version :", torch.__version__)
+print("mps available :", torch.backends.mps.is_available())
+device = "mps" if torch.backends.mps.is_available() else "cpu"
+x = torch.ones(3, device=device)   # three 1s, stored on the GPU if there is one
+print("computed on   :", device, "->", (x * 2).tolist())
+</pre><div class="pynote"><b>What you see:</b> the version, whether the GPU is usable, and a tiny calculation (three 1s doubled) done on whichever device is available. If this prints <code>[2.0, 2.0, 2.0]</code> on your Mac, PyTorch works end to end.</div></div>
+
+<h3 id="s0-setup-vscode">Step 9 · Install VS Code and run your first notebook</h3>
+<p><dfn data-g="setup-vscode">VS Code</dfn> (Visual Studio Code) is a free code editor from Microsoft, and the most used one in the world. You'll write Python files and notebooks in it. A <dfn data-g="setup-notebook">notebook</dfn> (a file ending in <code>.ipynb</code>, short for <i>IPython notebook</i>) is a document made of <b>cells</b>: text cells and code cells. You run one code cell at a time and its output appears right underneath it, just like in this page.</p>
+<h4>Install it</h4>
+<ol>
+<li>In your web browser, go to <b>code.visualstudio.com</b> and click the big <b>Download for macOS</b> button. (It's a "Universal" download that works on both Apple Silicon and Intel.)</li>
+<li>A file like <code>VSCode-darwin-universal.zip</code> appears in your <b>Downloads</b> folder. Double-click it: it unzips into an app called <b>Visual Studio Code</b>.</li>
+<li>Open a Finder window, click <b>Applications</b> in the sidebar, and <b>drag</b> Visual Studio Code from Downloads into Applications. (This matters: an app run from Downloads can't update itself properly.)</li>
+<li>Open it from Applications (or Spotlight: ⌘ + Space, type "Visual Studio Code"). macOS asks "Are you sure you want to open it?" because it came from the internet. Click <b>Open</b>.</li>
+<li>Right-click its Dock icon → Options → <b>Keep in Dock</b>.</li>
+</ol>
+<h4>Add the Python and Jupyter extensions</h4>
+<p>An <b>extension</b> is an add-on that teaches VS Code a new skill. You need two, both made by Microsoft:</p>
+<ol>
+<li>Click the <b>Extensions</b> icon in the left sidebar (four small squares, one flying off), or press <kbd class="k">⇧ Shift</kbd> + <kbd class="k">⌘</kbd> + <kbd class="k">X</kbd>.</li>
+<li>In the search box type <code>Python</code>. Click the one called <b>Python</b> whose publisher is <b>Microsoft</b> (it has a blue tick and many millions of installs). Click <b>Install</b>. It also installs "Pylance" and "Python Debugger" automatically; that's expected.</li>
+<li>Search <code>Jupyter</code> and install the <b>Jupyter</b> extension by <b>Microsoft</b> the same way.</li>
+</ol>
+<h4>Open the course folder and make a notebook</h4>
+<ol>
+<li><b>File → Open Folder…</b>, then go to your home folder (in the window's sidebar, or press <kbd class="k">⇧</kbd> + <kbd class="k">⌘</kbd> + <kbd class="k">H</kbd>), click <b>ml-course</b> once, then <b>Open</b>. If asked "Do you trust the authors of the files in this folder?", click <b>Yes, I trust the authors</b> (you are the author).</li>
+<li>Press <kbd class="k">⇧</kbd> + <kbd class="k">⌘</kbd> + <kbd class="k">P</kbd> to open the <b>Command Palette</b> (a search box for every VS Code action). Type <code>new jupyter</code> and choose <b>Create: New Jupyter Notebook</b>.</li>
+<li>Top right of the notebook, click <b>Select Kernel</b> → <b>Python Environments…</b> → choose the one that says <b>.venv</b> and <b>Python 3.12</b> (its path ends in <code>ml-course/.venv/bin/python</code>). A <dfn data-g="setup-kernel">kernel</dfn> is the Python program that actually runs a notebook's cells; choosing <code>.venv</code> means it uses the libraries you just installed.</li>
+<li>Click in the first cell and type <code>print("hello from my Mac")</code>. Press <kbd class="k">Shift</kbd> + <kbd class="k">Enter</kbd>. The output appears under the cell, with a small green tick, and a new empty cell opens below.</li>
+<li>Paste the version-check code from Step 7 into the new cell and run it. You should see your Mac's version numbers and <code>all good</code>.</li>
+<li>Save with <kbd class="k">⌘</kbd> + <kbd class="k">S</kbd>; call it <code>test.ipynb</code>. It's now a file in <code>~/ml-course</code>.</li>
+</ol>
+
+<div class="callout mac"><div class="ct">Optional but handy · the <code>code</code> command</div><p>In VS Code press ⇧⌘P, type <code>shell command</code>, and choose <b>Shell Command: Install 'code' command in PATH</b>. After that, in Terminal, <code>code .</code> opens the current folder in VS Code. Your start-of-session routine becomes:</p>
+<pre class="term">cd ~/ml-course
+source .venv/bin/activate
+code .</pre></div>
+
+<p>Try one more cell in your notebook: a picture. If a plot appears under the cell, matplotlib works too. Here's the same cell in this page:</p>
+<div class="py" id="c-s0-setup-03"><pre class="src">
+import matplotlib.pyplot as plt
+
+marks = [62, 75, 81, 70]
+plt.bar(["Asha", "Ben", "Chen", "Divya"], marks)
+plt.title("If you can see this chart, plotting works")
+plt.ylabel("mark")
+plt.show()
+</pre><div class="pynote"><b>What you see:</b> a bar chart with four bars. On your Mac it appears inside the notebook, under the cell. You'll learn how plotting works in the matplotlib lesson; today you only need to know that it works.</div></div>
+
+<h3 id="s0-setup-jlab">Step 10 · JupyterLab, the other way to use notebooks</h3>
+<p><b>JupyterLab</b> is a notebook program that runs in your web browser. Some people prefer it to VS Code for exploring data, and many online courses and companies use it. You installed it in Step 6. To start it:</p>
+<div class="callout mac"><p class="tl">Type this (in ~/ml-course, with (.venv) active)</p>
+<pre class="term">jupyter lab</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">[I 2026-10-17 09:41:10.312 ServerApp] Jupyter Server 2.17.0 is running at:
+[I 2026-10-17 09:41:10.312 ServerApp] http://localhost:8888/lab?token=3f1c…
+…</pre>
+<p>Your browser opens a new tab showing JupyterLab, with your <code>ml-course</code> files on the left. Click <b>Python 3 (ipykernel)</b> under "Notebook" to make a new notebook, or double-click <code>test.ipynb</code> to open the one you made. <kbd class="k">Shift</kbd> + <kbd class="k">Enter</kbd> runs a cell here too.</p>
+<p><b>Leave the Terminal window open</b> while you use JupyterLab: it is the server running your notebooks. To stop, save your work, go back to Terminal, press <kbd class="k">Ctrl</kbd> + <kbd class="k">C</kbd>, and answer <code>y</code> to "Shutdown this Jupyter server (y/[n])?".</p></div>
+
+<h3 id="s0-setup-files">Step 11 · Get the course files</h3>
+<p>Every lesson in this guide with code can be downloaded as a notebook, and the datasets the lessons use (such as <code>Advertising.csv</code>) come in one <b>data pack</b>. Click the button to download it:</p>
+<p><button class="cbtn run" type="button" onclick="downloadDataPack()">⬇ Download the course data pack (zip)</button></p>
+<p>It saves a file called <code>ml-course-data.zip</code> into your Downloads folder. A <b>zip</b> file is several files squeezed into one. Inside it is a folder <code>ml-course</code> containing the data files and a <code>notebooks</code> folder with every lesson as a notebook. Unpack it straight into your course folder:</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">cd ~
+unzip -o ~/Downloads/ml-course-data.zip
+ls ~/ml-course</pre>
+<ul class="flags">
+<li><code>cd ~</code>: go home, because the zip contains a folder called <code>ml-course</code>, which will land exactly on top of yours.</li>
+<li><code>unzip</code>: unpack a zip file. <code>-o</code>: <b>o</b>verwrite older copies without asking (useful when you download a newer pack later). Your <code>.venv</code> and your own notebooks are not touched, because the zip doesn't contain files with those names.</li>
+<li><code>~/Downloads/ml-course-data.zip</code>: the path of the zip you downloaded.</li></ul>
+<p class="tl">What you should see (the list will be longer)</p>
+<pre class="term see">Archive:  /Users/you/Downloads/ml-course-data.zip
+  inflating: ml-course/Advertising.csv
+  inflating: ml-course/Auto.csv
+  …
+  inflating: ml-course/notebooks/py1.ipynb
+  …
+Advertising.csv  Auto.csv  College.csv  Income1.csv  Income2.csv  notebooks  test.ipynb</pre></div>
+
+<p>Your course folder now looks like this (<code>ls -a</code> shows the hidden <code>.venv</code> too):</p>
+<pre class="term">ml-course/
+├── .venv/              your private Python and libraries (never edit by hand)
+├── Advertising.csv     data files used by the lessons
+├── Auto.csv
+├── …
+├── notebooks/
+│   ├── py1.ipynb       every lesson as a notebook
+│   └── …
+└── test.ipynb          the notebook you made in Step 9</pre>
+
+<div class="callout pitfall"><p><b>Keep notebooks and data in the same folder tree.</b> Lessons load data with short names like <code>pd.read_csv("Advertising.csv")</code>, which looks in the folder where the notebook is running. If you open a notebook from <code>notebooks/</code>, either move it up into <code>~/ml-course</code> (next to the CSV files), or write <code>"../Advertising.csv"</code> (<code>..</code> means "the folder above"). The ISLP datasets (Auto, Default, Smarket…) come inside the ISLP library, so <code>load_data("Auto")</code> works from anywhere.</p></div>
+
+<p><b>One lesson at a time:</b> at the bottom of every lesson with code there's a button <b>⬇ Download as a Jupyter notebook</b>. It gives you that lesson's cells and exercises (with their checks) as a <code>.ipynb</code> file. Move it into <code>~/ml-course</code> and open it in VS Code. This lesson has one too, at the bottom of the page; try it now.</p>
+
+<h3 id="s0-setup-colab">Plan B · Google Colab, when your Mac won't cooperate</h3>
+<p><b>Google Colab</b> runs notebooks on Google's computers, in your browser, for free. Nothing to install. Use it if your setup is stuck and you want to keep learning while you fix it, or when you want a free GPU for PyTorch.</p>
+<ol>
+<li>Go to <b>colab.research.google.com</b> and sign in with a Google account.</li>
+<li><b>File → Upload notebook</b> and choose a lesson's <code>.ipynb</code>, or <b>File → New notebook</b>.</li>
+<li>In the first cell, install what Colab doesn't already have, then run it: <code>!pip install ISLP</code>. The <code>!</code> at the start means "run this as a Terminal command, not as Python".</li>
+<li>To use a data file: click the <b>folder icon</b> on the left, then the upload icon, and choose the CSV file from your <code>ml-course</code> folder.</li>
+<li>For PyTorch with a GPU: <b>Runtime → Change runtime type → T4 GPU</b>.</li>
+</ol>
+<div class="callout pitfall"><p>Colab forgets everything (installed packages, uploaded files, variables) when the session ends, usually after about 90 minutes of inactivity. Download your notebook (<b>File → Download → .ipynb</b>) before you stop, and re-run the install cell next time.</p></div>
+
+<h3 id="s0-setup-trouble">When something goes wrong: the troubleshooting table</h3>
+<p>Every programmer sees these errors. They're not signs that you've broken anything; they're messages telling you what to fix. Find the words you see in the left column.</p>
+<div class="tw"><table class="t"><thead><tr><th>You see</th><th>What it means</th><th>Fix</th></tr></thead><tbody>
+<tr><td><code>zsh: command not found: uv</code></td><td>The shell doesn't know where uv is. Usually Terminal wasn't restarted after installing.</td><td>Quit Terminal fully (⌘Q), reopen, try again. If it persists: <code>source $HOME/.local/bin/env</code>. If still nothing, re-run the install command from Step 4.</td></tr>
+<tr><td><code>zsh: command not found: python</code> (or <code>jupyter</code>)</td><td>No environment is active.</td><td><code>cd ~/ml-course</code> then <code>source .venv/bin/activate</code>. Check for <code>(.venv)</code>.</td></tr>
+<tr><td><code>zsh: command not found: Pwd</code> or a misspelling</td><td>A typo or wrong capital letter.</td><td>Press ↑, fix the command, press Return.</td></tr>
+<tr><td><code>Permission denied</code></td><td>You're trying to write somewhere your account doesn't own (for example the system Python, or a folder outside your home).</td><td>Work inside your home folder (<code>cd ~/ml-course</code>), and install only into an active <code>.venv</code>. <b>Never</b> use <code>sudo</code> to install Python packages: it can damage macOS's own Python.</td></tr>
+<tr><td><code>source: no such file or directory: .venv/bin/activate</code></td><td>You're not in the course folder, or the environment wasn't created.</td><td><code>cd ~/ml-course</code>, then <code>ls -a</code>. No <code>.venv</code>? Run <code>uv venv --python 3.12</code>.</td></tr>
+<tr><td>Wrong Python: <code>which python</code> shows <code>/usr/bin/python3</code> or <code>/opt/homebrew/…</code>, or the version isn't 3.12</td><td>The environment isn't active in this window, so another Python answers.</td><td>Activate it. Then <code>which python</code> must end in <code>ml-course/.venv/bin/python</code>.</td></tr>
+<tr><td><code>ModuleNotFoundError: No module named 'pandas'</code> (in Terminal or a notebook)</td><td>This Python doesn't have the library. In a notebook it usually means the <b>wrong kernel</b> is selected.</td><td>Terminal: activate, then <code>uv pip install pandas</code>. Notebook: click the kernel name (top right) and pick the <code>.venv</code> one.</td></tr>
+<tr><td>VS Code: "Kernel not found", or <code>.venv</code> isn't in the kernel list</td><td>VS Code hasn't noticed the environment, or the folder you opened isn't <code>ml-course</code>.</td><td>File → Open Folder → <code>ml-course</code>. Then ⇧⌘P → <b>Python: Select Interpreter</b> → <b>Enter interpreter path…</b> → type <code>~/ml-course/.venv/bin/python</code>. Reload with ⇧⌘P → <b>Developer: Reload Window</b>.</td></tr>
+<tr><td>VS Code asks to install <code>ipykernel</code></td><td>The chosen environment lacks the notebook bridge.</td><td>Click <b>Install</b>, or in Terminal (activated): <code>uv pip install ipykernel</code>.</td></tr>
+<tr><td><code>zsh: no matches found: numpy&lt;2</code> or <code>…[all]</code></td><td>zsh treats <code>&lt; &gt; [ ] * ?</code> as special pattern characters.</td><td>Put that package in quotes: <code>uv pip install "numpy&lt;2"</code>.</td></tr>
+<tr><td>Something runs forever and the prompt doesn't come back</td><td>A program is still running (for example <code>jupyter lab</code>), or a command is waiting for input.</td><td>Press <kbd class="k">Ctrl</kbd> + <kbd class="k">C</kbd>.</td></tr>
+<tr><td><code>xcrun: error: invalid active developer path</code></td><td>The Command Line Tools are missing, often after a macOS update.</td><td>Run <code>xcode-select --install</code> again (Step 3).</td></tr>
+</tbody></table></div>
+<div class="callout key"><p><b>The universal recipe when stuck:</b> (1) read the last line of the error; (2) check for <code>(.venv)</code> and run <code>pwd</code> to see where you are; (3) search the exact last line of the error in your browser, in quotes. Someone has had it before. (4) If an environment is truly tangled, delete it and rebuild, which takes two minutes: <code>cd ~/ml-course</code>, <code>rm -rf .venv</code>, then Steps 5–7 again. (<code>rm -rf</code> deletes a folder and everything in it without asking, so type it carefully and only for <code>.venv</code>.)</p></div>
+
+<h3 id="s0-setup-recap">Recap: the whole setup on one card</h3>
+<p>Here are all the commands of this lesson in order, for the day you set up a second Mac:</p>
+<pre class="term">xcode-select --install
+curl -LsSf https://astral.sh/uv/install.sh | sh
+#   (quit and reopen Terminal)
+uv --version
+mkdir ~/ml-course
+cd ~/ml-course
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install numpy pandas matplotlib scikit-learn statsmodels ISLP jupyterlab ipykernel
+uv pip install torch torchvision
+python -c "import numpy, pandas, sklearn, statsmodels, ISLP; print('all good')"</pre>
+<p>(In Terminal, a line starting with <code>#</code> is a comment and does nothing; it's here as a reminder.)</p>
+
+<h3 id="s0-setup-practice">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Your prompt reads <code>you@MacBook-Air ml-course %</code>. What does <code>ml-course</code> tell you?</p><ol class="opts"><li>The name of your Mac</li><li>The folder Terminal is currently in</li><li>That the environment is active</li><li>The command you just ran</li></ol><div class="why">The part just before <code>%</code> is the current folder (its last part only; <code>pwd</code> prints the full path). The Mac's name comes after the <code>@</code>. An active environment shows <code>(.venv)</code> at the <i>start</i> of the prompt, which isn't there, so it is <b>not</b> active.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">You open a brand-new Terminal window and type <code>python -c "import pandas"</code>. It says <code>zsh: command not found: python</code>. What is the most likely cause?</p><ol class="opts"><li>pandas isn't installed</li><li>uv isn't installed</li><li>You haven't gone to <code>~/ml-course</code> and activated the environment in this new window</li><li>Your Mac is Intel</li></ol><div class="why">Activation lasts only for the window where you did it. A fresh window needs <code>cd ~/ml-course</code> and <code>source .venv/bin/activate</code> again. If pandas were the problem, Python would at least start and then say <code>ModuleNotFoundError</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">What does <code>cd ..</code> do?</p><ol class="opts"><li>Moves you up one folder, to the folder that contains the current one</li><li>Moves you to your home folder</li><li>Lists the hidden files</li><li>Goes back to the previous command</li></ol><div class="why"><code>..</code> always means "the parent folder". Home is <code>cd ~</code> (or plain <code>cd</code>). Hidden files are shown by <code>ls -a</code>. The previous command comes back with the ↑ key.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">In <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>, what does the <code>|</code> do?</p><ol class="opts"><li>It separates two unrelated commands</li><li>It saves the download to a file called sh</li><li>It is part of the web address</li><li>It sends what curl downloaded straight into <code>sh</code>, which runs it</li></ol><div class="why">The pipe connects the output of the left command to the input of the right one. Nothing is saved to disk; the script flows from curl into the shell.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">A notebook in VS Code says <code>ModuleNotFoundError: No module named 'sklearn'</code>, but in your activated Terminal the import check prints <code>all good</code>. What should you do first?</p><ol class="opts"><li>Reinstall scikit-learn</li><li>Check the kernel (top right of the notebook) and choose the <code>.venv</code> Python 3.12 one</li><li>Restart the Mac</li><li>Install Anaconda</li></ol><div class="why">The library exists in <code>.venv</code> (Terminal proved it), so the notebook must be using a different Python. The kernel picker decides which Python runs the notebook.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">On an Apple Silicon Mac, <code>torch.backends.mps.is_available()</code> returns <code>True</code>. What does that mean?</p><ol class="opts"><li>PyTorch isn't installed correctly</li><li>You must use Google Colab</li><li>PyTorch can run calculations on the Mac's built-in GPU</li><li>Your Mac is Intel</li></ol><div class="why">MPS is Apple's GPU system; <code>True</code> is the good result. On an Intel Mac it would be <code>False</code> and PyTorch would use the CPU.</div></div>
+<div class="q" data-type="num" data-answer="4" data-tol="0"><p class="stem">You type <code>-LsSf</code> after curl. How many separate options is that?</p><div class="why">Four one-letter options squeezed together: <code>-L</code>, <code>-s</code>, <code>-S</code>, <code>-f</code>. Note that <code>-s</code> and <code>-S</code> are different options: capital letters matter.</div></div>
+<div class="q" data-type="open"><p class="stem">In two or three sentences, explain to a friend why we make a <code>.venv</code> instead of installing libraries into the Python that comes with the Mac.</p><div class="model">macOS uses its own Python for itself, and installing into it can break things or need administrator rights. A virtual environment is a private, self-contained Python for one project, so the exact library versions for this course live in one folder, never clash with other projects, and can be deleted and rebuilt in minutes if something goes wrong.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">Terminal: what do <code>pwd</code>, <code>ls</code>, <code>cd</code> and <code>mkdir</code> do?</div><div class="b"><code>pwd</code> prints the current folder; <code>ls</code> lists its contents; <code>cd NAME</code> moves into a folder; <code>mkdir NAME</code> makes a new folder.</div></div>
+<div class="fc"><div class="f">What do <code>~</code>, <code>.</code> and <code>..</code> mean in a path?</div><div class="b"><code>~</code> your home folder (<code>/Users/you</code>); <code>.</code> the current folder; <code>..</code> the folder above (the parent).</div></div>
+<div class="fc"><div class="f">The two commands that start every work session</div><div class="b"><code>cd ~/ml-course</code> then <code>source .venv/bin/activate</code></div></div>
+<div class="fc"><div class="f">What does <code>(.venv)</code> at the start of the prompt tell you?</div><div class="b">The course's virtual environment is active: <code>python</code> and installs now use <code>~/ml-course/.venv</code>.</div></div>
+<div class="fc"><div class="f">Command to create a virtual environment with Python 3.12 using uv</div><div class="b"><code>uv venv --python 3.12</code> (run inside the project folder; creates <code>.venv</code>)</div></div>
+<div class="fc"><div class="f">Command to install a library into the active environment with uv</div><div class="b"><code>uv pip install NAME</code>, for example <code>uv pip install pandas</code></div></div>
+<div class="fc"><div class="f">How do you stop a running program in Terminal?</div><div class="b"><kbd class="k">Ctrl</kbd> + <kbd class="k">C</kbd> (Control, not Command)</div></div>
+<div class="fc"><div class="f">What is a notebook "kernel"?</div><div class="b">The Python program that runs the notebook's cells. Choose the <code>.venv</code> one so the notebook sees your libraries.</div></div>
+<div class="fc"><div class="f"><code>ModuleNotFoundError</code> in a notebook, but the import works in the activated Terminal. Fix?</div><div class="b">The notebook is using the wrong kernel: select the <code>.venv</code> (Python 3.12) kernel.</div></div>
+<div class="fc"><div class="f">What is MPS in PyTorch?</div><div class="b">Metal Performance Shaders: Apple's way for PyTorch to use the GPU on Apple Silicon Macs. Check with <code>torch.backends.mps.is_available()</code>.</div></div>
+<div class="fc"><div class="f">Why does zsh say <code>no matches found</code> for <code>uv pip install numpy&lt;2</code>?</div><div class="b">zsh treats <code>&lt; [ ] * ?</code> as special characters. Quote it: <code>"numpy&lt;2"</code>.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can open Terminal and explain each part of the prompt.</label>
+<label><input type="checkbox"> I can use <code>pwd</code>, <code>ls</code>, <code>cd</code>, <code>cd ..</code>, <code>cd ~</code> and <code>mkdir</code> without looking them up.</label>
+<label><input type="checkbox"> <code>git --version</code> and <code>uv --version</code> both print a version number.</label>
+<label><input type="checkbox"> I have <code>~/ml-course/.venv</code>, and I can activate it and see <code>(.venv)</code>.</label>
+<label><input type="checkbox"> The import check prints <code>all good</code>.</label>
+<label><input type="checkbox"> PyTorch imports, and I know whether MPS is available on my Mac.</label>
+<label><input type="checkbox"> I ran a cell with Shift + Enter in a VS Code notebook using the <code>.venv</code> kernel.</label>
+<label><input type="checkbox"> I started and stopped JupyterLab.</label>
+<label><input type="checkbox"> The data pack is unzipped into <code>~/ml-course</code>, and I downloaded this lesson's notebook.</label>
+<label><input type="checkbox"> I know what to do when I see <code>command not found</code> or <code>ModuleNotFoundError</code>.</label>
+</div>
+</section>

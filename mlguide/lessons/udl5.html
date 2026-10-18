@@ -1,0 +1,760 @@
+<section class="lesson" id="udl5" data-book="Prince Ch. 5, pp. 56–76">
+<p class="lede">Every network you train needs a loss: one number that says how badly the current parameters fit the data. This chapter shows that you never have to invent a loss by guesswork. Pick a probability distribution that suits your output, let the network predict its parameters, and minimise the negative log-likelihood. Least squares, binary cross-entropy and softmax cross-entropy all come out of that one recipe, and so does every loss you will meet in later chapters.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#m-prob">Probability</a> (densities, the normal curve, independence) · <a href="#m-calc">Derivatives</a> · <a href="#np2">NumPy II</a> · <a href="#udl3">UDL 3 · shallow networks</a> · <a href="#udl4">UDL 4 · deep networks</a> · <a href="#isl4-1">ISLP logistic regression</a> · <a href="#cs-softmax">softmax classifier</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>explain what it means for a network to "predict a probability distribution" instead of a single number;</li>
+<li>write the maximum likelihood criterion, turn it into the negative log-likelihood, and say why the log changes nothing about where the best parameters are;</li>
+<li>derive the least squares loss from a normal distribution, line by line, and extend it to learn the variance (including heteroscedastic regression);</li>
+<li>derive binary cross-entropy from the Bernoulli distribution and the sigmoid, and multiclass cross-entropy from the categorical distribution and softmax, computing every number by hand;</li>
+<li>build a loss for any output type (counts, directions, several outputs at once) with the four-step recipe;</li>
+<li>explain why "cross-entropy" and "negative log-likelihood" are the same thing, using the KL divergence;</li>
+<li>implement numerically stable versions of all these losses in NumPy and check them against scikit-learn.</li></ul></div>
+
+<div class="callout book"><blockquote>A loss function or cost function L[ϕ] returns a single number that describes the mismatch between the model predictions f[x<sub>i</sub>, ϕ] and their corresponding ground-truth outputs y<sub>i</sub>.</blockquote><cite>Prince, p. 56</cite></div>
+
+<p>Where are we? In <a href="#udl2">Chapter 2</a> you met the least squares loss for a straight line. In <a href="#udl3">Chapters 3</a> and <a href="#udl4">4</a> you built shallow and deep networks: families of piecewise linear functions \(\mathrm{f}[\bx,\bphi]\) whose shape is set by the parameters \(\bphi\) (read <i>phi</i>, bold because it is a whole vector of numbers). What we have not said is <b>which</b> member of the family is "best". This chapter defines "best". Chapters 6 and 7 then show how to find it.</p>
+
+<p>Throughout, the training data are \(I\) pairs \(\{\bx_i, y_i\}\) (read <i>x-i, y-i</i>): the \(i\)-th input and the output we want for it. A <dfn data-g="udl5-loss">loss function</dfn> \(L[\bphi]\) (read <i>L of phi</i>) takes the parameters and returns a single number. Small is good. Training means: find the \(\bphi\) that makes \(L\) as small as possible.</p>
+
+<h3 id="udl5-shift">5.1 A change of view: the network predicts a distribution</h3>
+<p>Until now you have imagined the network spitting out an answer, "the house costs 31 lakh". Prince asks you to imagine something richer: the network spits out a <b>probability distribution</b> over possible answers, "the house most likely costs about 31 lakh, give or take 3". The single answer is still there (the peak of the distribution), but now we also have a shape that says how sure we are.</p>
+<p>Why is this useful? Because once the output is a probability distribution, there is one obvious way to score it: <b>how much probability did the model give to what really happened?</b> If the true price was 30 lakh and the model's distribution puts plenty of probability near 30, it did well. If it put almost none there, it did badly. That single idea produces every loss in this chapter.</p>
+
+<figure class="book" data-fig="udl-5.1"><figcaption>Four kinds of output, one idea. <b>Look at the small panels under each plot:</b> they are what the model predicts at \(x=2\) and \(x=7\). (a) For a real number \(y\) it predicts a bell curve; at \(x=7\) the bell sits higher because the data there are higher. (b) For a class \(y\in\{1,2,3,4\}\) it predicts a histogram: at \(x=2\) class 1 and 4 are likely, at \(x=7\) classes 2 and 3. (c) For a count it predicts a histogram over 0, 1, 2, … (d) For a direction (an angle) it predicts a curve that wraps around from \(-\pi\) to \(\pi\). The training data (orange dots) should land where these predicted distributions are high.</figcaption></figure>
+
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(\bphi\)</span><span>"phi": all the network's weights and biases stacked in one vector</span><span class="eg">a line has \(\bphi=[\phi_0,\phi_1]\T\)</span></div>
+<div class="row"><span class="s">\(\mathrm{f}[\bx,\bphi]\)</span><span>"f of x and phi": the network's output for input \(\bx\)</span><span class="eg">\(\mathrm{f}[2,\bphi]=1+0.5\cdot 2=2\)</span></div>
+<div class="row"><span class="s">\(\Pr(y\mid\btheta)\)</span><span>"probability of y given theta": a distribution over \(y\) with parameters \(\btheta\)</span><span class="eg">normal curve with \(\btheta=\{\mu,\sigma^2\}\)</span></div>
+<div class="row"><span class="s">\(\btheta\)</span><span>"theta": the <i>distribution's</i> parameters (not the network's)</span><span class="eg">\(\mu=2,\ \sigma^2=0.25\)</span></div>
+<div class="row"><span class="s">\(\Pr(y\mid\bx)\)</span><span>"probability of y given x": the distribution the model predicts for input \(\bx\)</span><span class="eg">bell centred at 1.3 for \(x=0.5\)</span></div>
+<div class="row"><span class="s">\(\prod_{i=1}^{I}\)</span><span>"product over i from 1 to I": multiply \(I\) terms (like \(\sum\) but with ×)</span><span class="eg">\(\prod_{i=1}^3 i=1\cdot2\cdot3=6\)</span></div>
+<div class="row"><span class="s">\(\argmax_{\bphi}\)</span><span>"arg-max over phi": the value of \(\bphi\) that makes what follows largest (not the largest value itself)</span><span class="eg">\(\argmax_z(-(z-3)^2)=3\)</span></div>
+</div>
+
+<h4 id="udl5-howdist">5.1.1 How can a network output a distribution?</h4>
+<p>The trick is pleasingly simple, and it is worth saying slowly because everything rests on it:</p>
+<ol><li>Choose a <dfn data-g="udl5-parametric">parametric distribution</dfn> \(\Pr(y\mid\btheta)\) that lives on the right set of values. For a real number \(y\in\R\) (read <i>y in the real numbers</i>) you might choose the normal distribution, whose parameters are a mean \(\mu\) (read <i>mu</i>) and a variance \(\sigma^2\) (read <i>sigma squared</i>).</li>
+<li>Let the network compute one or more of those parameters from the input. For example \(\mu=\mathrm{f}[\bx,\bphi]\), while \(\sigma^2\) is just some unknown constant.</li></ol>
+<p>So the network does not change at all. It still outputs ordinary numbers. We simply <i>interpret</i> those numbers as the parameters of a distribution. The network's weights are \(\bphi\); the distribution's parameters are \(\btheta\); the network turns \(\bx\) into \(\btheta\).</p>
+
+<div class="callout ece"><p>You already think this way in communications. A receiver does not see the transmitted symbol; it sees symbol + noise. The <b>likelihood</b> \(\Pr(\text{received}\mid\text{sent})\) is a Gaussian centred on the clean signal, and the maximum-likelihood detector picks whichever symbol makes the received samples most probable. For Gaussian noise that is the symbol at the smallest Euclidean distance. This chapter is that same detector, except the unknown is the network's parameters \(\bphi\) instead of the transmitted symbol.</p></div>
+
+<h3 id="udl5-ml">5.1.2 The maximum likelihood criterion</h3>
+<p>For each training input \(\bx_i\) the model now predicts its own distribution parameters \(\btheta_i=\mathrm{f}[\bx_i,\bphi]\). Each observed output \(y_i\) should be probable under its own distribution \(\Pr(y_i\mid\btheta_i)\). We want this to hold for all \(I\) examples at once, so we choose \(\bphi\) to make the product of all those probabilities as large as possible:</p>
+<div class="mathblock" data-sheet="Maximum likelihood (Prince 5.1)"><div class="eqlabel">Maximum likelihood criterion (equation 5.1)</div>
+\[\hat\bphi=\argmax_{\bphi}\Big[\prod_{i=1}^{I}\Pr(y_i\mid\bx_i)\Big]=\argmax_{\bphi}\Big[\prod_{i=1}^{I}\Pr(y_i\mid\btheta_i)\Big]=\argmax_{\bphi}\Big[\prod_{i=1}^{I}\Pr\big(y_i\mid\mathrm{f}[\bx_i,\bphi]\big)\Big]\]
+<p class="say">Read: phi-hat (our <i>chosen</i> parameters) is the phi that makes the product, over every training example, of "the probability the model gives to the true output" as big as possible.</p></div>
+<p>The product is called the <dfn data-g="udl5-likelihood">likelihood</dfn> of the parameters. The hat on \(\hat\bphi\) always means "the value we estimated", exactly as in ISLP's \(\hat\beta_1\).</p>
+
+<div class="callout key"><div class="ct">Probability or likelihood?</div><p>Prince's footnote says a conditional probability \(\Pr(z\mid\psi)\) can be read two ways. As a function of \(z\) with \(\psi\) fixed, it is a <b>probability distribution</b> and adds up (or integrates) to one. As a function of \(\psi\) with \(z\) fixed (our data are fixed, the parameters vary) it is called a <b>likelihood</b>, and it does <i>not</i> generally sum to one. Same formula, different question.</p></div>
+
+<h4>Two hidden assumptions: i.i.d.</h4>
+<p>Writing the total probability as a product quietly assumes two things:</p>
+<ol><li><b>Identically distributed:</b> the <i>form</i> of the distribution is the same for every data point (always normal, say; only its parameters change with \(\bx\)).</li>
+<li><b>Independent:</b> given the inputs, the outputs do not influence each other, so the joint probability splits into a product:</li></ol>
+<div class="mathblock"><div class="eqlabel">Independence (equation 5.2)</div>
+\[\Pr(y_1,y_2,\dots,y_I\mid\bx_1,\bx_2,\dots,\bx_I)=\prod_{i=1}^{I}\Pr(y_i\mid\bx_i)\]
+<p class="say">Read: the probability of seeing all the outputs together equals the product of the probabilities of seeing each one on its own. This is the rule \(P(A\text{ and }B)=P(A)P(B)\) for independent events from <a href="#m-prob">the probability lesson</a>, applied \(I\) times.</p></div>
+<p>Together these are called <dfn data-g="udl5-iid">i.i.d.</dfn> (independent and identically distributed). Keep them in mind: when they are badly false (time series, repeated photos of the same person) the loss is still usable but it no longer means exactly what it claims.</p>
+
+<div class="worked"><div class="wt">Worked example · <b>the likelihood of three points under two lines</b></div>
+<div class="given">Data: \((x_1,y_1)=(0,\,1.1)\), \((x_2,y_2)=(1,\,1.9)\), \((x_3,y_3)=(2,\,3.2)\). Model: a line \(\mu=\phi_0+\phi_1x\) predicts the mean of a normal distribution with fixed \(\sigma=0.5\) (so \(\sigma^2=0.25\)). Compare <span class="hlg">line A: \(\phi_0=1,\ \phi_1=1\)</span> with <span class="hlr">line B: \(\phi_0=1,\ \phi_1=0.5\)</span>. The normal density is \(\Pr(y\mid\mu,\sigma^2)=\frac{1}{\sqrt{2\pi\sigma^2}}\exp\!\big[-\frac{(y-\mu)^2}{2\sigma^2}\big]\) (we take it apart properly in section 5.3).</div>
+<ol class="steps">
+<li><div>Constant in front: \(\frac{1}{\sqrt{2\pi\cdot0.25}}=\frac{1}{\sqrt{1.5708}}=\frac{1}{1.2533}=0.79788\).<span class="why">It is the same for every point because \(\sigma\) is fixed.</span></div></li>
+<li><div><span class="hlg">Line A</span> predicts \(\mu=1+1\cdot x = 1,\ 2,\ 3\). Residuals \(y-\mu = 0.1,\ -0.1,\ 0.2\). Squared: \(0.01,\ 0.01,\ 0.04\).</div></li>
+<li><div>Densities: \(0.79788\,e^{-0.01/0.5}=0.79788\times0.98020=0.78209\); the second is the same, \(0.78209\); the third \(0.79788\,e^{-0.04/0.5}=0.79788\times0.92312=0.73654\).</div></li>
+<li><div>Likelihood A \(=0.78209\times0.78209\times0.73654=\mathbf{0.45051}\).</div></li>
+<li><div><span class="hlr">Line B</span> predicts \(\mu=1,\ 1.5,\ 2\). Residuals \(0.1,\ 0.4,\ 1.2\). Densities \(0.78209,\ 0.57938,\ 0.04479\) (the third point is 2.4 standard deviations away, so it gets very little probability).</div></li>
+<li><div>Likelihood B \(=0.78209\times0.57938\times0.04479=\mathbf{0.02030}\).<span class="why">One badly predicted point drags the whole product down: products punish any single disaster.</span></div></li>
+</ol>
+<div class="result">Line A makes the data about 22 times more probable (\(0.45051/0.02030\)). Maximum likelihood prefers line A.</div></div>
+
+<h3 id="udl5-log">5.1.3 Maximising the log-likelihood instead</h3>
+<p>The product in equation 5.1 is a practical disaster. Each factor is often small, and multiplying thousands of small numbers gives a number too small for the computer to store. Predict what happens before you run the next cell.</p>
+
+<div class="py" id="c-udl5-01" data-mode="setup"><pre class="src">
+import numpy as np
+import matplotlib.pyplot as plt
+np.set_printoptions(precision=5, suppress=True)
+rng = np.random.default_rng(0)
+print("ready")
+</pre></div>
+
+<div class="predict" data-correct="3"><p>We have 1,000 data points and the model gives each one probability density 0.4. What does <code>np.prod</code> of the 1,000 densities return?</p><ol class="opts"><li>About \(10^{-398}\), printed exactly</li><li>A Python error</li><li><code>0.0</code></li></ol><div class="why">The true value is \(0.4^{1000}\approx 10^{-398}\). The smallest positive number a 64-bit float can hold is about \(5\times10^{-324}\), so the product <b>underflows</b> to exactly zero, with no warning. Every parameter setting then has likelihood 0, and you can no longer tell good from bad. The log-likelihood \(1000\times\log 0.4=-916.3\) is a perfectly ordinary number.</div></div>
+<div class="py" id="c-udl5-02"><pre class="src">
+p = np.full(1000, 0.4)          # 1,000 copies of 0.4
+print("product of densities:", np.prod(p))
+print("sum of log densities:", np.sum(np.log(p)))
+print("smallest positive float:", np.nextafter(0, 1))
+</pre><div class="pynote"><b>Read the output:</b> <code>np.full(n, v)</code> makes an array of <code>n</code> copies of <code>v</code>. The product is <code>0.0</code>; the sum of logs is about −916. Taking logs turns a product of tiny numbers into a sum of moderate negative numbers.</div></div>
+
+<p>The fix is to maximise the <b>logarithm</b> of the likelihood. The log of a product is the sum of the logs (\(\log(ab)=\log a+\log b\)), so:</p>
+<div class="mathblock" data-sheet="Log-likelihood (Prince 5.3)"><div class="eqlabel">Log-likelihood criterion (equation 5.3)</div>
+\[\hat\bphi=\argmax_{\bphi}\Big[\prod_{i=1}^{I}\Pr(y_i\mid\mathrm{f}[\bx_i,\bphi])\Big]=\argmax_{\bphi}\Big[\log\prod_{i=1}^{I}\Pr(y_i\mid\mathrm{f}[\bx_i,\bphi])\Big]=\argmax_{\bphi}\Big[\sum_{i=1}^{I}\log\Pr(y_i\mid\mathrm{f}[\bx_i,\bphi])\Big]\]
+<p class="say">Read: the best phi is also the phi that maximises the <i>sum</i> of the log-probabilities of the true outputs.</p></div>
+
+<p>Why is the answer the same? Because \(\log\) is <dfn data-g="udl5-monotonic">monotonically increasing</dfn>: if \(z>z'\) then \(\log z>\log z'\). So whatever change of \(\bphi\) makes the likelihood go up also makes the log-likelihood go up, and the peak of one is the peak of the other. (Throughout this book, \(\log\) means the natural log, base \(e\).)</p>
+
+<figure class="book" data-fig="udl-5.2"><figcaption>(a) The log curve always rises, so it never reorders values. (b) A bumpy function \(g[z]\) with two peaks. (c) Its log, \(\log g[z]\): squashed vertically, but <b>every uphill stays uphill, every downhill stays downhill, and the highest point is at the same \(z\)</b>. That is the whole justification for working with logs.</figcaption></figure>
+
+<p>Check it on the worked example: log-likelihood A \(=\log 0.78209+\log0.78209+\log0.73654=-0.24579-0.24579-0.30579=-0.79737\); log-likelihood B \(=-0.24579-0.54579-3.10579=-3.89737\). A is still better (−0.797 is bigger than −3.897), and nothing underflows.</p>
+
+<h3 id="udl5-nll">5.1.4 Minimising the negative log-likelihood</h3>
+<p>Optimisers are written to <b>minimise</b> things. Multiplying by −1 turns "maximise the log-likelihood" into "minimise its negative". That gives the loss we will use everywhere:</p>
+<div class="mathblock" data-sheet="Negative log-likelihood loss (Prince 5.4)"><div class="eqlabel">Negative log-likelihood (equation 5.4)</div>
+\[\hat\bphi=\argmin_{\bphi}\Big[-\sum_{i=1}^{I}\log\Pr\big(y_i\mid\mathrm{f}[\bx_i,\bphi]\big)\Big]=\argmin_{\bphi}\big[L[\bphi]\big]\]
+<p class="say">Read: the loss L of phi is minus the sum of the log-probabilities the model assigns to the true outputs. Each term is "how surprised the model was by the truth".</p></div>
+<p>For our two lines: \(L_A=0.797\), \(L_B=3.897\). Small is good. The <dfn data-g="udl5-nll">negative log-likelihood (NLL)</dfn> of one example, \(-\log\Pr(y_i\mid\dots)\), is zero only if the model gave the truth probability 1, and it grows without limit as that probability heads to 0.</p>
+
+<h4 id="udl5-inference">5.1.5 Inference: from a distribution back to one answer</h4>
+<p>After training, someone gives you a new \(\bx\) and wants a single prediction. Return the most probable value, the peak of the predicted distribution:</p>
+<div class="mathblock"><div class="eqlabel">Point estimate (equation 5.5)</div>
+\[\hat y=\argmax_{y}\Big[\Pr\big(y\mid\mathrm{f}[\bx,\hat\bphi]\big)\Big]\]
+<p class="say">Read: y-hat is the value of y where the predicted distribution is highest.</p></div>
+<p>Usually there is a formula for the peak in terms of \(\btheta\). For a normal distribution it is the mean \(\mu\), which the network computed directly.</p>
+
+<h3 id="udl5-recipe">5.2 The recipe for building a loss</h3>
+<p>Here is the whole chapter on one card. Learn it by heart; you will apply it to every new problem you meet.</p>
+<div class="mathblock" data-sheet="Recipe for loss functions (Prince 5.2)"><div class="eqlabel">Recipe (equation 5.6)</div>
+<ol style="margin:0 0 .4em 1.2em">
+<li>Choose a probability distribution \(\Pr(y\mid\btheta)\) defined on the domain of the outputs \(y\), with parameters \(\btheta\).</li>
+<li>Make the model predict one or more of those parameters: \(\btheta=\mathrm{f}[\bx,\bphi]\), so \(\Pr(y\mid\btheta)=\Pr(y\mid\mathrm{f}[\bx,\bphi])\).</li>
+<li>Train by minimising the negative log-likelihood over the training pairs:
+\[\hat\bphi=\argmin_{\bphi}\big[L[\bphi]\big]=\argmin_{\bphi}\Big[-\sum_{i=1}^{I}\log\Pr\big(y_i\mid\mathrm{f}[\bx_i,\bphi]\big)\Big]\]</li>
+<li>For a new input \(\bx\), return the whole distribution \(\Pr(y\mid\mathrm{f}[\bx,\hat\bphi])\), or the value where it is largest.</li></ol>
+<p class="say">Distribution → network predicts its parameters → minimise NLL → read off the peak.</p></div>
+
+<div class="callout exam"><p><b>Interview classic:</b> "Why do we use mean squared error for regression and cross-entropy for classification?" The strong answer is this recipe: MSE is the NLL of a Gaussian with fixed variance; cross-entropy is the NLL of a Bernoulli or categorical distribution. Then derive one of them on the whiteboard, as you are about to.</p></div>
+
+<h3 id="udl5-reg">5.3 Example 1: univariate regression gives least squares</h3>
+<p><i>Univariate</i> means one output. The goal: predict a single real number \(y\in\R\) from \(\bx\).</p>
+<p><b>Step 1 of the recipe: choose a distribution on \(\R\).</b> The natural choice is the <dfn data-g="udl5-normal">univariate normal (Gaussian) distribution</dfn>:</p>
+<div class="mathblock" data-sheet="Normal density (Prince 5.7)"><div class="eqlabel">Normal distribution (equation 5.7)</div>
+\[\Pr(y\mid\mu,\sigma^2)=\frac{1}{\sqrt{2\pi\sigma^2}}\exp\!\Big[-\frac{(y-\mu)^2}{2\sigma^2}\Big]\]
+<p class="say">Read: the density at y equals one over root two-pi sigma-squared, times e to the minus (y minus mu) squared over two sigma-squared.</p></div>
+<p>Take it apart piece by piece. \((y-\mu)^2\) is the squared distance from the centre. Dividing by \(2\sigma^2\) measures that distance in units of the spread. \(\exp[-\,\cdot\,]\) turns "far" into "small": it is 1 at the centre and falls towards 0. The fraction in front makes the total area under the curve equal to one, so a narrow curve (small \(\sigma\)) must be tall.</p>
+<p><b>Tiny example.</b> \(\mu=0,\ \sigma^2=1\), \(y=1\): \(\frac{1}{\sqrt{2\pi}}e^{-1/2}=0.39894\times0.60653=0.24197\). At the centre \(y=0\): \(0.39894\). Note a density is not a probability; it can exceed 1 when \(\sigma\) is small (with \(\sigma=0.1\) the peak is 3.99).</p>
+
+<figure class="book small" data-fig="udl-5.3"><figcaption>Three normal curves. <b>Look at the orange one</b> (\(\sigma=0.3\)): narrow and tall, peak about 1.33. The cyan one (\(\sigma=1.2\)) is wide and low. The mean \(\mu\) slides the curve left or right; \(\sigma\) changes its width; the area under each is exactly one.</figcaption></figure>
+
+<p><b>Step 2: let the network predict the mean.</b> Set \(\mu=\mathrm{f}[\bx,\bphi]\) and keep \(\sigma^2\) as a constant:</p>
+<div class="mathblock"><div class="eqlabel">Equation 5.8</div>
+\[\Pr\big(y\mid\mathrm{f}[\bx,\bphi],\sigma^2\big)=\frac{1}{\sqrt{2\pi\sigma^2}}\exp\!\Big[-\frac{(y-\mathrm{f}[\bx,\bphi])^2}{2\sigma^2}\Big]\]</div>
+<p><b>Step 3: the loss is the NLL</b>:</p>
+<div class="mathblock"><div class="eqlabel">Equation 5.9</div>
+\[L[\bphi]=-\sum_{i=1}^{I}\log\Big[\frac{1}{\sqrt{2\pi\sigma^2}}\exp\!\Big[-\frac{(y_i-\mathrm{f}[\bx_i,\bphi])^2}{2\sigma^2}\Big]\Big]\]</div>
+
+<h4 id="udl5-ls">5.3.1 From NLL to least squares, every step</h4>
+<p>Now the satisfying part. Watch the Gaussian NLL turn into the least squares loss you have used since ISLP Chapter 3.</p>
+<div class="worked" data-reveal><div class="wt">Derivation · <b>least squares is the Gaussian NLL (equation 5.10)</b></div>
+<div class="given">Start: \(\hat\bphi=\argmin_{\bphi}\Big[-\sum_{i}\log\Big[\frac{1}{\sqrt{2\pi\sigma^2}}\exp\big[-\frac{(y_i-\mathrm{f}[\bx_i,\bphi])^2}{2\sigma^2}\big]\Big]\Big]\). Write \(r_i=y_i-\mathrm{f}[\bx_i,\bphi]\) (the residual) to keep it short.</div>
+<ol class="steps">
+<li><div>Use \(\log(ab)=\log a+\log b\) inside the sum: \[\log\Big[\tfrac{1}{\sqrt{2\pi\sigma^2}}\,e^{-r_i^2/2\sigma^2}\Big]=\log\tfrac{1}{\sqrt{2\pi\sigma^2}}+\log e^{-r_i^2/2\sigma^2}.\]<span class="why">The log of a product of two factors is the sum of their logs.</span></div></li>
+<li><div>Use \(\log e^{u}=u\): the second piece is just \(-\dfrac{r_i^2}{2\sigma^2}\). So \[\hat\bphi=\argmin_{\bphi}\Big[-\sum_{i}\Big(\log\tfrac{1}{\sqrt{2\pi\sigma^2}}-\tfrac{r_i^2}{2\sigma^2}\Big)\Big].\]<span class="why">The natural log undoes the exponential: that is why Gaussians and logs go so well together.</span></div></li>
+<li><div>The first piece, \(\log\frac{1}{\sqrt{2\pi\sigma^2}}\), does not contain \(\bphi\). Adding the same constant \(I\log\frac{1}{\sqrt{2\pi\sigma^2}}\) to every candidate's score never changes which candidate is smallest, so drop it: \[\hat\bphi=\argmin_{\bphi}\Big[-\sum_{i}-\tfrac{r_i^2}{2\sigma^2}\Big]=\argmin_{\bphi}\Big[\sum_{i}\tfrac{r_i^2}{2\sigma^2}\Big].\]<span class="why">argmin only cares <i>where</i> the minimum is, not its height.</span></div></li>
+<li><div>\(\frac{1}{2\sigma^2}\) is a positive constant multiplying every term. Scaling a function by a positive number does not move its minimum, so drop it too: \[\hat\bphi=\argmin_{\bphi}\Big[\sum_{i=1}^{I}\big(y_i-\mathrm{f}[\bx_i,\bphi]\big)^2\Big].\]<span class="why">If \(g\) is smallest at \(\phi^*\), so is \(5g\) or \(0.1g\).</span></div></li>
+</ol>
+<div class="result">\(L[\bphi]=\sum_{i=1}^{I}\big(y_i-\mathrm{f}[\bx_i,\bphi]\big)^2\) — the least squares loss (equation 5.11).</div></div>
+
+<div class="mathblock" data-sheet="Least squares loss (Prince 5.11)"><div class="eqlabel">Least squares loss (equation 5.11)</div>
+\[L[\bphi]=\sum_{i=1}^{I}\big(y_i-\mathrm{f}[\bx_i,\bphi]\big)^2\]
+<p class="say">Least squares = "the outputs are independent and normally distributed around the network's prediction, with the same spread everywhere".</p></div>
+
+<p>Check it numerically with the three-point example. The exact relationship (before dropping anything) is \(\text{NLL}=I\cdot\log\sqrt{2\pi\sigma^2}+\frac{1}{2\sigma^2}\text{SSE}\), where SSE is the sum of squared errors. With \(I=3\) and \(\sigma^2=0.25\): \(3\times0.22579=0.67737\) and \(\frac{1}{0.5}=2\). Line A: SSE \(=0.01+0.01+0.04=0.06\), so NLL \(=0.67737+2\times0.06=0.79737\) ✓. Line B: SSE \(=0.01+0.16+1.44=1.61\), NLL \(=0.67737+3.22=3.89737\) ✓. The NLL is just a shifted, stretched copy of the SSE, so both rank the lines the same way.</p>
+
+<figure class="book" data-fig="udl-5.4"><figcaption>The same fact as a picture. Top row: least squares view. (a) A good line, small dashed residuals, \(\sum(y_i-\mathrm{f})^2=0.19\). (b) A bad line, big residuals, 10.22. Bottom row: probability view of the same two lines. <b>Look at the cyan bells</b> drawn sideways at two inputs: (c) the orange data points sit near the peaks, so the probabilities (orange dashed lines) are large and the NLL is small (−6.57; it can be negative because densities can exceed 1). (d) The points sit in the tails, the probabilities are tiny, the NLL is 497.37. Small residuals ⇔ high probability.</figcaption></figure>
+
+<p>Now feel it with your hands. The widget draws the data, a line, and a sideways bell at every data point. The red segments are residuals. Move the line and the spread.</p>
+
+<div class="widget" data-w="udl5-gauss" data-title="Gaussian likelihood of the data as you move the line"><div class="wn">Start by moving the slope \(\phi_1\) and watch SSE and NLL fall and rise <b>together</b>: their minimum is in the same place. Then fix a good line and slide \(\sigma\): the SSE does not move at all, but the NLL has its own best \(\sigma\) (too small and points in the tails become nearly impossible; too large and every point gets a low, spread-out density). Press "best fit" to jump to the least squares line and the best \(\sigma\).</div></div>
+
+<p>The next cell is Prince's Notebook 5.1 idea in a few lines: compute both losses over a range of slopes and see that they bottom out at the same slope.</p>
+
+<div class="py" id="c-udl5-03"><pre class="src">
+# 12 points read approximately off Prince's figure 6.1a / 5.4 (input 0..2)
+x = np.array([0.05,0.20,0.35,0.47,0.80,0.82,1.08,1.19,1.40,1.60,1.65,1.90])
+y = np.array([0.66,0.90,1.05,1.00,1.40,1.50,1.29,1.55,1.55,1.67,1.73,1.60])
+
+def normal_pdf(y, mu, sigma2):
+    return np.exp(-(y - mu)**2 / (2 * sigma2)) / np.sqrt(2 * np.pi * sigma2)
+
+phi0, sigma2 = 0.9, 0.04
+slopes = np.linspace(-0.5, 1.5, 201)
+sse = [np.sum((y - (phi0 + s * x))**2) for s in slopes]
+nll = [-np.sum(np.log(normal_pdf(y, phi0 + s * x, sigma2))) for s in slopes]
+print("best slope by SSE:", slopes[np.argmin(sse)])
+print("best slope by NLL:", slopes[np.argmin(nll)])
+fig, ax = plt.subplots(1, 2, figsize=(9, 3))
+ax[0].plot(slopes, sse); ax[0].set_title("sum of squares"); ax[0].set_xlabel("slope phi1")
+ax[1].plot(slopes, nll, color="C1"); ax[1].set_title("negative log-likelihood"); ax[1].set_xlabel("slope phi1")
+plt.tight_layout(); plt.show()
+</pre><div class="pynote"><b>Read the output:</b> the two curves have different heights and scales, but the same lowest point. A list comprehension <code>[... for s in slopes]</code> evaluates the loss once per candidate slope; <code>np.argmin</code> returns the <i>index</i> of the smallest entry, which we use to look up the slope. Try <code>sigma2 = 1.0</code>: the NLL curve flattens but its minimum does not move.</div></div>
+
+<div class="ex" id="x-udl5-01" data-title="Gaussian negative log-likelihood"><div class="task"><p>Write <code>gaussian_nll(y, mu, sigma2)</code> that returns the total negative log-likelihood \(\sum_i\big[\tfrac12\log(2\pi\sigma^2)+\tfrac{(y_i-\mu_i)^2}{2\sigma^2}\big]\). <code>y</code> and <code>mu</code> are arrays of the same length; <code>sigma2</code> is a positive number <i>or</i> an array (one variance per point, which you will need for heteroscedastic regression). Work with logs directly (do not compute the density and then take its log; that underflows for far-away points). Example: <code>gaussian_nll(np.array([1.1,1.9,3.2]), np.array([1.,2.,3.]), 0.25)</code> ≈ 0.79737.</p></div>
+<pre class="src">
+def gaussian_nll(y, mu, sigma2):
+    ...   # your code here
+</pre>
+<pre class="check">
+from scipy.stats import norm
+yy = np.array([1.1, 1.9, 3.2]); mm = np.array([1., 2., 3.])
+got = gaussian_nll(yy, mm, 0.25)
+assert np.isclose(got, 0.797374, atol=1e-5), f"expected 0.797374, got {got}"
+ref = -norm.logpdf(y, 0.9 + 0.5*x, np.sqrt(0.04)).sum()
+assert np.isclose(gaussian_nll(y, 0.9 + 0.5*x, 0.04), ref), "does not match scipy.stats.norm.logpdf on the 12-point data"
+s2 = np.linspace(0.1, 1.2, 12)
+assert np.isclose(gaussian_nll(y, 0.9 + 0.5*x, s2), -norm.logpdf(y, 0.9 + 0.5*x, np.sqrt(s2)).sum()), "should accept an array of variances"
+far = gaussian_nll(np.array([100.0]), np.array([0.0]), 0.01)
+assert np.isfinite(far) and far > 1e5, f"a point 1000 sd away should give a huge but finite NLL, got {far}"
+</pre>
+<div class="hint"><p>Each term is \(\tfrac12\log(2\pi\sigma^2)\) plus the squared residual divided by \(2\sigma^2\). NumPy broadcasts a single number or an array the same way.</p></div>
+<div class="hint"><p><code>return np.sum(0.5*np.log(2*np.pi*sigma2) + (y - mu)**2 / (2*sigma2))</code></p></div>
+<pre class="solution">
+def gaussian_nll(y, mu, sigma2):
+    sigma2 = np.asarray(sigma2, dtype=float)
+    terms = 0.5 * np.log(2 * np.pi * sigma2) + (y - mu)**2 / (2 * sigma2)
+    return np.sum(terms)
+</pre>
+<div class="explain"><p>Writing \(-\log\Pr\) in closed form avoids ever forming \(e^{-\text{huge}}\), which would be 0 and give \(\log 0=-\infty\). For the far point the answer is \(0.5\log(0.0628)+10^4/0.02\approx 500{,}000\): huge but finite. <code>np.asarray(..., dtype=float)</code> lets the same code accept a number or an array.</p></div></div>
+
+<h4 id="udl5-reg-inf">5.3.2 Inference for regression</h4>
+<p>The network predicts \(\mu=\mathrm{f}[\bx,\bphi]\), and a normal curve peaks at its mean (equation 5.12, \(\hat y=\argmax_y\Pr(y\mid\mathrm{f}[\bx,\hat\bphi],\sigma^2)\)). So \(\hat y=\mathrm{f}[\bx,\hat\bphi]\): the network output is the prediction, just as before. Nothing about how you <i>use</i> a regression network changes; only our understanding of why the loss is right.</p>
+
+<h4 id="udl5-var">5.3.3 Estimating the variance too</h4>
+<p>The least squares loss does not contain \(\sigma^2\). But nothing stops us learning it: minimise the full NLL (equation 5.9) over both \(\bphi\) and \(\sigma^2\):</p>
+<div class="mathblock"><div class="eqlabel">Equation 5.13</div>
+\[\hat\bphi,\hat\sigma^2=\argmin_{\bphi,\sigma^2}\Big[-\sum_{i=1}^{I}\log\Big[\frac{1}{\sqrt{2\pi\sigma^2}}\exp\!\Big[-\frac{(y_i-\mathrm{f}[\bx_i,\bphi])^2}{2\sigma^2}\Big]\Big]\Big]\]
+<p class="say">Read: find the network parameters and the variance together. \(\hat\mu\) is the best prediction; \(\hat\sigma^2\) tells you how uncertain it is.</p></div>
+<p>Prince stops there. Let us finish the job, because the answer is beautiful and you will reuse it. Write \(s=\sigma^2\). For fixed \(\bphi\), the NLL is \(\frac{I}{2}\log(2\pi s)+\frac{\text{SSE}}{2s}\). Differentiate with respect to \(s\) (<a href="#m-calc">derivatives lesson</a>: \(\frac{d}{ds}\log s=\frac1s\), \(\frac{d}{ds}\frac1s=-\frac1{s^2}\)):</p>
+\[\frac{\partial\,\text{NLL}}{\partial s}=\frac{I}{2s}-\frac{\text{SSE}}{2s^2}=0\quad\Longrightarrow\quad \hat\sigma^2=\frac{\text{SSE}}{I}=\frac1I\sum_{i=1}^{I}\big(y_i-\mathrm{f}[\bx_i,\hat\bphi]\big)^2 .\]
+<p>The best variance is simply the mean squared residual. For line A: \(\hat\sigma^2=0.06/3=0.02\). (ISLP divides by \(n-2\) instead of \(n\) to remove bias; maximum likelihood divides by \(n\).)</p>
+
+<div class="py" id="c-udl5-04"><pre class="src">
+# fit the line by least squares, then find the best sigma^2 by brute force
+A = np.column_stack([np.ones_like(x), x])          # design matrix [1, x]
+phi_hat = np.linalg.lstsq(A, y, rcond=None)[0]
+res = y - A @ phi_hat
+grid = np.linspace(0.001, 0.05, 2000)
+nll_s = [np.sum(0.5*np.log(2*np.pi*s) + res**2/(2*s)) for s in grid]
+print("phi_hat (intercept, slope):", phi_hat)
+print("best sigma^2 on the grid  :", grid[np.argmin(nll_s)])
+print("mean squared residual     :", np.mean(res**2))
+</pre><div class="pynote"><b>Read the output:</b> the brute-force minimum of the NLL over \(\sigma^2\) agrees with the formula \(\hat\sigma^2=\text{SSE}/I\) to grid precision. <code>np.column_stack</code> glues columns side by side; <code>np.linalg.lstsq</code> solves least squares (you met it in <a href="#np2">NumPy II</a>).</div></div>
+
+<h4 id="udl5-hetero">5.3.4 Heteroscedastic regression: uncertainty that depends on the input</h4>
+<p>Assuming the same \(\sigma^2\) everywhere is called <dfn data-g="udl5-homo">homoscedastic</dfn> ("same scatter"). Often it is wrong: predicting a car's price is harder for rare luxury cars than for common hatchbacks. When the uncertainty changes with the input we call it <dfn data-g="udl5-hetero">heteroscedastic</dfn> ("different scatter").</p>
+<p>The fix: give the network two outputs. \(\mathrm{f}_1[\bx,\bphi]\) predicts the mean, \(\mathrm{f}_2[\bx,\bphi]\) the variance. One complication: a variance must be positive, and a network output can be anything. So we pass it through a function that always returns something positive. Prince squares it:</p>
+<div class="mathblock" data-sheet="Heteroscedastic regression (Prince 5.14–5.15)"><div class="eqlabel">Heteroscedastic model (equations 5.14–5.15)</div>
+\[\mu=\mathrm{f}_1[\bx,\bphi],\qquad \sigma^2=\mathrm{f}_2[\bx,\bphi]^2\]
+\[\hat\bphi=\argmin_{\bphi}\Big[-\sum_{i=1}^{I}\Big(\log\Big[\frac{1}{\sqrt{2\pi\,\mathrm{f}_2[\bx_i,\bphi]^2}}\Big]-\frac{(y_i-\mathrm{f}_1[\bx_i,\bphi])^2}{2\,\mathrm{f}_2[\bx_i,\bphi]^2}\Big)\Big]\]
+<p class="say">Read: each point's squared error is divided by its own predicted variance, and a \(\log\) penalty stops the network from claiming huge variance everywhere.</p></div>
+<p>Notice the balance. Dividing by \(\mathrm{f}_2^2\) lets the network "shrug off" a big error by predicting a big variance at that input. The \(\log\sqrt{2\pi\mathrm{f}_2^2}\) term charges for that shrug. The best trade-off is to predict a variance that matches the actual size of the errors at each \(\bx\). (In practice people often use \(\sigma^2=\exp[\mathrm{f}_2]\) or the softplus; any positive map works.)</p>
+
+<figure class="book" data-fig="udl-5.5"><figcaption>(a) A shallow network with one output, the mean. (b) Its mean (blue) is piecewise linear, but <b>the grey ±2σ band has the same width everywhere</b>. (c) Add a second output for σ (computed then squared). (d) Now the band's width is also piecewise linear in \(x\): narrow where the data are tight, wide where they are scattered.</figcaption></figure>
+
+<div class="py" id="c-udl5-05"><pre class="src">
+# data whose noise grows with x: sd = 0.05 + 0.3*x
+xh = np.sort(rng.uniform(0, 2, 200))
+yh = 1 + 0.5*xh + rng.normal(0, 0.05 + 0.3*xh)
+mu = 1 + 0.5*xh                                    # both models get the true mean
+homo_s2 = np.mean((yh - mu)**2)                    # one variance for everyone
+hetero_s2 = (0.05 + 0.3*xh)**2                     # "network" output f2 squared
+def nll(y, mu, s2): return np.sum(0.5*np.log(2*np.pi*s2) + (y-mu)**2/(2*s2))
+print("homoscedastic NLL  :", round(nll(yh, mu, homo_s2), 2))
+print("heteroscedastic NLL:", round(nll(yh, mu, hetero_s2), 2))
+</pre><div class="pynote"><b>Read the output:</b> with the same mean, letting the variance follow the data lowers the NLL substantially. The least squares loss would score these two models identically, because it ignores the variance. Here we gave the "network" the true spread to isolate the idea; a real model would learn \(\mathrm{f}_2\).</div></div>
+
+<div class="callout pitfall"><p><b>Pitfall.</b> If a heteroscedastic model ever predicts \(\sigma^2\to0\) at a point it fits perfectly, the NLL heads to \(-\infty\) and training blows up. Real code adds a small floor, e.g. \(\sigma^2=\mathrm{f}_2^2+10^{-6}\).</p></div>
+
+<h3 id="udl5-bin">5.4 Example 2: binary classification gives binary cross-entropy</h3>
+<p>Now the output is a <dfn data-g="udl5-label">label</dfn> \(y\in\{0,1\}\): is the restaurant review positive (1) or negative (0)? Is there a tumour in this MRI (1) or not (0)?</p>
+<p><b>Step 1: a distribution on \(\{0,1\}\).</b> The <dfn data-g="udl5-bern">Bernoulli distribution</dfn> has a single parameter \(\lambda\in[0,1]\) (read <i>lambda</i>): the probability that \(y=1\).</p>
+<div class="mathblock" data-sheet="Bernoulli distribution (Prince 5.16–5.17)"><div class="eqlabel">Bernoulli (equations 5.16–5.17)</div>
+\[\Pr(y\mid\lambda)=\begin{cases}1-\lambda & y=0\\ \lambda & y=1\end{cases}\qquad\text{equivalently}\qquad \Pr(y\mid\lambda)=(1-\lambda)^{1-y}\cdot\lambda^{y}\]
+<p class="say">The compact form is a switch: when \(y=1\) the first factor has power 0 (equals 1) and you get \(\lambda\); when \(y=0\) the second factor has power 0 and you get \(1-\lambda\).</p></div>
+<p>Check with \(\lambda=0.3\): \(y=1\) gives \(0.7^0\cdot0.3^1=0.3\); \(y=0\) gives \(0.7^1\cdot0.3^0=0.7\). They add to 1 ✓.</p>
+<figure class="book small" data-fig="udl-5.6"><figcaption>A Bernoulli distribution is just two bars: height \(1-\lambda\) at \(z=0\) and \(\lambda\) at \(z=1\). Here \(\lambda\approx0.2\).</figcaption></figure>
+
+<p><b>Step 2: the network predicts \(\lambda\)</b>, but \(\lambda\) must lie in \([0,1]\) and a network output can be any real number. So squash it with the <dfn data-g="udl5-sigmoid">logistic sigmoid</dfn>:</p>
+<div class="mathblock" data-sheet="Logistic sigmoid (Prince 5.18)"><div class="eqlabel">Logistic sigmoid (equation 5.18)</div>
+\[\sig[z]=\frac{1}{1+\exp[-z]}\]
+<p class="say">Read: sig of z is one over one plus e to the minus z. It maps any real number into the interval from 0 to 1.</p></div>
+<p>Numbers: \(\sig[0]=\frac{1}{1+1}=0.5\). \(\sig[2]=\frac{1}{1+e^{-2}}=\frac{1}{1+0.13534}=0.88080\). \(\sig[-1]=\frac{1}{1+e^{1}}=\frac{1}{3.71828}=0.26894\). Very positive inputs give nearly 1, very negative ones nearly 0. You met this exact function in <a href="#isl4-1">ISLP logistic regression</a>.</p>
+<figure class="book small" data-fig="udl-5.7"><figcaption>The sigmoid: an S-shaped curve from 0 to 1, passing 0.5 at \(z=0\). <b>Look at the ends:</b> beyond \(|z|\approx5\) it is almost flat. (That flatness will matter for gradients in Chapter 7.)</figcaption></figure>
+
+<p>So \(\lambda=\sig[\mathrm{f}[\bx,\bphi]]\), and the likelihood of one label is</p>
+<div class="mathblock"><div class="eqlabel">Equation 5.19</div>
+\[\Pr(y\mid\bx)=\big(1-\sig[\mathrm{f}[\bx,\bphi]]\big)^{1-y}\cdot\sig[\mathrm{f}[\bx,\bphi]]^{y}\]</div>
+<p><b>Step 3: take minus the log and sum.</b> Using \(\log(a^pb^q)=p\log a+q\log b\):</p>
+<div class="mathblock" data-sheet="Binary cross-entropy (Prince 5.20)"><div class="eqlabel">Binary cross-entropy loss (equation 5.20)</div>
+\[L[\bphi]=\sum_{i=1}^{I}\Big[-(1-y_i)\log\big[1-\sig[\mathrm{f}[\bx_i,\bphi]]\big]-y_i\log\big[\sig[\mathrm{f}[\bx_i,\bphi]]\big]\Big]\]
+<p class="say">Read: for each example, if the true label is 1, pay minus log of the predicted probability of 1; if it is 0, pay minus log of the predicted probability of 0.</p></div>
+<p>This is the <dfn data-g="udl5-bce">binary cross-entropy</dfn> loss (section 5.7 explains the name). For a point estimate, predict \(\hat y=1\) if \(\lambda>0.5\) and 0 otherwise.</p>
+
+<figure class="book" data-fig="udl-5.8"><figcaption>(a) A shallow network's raw output \(\mathrm{f}[x,\bphi]\): piecewise linear, any real value (here −4 to 4). (b) The sigmoid squashes it. (c) The result is \(\lambda=\Pr(y=1\mid x)\) (solid) and \(1-\lambda\) (dashed). <b>Take any vertical slice:</b> the two heights are the two bars of a Bernoulli distribution like figure 5.6. The loss rewards large \(\lambda\) where the training labels are 1 and small \(\lambda\) where they are 0.</figcaption></figure>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>binary cross-entropy for three examples</b></div>
+<div class="given">Network outputs (called <i>logits</i>) \(\mathrm{f}=2.0,\ -1.0,\ 0.5\); true labels \(y=1,\ 0,\ 0\).</div>
+<ol class="steps">
+<li><div>Exponentials: \(e^{-2.0}=0.13534,\ e^{1.0}=2.71828,\ e^{-0.5}=0.60653\).</div></li>
+<li><div>Sigmoids: \(\lambda_1=\frac{1}{1.13534}=0.88080\), \(\lambda_2=\frac{1}{3.71828}=0.26894\), \(\lambda_3=\frac{1}{1.60653}=0.62246\).</div></li>
+<li><div>Example 1 has \(y=1\): pay \(-\log\lambda_1=-\log0.88080=\mathbf{0.12693}\). Confident and right: cheap.</div></li>
+<li><div>Example 2 has \(y=0\): pay \(-\log(1-\lambda_2)=-\log0.73106=\mathbf{0.31326}\).</div></li>
+<li><div>Example 3 has \(y=0\) but the model leans to 1 (\(\lambda_3=0.62\)): pay \(-\log(1-0.62246)=-\log0.37754=\mathbf{0.97408}\). Wrong side: expensive.<span class="why">Had the model said \(\lambda_3=0.99\), the cost would be \(-\log0.01=4.6\). Confident mistakes are punished hardest.</span></div></li>
+<li><div>Total: \(0.12693+0.31326+0.97408=1.41427\).</div></li></ol>
+<div class="result">\(L=1.41427\) (mean 0.47142 per example)</div></div>
+
+<div class="py" id="c-udl5-06"><pre class="src">
+def sig(z):
+    return 1 / (1 + np.exp(-z))
+f = np.array([2.0, -1.0, 0.5]); ylab = np.array([1, 0, 0])
+lam = sig(f)
+terms = -(1 - ylab) * np.log(1 - lam) - ylab * np.log(lam)
+print("lambda:", lam)
+print("terms :", terms, " total:", terms.sum())
+from sklearn.metrics import log_loss
+print("sklearn log_loss (a mean):", log_loss(ylab, lam), "x 3 =", 3 * log_loss(ylab, lam))
+</pre><div class="pynote"><b>Read the output:</b> our terms match the worked example. scikit-learn calls binary cross-entropy <code>log_loss</code> and reports the <i>mean</i>, so multiply by 3 to compare. Means and sums have the same minimiser; libraries usually use the mean so the loss does not grow with the dataset size.</div></div>
+
+<p>Prince's Problem 5.2 asks you to plot the loss as a function of \(\lambda\) for each label. It is so central that we do it now (the full problem is at the end).</p>
+<div class="predict" data-correct="1"><p>For a training label \(y=1\), how does the loss \(-\log\lambda\) behave as the predicted \(\lambda\) goes from 1 down to 0?</p><ol class="opts"><li>It starts at 0 and rises without limit</li><li>It rises in a straight line from 0 to 1</li><li>It starts at 1 and falls to 0</li></ol><div class="why">\(-\log 1=0\) (perfect, no cost) and \(-\log\lambda\to\infty\) as \(\lambda\to0\). It is not linear: going from 0.5 to 0.25 costs 0.69 extra, and from 0.02 to 0.01 also costs 0.69 extra, because each halving of the probability adds \(\log 2\).</div></div>
+<div class="py" id="c-udl5-07"><pre class="src">
+lam = np.linspace(0.001, 0.999, 500)
+plt.figure(figsize=(5.5, 3.2))
+plt.plot(lam, -np.log(1 - lam), label="y = 0:  -log(1 - lambda)")
+plt.plot(lam, -np.log(lam), label="y = 1:  -log(lambda)")
+plt.xlabel("predicted lambda = sig[f]"); plt.ylabel("loss"); plt.ylim(0, 5); plt.legend()
+plt.show()
+</pre><div class="pynote"><b>Read the output:</b> each curve is zero where the prediction agrees with the label and shoots up where it confidently disagrees. The two curves are mirror images about \(\lambda=0.5\).</div></div>
+
+<h4>A numerically safe binary cross-entropy</h4>
+<p>If the logit is \(\mathrm{f}=40\), then \(\sig[40]\) rounds to exactly 1.0 and \(\log(1-1)=-\infty\). The cure is algebra: \(-\log\sig[f]=\log(1+e^{-f})\) and \(-\log(1-\sig[f])=\log(1+e^{f})\) (because \(1-\sig[f]=\sig[-f]\)). NumPy's <code>np.logaddexp(a, b)</code> computes \(\log(e^a+e^b)\) safely, so \(\log(1+e^{u})=\) <code>np.logaddexp(0, u)</code>. Libraries call this "BCE with logits".</p>
+
+<div class="ex" id="x-udl5-02" data-title="stable binary cross-entropy from logits"><div class="task"><p>Write <code>bce_logits(f, y)</code> returning the <b>sum</b> of the binary cross-entropy over arrays of logits <code>f</code> and labels <code>y</code> (0 or 1), without ever computing \(\log 0\). Use \(y\log(1+e^{-f})+(1-y)\log(1+e^{f})\) and <code>np.logaddexp</code>. Example: <code>bce_logits(np.array([2.,-1.,.5]), np.array([1,0,0]))</code> ≈ 1.41427; <code>bce_logits(np.array([40.]), np.array([0]))</code> ≈ 40.0 (not inf or nan).</p></div>
+<pre class="src">
+def bce_logits(f, y):
+    ...   # your code here
+</pre>
+<pre class="check">
+got = bce_logits(np.array([2., -1., .5]), np.array([1, 0, 0]))
+assert np.isclose(got, 1.414274, atol=1e-5), f"expected 1.414274, got {got}"
+big = bce_logits(np.array([40., -40., 800.]), np.array([0, 1, 1]))
+assert np.isfinite(big), f"large logits must not give inf/nan, got {big}"
+assert np.isclose(big, 80.0, atol=1e-6), f"expected about 80.0 (40 + 40 + 0), got {big}"
+from sklearn.metrics import log_loss
+ff = rng.normal(0, 3, 50); yy = (rng.uniform(size=50) &lt; sig(ff)).astype(int)
+assert np.isclose(bce_logits(ff, yy), 50 * log_loss(yy, sig(ff))), "does not match sklearn's log_loss on random data"
+</pre>
+<div class="hint"><p>\(\log(1+e^{-f})\) is <code>np.logaddexp(0, -f)</code>, and \(\log(1+e^{f})\) is <code>np.logaddexp(0, f)</code>.</p></div>
+<div class="hint"><p><code>return np.sum(y*np.logaddexp(0, -f) + (1 - y)*np.logaddexp(0, f))</code></p></div>
+<pre class="solution">
+def bce_logits(f, y):
+    return np.sum(y * np.logaddexp(0, -f) + (1 - y) * np.logaddexp(0, f))
+</pre>
+<div class="explain"><p>The identities \(-\log\sig[f]=\log(1+e^{-f})\) and \(-\log(1-\sig[f])=\log(1+e^{f})\) remove the division and the \(\log(1-\text{something close to }1)\). <code>np.logaddexp</code> internally factors out the larger exponent, so \(\log(1+e^{800})\) comes back as 800 instead of overflowing. The 800-logit with label 1 costs \(\log(1+e^{-800})\approx0\).</p></div></div>
+
+<h3 id="udl5-multi">5.5 Example 3: multiclass classification gives softmax cross-entropy</h3>
+<p>Now \(y\in\{1,2,\dots,K\}\) with \(K>2\) classes: which of the 10 digits is in this image? Which of 50,000 words comes next?</p>
+<p><b>Step 1.</b> The <dfn data-g="udl5-cat">categorical distribution</dfn> has \(K\) parameters \(\lambda_1,\dots,\lambda_K\), one probability per class:</p>
+<div class="mathblock"><div class="eqlabel">Categorical distribution (equation 5.21)</div>
+\[\Pr(y=k)=\lambda_k,\qquad \lambda_k\in[0,1],\qquad \sum_{k=1}^{K}\lambda_k=1\]
+<p class="say">Read: the probability of class k is lambda-k. All of them lie between 0 and 1 and add up to one.</p></div>
+<figure class="book small" data-fig="udl-5.9"><figcaption>A categorical distribution over \(K=5\) categories: five bars whose heights \(\lambda_1,\dots,\lambda_5\) add to one. Here class 2 is most likely.</figcaption></figure>
+
+<p><b>Step 2.</b> A network with \(K\) outputs computes \(K\) arbitrary real numbers. We need \(K\) numbers that are positive and add to 1. The <dfn data-g="udl5-softmax">softmax</dfn> function does exactly that:</p>
+<div class="mathblock" data-sheet="Softmax (Prince 5.22)"><div class="eqlabel">Softmax (equation 5.22)</div>
+\[\softmax_k[\bz]=\frac{\exp[z_k]}{\sum_{k'=1}^{K}\exp[z_{k'}]}\]
+<p class="say">Read: softmax-k of z is e to the z-k, divided by the sum of e to every z. The exponential makes each entry positive; dividing by the total makes them add to one.</p></div>
+<p>The prime in \(k'\) (read <i>k-prime</i>) is just a different letter for the counter inside the sum, so it does not clash with the \(k\) we are computing.</p>
+
+<div class="worked"><div class="wt">Worked example · <b>softmax of \(\bz=(2.0,\ 1.0,\ -1.0)\), every exponential shown</b></div>
+<div class="given">Three classes. Network outputs (logits) \(z_1=2.0,\ z_2=1.0,\ z_3=-1.0\). The true class is \(y=1\).</div>
+<ol class="steps">
+<li><div>Exponentiate each: \(e^{2.0}=\)<span class="hlc">7.38906</span>, \(e^{1.0}=\)<span class="hlb">2.71828</span>, \(e^{-1.0}=\)<span class="hlg">0.36788</span>.<span class="why">All positive now, whatever the signs of the logits.</span></div></li>
+<li><div>Add them: \(7.38906+2.71828+0.36788=\)<span class="hlr">10.47522</span>.</div></li>
+<li><div>Divide each by the sum: \(\lambda_1=\frac{7.38906}{10.47522}=0.70538\), \(\lambda_2=\frac{2.71828}{10.47522}=0.25950\), \(\lambda_3=\frac{0.36788}{10.47522}=0.03512\).</div></li>
+<li><div>Check: \(0.70538+0.25950+0.03512=1.00000\) ✓.<span class="why">The gap of 1 between \(z_1\) and \(z_2\) became a ratio \(e^1=2.718\) between \(\lambda_1\) and \(\lambda_2\): softmax turns <i>differences</i> of logits into <i>ratios</i> of probabilities.</span></div></li>
+<li><div>Loss for true class 1: \(-\log\lambda_1=-\log0.70538=\mathbf{0.34901}\).</div></li>
+<li><div>Same thing via the shortcut in equation 5.24: \(-\big(z_1-\log\sum_k e^{z_k}\big)=-(2.0-\log10.47522)=-(2.0-2.34901)=0.34901\) ✓.</div></li></ol>
+<div class="result">\(\boldsymbol\lambda=(0.70538,\ 0.25950,\ 0.03512)\), loss \(=0.34901\)</div></div>
+
+<div class="tw"><table class="t"><thead><tr><th>class \(k\)</th><th>logit \(z_k\)</th><th>\(e^{z_k}\)</th><th>\(\lambda_k=e^{z_k}/10.47522\)</th><th>\(-\log\lambda_k\) (loss if this were the true class)</th></tr></thead><tbody>
+<tr><td>1</td><td class="n">2.0</td><td class="n">7.38906</td><td class="n">0.70538</td><td class="n">0.34901</td></tr>
+<tr><td>2</td><td class="n">1.0</td><td class="n">2.71828</td><td class="n">0.25950</td><td class="n">1.34901</td></tr>
+<tr><td>3</td><td class="n">−1.0</td><td class="n">0.36788</td><td class="n">0.03512</td><td class="n">3.34901</td></tr>
+<tr><td><b>sum</b></td><td></td><td class="n"><b>10.47522</b></td><td class="n"><b>1.00000</b></td><td></td></tr></tbody></table></div>
+<p>Notice the last column: each step of 1 in the logit changes the loss by exactly 1, because \(-\log\lambda_k=\log\sum e^{z}-z_k\).</p>
+
+<figure class="book" data-fig="udl-5.10"><figcaption>Multiclass classification with \(K=3\). (a) The network's three raw outputs, piecewise linear, any values. (b) After softmax: three curves that are always positive and <b>add to one at every \(x\)</b>. Any vertical slice gives three bar heights of a categorical distribution like figure 5.9. Where \(\mathrm{f}_1\) is far above the others, \(\lambda_1\) is near 1.</figcaption></figure>
+
+<p>The likelihood that input \(\bx\) has label \(k\) is \(\Pr(y=k\mid\bx)=\softmax_k[\mathrm{f}[\bx,\bphi]]\) (equation 5.23). Minus its log, summed over the data, is the loss:</p>
+<div class="mathblock" data-sheet="Multiclass cross-entropy (Prince 5.24)"><div class="eqlabel">Multiclass cross-entropy (equation 5.24)</div>
+\[L[\bphi]=-\sum_{i=1}^{I}\log\Big[\softmax_{y_i}\big[\mathrm{f}[\bx_i,\bphi]\big]\Big]=-\sum_{i=1}^{I}\Big(\mathrm{f}_{y_i}[\bx_i,\bphi]-\log\Big[\sum_{k'=1}^{K}\exp\big[\mathrm{f}_{k'}[\bx_i,\bphi]\big]\Big]\Big)\]
+<p class="say">Read: for each example, take the network's output for the true class, subtract the log of the sum of exponentials of all its outputs, and negate. \(\mathrm{f}_{y_i}\) means "the output whose index is the true label".</p></div>
+<p>To get from the first form to the second, write \(\log\frac{e^{a}}{S}=a-\log S\). This is the <dfn data-g="udl5-xent">multiclass cross-entropy</dfn> loss. The point estimate is the class with the largest probability, \(\hat y=\argmax_k\Pr(y=k\mid\mathrm{f}[\bx,\hat\bphi])\), which is also the class with the largest logit (softmax never changes the order).</p>
+
+<div class="callout key"><p><b>Sigmoid is softmax with two classes.</b> Softmax of \((z,0)\) gives \(\frac{e^z}{e^z+1}=\frac{1}{1+e^{-z}}=\sig[z]\). So binary cross-entropy is the \(K=2\) case of multiclass cross-entropy, with one logit fixed at 0.</p></div>
+
+<h4 id="udl5-temp">Temperature, and why the logits' size matters</h4>
+<p>If you divide every logit by a number \(T\) (the <dfn data-g="udl5-temperature">temperature</dfn>) before the softmax, \(T\lt1\) sharpens the distribution and \(T\gt1\) flattens it. With our logits: \(T=0.5\) gives \((0.879,\ 0.119,\ 0.002)\); \(T=2\) gives \((0.547,\ 0.331,\ 0.122)\). Language models use exactly this knob when they generate text.</p>
+
+<div class="widget" data-w="udl5-softmax" data-title="Softmax explorer: logits, temperature and the loss"><div class="wn">Drag the four logits and watch the probabilities (bars) and the exponentials (in the table). Then: (1) add the same amount to every logit with the "shift all" slider: <b>nothing changes</b>; (2) lower the temperature towards 0.2: the biggest logit takes almost everything; (3) raise it to 5: the bars flatten towards 1/4 each. Choose the true class to see its cross-entropy loss \(-\log\lambda_y\).</div></div>
+
+<h4 id="udl5-stable">Numerical stability: subtract the maximum</h4>
+<p>The shift-invariance you just saw is not only cute; it saves programs. \(\softmax[\bz]=\softmax[\bz-c]\) for any constant \(c\), because \(\frac{e^{z_k-c}}{\sum e^{z_{k'}-c}}=\frac{e^{-c}e^{z_k}}{e^{-c}\sum e^{z_{k'}}}\). Choosing \(c=\max_k z_k\) makes the largest exponent \(e^0=1\), so nothing overflows.</p>
+
+<div class="predict" data-correct="2"><p>What does the naive formula give for logits \((1000,\ 999,\ 997)\)?</p><ol class="opts"><li><code>[0.705, 0.260, 0.035]</code></li><li><code>[nan, nan, nan]</code></li><li><code>[1.0, 0.0, 0.0]</code></li></ol><div class="why">\(e^{1000}\) overflows to <code>inf</code>, and <code>inf/inf</code> is <code>nan</code> ("not a number"). The correct answer is \(\approx(0.705,0.259,0.035)\): logits \((1000,999,997)\) are \((2,1,-1)\) plus a constant 998, so their softmax is close to our worked example (not identical, because \(997-998=-1\) but \(1000-998=2\) and \(999-998=1\): it <i>is</i> identical).</div></div>
+<div class="py" id="c-udl5-08"><pre class="src">
+z = np.array([1000.0, 999.0, 997.0])
+with np.errstate(over="ignore", invalid="ignore"):     # silence the warnings
+    naive = np.exp(z) / np.sum(np.exp(z))
+stable = np.exp(z - z.max()) / np.sum(np.exp(z - z.max()))
+print("naive :", naive)
+print("stable:", stable)
+</pre><div class="pynote"><b>Read the output:</b> the naive version is <code>nan</code>; the stable version gives exactly the probabilities of the worked example, since \((1000,999,997)-998=(2,1,-1)\). <code>np.errstate</code> temporarily switches off NumPy's warnings inside the <code>with</code> block.</div></div>
+
+<div class="ex" id="x-udl5-03" data-title="a stable softmax for a batch"><div class="task"><p>Write <code>softmax(Z)</code> where <code>Z</code> has shape <code>(N, K)</code>: one row of \(K\) logits per example. Return an array of the same shape whose rows are the softmax of each row. Subtract each row's maximum first (use <code>Z.max(axis=1, keepdims=True)</code>). Example: <code>softmax(np.array([[2., 1., -1.]]))</code> ≈ <code>[[0.70538, 0.25950, 0.03512]]</code>.</p></div>
+<pre class="src">
+def softmax(Z):
+    ...   # your code here
+</pre>
+<pre class="check">
+P = softmax(np.array([[2., 1., -1.]]))
+assert P.shape == (1, 3), f"shape should be (1, 3), got {np.shape(P)}"
+assert np.allclose(P, [[0.705385, 0.259496, 0.035119]], atol=1e-5), f"wrong values: {P}"
+Zr = rng.normal(0, 5, (6, 4))
+Pr_ = softmax(Zr)
+assert np.allclose(Pr_.sum(axis=1), 1), "every row must sum to 1"
+from scipy.special import softmax as sp_softmax
+assert np.allclose(Pr_, sp_softmax(Zr, axis=1)), "rows do not match scipy.special.softmax"
+Pb = softmax(np.array([[1000., 999., 997.], [-1000., -1000., -1000.]]))
+assert np.all(np.isfinite(Pb)), f"overflow/underflow: {Pb}"
+assert np.allclose(Pb[1], 1/3), "equal logits should give equal probabilities"
+</pre>
+<div class="hint"><p>Subtract the row maxima, exponentiate, then divide by the row sums. Keep the dimensions (<code>keepdims=True</code>) so the shapes broadcast.</p></div>
+<div class="hint"><p><code>E = np.exp(Z - Z.max(axis=1, keepdims=True)); return E / E.sum(axis=1, keepdims=True)</code></p></div>
+<pre class="solution">
+def softmax(Z):
+    E = np.exp(Z - Z.max(axis=1, keepdims=True))
+    return E / E.sum(axis=1, keepdims=True)
+</pre>
+<div class="explain"><p><code>Z.max(axis=1, keepdims=True)</code> has shape <code>(N, 1)</code>, so it broadcasts across each row. After the shift every row's largest entry is \(e^0=1\), so the sum is at least 1 and nothing divides by zero; the row of −1000s becomes a row of zeros before exponentiating, giving 1/3 each.</p></div></div>
+
+<p>Prince's Notebook 5.3 computes the multiclass loss on a batch. The cleanest code uses the second form of equation 5.24, with the log-sum-exp computed stably: \(\log\sum_k e^{z_k}=m+\log\sum_k e^{z_k-m}\) where \(m=\max_k z_k\).</p>
+
+<div class="ex" id="x-udl5-04" data-title="multiclass cross-entropy from logits"><div class="task"><p>Write <code>cross_entropy(Z, y)</code> returning the <b>mean</b> multiclass cross-entropy for logits <code>Z</code> of shape <code>(N, K)</code> and integer labels <code>y</code> in \(\{0,\dots,K-1\}\) (Python counts from 0, the book from 1). Use equation 5.24: \(\log\sum_k e^{z_{ik}}-z_{i,y_i}\), with a stable log-sum-exp. <code>Z[np.arange(N), y]</code> picks the true-class logit from each row. Example: <code>cross_entropy(np.array([[2., 1., -1.]]), np.array([0]))</code> ≈ 0.34901.</p></div>
+<pre class="src">
+def cross_entropy(Z, y):
+    ...   # your code here
+</pre>
+<pre class="check">
+got = cross_entropy(np.array([[2., 1., -1.]]), np.array([0]))
+assert np.isclose(got, 0.349012, atol=1e-5), f"expected 0.349012, got {got}"
+assert np.isclose(cross_entropy(np.array([[2., 1., -1.]]), np.array([2])), 3.349012, atol=1e-5), "true class 2 should cost 3.349012"
+from sklearn.metrics import log_loss
+Zr = rng.normal(0, 3, (40, 5)); yr = rng.integers(0, 5, 40)
+from scipy.special import softmax as sp_softmax
+ref = log_loss(yr, sp_softmax(Zr, axis=1), labels=range(5))
+assert np.isclose(cross_entropy(Zr, yr), ref), f"expected sklearn's {ref}, got {cross_entropy(Zr, yr)}"
+big = cross_entropy(np.array([[1000., 0., 0.]]), np.array([1]))
+assert np.isfinite(big) and np.isclose(big, 1000.0), f"expected 1000.0 for a confident mistake, got {big}"
+</pre>
+<div class="hint"><p>Row maxima: <code>m = Z.max(axis=1)</code>. Log-sum-exp per row: <code>m + np.log(np.exp(Z - m[:, None]).sum(axis=1))</code>.</p></div>
+<div class="hint"><p>Then <code>return np.mean(lse - Z[np.arange(len(y)), y])</code>.</p></div>
+<pre class="solution">
+def cross_entropy(Z, y):
+    m = Z.max(axis=1)
+    lse = m + np.log(np.exp(Z - m[:, None]).sum(axis=1))
+    return np.mean(lse - Z[np.arange(len(y)), y])
+</pre>
+<div class="explain"><p>This never forms a probability, so it never takes \(\log 0\). The confident mistake (logit 1000 on class 0, truth class 1) costs \(\log(e^{1000}+2)-0\approx1000\): exactly "how many nats of surprise". <code>m[:, None]</code> turns shape <code>(N,)</code> into <code>(N, 1)</code> so it broadcasts across columns; this is the same computation as the <a href="#cs-softmax">softmax classifier</a> lesson, where you will also write its gradient.</p></div></div>
+
+<h4 id="udl5-other">5.5.1 Predicting other kinds of data</h4>
+<p>Regression and classification are common, but the recipe works for any output. Choose a distribution defined on the output's domain, then follow the four steps. Prince's figure 5.11 lists the usual choices.</p>
+<figure class="book" data-fig="udl-5.11"><figcaption>The table of distributions. <b>Read it row by row as "if my output looks like this, use that distribution".</b> The first column describes the data (one or many values; continuous or discrete; bounded or not), the second gives the set of possible values, the third the distribution, the fourth what it is used for.</figcaption></figure>
+<p>For each row, here is what the network would have to output and how to keep that output legal. This is the practical half that the table leaves to you.</p>
+<div class="tw"><table class="t"><thead><tr><th>Output domain</th><th>Distribution</th><th>Network predicts</th><th>Keep it legal with</th><th>Use</th></tr></thead><tbody>
+<tr><td>\(y\in\R\)</td><td>normal</td><td>\(\mu\) (and maybe \(\sigma^2\))</td><td>\(\mu\): nothing; \(\sigma^2\): square or exp</td><td>regression</td></tr>
+<tr><td>\(y\in\R\)</td><td>Laplace or t</td><td>location (median), scale</td><td>scale: exp</td><td>robust regression (Laplace NLL = absolute error)</td></tr>
+<tr><td>\(y\in\R\)</td><td>mixture of Gaussians</td><td>weights, means, variances</td><td>weights: softmax; variances: exp</td><td>multimodal regression</td></tr>
+<tr><td>\(y\in\R^+\)</td><td>exponential or gamma</td><td>rate (and shape)</td><td>exp or softplus</td><td>magnitudes, durations</td></tr>
+<tr><td>\(y\in[0,1]\)</td><td>beta</td><td>two shape parameters \(\alpha,\beta\gt0\)</td><td>exp or softplus</td><td>proportions</td></tr>
+<tr><td>\(\by\in\R^K\)</td><td>multivariate normal</td><td>mean vector (and covariance)</td><td>covariance: e.g. \(\mathbf{L}\mathbf{L}\T\)</td><td>multivariate regression</td></tr>
+<tr><td>\(y\in(-\pi,\pi]\)</td><td>von Mises</td><td>mean direction \(\mu\), concentration \(\kappa\)</td><td>\(\kappa\): exp</td><td>predicting direction</td></tr>
+<tr><td>\(y\in\{0,1\}\)</td><td>Bernoulli</td><td>\(\lambda\)</td><td>sigmoid</td><td>binary classification</td></tr>
+<tr><td>\(y\in\{1,\dots,K\}\)</td><td>categorical</td><td>\(\lambda_1,\dots,\lambda_K\)</td><td>softmax</td><td>multiclass classification</td></tr>
+<tr><td>\(y\in\{0,1,2,\dots\}\)</td><td>Poisson</td><td>rate \(\lambda\)</td><td>exp</td><td>event counts</td></tr>
+<tr><td>\(\by\in\text{Perm}[1,\dots,K]\)</td><td>Plackett–Luce</td><td>one score per item</td><td>exp (scores act like softmax logits)</td><td>ranking</td></tr></tbody></table></div>
+<p>Problems 5.3–5.6 (end of lesson) work through the von Mises, mixture and Poisson rows in full.</p>
+
+<h3 id="udl5-multiout">5.6 Multiple outputs</h3>
+<p>Often one network predicts several things at once: a molecule's melting <i>and</i> boiling point (multivariate regression), or a class for <i>every pixel</i> of an image (semantic segmentation). The usual move is to treat the predictions as independent given the input, so the probability of the whole output vector is a product:</p>
+<div class="mathblock" data-sheet="Multiple outputs (Prince 5.25–5.26)"><div class="eqlabel">Independent outputs (equations 5.25–5.26)</div>
+\[\Pr(\by\mid\mathrm{f}[\bx,\bphi])=\prod_{d}\Pr\big(y_d\mid\mathrm{f}_d[\bx,\bphi]\big)\]
+\[L[\bphi]=-\sum_{i=1}^{I}\log\Pr(\by_i\mid\mathrm{f}[\bx_i,\bphi])=-\sum_{i=1}^{I}\sum_{d}\log\Pr\big(y_{id}\mid\mathrm{f}_d[\bx_i,\bphi]\big)\]
+<p class="say">Read: \(\mathrm{f}_d\) is the group of network outputs that describes output number d; \(y_{id}\) is the d-th output of the i-th example. The log turns the product into a double sum: one term per example per output.</p></div>
+<p>Examples. Ten continuous outputs, each normal with the network predicting the means: the loss is the sum of squared errors over all examples and all ten outputs. One class per pixel of a \(256\times256\) image: the loss is the sum of \(65{,}536\) categorical cross-entropies per image. Wind direction <i>and</i> speed: a von Mises term for direction plus an exponential term for speed (Problem 5.10). Different distributions simply add.</p>
+
+<div class="py" id="c-udl5-09"><pre class="src">
+# two outputs per example: y1 is a real number (normal), y2 is a class (categorical)
+mu_pred = np.array([1.2, 0.4])                 # predicted means for 2 examples
+y_real  = np.array([1.0, 0.9])
+logits  = np.array([[2., 1., -1.], [0., 0., 3.]])
+y_cls   = np.array([0, 1])
+nll_real = np.sum(0.5*np.log(2*np.pi*1.0) + (y_real - mu_pred)**2 / 2)   # sigma^2 = 1
+m = logits.max(axis=1)
+nll_cls = np.sum(m + np.log(np.exp(logits - m[:, None]).sum(axis=1)) - logits[[0, 1], y_cls])
+print("regression part:", round(nll_real, 4), " classification part:", round(nll_cls, 4))
+print("total NLL      :", round(nll_real + nll_cls, 4))
+</pre><div class="pynote"><b>Read the output:</b> under independence the total loss is just the sum of the two parts. In real code you often weight the parts, which (as Problem 5.9 shows) is the same as assuming different variances.</div></div>
+
+<h3 id="udl5-ce">5.7 Cross-entropy and the KL divergence</h3>
+<p>You have probably heard "cross-entropy loss" more often than "negative log-likelihood". They are the same thing, reached from a different starting point. Prince's argument has three ideas.</p>
+
+<p><b>Idea 1: a distance between distributions.</b> The <dfn data-g="udl5-kl">Kullback–Leibler (KL) divergence</dfn> measures how different a distribution \(p\) is from a distribution \(q\):</p>
+<div class="mathblock" data-sheet="KL divergence (Prince 5.27)"><div class="eqlabel">KL divergence (equation 5.27)</div>
+\[D_{KL}\big[q\,\|\,p\big]=\int_{-\infty}^{\infty}q(z)\log q(z)\,dz-\int_{-\infty}^{\infty}q(z)\log p(z)\,dz\]
+<p class="say">Read: "the KL divergence from q to p". It is zero when the two are equal and positive otherwise. For discrete distributions the integrals become sums.</p></div>
+<p>The second integral, with its minus sign, \(-\int q\log p\), is the <dfn data-g="udl5-crossentropy">cross-entropy</dfn> of \(p\) relative to \(q\). The first, \(\int q\log q\), is minus the <i>entropy</i> of \(q\). So KL = cross-entropy − entropy.</p>
+
+<div class="worked"><div class="wt">Worked example · <b>KL divergence of two three-class distributions</b></div>
+<div class="given">\(q=(0.5,\ 0.25,\ 0.25)\) ("the truth"), \(p=(0.4,\ 0.4,\ 0.2)\) ("the model"). Discrete version: \(D_{KL}[q\|p]=\sum_k q_k\log\frac{q_k}{p_k}\).</div>
+<ol class="steps">
+<li><div>Ratios and logs: \(\log\frac{0.5}{0.4}=\log1.25=0.22314\); \(\log\frac{0.25}{0.4}=\log0.625=-0.47000\); \(\log\frac{0.25}{0.2}=\log1.25=0.22314\).</div></li>
+<li><div>Weight by \(q\): \(0.5\times0.22314+0.25\times(-0.47000)+0.25\times0.22314=0.11157-0.11750+0.05579=\mathbf{0.04986}\).</div></li>
+<li><div>Entropy of \(q\): \(-\sum q\log q=-(0.5\log0.5+0.25\log0.25+0.25\log0.25)=0.34657+0.34657+0.34657=1.03972\).</div></li>
+<li><div>Cross-entropy: \(-\sum q\log p=-(0.5\log0.4+0.25\log0.4+0.25\log0.2)=0.45815+0.22907+0.40236=1.08958\).</div></li>
+<li><div>Check: cross-entropy − entropy \(=1.08958-1.03972=0.04986\) ✓.</div></li></ol>
+<div class="result">\(D_{KL}=0.04986\): small but positive; only \(p=q\) would give 0.</div></div>
+
+<p><b>Idea 2: the data as a distribution.</b> Put a spike of weight \(1/I\) at each observed \(y_i\). This <dfn data-g="udl5-empirical">empirical distribution</dfn> is</p>
+<div class="mathblock"><div class="eqlabel">Equation 5.28</div>
+\[q(y)=\frac1I\sum_{i=1}^{I}\delta[y-y_i]\]
+<p class="say">\(\delta[\cdot]\) is the Dirac delta (read <i>delta</i>): an infinitely thin spike with area 1. Its key property: \(\int\delta[y-y_i]\,g(y)\,dy=g(y_i)\), it "picks out" the value of \(g\) at \(y_i\). (You know it from signals as the unit impulse.)</p></div>
+
+<figure class="book" data-fig="udl-5.12"><figcaption>(a) The data as a distribution: one arrow (a delta spike) at each training value. (b) A model distribution, here a normal with parameters \(\mu,\sigma^2\). The cross-entropy approach slides and stretches (b) to be as close as possible, in KL divergence, to (a).</figcaption></figure>
+
+<p><b>Idea 3: minimise the KL divergence from the data to the model.</b></p>
+<div class="worked" data-reveal><div class="wt">Derivation · <b>minimising KL = minimising NLL (equations 5.29–5.31)</b></div>
+<div class="given">Find \(\hat\btheta=\argmin_{\btheta}D_{KL}\big[q(y)\,\|\,\Pr(y\mid\btheta)\big]\).</div>
+<ol class="steps">
+<li><div>Write out the KL: \(\hat\btheta=\argmin_{\btheta}\Big[\int q(y)\log q(y)\,dy-\int q(y)\log\Pr(y\mid\btheta)\,dy\Big]\).</div></li>
+<li><div>The first integral involves only the data, not \(\btheta\). Drop it: \(\hat\btheta=\argmin_{\btheta}\Big[-\int q(y)\log\Pr(y\mid\btheta)\,dy\Big]\) (5.29). What is left is the cross-entropy.<span class="why">Same argument as before: a constant shift does not move the minimum.</span></div></li>
+<li><div>Substitute \(q\): \(-\int\Big(\frac1I\sum_i\delta[y-y_i]\Big)\log\Pr(y\mid\btheta)\,dy=-\frac1I\sum_i\int\delta[y-y_i]\log\Pr(y\mid\btheta)\,dy\).</div></li>
+<li><div>Use the picking-out property of the delta: each integral is \(\log\Pr(y_i\mid\btheta)\). So the objective is \(-\frac1I\sum_{i=1}^{I}\log\Pr(y_i\mid\btheta)\).</div></li>
+<li><div>Drop the positive constant \(\frac1I\): \(\hat\btheta=\argmin_{\btheta}\Big[-\sum_{i=1}^{I}\log\Pr(y_i\mid\btheta)\Big]\) (5.30).</div></li>
+<li><div>In machine learning \(\btheta\) is computed by the network: \(\hat\bphi=\argmin_{\bphi}\Big[-\sum_{i=1}^{I}\log\Pr(y_i\mid\mathrm{f}[\bx_i,\bphi])\Big]\) (5.31).</div></li></ol>
+<div class="result">Exactly the negative log-likelihood of the recipe. Cross-entropy loss and NLL are the same loss.</div></div>
+
+<p>That is why equations 5.20 and 5.24 are called <i>binary</i> and <i>multiclass cross-entropy</i>: for a single example whose true class is \(y_i\), the "true distribution" is a one-hot vector (all its mass on \(y_i\)), and its cross-entropy with the model's \(\boldsymbol\lambda\) is \(-\log\lambda_{y_i}\), our NLL term.</p>
+
+<div class="py" id="c-udl5-10"><pre class="src">
+q = np.array([0.5, 0.25, 0.25]); p = np.array([0.4, 0.4, 0.2])
+H  = -np.sum(q * np.log(q))
+CE = -np.sum(q * np.log(p))
+KL =  np.sum(q * np.log(q / p))
+from scipy.stats import entropy
+print("entropy", H, " cross-entropy", CE, " KL", KL, " CE - H", CE - H)
+print("scipy KL:", entropy(q, p))
+# fitting a normal by minimising cross-entropy with the empirical distribution
+data = np.array([-6.5, -5.0, -4.6, -4.0, -3.6, -2.8, -2.4, -2.2, 0.0, 4.4])
+mus = np.linspace(-6, 4, 1001)
+ce = [np.mean(0.5*np.log(2*np.pi*4) + (data - m)**2/8) for m in mus]     # sigma^2 = 4
+print("best mu by cross-entropy:", mus[np.argmin(ce)], "  sample mean:", data.mean())
+</pre><div class="pynote"><b>Read the output:</b> <code>scipy.stats.entropy(q, p)</code> with two arguments computes the KL divergence, and agrees with the worked example. The second part fits the mean of a normal to ten points (positions like the arrows of figure 5.12a) by minimising the average NLL, which is the cross-entropy with the empirical distribution: the best \(\mu\) is the sample mean, −2.67.</div></div>
+
+<div class="callout ece"><p>Information theory, which you may have met in a communications course, gives the units: with natural logs, cross-entropy is measured in <i>nats</i> (with \(\log_2\), in bits). \(H(q)\) is the average code length of the best code for \(q\); cross-entropy is the average length if you design the code for \(p\) but the symbols really come from \(q\); KL is the wasted length. Training a classifier is building the best "code" for the labels.</p></div>
+
+<h3 id="udl5-summary">5.8 Summary, and what the Notes add</h3>
+<p>We stopped thinking of a network as predicting \(y\) and started thinking of it as predicting the parameters \(\btheta\) of a distribution \(\Pr(y\mid\btheta)\). Maximising the likelihood of the training data is the same as minimising the negative log-likelihood, and that is the same as minimising the cross-entropy between the data and the model. Least squares falls out of a normal distribution with a predicted mean; letting the network also predict the variance gives uncertainty, even uncertainty that varies with the input. Bernoulli + sigmoid gives binary cross-entropy; categorical + softmax gives multiclass cross-entropy. Several outputs simply add their losses.</p>
+<p>A few ideas from Prince's chapter notes are worth knowing by name: <b>robust regression</b> (a Laplace distribution gives the mean <i>absolute</i> error loss, which predicts the median and shrugs off outliers); <b>quantile (pinball) loss</b> for predicting, say, the 90th percentile; <b>focal loss</b> for heavily imbalanced classes; <b>mixture density networks</b> for multimodal outputs; and non-probabilistic losses such as the <b>hinge loss</b> of support vector machines. The next chapter finds the parameters that minimise these losses.</p>
+
+<div class="callout pitfall"><p><b>Three bugs that bite every beginner.</b> (1) Applying softmax in your model <i>and</i> using a library loss that applies it again (PyTorch's <code>CrossEntropyLoss</code> expects raw logits). (2) Computing <code>log(sigmoid(f))</code> literally, which gives <code>-inf</code> for large \(|f|\): use the logits version. (3) Comparing a summed loss with a mean loss and thinking training got 1000 times worse.</p></div>
+
+<h3 id="udl5-probs">Problems 5.1–5.10, with full solutions</h3>
+<p>Work each on paper first. Problems marked ∗ in the book have their answers only in the instructor's manual, so the solutions below are our own, carefully checked.</p>
+
+<div class="prob" id="p-udl5-01" data-src="Prince Problem 5.1" data-title="Limits of the sigmoid"><div class="stmt"><p>Show that the logistic sigmoid \(\sig[z]=\frac{1}{1+\exp[-z]}\) becomes 0 as \(z\to-\infty\), is 0.5 when \(z=0\), and becomes 1 when \(z\to\infty\).</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Look only at what \(\exp[-z]\) does in each case, then at \(1/(1+\text{that})\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\lim_{z\to-\infty}\sig[z]=0\), \(\sig[0]=0.5\), \(\lim_{z\to\infty}\sig[z]=1\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div>\(z\to-\infty\): then \(-z\to+\infty\), so \(\exp[-z]\to\infty\). The denominator \(1+\exp[-z]\to\infty\), and one over something huge \(\to0\). (Numbers: \(z=-10\) gives \(1/(1+22026)=0.0000454\).)</div></li>
+<li><div>\(z=0\): \(\exp[0]=1\), so \(\sig[0]=\frac{1}{1+1}=0.5\).</div></li>
+<li><div>\(z\to+\infty\): \(-z\to-\infty\), so \(\exp[-z]\to0\). The denominator \(\to1\), so \(\sig[z]\to1\). (\(z=10\): \(1/(1+0.0000454)=0.9999546\).)</div></li>
+<li><div>Bonus: \(\sig\) never actually reaches 0 or 1, and \(\sig[-z]=1-\sig[z]\) (multiply top and bottom of \(\frac{1}{1+e^{z}}\) by \(e^{-z}\)), which is why figure 5.7 is symmetric about the point \((0,0.5)\).</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Saying \(\exp[-z]\to0\) as \(z\to-\infty\) (sign slip). Write \(-z\) explicitly for each case.</p></div></details></div>
+
+<div class="prob" id="p-udl5-02" data-src="Prince Problem 5.2" data-title="Plot the binary cross-entropy"><div class="stmt"><p>The loss for one training pair is \(L=-(1-y)\log\big[1-\sig[\mathrm{f}[x,\bphi]]\big]-y\log\big[\sig[\mathrm{f}[x,\bphi]]\big]\). Plot this loss as a function of the transformed network output \(\sig[\mathrm{f}[x,\bphi]]\in[0,1]\) (i) when \(y=0\) and (ii) when \(y=1\).</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Substitute each value of \(y\): one of the two terms vanishes.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(i) \(y=0\): \(L=-\log(1-\lambda)\), zero at \(\lambda=0\), rising to \(\infty\) as \(\lambda\to1\). (ii) \(y=1\): \(L=-\log\lambda\), infinite at \(\lambda\to0\), falling to 0 at \(\lambda=1\). Mirror images about \(\lambda=0.5\), where both equal \(\log2=0.693\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div>Write \(\lambda=\sig[\mathrm{f}]\). With \(y=0\): \(L=-(1)\log(1-\lambda)-0=-\log(1-\lambda)\).</div></li>
+<li><div>With \(y=1\): \(L=-0-1\cdot\log\lambda=-\log\lambda\).</div></li>
+<li><div>Key values: \(\lambda=0.5\): both \(0.693\). \(\lambda=0.9\): \(y=1\) costs \(0.105\), \(y=0\) costs \(2.303\). \(\lambda=0.99\): \(0.010\) vs \(4.605\).</div></li>
+<li><div>The plot is cell <code>c-udl5-07</code> in section 5.4; here is a variant that marks these points:</div></li></ol>
+<div class="py" id="c-udl5-11"><pre class="src">
+lam = np.linspace(0.001, 0.999, 400)
+fig, ax = plt.subplots(1, 2, figsize=(8, 3), sharey=True)
+ax[0].plot(lam, -np.log(1 - lam)); ax[0].set_title("(i) y = 0")
+ax[1].plot(lam, -np.log(lam), color="C1"); ax[1].set_title("(ii) y = 1")
+for a in ax:
+    a.set_xlabel("sig[f[x, phi]]"); a.set_ylim(0, 5)
+    for v in (0.5, 0.9, 0.99):
+        a.axvline(v, color="grey", lw=0.5)
+ax[0].set_ylabel("loss L"); plt.tight_layout(); plt.show()
+</pre></div></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Plotting against the raw output \(\mathrm{f}\) instead of \(\sig[\mathrm{f}]\) (that gives the softplus curves \(\log(1+e^{\pm f})\), also correct but not what was asked).</p></div></details></div>
+
+<div class="prob" id="p-udl5-03" data-src="Prince Problem 5.3∗" data-title="Loss for wind direction (von Mises)"><div class="stmt"><p>We want to predict the direction \(y\) (radians) of the prevailing wind from local barometric pressure \(x\). A distribution on circular domains is the von Mises distribution (figure 5.13): \[\Pr(y\mid\mu,\kappa)=\frac{\exp\big[\kappa\cos[y-\mu]\big]}{2\pi\cdot\text{Bessel}_0[\kappa]},\] where \(\mu\) is the mean direction and \(\kappa\) the concentration (like an inverse variance); \(\text{Bessel}_0[\kappa]\) is a modified Bessel function of the first kind of order 0. Use the recipe of section 5.2 to develop a loss for learning the parameter \(\mu\) of a model \(\mathrm{f}[x,\bphi]\) that predicts the most likely wind direction. Treat \(\kappa\) as constant. How would you perform inference?</p></div>
+<figure class="book small" data-fig="udl-5.13"><figcaption>The von Mises distribution on \((-\pi,\pi]\): a bump at \(\mu\) whose width is about \(1/\sqrt\kappa\). It wraps around: the left and right edges are the same direction.</figcaption></figure>
+<details class="hintd"><summary>Hint</summary><div><p>Set \(\mu=\mathrm{f}[x,\bphi]\), take minus the log of the density, and remove every term that does not contain \(\bphi\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(L[\bphi]=-\sum_i\kappa\cos\big[y_i-\mathrm{f}[x_i,\bphi]\big]+I\log\big[2\pi\,\text{Bessel}_0[\kappa]\big]\); equivalently minimise \(\sum_i\big(1-\cos[y_i-\mathrm{f}[x_i,\bphi]]\big)\). Inference: \(\hat y=\mathrm{f}[x,\hat\bphi]\), wrapped into \((-\pi,\pi]\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Distribution:</b> von Mises, defined on angles. <b>Model:</b> \(\mu=\mathrm{f}[x,\bphi]\); \(\kappa\) is a fixed constant.</div></li>
+<li><div><b>NLL of one point:</b> \(-\log\frac{\exp[\kappa\cos[y_i-\mathrm{f}_i]]}{2\pi\text{Bessel}_0[\kappa]}=-\kappa\cos[y_i-\mathrm{f}_i]+\log\big(2\pi\text{Bessel}_0[\kappa]\big)\), using \(\log\frac{e^a}{b}=a-\log b\).</div></li>
+<li><div><b>Sum:</b> \(L[\bphi]=\sum_{i=1}^{I}\Big(-\kappa\cos\big[y_i-\mathrm{f}[x_i,\bphi]\big]\Big)+I\log\big(2\pi\text{Bessel}_0[\kappa]\big)\).</div></li>
+<li><div>The last term and the factor \(\kappa\gt0\) do not depend on \(\bphi\): \(\hat\bphi=\argmin_{\bphi}\big[-\sum_i\cos[y_i-\mathrm{f}[x_i,\bphi]]\big]\). Adding the constant \(I\) gives the tidy, non-negative form \(\sum_i(1-\cos[y_i-\mathrm{f}_i])\).</div></li>
+<li><div>Sanity check: for small errors \(1-\cos e\approx e^2/2\), so near the right answer this <i>is</i> least squares, but an error of \(2\pi\) (pointing the same way) costs nothing, which is exactly right for angles. A plain squared error would wrongly say that 179° and −179° are far apart.</div></li>
+<li><div><b>Inference:</b> the density peaks at \(\mu\), so \(\hat y=\mathrm{f}[x,\hat\bphi]\). The network output can be any real number; report it modulo \(2\pi\) in \((-\pi,\pi]\), e.g. \(\hat y=\operatorname{atan2}(\sin\mathrm{f},\cos\mathrm{f})\).</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Forgetting the minus sign (maximising \(-\cos\) puts the prediction <i>opposite</i> the wind). Trying to keep \(\mathrm{f}\) inside \((-\pi,\pi]\) during training: unnecessary, the cosine is periodic.</p></div></details></div>
+
+<div class="prob" id="p-udl5-04" data-src="Prince Problem 5.4∗" data-title="Mixture of two Gaussians"><div class="stmt"><p>Sometimes the outputs are multimodal: more than one valid prediction for a given input (figure 5.14a). A mixture of two Gaussians has parameters \(\btheta=\{\lambda,\mu_1,\sigma_1^2,\mu_2,\sigma_2^2\}\): \[\Pr(y\mid\btheta)=\frac{\lambda}{\sqrt{2\pi\sigma_1^2}}\exp\Big[\frac{-(y-\mu_1)^2}{2\sigma_1^2}\Big]+\frac{1-\lambda}{\sqrt{2\pi\sigma_2^2}}\exp\Big[\frac{-(y-\mu_2)^2}{2\sigma_2^2}\Big],\] with \(\lambda\in[0,1]\). Use the recipe to construct a loss for a model \(\mathrm{f}[x,\bphi]\) that predicts a mixture of two Gaussians from \(I\) training pairs. What problems do you foresee when performing inference?</p></div>
+<figure class="book" data-fig="udl-5.14"><figcaption>(a) Data that split into two branches: at \(x=0\), \(y\) is about −2 or +3 but rarely in between. (b) A mixture (cyan) of two normals (dashed) far apart: two peaks. (c) Two normals close together: one peak but a lopsided shape no single normal can make.</figcaption></figure>
+<details class="hintd"><summary>Hint</summary><div><p>The network needs five outputs, and three of the parameters have constraints. The log of a sum does not split into a sum of logs.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Outputs \(\mathrm{f}_1,\dots,\mathrm{f}_5\); \(\lambda=\sig[\mathrm{f}_1]\), \(\mu_1=\mathrm{f}_2\), \(\sigma_1^2=\mathrm{f}_3^2\), \(\mu_2=\mathrm{f}_4\), \(\sigma_2^2=\mathrm{f}_5^2\). \(L=-\sum_i\log\big[\lambda_i\Norm(y_i;\mu_{1i},\sigma^2_{1i})+(1-\lambda_i)\Norm(y_i;\mu_{2i},\sigma^2_{2i})\big]\). Inference: no closed-form mode; two near-equal peaks make a single answer ambiguous; the mean may lie in a valley of low probability.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Distribution:</b> the two-component mixture above, defined on \(\R\).</div></li>
+<li><div><b>Model:</b> five network outputs mapped to legal values: \(\lambda=\sig[\mathrm{f}_1[x,\bphi]]\in(0,1)\), \(\mu_1=\mathrm{f}_2\), \(\sigma_1^2=\mathrm{f}_3^2\) (or \(\exp[\mathrm{f}_3]\)), \(\mu_2=\mathrm{f}_4\), \(\sigma_2^2=\mathrm{f}_5^2\).</div></li>
+<li><div><b>Loss:</b> \[L[\bphi]=-\sum_{i=1}^{I}\log\Big[\frac{\sig[\mathrm{f}_{1i}]}{\sqrt{2\pi\mathrm{f}_{3i}^2}}e^{-\frac{(y_i-\mathrm{f}_{2i})^2}{2\mathrm{f}_{3i}^2}}+\frac{1-\sig[\mathrm{f}_{1i}]}{\sqrt{2\pi\mathrm{f}_{5i}^2}}e^{-\frac{(y_i-\mathrm{f}_{4i})^2}{2\mathrm{f}_{5i}^2}}\Big],\] where \(\mathrm{f}_{ki}=\mathrm{f}_k[x_i,\bphi]\). Unlike the single Gaussian, the log does <i>not</i> simplify, because it is the log of a sum. In code compute it with log-sum-exp: \(\log(e^{a}+e^{b})\) with \(a=\log\lambda+\log\Norm_1\), \(b=\log(1-\lambda)+\log\Norm_2\).</div></li>
+<li><div><b>Inference problems.</b> (i) The most probable \(y\) has no formula: you must search numerically (evaluate the density on a grid, or run a few Newton steps from each mean). (ii) When the two peaks have similar heights the "best" answer can jump from one branch to the other as \(x\) changes slightly; often it is better to report both modes. (iii) The mean of the mixture, \(\lambda\mu_1+(1-\lambda)\mu_2\), can sit between the branches where almost no data live (at \(x=0\) in figure 5.14a it would predict about 0.5, a value that essentially never occurs). (iv) Training issues: if one \(\sigma^2\to0\) on a single point the likelihood goes to infinity; and the components can swap roles ("label switching"), so \(\mu_1\) is not always the "upper" branch.</div></li></ol>
+<div class="py" id="c-udl5-12"><pre class="src">
+from scipy.special import logsumexp
+def mog_nll(y, lam, mu1, s1, mu2, s2):
+    la = np.log(lam) - 0.5*np.log(2*np.pi*s1) - (y-mu1)**2/(2*s1)
+    lb = np.log(1-lam) - 0.5*np.log(2*np.pi*s2) - (y-mu2)**2/(2*s2)
+    return -np.sum(logsumexp(np.stack([la, lb]), axis=0))
+yb = np.array([-2.1, -1.8, 3.2, 2.9, -2.0, 3.0])          # outputs at x = 0
+print("one Gaussian (mean, var of data):", round(mog_nll(yb, 0.5, yb.mean(), yb.var(), yb.mean(), yb.var()), 3))
+print("two-branch mixture              :", round(mog_nll(yb, 0.5, -2.0, 0.04, 3.0, 0.04), 3))
+grid = np.linspace(-4, 5, 901)
+dens = 0.5*np.exp(-(grid+2)**2/0.08)/np.sqrt(2*np.pi*0.04) + 0.5*np.exp(-(grid-3)**2/0.08)/np.sqrt(2*np.pi*0.04)
+print("numerical mode:", grid[np.argmax(dens)], "  mixture mean:", 0.5*(-2) + 0.5*3)
+</pre><div class="pynote">The mixture explains the two-branch data with a far lower NLL. Its mean, 0.5, lies where the density is almost zero; the mode must be found by search (with equal weights, either peak qualifies).</div></div></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Writing \(\log(A+B)=\log A+\log B\). Forgetting to constrain \(\lambda\) and the variances.</p></div></details></div>
+
+<div class="prob" id="p-udl5-05" data-src="Prince Problem 5.5" data-title="Mixture of two von Mises distributions"><div class="stmt"><p>Extend the model from Problem 5.3 to predict the wind direction using a mixture of two von Mises distributions. Write an expression for the likelihood \(\Pr(y\mid\btheta)\). How many outputs will the network need to produce?</p></div>
+<div class="ansin" data-answer="5" data-tol="0" data-unit="outputs (if κ is learned)"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Copy the structure of Problem 5.4, replacing each normal by a von Mises.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\Pr(y\mid\btheta)=\lambda\frac{\exp[\kappa_1\cos(y-\mu_1)]}{2\pi\text{Bessel}_0[\kappa_1]}+(1-\lambda)\frac{\exp[\kappa_2\cos(y-\mu_2)]}{2\pi\text{Bessel}_0[\kappa_2]}\). Five outputs (\(\lambda,\mu_1,\kappa_1,\mu_2,\kappa_2\)); three if both concentrations are fixed constants as in Problem 5.3.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div>Parameters: \(\btheta=\{\lambda,\mu_1,\kappa_1,\mu_2,\kappa_2\}\), with \(\lambda\in[0,1]\) the weight of component 1.</div></li>
+<li><div>Likelihood: the weighted sum above. It integrates to 1 over \((-\pi,\pi]\) because each component does and the weights add to 1.</div></li>
+<li><div>Network outputs and constraints: \(\lambda=\sig[\mathrm{f}_1]\), \(\mu_1=\mathrm{f}_2\), \(\kappa_1=\exp[\mathrm{f}_3]\) (must be positive), \(\mu_2=\mathrm{f}_4\), \(\kappa_2=\exp[\mathrm{f}_5]\). That is <b>5 outputs</b>. If we keep \(\kappa_1,\kappa_2\) fixed (as Problem 5.3 did), 3 outputs.</div></li>
+<li><div>Loss: \(L=-\sum_i\log\Pr(y_i\mid\btheta_i)\), computed with log-sum-exp as in Problem 5.4.</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Counting 4 outputs by forgetting the mixing weight, or 6 by giving each component its own weight (the second weight is \(1-\lambda\), not free).</p></div></details></div>
+
+<div class="prob" id="p-udl5-06" data-src="Prince Problem 5.6" data-title="Counting pedestrians (Poisson)"><div class="stmt"><p>Build a model to predict the number of pedestrians \(y\in\{0,1,2,\dots\}\) that will pass a given point in the next minute, from data \(x\) (time of day, longitude, latitude, type of neighbourhood). A suitable distribution for counts is the Poisson (figure 5.15), with a single parameter \(\lambda\gt0\), the rate, which is the mean: \[\Pr(y=k)=\frac{\lambda^ke^{-\lambda}}{k!}.\] Design a loss function for this model assuming \(I\) training pairs \(\{x_i,y_i\}\).</p></div>
+<figure class="book" data-fig="udl-5.15"><figcaption>Poisson distributions with rates 1.4, 2.8 and 6.0. The peak sits near \(\lambda\), and the spread grows with \(\lambda\) (variance equals the mean).</figcaption></figure>
+<details class="hintd"><summary>Hint</summary><div><p>\(\lambda\) must be positive: use \(\lambda=\exp[\mathrm{f}[x,\bphi]]\). Then \(\log\lambda=\mathrm{f}\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(L[\bphi]=\sum_{i=1}^{I}\Big(\exp\big[\mathrm{f}[x_i,\bphi]\big]-y_i\,\mathrm{f}[x_i,\bphi]+\log(y_i!)\Big)\); the last term can be dropped.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Distribution:</b> Poisson on \(\{0,1,2,\dots\}\). <b>Model:</b> \(\lambda_i=\exp[\mathrm{f}[x_i,\bphi]]\gt0\) for any network output.</div></li>
+<li><div><b>Log of one term:</b> \(\log\frac{\lambda^{y}e^{-\lambda}}{y!}=y\log\lambda-\lambda-\log(y!)\).</div></li>
+<li><div><b>Substitute</b> \(\log\lambda_i=\mathrm{f}_i\): \(y_i\mathrm{f}_i-e^{\mathrm{f}_i}-\log(y_i!)\).</div></li>
+<li><div><b>Negate and sum:</b> \(L=\sum_i\big(e^{\mathrm{f}_i}-y_i\mathrm{f}_i+\log(y_i!)\big)\). The \(\log(y_i!)\) terms do not depend on \(\bphi\): drop them for training.</div></li>
+<li><div>Check: for one point, \(\frac{\partial L}{\partial\mathrm{f}}=e^{\mathrm{f}}-y=\lambda-y\). It is zero when the predicted rate equals the observed count, just like least squares' \(2(\mathrm{f}-y)\). <b>Inference:</b> the mode of a Poisson is \(\lfloor\lambda\rfloor\) (round down), or report \(\lambda\) itself as the expected count.</div></li></ol>
+<div class="py" id="c-udl5-13"><pre class="src">
+from scipy.stats import poisson
+from scipy.special import gammaln          # gammaln(k+1) = log(k!)
+f = np.array([0.3, 1.0, 1.8]); yc = np.array([1, 4, 6])
+ours = np.sum(np.exp(f) - yc*f + gammaln(yc + 1))
+print("our Poisson NLL:", ours, "  scipy:", -poisson.logpmf(yc, np.exp(f)).sum())
+</pre></div></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Predicting \(\lambda=\mathrm{f}\) directly (it can go negative) or using least squares on counts (ignores that the variance grows with the mean).</p></div></details></div>
+
+<div class="prob" id="p-udl5-07" data-src="Prince Problem 5.7" data-title="Ten outputs, still least squares"><div class="stmt"><p>A multivariate regression predicts ten outputs, \(\by\in\R^{10}\), each modelled by an independent normal whose mean \(\mu_d\) is predicted by the network and whose variance \(\sigma^2\) is constant. Write an expression for the likelihood \(\Pr(\by\mid\mathrm{f}[\bx,\bphi])\). Show that minimising the NLL is still equivalent to minimising a sum of squared terms if we don't estimate \(\sigma^2\).</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Product over \(d=1..10\), then logs, then the same two "drop the constant" moves as equation 5.10.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\Pr(\by\mid\mathrm{f})=\prod_{d=1}^{10}\frac{1}{\sqrt{2\pi\sigma^2}}\exp\big[-\frac{(y_d-\mathrm{f}_d[\bx,\bphi])^2}{2\sigma^2}\big]\); NLL \(=5I\log(2\pi\sigma^2)+\frac{1}{2\sigma^2}\sum_i\sum_d(y_{id}-\mathrm{f}_d[\bx_i,\bphi])^2\), minimised by the same \(\bphi\) as \(\sum_i\sum_d(y_{id}-\mathrm{f}_d)^2\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div>Independence (equation 5.25): the likelihood is the product of 10 normal densities, one per output, as written in the final answer.</div></li>
+<li><div>Log of one example: \(\sum_{d=1}^{10}\big[-\tfrac12\log(2\pi\sigma^2)-\frac{(y_{d}-\mathrm{f}_d)^2}{2\sigma^2}\big]=-5\log(2\pi\sigma^2)-\frac{1}{2\sigma^2}\sum_d(y_d-\mathrm{f}_d)^2\).</div></li>
+<li><div>Negate and sum over \(I\) examples: \(L=5I\log(2\pi\sigma^2)+\frac{1}{2\sigma^2}\sum_{i=1}^{I}\sum_{d=1}^{10}(y_{id}-\mathrm{f}_d[\bx_i,\bphi])^2\).</div></li>
+<li><div>With \(\sigma^2\) fixed, the first term is constant and \(\frac1{2\sigma^2}\gt0\) is a scale factor, so \(\hat\bphi=\argmin\sum_i\sum_d(y_{id}-\mathrm{f}_d)^2=\argmin\sum_i\|\by_i-\mathrm{f}[\bx_i,\bphi]\|^2\): a sum of squared terms (the squared Euclidean distance between prediction and target vectors).</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Writing \(10\log\) instead of \(5\log\): each density contributes \(\tfrac12\log(2\pi\sigma^2)\).</p></div></details></div>
+
+<div class="prob" id="p-udl5-08" data-src="Prince Problem 5.8∗" data-title="Heteroscedastic multivariate regression"><div class="stmt"><p>Construct a loss function for multivariate predictions \(\by\in\R^{D_o}\) based on independent normal distributions with different variances \(\sigma_d^2\) for each dimension. Assume a heteroscedastic model, so both the means \(\mu_d\) and the variances \(\sigma_d^2\) vary as a function of the data.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>The network needs \(2D_o\) outputs. Combine equation 5.15 with equation 5.26.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>With \(\mu_d=\mathrm{f}_d[\bx,\bphi]\), \(\sigma_d^2=\mathrm{f}_{D_o+d}[\bx,\bphi]^2\): \[L[\bphi]=\sum_{i=1}^{I}\sum_{d=1}^{D_o}\Big[\tfrac12\log\big(2\pi\,\mathrm{f}_{D_o+d}[\bx_i,\bphi]^2\big)+\frac{(y_{id}-\mathrm{f}_d[\bx_i,\bphi])^2}{2\,\mathrm{f}_{D_o+d}[\bx_i,\bphi]^2}\Big].\]</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Distribution:</b> \(\Pr(\by\mid\cdot)=\prod_{d=1}^{D_o}\Norm(y_d;\mu_d,\sigma_d^2)\) (a multivariate normal with diagonal covariance).</div></li>
+<li><div><b>Model:</b> the network has \(2D_o\) outputs; the first \(D_o\) are the means, the next \(D_o\) are squared to give positive variances (or use \(\exp\), or add a small floor).</div></li>
+<li><div><b>NLL of one coordinate:</b> \(-\log\Norm(y;\mu,\sigma^2)=\tfrac12\log(2\pi\sigma^2)+\frac{(y-\mu)^2}{2\sigma^2}\).</div></li>
+<li><div><b>Sum over coordinates and examples</b> (equation 5.26), substituting the network outputs: the final answer. Neither term can be dropped now, because the variances depend on \(\bphi\).</div></li>
+<li><div>Interpretation: each squared error is weighted by its own inverse variance, so dimensions (and inputs) the network declares "noisy" are trusted less, and the log term stops it declaring everything noisy.</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Dropping the \(\log\sigma_d^2\) term: then the loss is minimised by making all variances infinite.</p></div></details></div>
+
+<div class="prob" id="p-udl5-09" data-src="Prince Problem 5.9∗" data-title="Height in metres, weight in kilos"><div class="stmt"><p>A multivariate regression predicts a person's height in metres and weight in kilos from data \(\bx\). The units take quite different ranges. What problems do you see this causing? Propose two solutions.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Least squares assumes the same \(\sigma^2\) for both outputs. Is an error of 0.1 equally bad in both?</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>The summed squared error is dominated by weight (errors of several kg) and almost ignores height (errors of a few cm = 0.0x m), because a shared \(\sigma^2\) is implicitly assumed. Fixes: (1) standardise each output (subtract its mean, divide by its standard deviation) before training, undo after; (2) learn a separate variance per output (Problem 5.8, even a homoscedastic per-dimension \(\sigma_d^2\)), which weights each squared error by \(1/\sigma_d^2\). Hand-chosen weights or a change of units are cruder versions of the same idea.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>The problem in numbers.</b> Typical spread: height sd ≈ 0.1 m, weight sd ≈ 15 kg. A mediocre model might be off by 0.08 m and 10 kg. Squared errors: \(0.0064\) vs \(100\). The weight term is about 15,000 times bigger, so gradient descent spends essentially all its effort on weight; height is learned poorly.</div></li>
+<li><div><b>Why, in recipe terms.</b> Summing squared errors is the NLL of independent normals with the <i>same</i> variance for both outputs (Problem 5.7). That assumption is false here: weight is inherently far more variable (in its own units) than height.</div></li>
+<li><div><b>Solution 1: standardise the targets.</b> \(\tilde y_d=(y_d-\bar y_d)/s_d\). Both outputs then have variance 1 and the equal-variance assumption becomes reasonable. Predict \(\tilde y\) and convert back: \(\hat y_d=\bar y_d+s_d\hat{\tilde y}_d\).</div></li>
+<li><div><b>Solution 2: learn the variances.</b> Use \(L=\sum_i\sum_d\big[\tfrac12\log\sigma_d^2+\frac{(y_{id}-\mathrm{f}_d)^2}{2\sigma_d^2}\big]\) with learned \(\sigma_d^2\) (constants per output, or input-dependent as in Problem 5.8). The loss automatically divides each error by its own scale.</div></li>
+<li><div>(Also possible: measure height in centimetres. That changes the scale from 0.1 to 10, much closer to weight's 15: a quick fix that works only by luck of units.)</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Standardising the targets for training but forgetting to un-standardise predictions before reporting them.</p></div></details></div>
+
+<div class="prob" id="p-udl5-10" data-src="Prince Problem 5.10" data-title="Wind direction and wind speed"><div class="stmt"><p>Extend the model from Problem 5.3 to predict both the wind direction and the wind speed, and define the associated loss function.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Section 5.6 suggests: von Mises for the direction, exponential (on positive reals) for the speed, independent given \(x\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>With direction \(y_i\), speed \(s_i\gt0\), outputs \(\mu=\mathrm{f}_1\), \(\lambda=\exp[\mathrm{f}_2]\) (rate of an exponential, \(\Pr(s)=\lambda e^{-\lambda s}\)): \[L[\bphi]=\sum_{i=1}^{I}\Big[-\kappa\cos\big(y_i-\mathrm{f}_1[x_i,\bphi]\big)-\mathrm{f}_2[x_i,\bphi]+s_i\exp\big[\mathrm{f}_2[x_i,\bphi]\big]\Big]+\text{const}.\]</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Distributions:</b> direction \(y\in(-\pi,\pi]\): von Mises with mean \(\mu\), fixed \(\kappa\). Speed \(s\in\R^+\): exponential, \(\Pr(s\mid\lambda)=\lambda e^{-\lambda s}\), mean \(1/\lambda\).</div></li>
+<li><div><b>Model:</b> two outputs: \(\mu=\mathrm{f}_1[x,\bphi]\); \(\lambda=\exp[\mathrm{f}_2[x,\bphi]]\gt0\). (A third output \(\kappa=\exp[\mathrm{f}_3]\) could learn the direction uncertainty; then keep the \(\log(2\pi\text{Bessel}_0[\kappa])\) term.)</div></li>
+<li><div><b>Independence:</b> \(\Pr(y,s\mid x)=\Pr(y\mid\mu,\kappa)\Pr(s\mid\lambda)\), so the NLL is the sum of the two NLLs.</div></li>
+<li><div><b>Direction term:</b> \(-\kappa\cos(y_i-\mathrm{f}_1)+\log(2\pi\text{Bessel}_0[\kappa])\) (Problem 5.3).</div></li>
+<li><div><b>Speed term:</b> \(-\log(\lambda e^{-\lambda s_i})=-\log\lambda+\lambda s_i=-\mathrm{f}_2+s_ie^{\mathrm{f}_2}\).</div></li>
+<li><div><b>Total:</b> add, sum over \(i\), drop the constant. Inference: direction \(\mathrm{f}_1\) wrapped to \((-\pi,\pi]\); speed: the mean \(1/\lambda=e^{-\mathrm{f}_2}\) (the exponential's mode is 0, which is useless as a prediction, a nice example of when to report the mean instead of the peak). A gamma distribution would give a more realistic speed model with a non-zero mode.</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Reporting the exponential's mode (always 0) as the predicted speed.</p></div></details></div>
+
+<h3 id="udl5-practice">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In Prince's view, a regression network trained with least squares is predicting…</p><ol class="opts"><li>the variance of a normal distribution</li><li>the mean of a normal distribution whose variance is constant</li><li>the probability that \(y\) is correct</li><li>the median of a Laplace distribution</li></ol><div class="why">Least squares is the NLL of a normal with the network predicting \(\mu\) and \(\sigma^2\) fixed (option 2). Option 1: the variance is not predicted at all in plain least squares. Option 3 is meaningless for a continuous \(y\). Option 4 describes the absolute-error loss.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Why do we maximise the log-likelihood rather than the likelihood?</p><ol class="opts"><li>The log gives a different, better optimum</li><li>The log makes the loss convex</li><li>The product of many small probabilities underflows; the log turns it into a sum with the same maximiser</li><li>Logs are required by the chain rule</li></ol><div class="why">Option 3. The log is monotonic, so the optimum is the same (not 1); it does not make a network's loss convex (not 2); 4 is false.</div></div>
+<div class="q" data-type="num" data-answer="0.0351" data-tol="0.0005"><p class="stem">Softmax of logits \((2,\ 1,\ -1)\): what is the probability of the third class? (4 decimal places)</p><div class="why">\(e^{-1}/(e^2+e^1+e^{-1})=0.36788/10.47522=0.03512\).</div></div>
+<div class="q" data-type="num" data-answer="0.9741" data-tol="0.001"><p class="stem">A binary classifier outputs logit \(\mathrm{f}=0.5\) for an example whose true label is 0. What is its binary cross-entropy (natural log)?</p><div class="why">\(\lambda=\sig[0.5]=0.62246\); loss \(=-\log(1-0.62246)=-\log0.37754=0.97408\).</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">You add 100 to every logit of a softmax classifier. The predicted probabilities…</p><ol class="opts"><li>all become 1</li><li>all become 0</li><li>move towards the uniform distribution</li><li>do not change</li></ol><div class="why">Softmax depends only on differences between logits: the factor \(e^{100}\) cancels top and bottom. (Dividing by a temperature, not adding, changes the sharpness.)</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">To predict how many emails arrive in the next hour, which output distribution and which output transform fit best?</p><ol class="opts"><li>Poisson, with rate \(\lambda=\exp[\mathrm{f}]\)</li><li>Normal, with \(\mu=\mathrm{f}\)</li><li>Bernoulli, with \(\lambda=\sig[\mathrm{f}]\)</li><li>Categorical over \(\{0,\dots,9\}\) with softmax</li></ol><div class="why">Counts live on \(\{0,1,2,\dots\}\): Poisson, rate kept positive with exp. A normal allows negative and fractional counts; Bernoulli only 0/1; a categorical with a cap of 9 cannot represent 10 or more emails.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Minimising the cross-entropy between the empirical data distribution and the model is the same as…</p><ol class="opts"><li>minimising the entropy of the data</li><li>minimising the negative log-likelihood of the data</li><li>maximising the KL divergence</li><li>minimising the squared error, always</li></ol><div class="why">The entropy of the data is a constant, and the delta functions turn the cross-entropy into \(-\frac1I\sum\log\Pr(y_i\mid\btheta)\): the (mean) NLL. Squared error only for a fixed-variance normal.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">In heteroscedastic regression, what stops the network from predicting a huge variance everywhere to make all squared errors cheap?</p><ol class="opts"><li>The sigmoid on the variance output</li><li>Weight decay</li><li>The \(\tfrac12\log(2\pi\sigma^2)\) term in the NLL</li><li>Nothing; this is a known failure</li></ol><div class="why">Large \(\sigma^2\) makes the error term small but the log term large. The balance point is the true error size.</div></div>
+<div class="q" data-type="open"><p class="stem">In two or three sentences, explain to a friend why least squares is "the Gaussian loss".</p><div class="model">If we assume each target is the network's prediction plus independent Gaussian noise with a fixed variance, then the probability of the data is a product of Gaussian densities. Taking minus the log turns each density into a constant plus the squared error divided by \(2\sigma^2\); constants and positive scale factors do not move the minimum, so maximising the likelihood is minimising the sum of squared errors.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">The four-step recipe for a loss function</div><div class="b">(1) choose \(\Pr(y\mid\btheta)\) on the output domain; (2) network predicts \(\btheta=\mathrm{f}[\bx,\bphi]\); (3) minimise \(-\sum_i\log\Pr(y_i\mid\mathrm{f}[\bx_i,\bphi])\); (4) infer the peak (or the whole distribution).</div></div>
+<div class="fc"><div class="f">Maximum likelihood criterion</div><div class="b">\(\hat\bphi=\argmax_{\bphi}\prod_i\Pr(y_i\mid\mathrm{f}[\bx_i,\bphi])\)</div></div>
+<div class="fc"><div class="f">Why is maximising log-likelihood equivalent to maximising likelihood?</div><div class="b">log is monotonically increasing, so it preserves the location of the maximum; it also turns an underflowing product into a sum.</div></div>
+<div class="fc"><div class="f">Normal density</div><div class="b">\(\Pr(y\mid\mu,\sigma^2)=\frac{1}{\sqrt{2\pi\sigma^2}}\exp\big[-\frac{(y-\mu)^2}{2\sigma^2}\big]\)</div></div>
+<div class="fc"><div class="f">Gaussian NLL in terms of SSE</div><div class="b">\(\text{NLL}=\frac I2\log(2\pi\sigma^2)+\frac{1}{2\sigma^2}\text{SSE}\); best \(\hat\sigma^2=\text{SSE}/I\).</div></div>
+<div class="fc"><div class="f">Bernoulli in one line</div><div class="b">\(\Pr(y\mid\lambda)=(1-\lambda)^{1-y}\lambda^{y}\), \(y\in\{0,1\}\)</div></div>
+<div class="fc"><div class="f">Binary cross-entropy for one example</div><div class="b">\(-(1-y)\log(1-\sig[\mathrm{f}])-y\log\sig[\mathrm{f}]\)</div></div>
+<div class="fc"><div class="f">Softmax</div><div class="b">\(\softmax_k[\bz]=e^{z_k}/\sum_{k'}e^{z_{k'}}\); invariant to adding a constant to all \(z\).</div></div>
+<div class="fc"><div class="f">Multiclass cross-entropy for one example with true class \(y\)</div><div class="b">\(\log\sum_k e^{z_k}-z_y\)</div></div>
+<div class="fc"><div class="f">Heteroscedastic regression</div><div class="b">Network predicts \(\mu=\mathrm{f}_1\) and \(\sigma^2=\mathrm{f}_2^2\); the uncertainty varies with the input.</div></div>
+<div class="fc"><div class="f">KL divergence (discrete)</div><div class="b">\(D_{KL}[q\|p]=\sum_k q_k\log\frac{q_k}{p_k}\) = cross-entropy − entropy \(\ge0\)</div></div>
+<div class="fc"><div class="f">Output distribution for counts / directions / proportions</div><div class="b">Poisson / von Mises / beta</div></div>
+<div class="fc"><div class="f">Stable way to compute \(-\log\sig[f]\)</div><div class="b">\(\log(1+e^{-f})\) = <code>np.logaddexp(0, -f)</code></div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can say what "the network predicts a distribution" means and give the four steps of the recipe.</label>
+<label><input type="checkbox"> I can derive least squares from the Gaussian NLL on a blank page, justifying each dropped term.</label>
+<label><input type="checkbox"> I can compute a sigmoid, a softmax and their cross-entropies by hand for small numbers.</label>
+<label><input type="checkbox"> I can write numerically stable BCE, softmax and cross-entropy functions in NumPy.</label>
+<label><input type="checkbox"> I can design a loss for a new output type (counts, angles, mixtures, several outputs).</label>
+<label><input type="checkbox"> I can explain why cross-entropy and negative log-likelihood are the same.</label>
+<label><input type="checkbox"> I solved Problems 5.1–5.10 before reading the solutions.</label>
+</div>
+</section>

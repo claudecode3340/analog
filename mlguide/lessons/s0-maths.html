@@ -1,0 +1,552 @@
+<section class="lesson" id="s0-maths" data-book="Prince Ch. 22 (Notation), pp. 437–439 · ISLP §1, pp. 8–10">
+<p class="lede">Every formula in ISLP and Prince is a sentence written in shorthand. Once you know how to read the shorthand out loud, a formula stops being a wall of symbols and becomes an instruction you can carry out with a calculator. This lesson is your phrasebook: what each symbol is called, what it means, and how to turn any formula into numbers.</p>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>say every common symbol of the two books out loud, and give a tiny example of each;</li>
+<li>read \(x_{ij}\), \(\bx_i\), \(\bX\) and \(\bX\T\) in a data table, and say which number each one points to;</li>
+<li>expand any \(\sum\) or \(\prod\) by writing out its terms, then compute it;</li>
+<li>read Prince's square-bracket functions \(\mathrm{f}[\bx,\bphi]\) and ISLP's round-bracket functions \(f(X)\), and know they mean the same kind of thing;</li>
+<li>use a five-step strategy to turn any new formula into a calculation;</li>
+<li>name every Greek letter you will meet in months 1–3.</li></ul></div>
+
+<div class="callout book"><blockquote>Functions are expressed as a name, followed by square brackets that contain the arguments of the function.</blockquote><cite>Prince, Appendix A (Ch. 22), p. 438</cite></div>
+
+<h3 id="s0-maths-why">Why formulas look hard, and why they are not</h3>
+<p>A formula packs a long sentence into a few symbols. Take this one from ISLP Chapter 3:</p>
+<div class="mathblock"><div class="eqlabel">An example sentence in maths</div>
+\[\RSS=\sum_{i=1}^{n}\left(y_i-\hat y_i\right)^2\]
+<p class="say">Read: “R-S-S equals the sum, for \(i\) from 1 to \(n\), of \(y\)-sub-\(i\) minus \(y\)-hat-sub-\(i\), all squared.”</p></div>
+<p>In ordinary English that says: <i>for every data point, take the true value, subtract the predicted value, square the difference, then add up all those squares</i>. The English version is 27 words. The maths version is about ten symbols. That compression is the whole reason maths notation exists: it is faster to write, and once you can read it, faster to read.</p>
+<p>The difficulty is never the idea. The difficulty is that nobody told you how to say the symbols. When you cannot pronounce something, your brain cannot hold it, so it slides off the page. This lesson fixes that. You will learn the name of every symbol, practise expanding the shorthand back into ordinary arithmetic, and get a strategy for any formula you have never seen.</p>
+<div class="callout key"><p><b>The one habit that matters most:</b> whenever you meet a formula, put numbers into it. Pick two or three tiny values, write the formula out with those numbers, and compute it. A formula you have computed by hand once is a formula you understand.</p></div>
+<div class="callout ece"><p>You already read compressed maths fluently in your ECE courses. The DFT \(X[k]=\sum_{n=0}^{N-1}x[n]e^{-j2\pi kn/N}\) is exactly the same kind of sentence as \(\RSS\): an index (\(n\)) that runs over a range, a term that depends on it, and a sum. The only new things in ML are the letters (the books use \(i\) for data points, \(j\) for features) and a few new symbols such as \(\argmin\) and \(\E\).</p></div>
+
+<h3 id="s0-maths-table">Data in a table: \(n\), \(p\), \(x_{ij}\), \(\bx_i\) and \(\bX\)</h3>
+<p>Almost everything in ISLP starts from a table of data. Each <b>row</b> is one <dfn data-g="observation">observation</dfn> (one person, one market, one image). Each <b>column</b> is one <dfn data-g="variable-feature">variable</dfn>, also called a <i>feature</i>, <i>predictor</i> or <i>input</i>. Here are the first three rows of ISLP's Advertising data: advertising budgets (in thousands of dollars) for TV, radio and newspaper in three markets, and the sales that followed (in thousands of units).</p>
+<div class="tw"><table class="t"><thead><tr><th>row \(i\)</th><th>TV (\(j=1\))</th><th>radio (\(j=2\))</th><th>newspaper (\(j=3\))</th><th>sales \(y_i\)</th></tr></thead><tbody>
+<tr><td>1</td><td class="n">230.1</td><td class="n"><span class="hlc">37.8</span></td><td class="n">69.2</td><td class="n">22.1</td></tr>
+<tr><td>2</td><td class="n"><span class="hlb">44.5</span></td><td class="n"><span class="hlb">39.3</span></td><td class="n"><span class="hlb">45.1</span></td><td class="n"><span class="hlg">10.4</span></td></tr>
+<tr><td>3</td><td class="n">17.2</td><td class="n">45.9</td><td class="n">69.3</td><td class="n">9.3</td></tr>
+</tbody></table></div>
+<p>ISLP fixes two letters for the size of any table:</p>
+<ul>
+<li>\(n\) (read <i>en</i>) is the <b>number of observations</b>, the number of rows. The full Advertising data has \(n=200\) markets.</li>
+<li>\(p\) (read <i>pee</i>) is the <b>number of predictors</b>, the number of input columns. Here \(p=3\) (TV, radio, newspaper). Sales is the thing we want to predict, so it is not counted in \(p\).</li>
+</ul>
+<p>And two letters for <i>which</i> row and column you mean:</p>
+<ul>
+<li>\(i\) (read <i>eye</i>) always counts <b>rows</b>: \(i=1,2,\dots,n\).</li>
+<li>\(j\) (read <i>jay</i>) always counts <b>columns</b>: \(j=1,2,\dots,p\).</li>
+</ul>
+<p>Now the symbols for single numbers, whole rows and the whole table:</p>
+<div class="symbols">
+<div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>In the table above</span></div>
+<div class="row"><span class="s">\(x_{ij}\)</span><span>“x, i, j”: the number in row \(i\), column \(j\). <b>Row first, column second</b>, always.</span><span class="eg">\(x_{12}=\) <span class="hlc">37.8</span> (row 1, radio)</span></div>
+<div class="row"><span class="s">\(y_i\)</span><span>“y sub i”: the response (the thing to predict) in row \(i\)</span><span class="eg">\(y_2=\) <span class="hlg">10.4</span></span></div>
+<div class="row"><span class="s">\(\bx_i\) or \(x_i\)</span><span>“x sub i” (bold): the whole of row \(i\), written as a column of \(p\) numbers</span><span class="eg">\(x_2=\) (<span class="hlb">44.5, 39.3, 45.1</span>) as a column</span></div>
+<div class="row"><span class="s">\(\bx_j\)</span><span>“column x-j”: the whole of column \(j\), all \(n\) values of one variable</span><span class="eg">\(\bx_1=(230.1,\,44.5,\,17.2)\) as a column (TV)</span></div>
+<div class="row"><span class="s">\(\bX\)</span><span>“big X” or “the data matrix”: the whole input table, \(n\) rows by \(p\) columns</span><span class="eg">here a \(3\times 3\) block of numbers</span></div>
+<div class="row"><span class="s">\(\by\)</span><span>“bold y”: all \(n\) responses stacked in one column</span><span class="eg">\(\by=(22.1,\,10.4,\,9.3)\) as a column</span></div>
+</div>
+<p>Written as a real matrix, with round brackets around it, the input table is</p>
+\[\bX=\begin{pmatrix}x_{11}&x_{12}&x_{13}\\x_{21}&x_{22}&x_{23}\\x_{31}&x_{32}&x_{33}\end{pmatrix}=\begin{pmatrix}230.1&37.8&69.2\\44.5&39.3&45.1\\17.2&45.9&69.3\end{pmatrix},\qquad \by=\begin{pmatrix}22.1\\10.4\\9.3\end{pmatrix}.\]
+<p>Notice how the subscripts of \(x_{ij}\) march across the first matrix: the first subscript stays the same along a row, the second stays the same down a column. In general ISLP writes</p>
+\[\bX=\begin{pmatrix}x_{11}&x_{12}&\cdots&x_{1p}\\x_{21}&x_{22}&\cdots&x_{2p}\\\vdots&\vdots&\ddots&\vdots\\x_{n1}&x_{n2}&\cdots&x_{np}\end{pmatrix}.\]
+<p>The dots \(\cdots\) (read <i>and so on across</i>), \(\vdots\) (<i>and so on down</i>) and \(\ddots\) (<i>and so on diagonally</i>) mean “the pattern continues”. They save writing all 200 rows.</p>
+<div class="callout pitfall"><p><b>Row or column?</b> ISLP uses the same letter \(x\) for a row (\(x_i\), indexed by \(i\)) and a column (\(\bx_j\), indexed by \(j\)). Only the letter of the index tells you which one is meant. When you read \(x_3\), ask: is the 3 counting rows or columns? Look at the surrounding sentence. In \(\sum_{i=1}^n x_i\) it counts rows; in \(\beta_1x_1+\beta_2x_2\) it counts columns (predictors).</p></div>
+
+<h4>Transpose: \(\T\)</h4>
+<p>The little raised \(\T\) (read <i>transpose</i>) turns columns into rows and rows into columns. By convention a vector is a <b>column</b>, so \(x_2\) is a column; when we want it lying flat we write \(x_2\T\) (read <i>x-two transpose</i>):</p>
+\[x_2=\begin{pmatrix}44.5\\39.3\\45.1\end{pmatrix},\qquad x_2\T=\begin{pmatrix}44.5&39.3&45.1\end{pmatrix}.\]
+<p>For a matrix, the transpose flips it over its main diagonal (top-left to bottom-right): row 1 becomes column 1, row 2 becomes column 2, and so on. For a \(2\times3\) matrix:</p>
+\[\begin{pmatrix}\colorbox{#fde68a}{1}&\colorbox{#fde68a}{2}&\colorbox{#fde68a}{3}\\\colorbox{#bfdbfe}{4}&\colorbox{#bfdbfe}{5}&\colorbox{#bfdbfe}{6}\end{pmatrix}\T=\begin{pmatrix}\colorbox{#fde68a}{1}&\colorbox{#bfdbfe}{4}\\\colorbox{#fde68a}{2}&\colorbox{#bfdbfe}{5}\\\colorbox{#fde68a}{3}&\colorbox{#bfdbfe}{6}\end{pmatrix}.\]
+<p>A \(2\times3\) matrix (2 rows, 3 columns) becomes \(3\times2\). You will practise this properly in <a href="#m-linalg">Vectors and matrices</a>.</p>
+
+<h4>ISLP and Prince use different letters for the same things</h4>
+<p>The two books grew up in different fields (statistics and computer science), so they name the same objects differently. Keep this table nearby for the first few weeks:</p>
+<div class="tw"><table class="t"><thead><tr><th>Idea</th><th>ISLP writes</th><th>Prince writes</th></tr></thead><tbody>
+<tr><td>number of training examples</td><td>\(n\)</td><td>\(I\)</td></tr>
+<tr><td>which example</td><td>\(i=1,\dots,n\)</td><td>\(i=1,\dots,I\)</td></tr>
+<tr><td>number of input variables</td><td>\(p\)</td><td>\(D_i\) (dimension of the input)</td></tr>
+<tr><td>an input / an output</td><td>\(X\), \(x_i\) / \(Y\), \(y_i\)</td><td>\(\bx\), \(\bx_i\) / \(\by\), \(\by_i\) (bold whenever it is a vector)</td></tr>
+<tr><td>the model's parameters</td><td>\(\beta_0,\beta_1,\dots\) (one letter per coefficient)</td><td>\(\bphi\) (phi, all parameters in one vector)</td></tr>
+<tr><td>the model</td><td>\(f(X)\) and its estimate \(\hat f(X)\)</td><td>\(\mathrm{f}[\bx,\bphi]\)</td></tr>
+<tr><td>how badly the model fits</td><td>\(\RSS\), \(\MSE\)</td><td>the loss \(L[\bphi]\)</td></tr>
+<tr><td>probability</td><td>\(\Pr(Y=k\mid X=x)\)</td><td>\(Pr(y\mid\bx)\)</td></tr>
+<tr><td>a normal distribution</td><td>\(N(\mu,\sigma^2)\)</td><td>\(\mathrm{Norm}_y[\mu,\sigma^2]\)</td></tr>
+</tbody></table></div>
+<div class="callout pitfall"><p><b>ISLP's bold is unusual.</b> ISLP prints a vector in <b>bold</b> only when its length is \(n\) (one entry per observation, such as \(\by\) or a column \(\bx_j\)). A row \(x_i\) of length \(p\) is printed in normal font even though it is a vector (ISLP pp. 9–10). Prince, like most ML writing, makes <i>every</i> vector bold. So in ISLP, plain \(x_i\) may be a whole row of numbers; in Prince, plain \(x\) is always a single number.</p></div>
+
+<h3 id="s0-maths-symbols">The “say it as” table</h3>
+<p>Here are the symbols you will meet in ISLP Chapters 2–6 and Prince Chapters 2–7, grouped by job. Read each one aloud as you go. You do not need to memorise them today: the flashcards at the end will do that over the next weeks, and every later lesson reads each symbol aloud again the first time it appears.</p>
+
+<h4>Decorations on a letter: hats, bars, stars, primes</h4>
+<div class="symbols">
+<div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(\hat y\)</span><span>“y-hat”: a <b>predicted</b> or <b>estimated</b> value. The hat always means “our guess, computed from data”.</span><span class="eg">true \(y_1=22.1\), prediction \(\hat y_1=20.5\)</span></div>
+<div class="row"><span class="s">\(\hat\beta_1\)</span><span>“beta-one-hat”: our <b>estimate</b> of the true, unknown coefficient \(\beta_1\)</span><span class="eg">\(\hat\beta_1=0.0475\) (ISLP's TV slope)</span></div>
+<div class="row"><span class="s">\(\hat f\)</span><span>“f-hat”: the function we fitted, our estimate of the true \(f\)</span><span class="eg">\(\hat f(x)=7.03+0.0475x\)</span></div>
+<div class="row"><span class="s">\(\bar x\)</span><span>“x-bar”: the <b>mean</b> (average) of the \(x\) values</span><span class="eg">\(x=(2,5,3,6)\Rightarrow\bar x=4\)</span></div>
+<div class="row"><span class="s">\(x_0\)</span><span>“x-nought” or “x-zero”: in ISLP, a <b>new</b> point we want to predict at (not in the training data)</span><span class="eg">predict sales at TV budget \(x_0=100\)</span></div>
+<div class="row"><span class="s">\(x^*\), \(\bphi^*\)</span><span>“x-star”: a special value, usually the best one (the minimiser) or a new test input</span><span class="eg">\(f(x)=(x-3)^2\) has \(x^*=3\)</span></div>
+<div class="row"><span class="s">\(x'\)</span><span>“x-prime”: a second or transformed version of \(x\). On a function, \(f'(x)\) is the derivative.</span><span class="eg">\(f(x)=x^2\Rightarrow f'(x)=2x\)</span></div>
+</div>
+
+<h4>Adding and multiplying many things</h4>
+<div class="symbols">
+<div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(\displaystyle\sum_{i=1}^{n}a_i\)</span><span>“the sum, for \(i\) from 1 to \(n\), of a-i”: add \(a_1+a_2+\dots+a_n\)</span><span class="eg">\(\sum_{i=1}^{3}i=1+2+3=6\)</span></div>
+<div class="row"><span class="s">\(\displaystyle\prod_{i=1}^{n}a_i\)</span><span>“the product, for \(i\) from 1 to \(n\), of a-i”: multiply \(a_1\times a_2\times\dots\times a_n\). Capital pi.</span><span class="eg">\(\prod_{i=1}^{3}i=1\times2\times3=6\)</span></div>
+<div class="row"><span class="s">\(\sum_i\)</span><span>“sum over i”: the range is left out because it is obvious from context (all the data)</span><span class="eg">\(\sum_i y_i\) = add every \(y\)</span></div>
+<div class="row"><span class="s">\(n!\)</span><span>“n factorial”: \(n\times(n-1)\times\dots\times2\times1\)</span><span class="eg">\(4!=24\); by convention \(0!=1\)</span></div>
+<div class="row"><span class="s">\(\binom{n}{k}\)</span><span>“n choose k”: the number of ways to pick \(k\) items from \(n\) (order not mattering) \(=\frac{n!}{k!(n-k)!}\)</span><span class="eg">\(\binom{4}{2}=\frac{24}{2\cdot2}=6\)</span></div>
+</div>
+
+<h4>Sets, spaces and membership</h4>
+<div class="symbols">
+<div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(\{\dots\}\)</span><span>“the set of …”: a collection of things, order not mattering</span><span class="eg">\(\{0,1\}\) = the two class labels</span></div>
+<div class="row"><span class="s">\(\{\bx_i,y_i\}_{i=1}^{I}\)</span><span>“the set of pairs x-i, y-i for i from 1 to I”: the whole training set (Prince)</span><span class="eg">\(\{(1,2),(2,3),(3,5)\}\), \(I=3\)</span></div>
+<div class="row"><span class="s">\(\in\)</span><span>“is in”, “is an element of”, “belongs to”</span><span class="eg">\(3\in\{1,2,3\}\); \(k\in\{1,\dots,K\}\)</span></div>
+<div class="row"><span class="s">\(\R\)</span><span>“the real numbers”: every number on the number line</span><span class="eg">\(-2.5\in\R\)</span></div>
+<div class="row"><span class="s">\(\R^p\)</span><span>“R-p”: all lists (vectors) of \(p\) real numbers</span><span class="eg">\((1.5,-2)\in\R^2\)</span></div>
+<div class="row"><span class="s">\(\R^{n\times p}\)</span><span>“R n-by-p”: all matrices with \(n\) rows and \(p\) columns</span><span class="eg">\(\bX\in\R^{200\times3}\) for Advertising</span></div>
+<div class="row"><span class="s">\([a,b]\), \((a,b]\)</span><span>interval from \(a\) to \(b\). Square bracket = end included; round = end excluded.</span><span class="eg">a probability lives in \([0,1]\)</span></div>
+<div class="row"><span class="s">\(\forall\)</span><span>“for all”, “for every”</span><span class="eg">\(y_i\ge0\ \forall i\): every \(y\) is non-negative</span></div>
+</div>
+
+<h4>Sizes: absolute value and norms</h4>
+<div class="symbols">
+<div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(|x|\)</span><span>“the absolute value of x”: drop the minus sign. (Around a set, \(|S|\) is the number of elements; around a matrix, its determinant.)</span><span class="eg">\(|-3|=3\), \(|3|=3\)</span></div>
+<div class="row"><span class="s">\(\|\bx\|_2\) or \(\|\bx\|\)</span><span>“the two-norm of x” or “the length of x”: square, add, square-root</span><span class="eg">\(\|(3,4)\|_2=\sqrt{9+16}=5\)</span></div>
+<div class="row"><span class="s">\(\|\bx\|_1\)</span><span>“the one-norm of x”: add the absolute values</span><span class="eg">\(\|(3,-4)\|_1=3+4=7\)</span></div>
+<div class="row"><span class="s">\(\|\bx\|_2^2\)</span><span>“the squared two-norm”: the sum of squares, no square root</span><span class="eg">\(\|(3,4)\|_2^2=25\)</span></div>
+</div>
+<p>Norms come back in ISLP Chapter 6: ridge regression penalises \(\|\bbeta\|_2^2\) and the lasso penalises \(\|\bbeta\|_1\) (<a href="#isl6-2">ISLP 6.2</a>).</p>
+
+<h4>Functions and optimisation</h4>
+<div class="symbols">
+<div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(f(x)\)</span><span>“f of x”: the function \(f\) applied to the input \(x\)</span><span class="eg">\(f(x)=2x+1\Rightarrow f(3)=7\)</span></div>
+<div class="row"><span class="s">\(\mathrm{f}[\bx,\bphi]\)</span><span>“f of x and phi” (Prince's square brackets): the model applied to input \(\bx\) using parameters \(\bphi\)</span><span class="eg">\(\mathrm{f}[x,\bphi]=\phi_0+\phi_1x\)</span></div>
+<div class="row"><span class="s">\(f:\R^p\to\R\)</span><span>“f maps R-p to R”: \(f\) eats \(p\) numbers and returns one number</span><span class="eg">\(f(x_1,x_2)=x_1+x_2\) is \(\R^2\to\R\)</span></div>
+<div class="row"><span class="s">\(\min_x f(x)\)</span><span>“the minimum over x of f of x”: the <b>smallest value</b> \(f\) can take</span><span class="eg">\(\min_x (x-3)^2+1=1\)</span></div>
+<div class="row"><span class="s">\(\argmin_x f(x)\)</span><span>“arg-min over x of f”: the <b>input \(x\)</b> at which that smallest value happens</span><span class="eg">\(\argmin_x (x-3)^2+1=3\)</span></div>
+<div class="row"><span class="s">\(\argmax\)</span><span>“arg-max”: the input at which a function is largest</span><span class="eg">\(\argmax_k \Pr(Y=k\mid x)\) = the most probable class</span></div>
+<div class="row"><span class="s">\(e\)</span><span>“e”: Euler's number, \(2.71828\dots\)</span><span class="eg">\(e^1\approx2.718\), \(e^0=1\)</span></div>
+<div class="row"><span class="s">\(\exp(x)\), \(\exp[x]\)</span><span>“exp of x”: another way to write \(e^x\); used when the exponent is long</span><span class="eg">\(\exp(2)=e^2\approx7.389\)</span></div>
+<div class="row"><span class="s">\(\log x\), \(\log[x]\)</span><span>“log of x”: in both books the <b>natural</b> log (base \(e\)), the one your calculator calls ln</span><span class="eg">\(\log e=1\), \(\log1=0\), \(\log 10\approx2.303\)</span></div>
+<div class="row"><span class="s">\(\sigma(z)\), \(\mathrm{sig}[z]\)</span><span>“sigmoid of z” (also called the logistic function): \(\frac{1}{1+e^{-z}}\), squashes any number into \((0,1)\)</span><span class="eg">\(\sigma(0)=0.5\)</span></div>
+</div>
+
+<h4>Relations and small connecting symbols</h4>
+<div class="symbols">
+<div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(:=\)</span><span>“is defined as”: we are <i>naming</i> something, not claiming a fact</span><span class="eg">\(r_i:=y_i-\hat y_i\) (the residual)</span></div>
+<div class="row"><span class="s">\(\leftarrow\)</span><span>“becomes” or “is updated to” (Prince): the new value replaces the old one, like <code>x = x + 2</code> in code</span><span class="eg">\(\phi\leftarrow\phi-\alpha\cdot g\)</span></div>
+<div class="row"><span class="s">\(\approx\)</span><span>“is approximately equal to”</span><span class="eg">\(\pi\approx3.1416\)</span></div>
+<div class="row"><span class="s">\(\propto\)</span><span>“is proportional to”: equal up to a constant multiplier we do not care about</span><span class="eg">\(y\propto x^2\): \(y=cx^2\) for some fixed \(c\)</span></div>
+<div class="row"><span class="s">\(\Rightarrow\)</span><span>“implies”, “so”</span><span class="eg">\(x=2\Rightarrow x^2=4\)</span></div>
+<div class="row"><span class="s">\(\cdot\)</span><span>a small dot: “times” (Prince uses it only to make reading easier)</span><span class="eg">\(\alpha\cdot g=\alpha g\)</span></div>
+<div class="row"><span class="s">\(\gg\), \(\ll\)</span><span>“much greater than”, “much less than”</span><span class="eg">\(p\gg n\): far more features than rows (ISLP 6.4)</span></div>
+</div>
+
+<h4>Calculus (taught properly in <a href="#m-calc">Derivatives and gradients</a>)</h4>
+<div class="symbols">
+<div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(\frac{df}{dx}\), \(f'(x)\)</span><span>“d-f by d-x”, “f-prime of x”: the derivative, the slope of \(f\) at \(x\)</span><span class="eg">\(f=x^2\Rightarrow\frac{df}{dx}=2x\)</span></div>
+<div class="row"><span class="s">\(\frac{\partial f}{\partial x_1}\)</span><span>“partial f by partial x-one”: the slope of \(f\) when only \(x_1\) moves and every other input is frozen</span><span class="eg">\(f=x_1x_2\Rightarrow\frac{\partial f}{\partial x_1}=x_2\)</span></div>
+<div class="row"><span class="s">\(\nabla f\)</span><span>“grad f” or “del f” (the symbol is called nabla): the vector of all partial derivatives</span><span class="eg">\(f=x_1^2+x_2^2\Rightarrow\nabla f=(2x_1,2x_2)\)</span></div>
+<div class="row"><span class="s">\(\int_a^b f(x)\,dx\)</span><span>“the integral from a to b of f of x, d-x”: the area under \(f\) between \(a\) and \(b\)</span><span class="eg">\(\int_0^1 2x\,dx=1\)</span></div>
+</div>
+
+<h4>Probability and statistics (taught properly in <a href="#m-prob">Probability and statistics</a>)</h4>
+<div class="symbols">
+<div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(X\), \(Y\) (capitals)</span><span>in ISLP, a capital letter is a <b>random variable</b>: a quantity whose value is uncertain until we observe it</span><span class="eg">\(Y\) = tomorrow's sales</span></div>
+<div class="row"><span class="s">\(\Pr(A)\), \(P(A)\)</span><span>“the probability of A”, a number in \([0,1]\)</span><span class="eg">\(\Pr(\text{die shows }6)=\tfrac16\)</span></div>
+<div class="row"><span class="s">\(\Pr(Y=k\mid X=x)\)</span><span>“the probability that Y equals k, <b>given</b> that X equals x”. The bar \(\mid\) is read “given”.</span><span class="eg">\(\Pr(\text{default}=\text{yes}\mid\text{balance}=2000)=0.586\)</span></div>
+<div class="row"><span class="s">\(\E[X]\)</span><span>“the expected value of X”, “E of X”: the long-run average value</span><span class="eg">fair die: \(\E[X]=3.5\)</span></div>
+<div class="row"><span class="s">\(\Var(X)\), \(\sigma^2\)</span><span>“the variance of X”, “sigma squared”: average squared distance from the mean</span><span class="eg">fair die: \(\Var(X)\approx2.92\)</span></div>
+<div class="row"><span class="s">\(\sigma\), \(\mathrm{SD}\)</span><span>“sigma”, “the standard deviation”: square root of the variance, in the data's own units</span><span class="eg">\(\sigma^2=4\Rightarrow\sigma=2\)</span></div>
+<div class="row"><span class="s">\(\Cov(X,Y)\), \(\rho\)</span><span>“the covariance of X and Y”; “rho”, the correlation: do they move together?</span><span class="eg">\(\rho=0.78\) for TV budget and sales</span></div>
+<div class="row"><span class="s">\(\mu\)</span><span>“mew”: the true mean of a distribution</span><span class="eg">\(\mu=0\)</span></div>
+<div class="row"><span class="s">\(N(\mu,\sigma^2)\)</span><span>“the normal distribution with mean mu and variance sigma squared”, the bell curve. Prince writes \(\mathrm{Norm}_y[\mu,\sigma^2]\).</span><span class="eg">\(N(0,1)\) is the standard normal</span></div>
+<div class="row"><span class="s">\(\sim\)</span><span>“is distributed as”, “is drawn from”</span><span class="eg">\(\epsilon\sim N(0,\sigma^2)\)</span></div>
+<div class="row"><span class="s">iid</span><span>“independent and identically distributed”: each draw comes from the same distribution and none affects another</span><span class="eg">ten fair coin flips are iid</span></div>
+<div class="row"><span class="s">\(\epsilon\)</span><span>“epsilon”: the random error, the part of \(Y\) no model can predict</span><span class="eg">\(Y=f(X)+\epsilon\)</span></div>
+</div>
+<p>That is 50 symbols. Each later lesson re-introduces the ones it uses, so if you forget one, you will be reminded at the moment you need it.</p>
+
+<h3 id="s0-maths-functions">Functions: round brackets, square brackets, and parameters</h3>
+<p>A <dfn data-g="function">function</dfn> is a machine: a value goes in, a value comes out, and the same input always gives the same output. You met this idea in school as \(f(x)=2x+1\): put \(x=3\) in, get \(f(3)=2\cdot3+1=7\) out.</p>
+<p>ISLP writes functions the school way, with round brackets: \(f(X)\), \(\hat f(x_0)\), \(p(X)\). Prince writes them with <b>square brackets</b>: \(\mathrm{f}[\bx,\bphi]\), \(\log[x]\), \(\exp[x]\), \(\mathrm{sig}[z]\). The square brackets mean exactly what round brackets mean. Prince's reason is practical: deep-learning formulas contain many round brackets for grouping, like \((a+b)(c-d)\), and square brackets make it instantly clear which brackets hold a function's inputs.</p>
+
+<h4>Variables (Roman letters) and parameters (Greek letters)</h4>
+<p>Prince keeps a strict rule (Appendix A, p. 437): <b>variables</b> are written with Roman (English) letters, \(x, y, z, a, h\); <b>parameters</b> are written with Greek letters, \(\phi, \beta, \omega, \theta\). A variable is something that changes from example to example (each house has a different size \(x\)). A parameter is a setting inside the model that we tune once, during training, and then keep (the slope of the line). ISLP follows the same habit: its coefficients are \(\beta_0,\beta_1,\dots\).</p>
+<p>So when Prince writes</p>
+<div class="mathblock" data-sheet="Prince's model notation"><div class="eqlabel">A model with parameters (Prince eq. 2.2 and 2.4)</div>
+\[y=\mathrm{f}[x,\bphi]=\phi_0+\phi_1x\]
+<p class="say">Read: “y equals f of x and phi, which equals phi-nought plus phi-one times x.” The input is \(x\); the parameters are \(\bphi=(\phi_0,\phi_1)\), the intercept and the slope.</p></div>
+<p>the comma inside the brackets separates two kinds of input: the data \(x\) (changes for every example) and the parameters \(\bphi\) (fixed once trained). Bold \(\bphi\) means “all the parameters packed into one vector”.</p>
+
+<div class="worked"><div class="wt">Worked example · <b>evaluating \(\mathrm{f}[x,\bphi]\)</b></div>
+<div class="given">The model is \(\mathrm{f}[x,\bphi]=\phi_0+\phi_1x\) with parameters \(\bphi=(\phi_0,\phi_1)=(1,\,0.5)\). Evaluate it at the input \(x=4\).</div>
+<ol class="steps">
+<li><div>Substitute the parameter values: \(\mathrm{f}[x,\bphi]=1+0.5\,x\).<span class="why">The parameters are fixed numbers once the model is trained.</span></div></li>
+<li><div>Substitute the input: \(\mathrm{f}[4,\bphi]=1+0.5\times4\).</div></li>
+<li><div>Compute: \(1+2=3\).</div></li>
+</ol>
+<div class="result">\(\mathrm{f}[4,\bphi]=3\)</div></div>
+
+<p>When Prince wants to leave an input deliberately unspecified, he uses a bullet: \(\mathrm{f}[\bullet,\bphi]\) means “the function f, with parameters \(\bphi\), whatever the input”. And when a function returns a vector, its name is bold: \(\mathbf{mlp}[\bx,\bphi]\) returns a vector.</p>
+<div class="callout intuition"><p><b>Think of parameters as knobs.</b> \(\mathrm{f}[x,\bphi]=\phi_0+\phi_1x\) is not one line; it is a whole <i>family</i> of lines, one for each setting of the two knobs \(\phi_0\) (where the line crosses the vertical axis) and \(\phi_1\) (how steep it is). Training means turning the knobs until the line fits the data. Prince's Figure 2.1 shows three members of the family.</p></div>
+
+<h4>Minimum and arg-min: the value versus the place</h4>
+<p>Training a model means finding the parameters that make the loss as small as possible. Prince writes this as</p>
+<div class="mathblock" data-sheet="argmin"><div class="eqlabel">Training as minimisation (Prince eq. 2.3)</div>
+\[\hat{\bphi}=\argmin_{\bphi}\Big[L[\bphi]\Big]\]
+<p class="say">Read: “phi-hat equals the arg-min over phi of L of phi”: the parameter setting at which the loss \(L\) is smallest. The little \(\bphi\) under argmin says what we are allowed to change.</p></div>
+<p>The difference between \(\min\) and \(\argmin\) confuses almost everyone once, so here it is with a table. Suppose we tried four values of a single parameter \(\phi\) and computed the loss for each:</p>
+<div class="tw"><table class="t"><thead><tr><th>\(\phi\)</th><th>0</th><th>1</th><th>2</th><th>3</th></tr></thead><tbody>
+<tr><td>\(L[\phi]\)</td><td class="n">9</td><td class="n">4</td><td class="n"><span class="hlg">1</span></td><td class="n">4</td></tr></tbody></table></div>
+<p>Then \(\min_\phi L[\phi]=1\) (the smallest <b>loss</b>) and \(\argmin_\phi L[\phi]=2\) (the <b>parameter</b> that achieves it). The min is the height of the bottom of the valley; the argmin is where on the map the bottom of the valley is. In ML we almost always want the argmin: we want the parameters, not the loss value.</p>
+
+<h3 id="s0-maths-sigma">Sigma notation: the sum sign, with numbers</h3>
+<p>The capital Greek letter \(\Sigma\) (<i>sigma</i>, the Greek S, for “sum”) is the symbol you will meet most. Every part of it has a job:</p>
+<div class="mathblock" data-sheet="Sigma notation"><div class="eqlabel">The parts of a sum</div>
+\[\sum_{\color{#2563eb}i=1}^{\color{#dc2626}n}\ \color{#16a34a}a_i\color{currentColor}\;=\;a_1+a_2+\dots+a_n\]
+<p class="say">The <span style="color:#2563eb">blue</span> part names the <b>index</b> (\(i\)) and where it <b>starts</b> (1). The <span style="color:#dc2626">red</span> part says where it <b>stops</b> (\(n\)). The <span style="color:#16a34a">green</span> part is the <b>term</b>: what to compute for each value of the index. Then add all the terms.</p></div>
+<p>To expand a sum, follow a three-step recipe. <b>(1)</b> Write down each value the index takes. <b>(2)</b> For each one, copy the term with the index replaced by that value. <b>(3)</b> Put plus signs between them and add. Let us do it with the data \(x=(x_1,x_2,x_3,x_4)=(2,5,3,6)\), so \(n=4\).</p>
+
+<div class="worked"><div class="wt">Worked example · <b>five sums of the same four numbers</b></div>
+<div class="given">\(x_1=2,\ x_2=5,\ x_3=3,\ x_4=6\), so \(n=4\).</div>
+<ol class="steps">
+<li><div><b>Plain sum.</b> \(\displaystyle\sum_{i=1}^{4}x_i=x_1+x_2+x_3+x_4=2+5+3+6=\mathbf{16}.\)</div></li>
+<li><div><b>The mean.</b> \(\displaystyle\bar x=\frac1n\sum_{i=1}^{n}x_i=\frac{16}{4}=\mathbf{4}.\)<span class="why">The \(\frac1n\) sits outside the sum: add first, then divide once.</span></div></li>
+<li><div><b>Sum of squares.</b> \(\displaystyle\sum_{i=1}^{4}x_i^2=2^2+5^2+3^2+6^2=4+25+9+36=\mathbf{74}.\)<span class="why">The term is \(x_i^2\): square each value <i>before</i> adding.</span></div></li>
+<li><div><b>Square of the sum.</b> \(\displaystyle\Big(\sum_{i=1}^{4}x_i\Big)^2=16^2=\mathbf{256}.\)<span class="why">Now the square is <i>outside</i> the sum: add first, square once. 256 is not 74. Where the brackets sit changes everything.</span></div></li>
+<li><div><b>Sum of squared deviations from the mean.</b> The deviations \(x_i-\bar x\) are \(2-4=-2,\ 5-4=1,\ 3-4=-1,\ 6-4=2\). Then \[\sum_{i=1}^{4}(x_i-\bar x)^2=(-2)^2+1^2+(-1)^2+2^2=4+1+1+4=\mathbf{10}.\]<span class="why">This quantity is the heart of variance, and of ISLP's \(\TSS\) (total sum of squares) in <a href="#isl3-1">ISLP 3.1</a>.</span></div></li>
+</ol>
+<div class="result">\(\sum x_i=16,\quad\bar x=4,\quad\sum x_i^2=74,\quad(\sum x_i)^2=256,\quad\sum(x_i-\bar x)^2=10\)</div></div>
+
+<p>A few more shapes you will see:</p>
+<ul>
+<li><b>A different start and stop.</b> \(\sum_{i=2}^{3}x_i=x_2+x_3=5+3=8\). Only the terms from 2 to 3.</li>
+<li><b>The index appears in the term itself.</b> \(\sum_{i=1}^{4}i\,x_i=1\cdot2+2\cdot5+3\cdot3+4\cdot6=2+10+9+24=45\).</li>
+<li><b>A term with no index in it.</b> \(\sum_{i=1}^{4}7=7+7+7+7=28\). In general \(\sum_{i=1}^{n}c=nc\): adding the same number \(n\) times.</li>
+<li><b>Prince's ranges.</b> Prince often writes \(\sum_{i=1}^{I}\), with a capital \(I\) for the number of examples. Same thing, different letter.</li>
+</ul>
+
+<div class="widget" data-w="s0-maths-sigma" data-title="Expand a sum, term by term" data-args='{"x":[2,5,3,6,4]}'><div class="wn">Pick a term and move the start and stop sliders. Every term is written out with its number substituted, and the bars show how each term contributes to the total. Try the term \(x_i^2\) and then \((x_i-\bar x)^2\) with the full range: compare with the worked example. Then set start = stop and see that a sum of one term is just that term.</div></div>
+
+<h4>Three rules for moving things in and out of a sum</h4>
+<p>You will see derivations in both books that rearrange sums. All of them use only these three rules, each of which is ordinary arithmetic (it is the distributive law and re-ordering of additions):</p>
+<div class="mathblock" data-sheet="Rules for sums"><div class="eqlabel">Sum rules</div>
+\[\sum_{i=1}^{n}c\,a_i=c\sum_{i=1}^{n}a_i,\qquad \sum_{i=1}^{n}(a_i+b_i)=\sum_{i=1}^{n}a_i+\sum_{i=1}^{n}b_i,\qquad \sum_{i=1}^{n}c=nc\]
+<p class="say">A constant multiplier can come out of the sum; a sum of two things splits into two sums; adding a constant \(n\) times gives \(n\) times the constant.</p></div>
+<p>Check the first rule with numbers: \(\sum_{i=1}^4 3x_i=6+15+9+18=48\), and \(3\sum_{i=1}^4x_i=3\times16=48\). Equal. The rule is just “take out the common factor”.</p>
+<div class="callout pitfall"><p><b>What does <i>not</i> come out of a sum:</b> anything that contains the index. \(\sum_i x_i y_i\ne\big(\sum_i x_i\big)\big(\sum_i y_i\big)\) in general. With \(x=(1,2)\) and \(y=(3,4)\): the left side is \(3+8=11\); the right side is \(3\times7=21\). Squares are the same trap: \(\sum x_i^2\ne(\sum x_i)^2\) (74 versus 256 above).</p></div>
+
+<h4>Double sums: adding over a whole table</h4>
+<p>When the term has two indices, you will see two sigmas. Read them from the outside in, like two nested loops: for each row \(i\), add along the row over \(j\); then add the row totals. With the table</p>
+\[\bX=\begin{pmatrix}1&4&2\\3&0&5\end{pmatrix}\quad(n=2\text{ rows},\ p=3\text{ columns}):\]
+\[\sum_{i=1}^{2}\sum_{j=1}^{3}x_{ij}=\underbrace{(1+4+2)}_{i=1:\ 7}+\underbrace{(3+0+5)}_{i=2:\ 8}=15.\]
+<p>Prince's Frobenius norm of a matrix (Appendix 23.3.2) is a double sum of exactly this kind: square every entry, add them all, take the square root.</p>
+
+<h4>Pi notation: products, and why logs turn them into sums</h4>
+<p>The capital \(\Pi\) (<i>pi</i>, the Greek P, for “product”) works exactly like \(\Sigma\) but multiplies instead of adding. It appears whenever we combine probabilities of independent events, for example the probability of a whole dataset in Prince Chapter 5 (<a href="#udl5">UDL 5</a>):</p>
+\[\prod_{i=1}^{3}p_i=p_1\times p_2\times p_3=0.9\times0.8\times0.5=0.36.\]
+<p>Products of many small probabilities get tiny very fast (a hundred factors of 0.5 is about \(10^{-30}\)), so the books almost always take the logarithm, which turns the product into a sum, because \(\log(ab)=\log a+\log b\):</p>
+\[\log\prod_{i=1}^{3}p_i=\sum_{i=1}^{3}\log p_i=\log0.9+\log0.8+\log0.5=-0.1054-0.2231-0.6931=-1.0217,\]
+<p>and indeed \(\log0.36=-1.0217\). This one identity is why “negative log-likelihood” loss functions are sums.</p>
+
+<h3 id="s0-maths-calc">The page as a calculator</h3>
+<p>You will learn Python properly from the next lessons on. For now, use the cells below as a calculator that checks the sums you did by hand. Read the comments (the lines after <code>#</code>); you do not need to understand every word of code yet.</p>
+<div class="py" id="c-s0-maths-01"><pre class="src">
+x = [2, 5, 3, 6]          # a list of four numbers: x1, x2, x3, x4
+n = len(x)                # len counts the items: 4
+total = sum(x)            # sum adds them: x1 + x2 + x3 + x4
+xbar = total / n          # the mean, x-bar
+print("n =", n, "  sum =", total, "  mean =", xbar)
+</pre><div class="pynote"><b>Read the output:</b> 16 and 4.0, as in the worked example. Change one of the numbers in the list and predict the new mean before you run it again.</div></div>
+
+<p>The next cell computes the three “squares” sums. The phrase <code>sum(v**2 for v in x)</code> reads almost like the maths: “sum of v squared, for each v in x”. In Python <code>**</code> means “to the power of”.</p>
+<div class="predict" data-correct="2"><p>The cell prints three numbers: \(\sum x_i^2\), \((\sum x_i)^2\) and \(\sum(x_i-\bar x)^2\). Which line will it print?</p><ol class="opts"><li><code>74 74 10.0</code></li><li><code>74 256 10.0</code></li><li><code>256 74 10.0</code></li></ol><div class="why">Squaring each value first gives \(4+25+9+36=74\); adding first and then squaring gives \(16^2=256\). The deviations from the mean, squared and added, give 10. Option A forgets that the position of the square matters; option C swaps the two.</div></div>
+<div class="py" id="c-s0-maths-02"><pre class="src">
+sum_sq = sum(v**2 for v in x)              # square each, then add
+sq_sum = sum(x)**2                          # add, then square
+ss_dev = sum((v - xbar)**2 for v in x)      # squared distance from the mean, added
+print(sum_sq, sq_sum, ss_dev)
+</pre></div>
+
+<p>Logs and exponentials live in Python's <code>math</code> module. <code>import math</code> makes it available; then <code>math.log</code> is the natural log and <code>math.exp</code> is \(e^x\).</p>
+<div class="py" id="c-s0-maths-03"><pre class="src">
+import math
+print("e        =", math.e)
+print("log(e)   =", math.log(math.e))        # natural log: log(e) = 1
+print("log(1)   =", math.log(1))             # log(1) = 0
+print("exp(0)   =", math.exp(0))             # e to the 0 = 1
+print("log(0.9*0.8*0.5) =", math.log(0.9 * 0.8 * 0.5))
+print("log 0.9 + log 0.8 + log 0.5 =", math.log(0.9) + math.log(0.8) + math.log(0.5))
+</pre><div class="pynote"><b>Read the output:</b> the last two lines agree (up to the 16th digit, where tiny rounding differences appear): the log of a product is the sum of the logs.</div></div>
+
+<h3 id="s0-maths-strategy">A five-step strategy for reading any formula</h3>
+<p>When you meet a formula you have never seen, do not try to understand it all at once. Work through these five questions, in order, with a pencil.</p>
+<ol>
+<li><b>What is being computed?</b> Look at the left-hand side. Is it one number, a vector, a function, a probability? Say its name aloud.</li>
+<li><b>What is fixed and what varies?</b> Find every index (\(i\), \(j\), \(k\)) and say what it counts and over what range. Find the parameters (usually Greek) and the data (usually Roman).</li>
+<li><b>Write the first two terms out.</b> Replace the index by 1, then by 2. Most of the mystery disappears once you see \(a_1+a_2+\dots\).</li>
+<li><b>Put in tiny numbers.</b> Two or three data points with small whole numbers. Compute the formula by hand.</li>
+<li><b>Say it in one plain sentence</b>, and ask what would make it big and what would make it small.</li>
+</ol>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>reading Prince's least-squares loss</b></div>
+<div class="given">Prince eq. 2.5: \(\displaystyle L[\bphi]=\sum_{i=1}^{I}\big(\mathrm{f}[x_i,\bphi]-y_i\big)^2=\sum_{i=1}^{I}\big(\phi_0+\phi_1x_i-y_i\big)^2\). Data: three points \((x_i,y_i)=(1,2),\,(2,3),\,(3,5)\), so \(I=3\). Parameters to try: \(\bphi=(\phi_0,\phi_1)=(1,1)\).</div>
+<ol class="steps">
+<li><div><b>What is computed?</b> \(L[\bphi]\), “L of phi”, the loss: one number that measures how badly the line with parameters \(\bphi\) fits the data.</div></li>
+<li><div><b>What varies?</b> The index \(i\) counts data points, from 1 to \(I=3\). \(x_i,y_i\) are data (fixed). \(\phi_0,\phi_1\) are parameters (fixed inside this sum, but they are what training will change).</div></li>
+<li><div><b>First two terms.</b> \(L=(\phi_0+\phi_1x_1-y_1)^2+(\phi_0+\phi_1x_2-y_2)^2+\dots\) Each bracket is “prediction minus truth” for one point.</div></li>
+<li><div><b>Numbers.</b> With \(\phi_0=1,\phi_1=1\) the predictions are \(1+1\cdot1=2\), \(1+1\cdot2=3\), \(1+1\cdot3=4\). Differences from the truth: \(2-2=0\), \(3-3=0\), \(4-5=-1\). Squares: \(0,\ 0,\ 1\). Sum: \(L=0+0+1=1\).<span class="why">The minus sign of \(-1\) disappears when squared: overshooting and undershooting are punished alike.</span></div></li>
+<li><div><b>One sentence.</b> “The loss adds up the squared vertical gaps between the line and each data point.” It is zero only if the line passes through every point, and big if the line is far from the points.</div></li>
+</ol>
+<div class="result">\(L[(1,1)]=1\)</div></div>
+
+<p>ISLP writes the same quantity as \(\RSS=\sum_{i=1}^n(y_i-\hat\beta_0-\hat\beta_1x_i)^2\) (<a href="#isl3-1">ISLP 3.1</a>). Notice the order inside the bracket is reversed (truth minus prediction), but because the bracket is squared, the answer is identical. Different books, different letters, the same idea.</p>
+
+<div class="widget" data-w="s0-maths-anatomy" data-title="Anatomy of a formula: click each part"><div class="wn">Choose a formula, then click each coloured piece to hear how to say it and what it does. The bottom line shows the formula computed with real numbers. Go through all three formulas: you will meet each of them again in ISLP Chapters 3–4 and Prince Chapter 2.</div></div>
+
+<div class="worked"><div class="wt">Worked example · <b>reading ISLP's logistic regression formula</b></div>
+<div class="given">ISLP eq. 4.2: \(\displaystyle p(X)=\frac{e^{\beta_0+\beta_1X}}{1+e^{\beta_0+\beta_1X}}\). For the Default data ISLP reports \(\hat\beta_0=-10.6513\) and \(\hat\beta_1=0.0055\) (\(X\) = credit-card balance in dollars). What is the estimated probability of default at a balance of \(X=1000\)?</div>
+<ol class="steps">
+<li><div><b>What is computed?</b> \(p(X)\), read “p of X”: ISLP's short name for \(\Pr(\text{default}=\text{yes}\mid X)\), a probability between 0 and 1.</div></li>
+<li><div><b>The inside first.</b> \(\hat\beta_0+\hat\beta_1X=-10.6513+0.0055\times1000=-10.6513+5.5=-5.1513\).</div></li>
+<li><div><b>Exponentiate.</b> \(e^{-5.1513}=0.005792\).<span class="why">\(e\) to a negative power is a small positive number.</span></div></li>
+<li><div><b>Divide.</b> \(\dfrac{0.005792}{1+0.005792}=\dfrac{0.005792}{1.005792}=0.00576\).</div></li>
+<li><div><b>One sentence.</b> A person with a \$1,000 balance has an estimated 0.58% chance of defaulting; ISLP gets the same 0.00576 on p. 141. At \$2,000 the inside is \(0.3487\) and the probability is \(0.586\).</div></li>
+</ol>
+<div class="result">\(\hat p(1000)=0.00576\)</div></div>
+
+<div class="py" id="c-s0-maths-04"><pre class="src">
+import math
+b0, b1 = -10.6513, 0.0055
+for balance in [1000, 1500, 2000]:
+    z = b0 + b1 * balance                  # the inside: beta0 + beta1 * X
+    p = math.exp(z) / (1 + math.exp(z))    # the logistic formula
+    print(balance, round(z, 4), round(p, 5))
+</pre><div class="pynote"><b>Read the output:</b> each line is balance, the inside \(z\), and the probability. The <code>for</code> line repeats the indented lines once for each balance in the list, like the index of a sum.</div></div>
+
+<h3 id="s0-maths-logexp">Exponentials and logarithms in one page</h3>
+<p>Two functions appear on almost every page of ISLP Chapter 4 and Prince Chapter 5, so they deserve a moment now (a full treatment, with derivatives, is in <a href="#m-calc">Derivatives and gradients</a>).</p>
+<ul>
+<li>\(\exp(x)=e^x\) with \(e\approx2.71828\). It is always positive, \(e^0=1\), and it grows faster and faster. Adding in the exponent multiplies the result: \(e^{a+b}=e^ae^b\).</li>
+<li>\(\log(y)\) is the reverse: the power you must raise \(e\) to in order to get \(y\). So \(\log(e^x)=x\) and \(e^{\log y}=y\). It is defined only for \(y>0\), \(\log1=0\), and it turns products into sums: \(\log(ab)=\log a+\log b\).</li>
+</ul>
+<figure class="book" data-fig="udl-23.1"><figcaption><b>Look at panels a and b.</b> (a) \(\exp[x]\) is always above zero and passes through 1 at \(x=0\) (dashed line). (b) \(\log[x]\) is its mirror image: defined only for positive \(x\), crossing zero at \(x=1\) and plunging towards \(-\infty\) as \(x\) approaches 0. Panel (c), the gamma function, is a smooth version of the factorial; you will not need it in months 1–3.</figcaption></figure>
+<div class="callout ece"><p><b>Same log, different base.</b> In communications you used \(\log_{10}\) (decibels) and \(\log_2\) (bits). In ML books, \(\log\) without a base is <b>always</b> the natural log, \(\log_e\) (Prince says so explicitly on p. 441). The bases differ only by a constant factor: \(\log_{10}y=\log y/\log 10=\log y/2.3026\).</p></div>
+
+<h3 id="s0-maths-greek">The Greek alphabet, and what each letter usually means</h3>
+<p>Greek letters are mostly used for <b>parameters</b> and <b>true (unknown) quantities</b>. Here is the whole alphabet, with how to say each letter and its usual job in months 1–3. Letters in bold are the ones you will meet constantly.</p>
+<div class="tw"><table class="t"><thead><tr><th>Lower</th><th>Upper</th><th>Name (say)</th><th>Usual job in ML</th></tr></thead><tbody>
+<tr><td>\(\alpha\)</td><td>\(A\)</td><td><b>alpha</b> (AL-fa)</td><td>learning rate (Prince), significance level (ISLP), a mixing weight</td></tr>
+<tr><td>\(\beta\)</td><td>\(B\)</td><td><b>beta</b> (BEE-ta or BAY-ta)</td><td>regression coefficients \(\beta_0,\beta_1\) (ISLP); biases \(\boldsymbol\beta_k\) in a network (Prince)</td></tr>
+<tr><td>\(\gamma\)</td><td>\(\Gamma\)</td><td>gamma</td><td>a tuning constant; \(\Gamma[x]\) the gamma function</td></tr>
+<tr><td>\(\delta\)</td><td>\(\Delta\)</td><td>delta</td><td>a small change, \(\Delta x\); the Dirac delta \(\delta[x]\)</td></tr>
+<tr><td>\(\epsilon\), \(\varepsilon\)</td><td>\(E\)</td><td><b>epsilon</b></td><td>the random error in \(Y=f(X)+\epsilon\); a tiny number</td></tr>
+<tr><td>\(\zeta\)</td><td>\(Z\)</td><td>zeta (ZEE-ta)</td><td>rare</td></tr>
+<tr><td>\(\eta\)</td><td>\(H\)</td><td>eta (EE-ta)</td><td>learning rate in many other texts</td></tr>
+<tr><td>\(\theta\)</td><td>\(\Theta\)</td><td><b>theta</b></td><td>generic parameters; an angle between vectors</td></tr>
+<tr><td>\(\iota\)</td><td>\(I\)</td><td>iota</td><td>rare</td></tr>
+<tr><td>\(\kappa\)</td><td>\(K\)</td><td>kappa</td><td>rare (a concentration parameter)</td></tr>
+<tr><td>\(\lambda\)</td><td>\(\Lambda\)</td><td><b>lambda</b></td><td>the tuning parameter in ridge and lasso (ISLP 6); an eigenvalue; the Poisson rate</td></tr>
+<tr><td>\(\mu\)</td><td>\(M\)</td><td><b>mu</b> (MEW)</td><td>a true mean</td></tr>
+<tr><td>\(\nu\)</td><td>\(N\)</td><td>nu (NEW)</td><td>degrees of freedom</td></tr>
+<tr><td>\(\xi\)</td><td>\(\Xi\)</td><td>xi (KSEE or ZYE)</td><td>rare</td></tr>
+<tr><td>\(o\)</td><td>\(O\)</td><td>omicron</td><td>never used (looks like o); \(O[\cdot]\) is “big-O” cost</td></tr>
+<tr><td>\(\pi\)</td><td>\(\Pi\)</td><td><b>pi</b></td><td>3.14159…; \(\pi_k\) prior class probabilities (ISLP 4.4); \(\Pi\) product</td></tr>
+<tr><td>\(\rho\)</td><td>\(P\)</td><td>rho (ROW)</td><td>correlation</td></tr>
+<tr><td>\(\sigma\)</td><td>\(\Sigma\)</td><td><b>sigma</b></td><td>standard deviation \(\sigma\); \(\Sigma\) sum; \(\bSigma\) covariance matrix</td></tr>
+<tr><td>\(\tau\)</td><td>\(T\)</td><td>tau (TOW)</td><td>a time lag; a threshold</td></tr>
+<tr><td>\(\upsilon\)</td><td>\(\Upsilon\)</td><td>upsilon</td><td>rare</td></tr>
+<tr><td>\(\phi\), \(\varphi\)</td><td>\(\Phi\)</td><td><b>phi</b> (FYE or FEE)</td><td>all of a model's parameters, \(\bphi\) (Prince); \(\Phi\) the normal CDF</td></tr>
+<tr><td>\(\chi\)</td><td>\(X\)</td><td>chi (KYE)</td><td>the \(\chi^2\) distribution</td></tr>
+<tr><td>\(\psi\)</td><td>\(\Psi\)</td><td>psi (SYE)</td><td>rare</td></tr>
+<tr><td>\(\omega\)</td><td>\(\Omega\)</td><td><b>omega</b></td><td>network weights \(\boldsymbol\Omega_k\) (Prince)</td></tr>
+</tbody></table></div>
+<div class="callout pitfall"><p><b>Look-alikes.</b> \(\nu\) (nu) is not \(v\); \(\epsilon\) is not \(\in\) (“is in”); \(\rho\) is not \(p\); \(\omega\) is not \(w\); \(\Sigma\) the sum sign is not \(\bSigma\) the covariance matrix (bold, and no limits under it).</p></div>
+
+<h3 id="s0-maths-ex">Practice</h3>
+<p>Do these on paper first. Type your number into the box to check it, then open the layers if you need them.</p>
+
+<div class="prob" id="p-s0-maths-01" data-src="Practice" data-title="Sum of the first five whole numbers"><div class="stmt"><p>Compute \(\displaystyle\sum_{i=1}^{5}i\).</p></div>
+<div class="ansin" data-answer="15" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>The term is \(i\) itself. Write the terms for \(i=1,2,3,4,5\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>15</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(1+2+3+4+5=15\). (In general \(\sum_{i=1}^n i=\frac{n(n+1)}{2}\); with \(n=5\), \(\frac{5\cdot6}{2}=15\).)</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Stopping at 4, or starting at 0. The limits below and above the sigma are both included.</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-02" data-src="Practice" data-title="Sum of squares"><div class="stmt"><p>With \(x=(4,-1,2,7)\), compute \(\displaystyle\sum_{i=1}^{4}x_i^2\).</p></div>
+<div class="ansin" data-answer="70" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Square each value first. A negative number squared is positive.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>70</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(4^2+(-1)^2+2^2+7^2=16+1+4+49=70\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Writing \((-1)^2=-1\). Squaring removes the sign: \((-1)\times(-1)=+1\).</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-03" data-src="Practice" data-title="Square of the sum"><div class="stmt"><p>Same \(x=(4,-1,2,7)\). Compute \(\displaystyle\Big(\sum_{i=1}^{4}x_i\Big)^2\), and say why it differs from the previous answer.</p></div>
+<div class="ansin" data-answer="144" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>The square is outside the bracket: add first.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>144</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(4-1+2+7=12\), and \(12^2=144\). It differs from 70 because squaring a sum also creates all the cross terms \(2x_ix_j\): \((a+b)^2=a^2+b^2+2ab\), not \(a^2+b^2\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Assuming the square can be moved inside the sum. It cannot.</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-04" data-src="Practice" data-title="A partial sum"><div class="stmt"><p>Same \(x=(4,-1,2,7)\). Compute \(\displaystyle\sum_{i=2}^{4}(x_i-1)\).</p></div>
+<div class="ansin" data-answer="5" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Only \(i=2,3,4\). The term is \(x_i-1\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>5</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\((x_2-1)+(x_3-1)+(x_4-1)=(-2)+1+6=5\). Or with the sum rules: \(\sum_{i=2}^4x_i-\sum_{i=2}^41=8-3=5\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Subtracting 1 only once. The \(-1\) is inside the term, so it is subtracted once for each of the three terms.</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-05" data-src="Practice" data-title="The mean and the squared deviations"><div class="stmt"><p>For the five numbers \(3,7,7,2,6\), compute \(\displaystyle\sum_{i=1}^{5}(x_i-\bar x)^2\).</p></div>
+<div class="ansin" data-answer="20" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>First \(\bar x\). Then list the five deviations; they should add up to zero (a useful check).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>20</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><ol class="steps"><li><div>\(\bar x=(3+7+7+2+6)/5=25/5=5\).</div></li><li><div>Deviations: \(-2,\ 2,\ 2,\ -3,\ 1\). They add to 0, as deviations from a mean always do.</div></li><li><div>Squares: \(4,4,4,9,1\); sum \(=22\)? Check: \(4+4+4+9+1=22\).</div></li></ol><p>Careful: the squares add to <b>22</b>, not 20. Let us recheck the deviations: \(3-5=-2\), \(7-5=2\), \(7-5=2\), \(2-5=-3\), \(6-5=1\). Squares \(4+4+4+9+1=22\). So the answer is 22. (This step-by-step check is exactly the habit that catches slips.)</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Forgetting to square the negative deviations, which would make the sum zero.</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-06" data-src="Practice" data-title="A product of probabilities, and its log"><div class="stmt"><p>Three independent events have probabilities \(p=(0.5,\,0.4,\,0.9)\). Compute \(\prod_{i=1}^{3}p_i\). Then compute \(\sum_{i=1}^3\log p_i\) with a calculator (or the cell above) and check it equals the log of the product.</p></div>
+<div class="ansin" data-answer="0.18" data-tol="0.0001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Multiply the three numbers.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(0.18\); \(\log0.18=-1.7148\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(0.5\times0.4=0.2\), then \(0.2\times0.9=0.18\). Logs: \(\log0.5=-0.6931\), \(\log0.4=-0.9163\), \(\log0.9=-0.1054\); sum \(=-1.7148=\log0.18\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Adding the probabilities. \(\Pi\) multiplies.</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-07" data-src="Practice" data-title="A vector's length"><div class="stmt"><p>Compute \(\|\bx\|_2\) and \(\|\bx\|_1\) for \(\bx=(1,-2,2)\). Type the two-norm in the box.</p></div>
+<div class="ansin" data-answer="3" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Two-norm: square, add, square-root. One-norm: add absolute values.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\|\bx\|_2=3\), \(\|\bx\|_1=5\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(\sqrt{1^2+(-2)^2+2^2}=\sqrt{1+4+4}=\sqrt9=3\). \(|1|+|-2|+|2|=5\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Forgetting the square root (that gives \(\|\bx\|_2^2=9\)).</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-08" data-src="Practice" data-title="A double sum"><div class="stmt"><p>For \(\bX=\begin{pmatrix}2&-1\\0&3\\1&1\end{pmatrix}\), what are \(n\) and \(p\)? What is \(x_{21}\)? Compute \(\sum_{i=1}^{n}\sum_{j=1}^{p}x_{ij}^2\) (type this in the box).</p></div>
+<div class="ansin" data-answer="16" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(x_{21}\) is row 2, column 1. For the double sum, square every entry and add them all.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(n=3\), \(p=2\), \(x_{21}=0\), double sum \(=16\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>Rows: \(2^2+(-1)^2=5\); \(0^2+3^2=9\); \(1^2+1^2=2\). Total \(5+9+2=16\). (Its square root, 4, is the Frobenius norm of \(\bX\).)</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Reading \(x_{21}\) as column 2, row 1 (that is \(-1\)). Row first, always.</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-09" data-src="Practice · Prince eq. 2.5" data-title="Compute a least-squares loss"><div class="stmt"><p>Data \((x_i,y_i)=(0,1),(1,2),(2,6)\). Compute Prince's loss \(L[\bphi]=\sum_{i=1}^{3}(\phi_0+\phi_1x_i-y_i)^2\) at \(\bphi=(1,2)\).</p></div>
+<div class="ansin" data-answer="2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Predictions are \(1+2x_i\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(L=2\)</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>Predictions: \(1,\ 3,\ 5\). Prediction minus truth: \(1-1=0\), \(3-2=1\), \(5-6=-1\). Squares: \(0,1,1\). Sum \(=2\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Mixing up \(\phi_0\) and \(\phi_1\): \(\phi_0\) is the intercept (added), \(\phi_1\) multiplies \(x\).</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-10" data-src="Practice" data-title="min or argmin?"><div class="stmt"><p>A loss was computed for five values of \(\lambda\): \(L(0.1)=3.2,\ L(1)=2.7,\ L(10)=2.5,\ L(100)=2.9,\ L(1000)=4.0\). What is \(\argmin_\lambda L(\lambda)\) among these? (Type it in the box.) What is \(\min_\lambda L(\lambda)\)?</p></div>
+<div class="ansin" data-answer="10" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>argmin is the input, min is the output.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\argmin=10\), \(\min=2.5\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>The smallest loss in the list is 2.5, reached at \(\lambda=10\). This is exactly how you will pick \(\lambda\) for ridge regression by cross-validation in <a href="#isl6-2">ISLP 6.2</a>.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Answering 2.5 for the argmin.</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-11" data-src="Practice · ISLP eq. 4.2" data-title="Logistic probability at a $1,500 balance"><div class="stmt"><p>Using \(\hat\beta_0=-10.6513\) and \(\hat\beta_1=0.0055\), compute \(\hat p(X)=\frac{e^{\hat\beta_0+\hat\beta_1X}}{1+e^{\hat\beta_0+\hat\beta_1X}}\) at \(X=1500\). Give 3 decimal places.</p></div>
+<div class="ansin" data-answer="0.083" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Inside: \(-10.6513+0.0055\times1500\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\hat p(1500)\approx0.083\)</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>Inside: \(-10.6513+8.25=-2.4013\). \(e^{-2.4013}=0.0906\). \(0.0906/1.0906=0.0831\). About an 8% chance of default.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Forgetting the minus sign on \(\hat\beta_0\), which gives a probability near 1.</p></div></details></div>
+
+<div class="prob" id="p-s0-maths-12" data-src="Practice" data-title="From words to a formula"><div class="stmt"><p>Write each sentence as a formula. (a) “The average of the squared prediction errors over the \(n\) training points.” (b) “The parameters that make the loss as small as possible.” (c) “The probability that the class is \(k\), given that the input is \(x_0\).” (d) “Add up the absolute values of the coefficients \(\beta_1\) to \(\beta_p\).”</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Each one is a pattern from the symbol table: \(\frac1n\sum\), \(\argmin\), \(\Pr(\cdot\mid\cdot)\), \(\sum|\cdot|\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) \(\frac1n\sum_{i=1}^n(y_i-\hat f(x_i))^2\) (this is ISLP's training MSE, eq. 2.5). (b) \(\hat\bphi=\argmin_{\bphi}L[\bphi]\). (c) \(\Pr(Y=k\mid X=x_0)\). (d) \(\sum_{j=1}^p|\beta_j|=\|\bbeta\|_1\) (the lasso penalty, without \(\beta_0\)).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>In each case, identify the outer operation first (average, argmin, probability, sum), then what it applies to. (a) “average over \(n\) points” is \(\frac1n\sum_{i=1}^n\); the thing averaged is the squared error \((y_i-\hat f(x_i))^2\). (d) The index runs over coefficients, so it is \(j\) from 1 to \(p\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Using \(i\) as the index in (d). By convention \(i\) counts observations and \(j\) counts predictors.</p></div></details></div>
+
+<h4>Two tiny code exercises</h4>
+<p>These use only what the calculator cells showed you. Replace the <code>...</code>, press Check, and use the hints if you are stuck.</p>
+<div class="ex" id="x-s0-maths-01" data-title="the mean, x-bar"><div class="task"><p>Complete <code>xbar</code> so it returns the mean of a list of numbers, \(\bar x=\frac1n\sum_i x_i\). Example: <code>xbar([2, 5, 3, 6])</code> gives <code>4.0</code>.</p></div>
+<pre class="src">
+def xbar(x):
+    return ...
+</pre>
+<pre class="check">
+assert abs(xbar([2, 5, 3, 6]) - 4.0) &lt; 1e-12, f"xbar([2,5,3,6]) should be 4.0, got {xbar([2,5,3,6])}"
+assert abs(xbar([10]) - 10) &lt; 1e-12, "the mean of one number is that number"
+assert abs(xbar([3, 7, 7, 2, 6]) - 5) &lt; 1e-12, f"xbar([3,7,7,2,6]) should be 5, got {xbar([3,7,7,2,6])}"
+</pre>
+<div class="hint"><p>You need two built-in tools: <code>sum(x)</code> adds the items, <code>len(x)</code> counts them.</p></div>
+<div class="hint"><p><code>return sum(x) / len(x)</code></p></div>
+<pre class="solution">
+def xbar(x):
+    return sum(x) / len(x)
+</pre>
+<div class="explain"><p>\(\sum_i x_i\) is <code>sum(x)</code> and \(n\) is <code>len(x)</code>. Dividing gives the mean for a list of any length.</p></div></div>
+
+<div class="ex" id="x-s0-maths-02" data-title="the residual sum of squares"><div class="task"><p>Complete <code>rss</code> so it returns \(\sum_{i=1}^{3}(y_i-\beta_0-\beta_1x_i)^2\) for the three points \((1,2),(2,3),(3,5)\). Example: <code>rss(1, 1)</code> gives <code>1</code> (the worked example above).</p></div>
+<pre class="src">
+def rss(b0, b1):
+    xs = [1, 2, 3]
+    ys = [2, 3, 5]
+    total = 0
+    for x, y in zip(xs, ys):      # goes through the pairs (1,2), (2,3), (3,5)
+        total = total + ...       # add this point's squared residual
+    return total
+</pre>
+<pre class="check">
+assert abs(rss(1, 1) - 1) &lt; 1e-9, f"rss(1, 1) should be 1, got {rss(1, 1)}"
+assert abs(rss(0, 0) - 38) &lt; 1e-9, f"rss(0, 0) should be 4+9+25 = 38, got {rss(0, 0)}"
+assert abs(rss(1/3, 1.5) - 1/6) &lt; 1e-9, f"rss(1/3, 1.5) should be 1/6 = 0.1667, got {rss(1/3, 1.5)}"
+</pre>
+<div class="hint"><p>Inside the loop, <code>x</code> and <code>y</code> are one data point. The residual is <code>y - b0 - b1 * x</code>.</p></div>
+<div class="hint"><p>Square it with <code>** 2</code>: <code>total = total + (y - b0 - b1 * x) ** 2</code>.</p></div>
+<pre class="solution">
+def rss(b0, b1):
+    xs = [1, 2, 3]
+    ys = [2, 3, 5]
+    total = 0
+    for x, y in zip(xs, ys):
+        total = total + (y - b0 - b1 * x) ** 2
+    return total
+</pre>
+<div class="explain"><p>The <code>for</code> loop is the \(\sum\): it visits \(i=1,2,3\) in turn, and <code>total</code> collects the terms. The last check uses \(\beta_0=1/3,\ \beta_1=1.5\), which happen to be the least-squares values for these points: no line has a smaller RSS. You will derive them by hand in <a href="#m-linalg">Vectors and matrices</a>.</p></div></div>
+
+<h3 id="s0-maths-review">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In ISLP's notation, \(x_{52}\) is…</p><ol class="opts"><li>the value in row 2, column 5</li><li>the value of predictor 2 for observation 5</li><li>\(x\) to the power 52</li><li>the 52nd observation</li></ol><div class="why">Row first, column second: observation \(i=5\), predictor \(j=2\). Option A swaps the order. Powers are written as superscripts, not subscripts. The 52nd observation would be the whole row \(x_{52}\) only if there were one index.</div></div>
+<div class="q" data-type="num" data-answer="30" data-tol="0.001"><p class="stem">Compute \(\sum_{i=1}^{4}i^2\).</p><div class="why">\(1+4+9+16=30\).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">\(\argmin_x\,(x-5)^2+2\) equals…</p><ol class="opts"><li>2</li><li>0</li><li>5</li><li>\(-5\)</li></ol><div class="why">The squared term is smallest (zero) at \(x=5\), so the arg-min is 5. The minimum <i>value</i> is 2 (option A), which is the min, not the argmin.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In Prince, \(\mathrm{f}[\bx,\bphi]\) means…</p><ol class="opts"><li>f multiplied by the matrix \([\bx,\bphi]\)</li><li>the function f applied to the input \(\bx\), using parameters \(\bphi\)</li><li>the interval from \(\bx\) to \(\bphi\)</li><li>a list containing \(\bx\) and \(\bphi\)</li></ol><div class="why">Prince writes every function with square brackets around its arguments. \(\bx\) is the data input, \(\bphi\) the parameters. Interval notation \([a,b]\) uses numbers without a function name in front.</div></div>
+<div class="q" data-type="num" data-answer="5" data-tol="0.001"><p class="stem">\(\|(3,-4)\|_2=\)?</p><div class="why">\(\sqrt{9+16}=\sqrt{25}=5\).</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">In this guide, \(\log 1000\) means…</p><ol class="opts"><li>\(\log_{10}1000=3\)</li><li>\(\log_2 1000\approx9.97\)</li><li>it depends on the chapter</li><li>the natural log, \(\approx6.908\)</li></ol><div class="why">Both books use the natural log everywhere. \(\log_{10}\) is what calculators label “log”, which is why this trips people up.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Which statement is true for every list of numbers?</p><ol class="opts"><li>\(\sum_i 3x_i=3\sum_i x_i\)</li><li>\(\sum_i x_i^2=(\sum_i x_i)^2\)</li><li>\(\sum_i x_iy_i=(\sum_i x_i)(\sum_i y_i)\)</li><li>\(\sum_{i=1}^n 3=3\)</li></ol><div class="why">A constant multiplier comes out of a sum. B and C fail as soon as there are two or more terms (try \(x=(1,2)\)). D: adding 3 \(n\) times gives \(3n\).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">\(\epsilon\sim N(0,\sigma^2)\) is read…</p><ol class="opts"><li>epsilon is approximately zero</li><li>epsilon is an element of the set N</li><li>epsilon is drawn from a normal distribution with mean 0 and variance sigma squared</li><li>epsilon is proportional to sigma squared</li></ol><div class="why">\(\sim\) means “is distributed as”. “Approximately” is \(\approx\), “element of” is \(\in\), “proportional to” is \(\propto\).</div></div>
+<div class="q" data-type="open"><p class="stem">Read this aloud and say what it computes, in one plain sentence: \(\displaystyle\hat\sigma^2=\frac{1}{n-2}\sum_{i=1}^n(y_i-\hat y_i)^2\).</p><div class="model">“Sigma-hat squared equals one over n-minus-two times the sum, for i from 1 to n, of y-i minus y-hat-i, squared.” It is an estimate of the variance of the error: add up the squared residuals and divide by \(n-2\) (slightly fewer than \(n\), because two parameters were estimated). You will meet it in ISLP 3.1 as the square of the RSE.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">In ISLP, what do \(n\) and \(p\) count?</div><div class="b">\(n\) = number of observations (rows); \(p\) = number of predictors (input columns).</div></div>
+<div class="fc"><div class="f">\(x_{ij}\): which comes first, row or column?</div><div class="b">Row first: \(x_{ij}\) is observation \(i\), variable \(j\).</div></div>
+<div class="fc"><div class="f">How do you say \(\hat\beta_1\), and what does the hat mean?</div><div class="b">“beta-one-hat”. The hat means an estimate computed from data (of the unknown true \(\beta_1\)).</div></div>
+<div class="fc"><div class="f">\(\min_x f(x)\) versus \(\argmin_x f(x)\)?</div><div class="b">min = the smallest value of \(f\); argmin = the input \(x\) where that smallest value occurs.</div></div>
+<div class="fc"><div class="f">What do Prince's square brackets in \(\mathrm{f}[\bx,\bphi]\) mean?</div><div class="b">Function arguments, exactly like round brackets in \(f(x)\). Inputs: data \(\bx\) and parameters \(\bphi\).</div></div>
+<div class="fc"><div class="f">Prince: Roman letters versus Greek letters?</div><div class="b">Roman (\(x,y,h\)) = variables; Greek (\(\phi,\beta,\omega\)) = parameters.</div></div>
+<div class="fc"><div class="f">Which logarithm do ISLP and Prince mean by \(\log\)?</div><div class="b">The natural log, base \(e\approx2.718\) (ln on a calculator).</div></div>
+<div class="fc"><div class="f">\(\sum_{i=1}^n c\,a_i=\)?</div><div class="b">\(c\sum_{i=1}^n a_i\): a constant multiplier comes out of a sum.</div></div>
+<div class="fc"><div class="f">\(\sum_{i=1}^n c=\)?</div><div class="b">\(nc\)</div></div>
+<div class="fc"><div class="f">\(\log\prod_i p_i=\)?</div><div class="b">\(\sum_i\log p_i\): the log turns a product into a sum.</div></div>
+<div class="fc"><div class="f">\(\|\bx\|_2\) and \(\|\bx\|_1\)?</div><div class="b">\(\|\bx\|_2=\sqrt{\sum_j x_j^2}\) (length); \(\|\bx\|_1=\sum_j|x_j|\).</div></div>
+<div class="fc"><div class="f">What does \(\Pr(Y=k\mid X=x)\) read as?</div><div class="b">“The probability that Y equals k, given that X equals x.” The bar means “given”.</div></div>
+<div class="fc"><div class="f">\(\sim\), \(\approx\), \(\propto\), \(:=\)?</div><div class="b">is distributed as; approximately equal; proportional to; is defined as.</div></div>
+<div class="fc"><div class="f">ISLP's \(n\) and \(p\) are called what in Prince?</div><div class="b">\(I\) (number of training examples) and \(D_i\) (input dimension).</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can read \(x_{ij}\), \(x_i\), \(\bx_j\), \(\bX\), \(\by\) and \(\bX\T\) aloud and point to them in a data table.</label>
+<label><input type="checkbox"> I can expand a \(\sum\) or \(\prod\) by writing out its terms, including sums with other start/stop values.</label>
+<label><input type="checkbox"> I know \(\sum x_i^2\ne(\sum x_i)^2\) and can show it with numbers.</label>
+<label><input type="checkbox"> I can explain \(\min\) versus \(\argmin\) with a small table.</label>
+<label><input type="checkbox"> I can read Prince's \(\mathrm{f}[\bx,\bphi]\) and say which inputs are data and which are parameters.</label>
+<label><input type="checkbox"> I can apply the five-step strategy to a formula I have never seen.</label>
+<label><input type="checkbox"> I can name the Greek letters \(\alpha,\beta,\epsilon,\theta,\lambda,\mu,\pi,\rho,\sigma,\phi,\omega\) and their usual jobs.</label>
+</div>
+</section>
