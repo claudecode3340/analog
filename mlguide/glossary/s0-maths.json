@@ -1,0 +1,10 @@
+{
+"observation": {"term": "observation", "def": "One row of a data table: one person, market or image. ISLP counts them with \\(i=1,\\dots,n\\).", "at": "s0-maths"},
+"variable-feature": {"term": "variable (feature, predictor)", "def": "One column of a data table. ISLP counts input variables with \\(j=1,\\dots,p\\).", "at": "s0-maths"},
+"function": {"term": "function", "def": "A rule that turns each input into exactly one output, written \\(f(x)\\) (ISLP) or \\(\\mathrm{f}[x]\\) (Prince).", "at": "s0-maths"},
+"parameter": {"term": "parameter", "def": "A number inside a model that training tunes and then fixes, such as a slope. Usually a Greek letter: \\(\\beta\\), \\(\\phi\\).", "at": "s0-maths"},
+"argmin": {"term": "argmin", "def": "\\(\\operatorname*{argmin}_x f(x)\\) is the input \\(x\\) at which \\(f\\) is smallest (the min is the smallest value itself).", "at": "s0-maths"},
+"sigma-notation": {"term": "sigma notation", "def": "\\(\\sum_{i=1}^n a_i=a_1+a_2+\\dots+a_n\\): add the term for every value of the index.", "at": "s0-maths"},
+"transpose": {"term": "transpose", "def": "\\(\\mathbf{A}^{\\mathsf{T}}\\): rows become columns. An \\(m\\times n\\) matrix becomes \\(n\\times m\\).", "at": "s0-maths"},
+"natural-log": {"term": "natural logarithm", "def": "\\(\\log y\\) in both books: the power you raise \\(e\\approx2.718\\) to in order to get \\(y\\). \\(\\log(ab)=\\log a+\\log b\\).", "at": "s0-maths"}
+}

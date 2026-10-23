@@ -125,7 +125,7 @@ h2.lt{font-size:clamp(30px,3.3vw,42px);line-height:1.08;font-weight:800;margin:4
 .uses b{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
 .uses a{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:1px 8px;text-decoration:none;font-size:13.5px}
 .goals{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px 14px 18px}
-.goals h4{margin:0 0 6px;font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+section.lesson .goals h4,.goals h4{margin:0 0 6px;font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
 .goals ul{margin:0;padding-left:20px} .goals li{margin:2px 0}
 section.lesson h3{font-size:26px;line-height:1.2;font-weight:750;margin:52px auto 12px}
 section.lesson h3 .num{color:var(--k);margin-right:8px}

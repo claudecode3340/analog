@@ -1,4 +1,4 @@
-<section class="lesson" id="s0-maths" data-book="Prince Ch. 22 (Notation), pp. 437–439 · ISLP §1, pp. 8–10">
+<section class="lesson" id="s0-maths" data-book="Prince pp. 437–439 · ISLP pp. 8–10">
 <p class="lede">Every formula in ISLP and Prince is a sentence written in shorthand. Once you know how to read the shorthand out loud, a formula stops being a wall of symbols and becomes an instruction you can carry out with a calculator. This lesson is your phrasebook: what each symbol is called, what it means, and how to turn any formula into numbers.</p>
 
 <div class="goals"><h4>By the end of this lesson you can</h4><ul>
@@ -56,7 +56,7 @@
 <div class="callout pitfall"><p><b>Row or column?</b> ISLP uses the same letter \(x\) for a row (\(x_i\), indexed by \(i\)) and a column (\(\bx_j\), indexed by \(j\)). Only the letter of the index tells you which one is meant. When you read \(x_3\), ask: is the 3 counting rows or columns? Look at the surrounding sentence. In \(\sum_{i=1}^n x_i\) it counts rows; in \(\beta_1x_1+\beta_2x_2\) it counts columns (predictors).</p></div>
 
 <h4>Transpose: \(\T\)</h4>
-<p>The little raised \(\T\) (read <i>transpose</i>) turns columns into rows and rows into columns. By convention a vector is a <b>column</b>, so \(x_2\) is a column; when we want it lying flat we write \(x_2\T\) (read <i>x-two transpose</i>):</p>
+<p>The little raised \(\T\) (read <i>transpose</i>; see <dfn data-g="transpose">transpose</dfn>) turns columns into rows and rows into columns. By convention a vector is a <b>column</b>, so \(x_2\) is a column; when we want it lying flat we write \(x_2\T\) (read <i>x-two transpose</i>):</p>
 \[x_2=\begin{pmatrix}44.5\\39.3\\45.1\end{pmatrix},\qquad x_2\T=\begin{pmatrix}44.5&39.3&45.1\end{pmatrix}.\]
 <p>For a matrix, the transpose flips it over its main diagonal (top-left to bottom-right): row 1 becomes column 1, row 2 becomes column 2, and so on. For a \(2\times3\) matrix:</p>
 \[\begin{pmatrix}{\color{#d97706}\mathbf{1}}&{\color{#d97706}\mathbf{2}}&{\color{#d97706}\mathbf{3}}\\{\color{#2563eb}\mathbf{4}}&{\color{#2563eb}\mathbf{5}}&{\color{#2563eb}\mathbf{6}}\end{pmatrix}\T=\begin{pmatrix}{\color{#d97706}\mathbf{1}}&{\color{#2563eb}\mathbf{4}}\\{\color{#d97706}\mathbf{2}}&{\color{#2563eb}\mathbf{5}}\\{\color{#d97706}\mathbf{3}}&{\color{#2563eb}\mathbf{6}}\end{pmatrix}.\]
@@ -184,7 +184,7 @@
 <p>ISLP writes functions the school way, with round brackets: \(f(X)\), \(\hat f(x_0)\), \(p(X)\). Prince writes them with <b>square brackets</b>: \(\mathrm{f}[\bx,\bphi]\), \(\log[x]\), \(\exp[x]\), \(\mathrm{sig}[z]\). The square brackets mean exactly what round brackets mean. Prince's reason is practical: deep-learning formulas contain many round brackets for grouping, like \((a+b)(c-d)\), and square brackets make it instantly clear which brackets hold a function's inputs.</p>
 
 <h4>Variables (Roman letters) and parameters (Greek letters)</h4>
-<p>Prince keeps a strict rule (Appendix A, p. 437): <b>variables</b> are written with Roman (English) letters, \(x, y, z, a, h\); <b>parameters</b> are written with Greek letters, \(\phi, \beta, \omega, \theta\). A variable is something that changes from example to example (each house has a different size \(x\)). A parameter is a setting inside the model that we tune once, during training, and then keep (the slope of the line). ISLP follows the same habit: its coefficients are \(\beta_0,\beta_1,\dots\).</p>
+<p>Prince keeps a strict rule (Appendix A, p. 437): <b>variables</b> are written with Roman (English) letters, \(x, y, z, a, h\); <b>parameters</b> are written with Greek letters, \(\phi, \beta, \omega, \theta\). A variable is something that changes from example to example (each house has a different size \(x\)). A <dfn data-g="parameter">parameter</dfn> is a setting inside the model that we tune once, during training, and then keep (the slope of the line). ISLP follows the same habit: its coefficients are \(\beta_0,\beta_1,\dots\).</p>
 <p>So when Prince writes</p>
 <div class="mathblock" data-sheet="Prince's model notation"><div class="eqlabel">A model with parameters (Prince eq. 2.2 and 2.4)</div>
 \[y=\mathrm{f}[x,\bphi]=\phi_0+\phi_1x\]
@@ -211,10 +211,10 @@
 <p>The difference between \(\min\) and \(\argmin\) confuses almost everyone once, so here it is with a table. Suppose we tried four values of a single parameter \(\phi\) and computed the loss for each:</p>
 <div class="tw"><table class="t"><thead><tr><th>\(\phi\)</th><th>0</th><th>1</th><th>2</th><th>3</th></tr></thead><tbody>
 <tr><td>\(L[\phi]\)</td><td class="n">9</td><td class="n">4</td><td class="n"><span class="hlg">1</span></td><td class="n">4</td></tr></tbody></table></div>
-<p>Then \(\min_\phi L[\phi]=1\) (the smallest <b>loss</b>) and \(\argmin_\phi L[\phi]=2\) (the <b>parameter</b> that achieves it). The min is the height of the bottom of the valley; the argmin is where on the map the bottom of the valley is. In ML we almost always want the argmin: we want the parameters, not the loss value.</p>
+<p>Then \(\min_\phi L[\phi]=1\) (the smallest <b>loss</b>) and the <dfn data-g="argmin">argmin</dfn> \(\argmin_\phi L[\phi]=2\) (the <b>parameter</b> that achieves it). The min is the height of the bottom of the valley; the argmin is where on the map the bottom of the valley is. In ML we almost always want the argmin: we want the parameters, not the loss value.</p>
 
 <h3 id="s0-maths-sigma">Sigma notation: the sum sign, with numbers</h3>
-<p>The capital Greek letter \(\Sigma\) (<i>sigma</i>, the Greek S, for “sum”) is the symbol you will meet most. Every part of it has a job:</p>
+<p>The capital Greek letter \(\Sigma\) (<i>sigma</i>, the Greek S, for “sum”) in <dfn data-g="sigma-notation">sigma notation</dfn> is the symbol you will meet most. Every part of it has a job:</p>
 <div class="mathblock" data-sheet="Sigma notation"><div class="eqlabel">The parts of a sum</div>
 \[\sum_{\color{#2563eb}i=1}^{\color{#dc2626}n}\ \color{#16a34a}a_i\color{currentColor}\;=\;a_1+a_2+\dots+a_n\]
 <p class="say">The <span style="color:#2563eb">blue</span> part names the <b>index</b> (\(i\)) and where it <b>starts</b> (1). The <span style="color:#dc2626">red</span> part says where it <b>stops</b> (\(n\)). The <span style="color:#16a34a">green</span> part is the <b>term</b>: what to compute for each value of the index. Then add all the terms.</p></div>
@@ -239,7 +239,7 @@
 <li><b>Prince's ranges.</b> Prince often writes \(\sum_{i=1}^{I}\), with a capital \(I\) for the number of examples. Same thing, different letter.</li>
 </ul>
 
-<div class="widget" data-w="s0-maths-sigma" data-title="Expand a sum, term by term" data-args='{"x":[2,5,3,6,4]}'><div class="wn">Pick a term and move the start and stop sliders. Every term is written out with its number substituted, and the bars show how each term contributes to the total. Try the term \(x_i^2\) and then \((x_i-\bar x)^2\) with the full range: compare with the worked example. Then set start = stop and see that a sum of one term is just that term.</div></div>
+<div class="widget" data-w="s0-maths-sigma" data-title="Expand a sum, term by term" data-args='{"x":[2,5,3,6]}'><div class="wn">Pick a term and move the start and stop sliders. Every term is written out with its number substituted, and the bars show how each term contributes to the total. Try the term \(x_i^2\) and then \((x_i-\bar x)^2\) with the full range: compare with the worked example. Then set start = stop and see that a sum of one term is just that term.</div></div>
 
 <h4>Three rules for moving things in and out of a sum</h4>
 <p>You will see derivations in both books that rearrange sums. All of them use only these three rules, each of which is ordinary arithmetic (it is the distributive law and re-ordering of additions):</p>
@@ -341,7 +341,7 @@ for balance in [1000, 1500, 2000]:
 <p>Two functions appear on almost every page of ISLP Chapter 4 and Prince Chapter 5, so they deserve a moment now (a full treatment, with derivatives, is in <a href="#m-calc">Derivatives and gradients</a>).</p>
 <ul>
 <li>\(\exp(x)=e^x\) with \(e\approx2.71828\). It is always positive, \(e^0=1\), and it grows faster and faster. Adding in the exponent multiplies the result: \(e^{a+b}=e^ae^b\).</li>
-<li>\(\log(y)\) is the reverse: the power you must raise \(e\) to in order to get \(y\). So \(\log(e^x)=x\) and \(e^{\log y}=y\). It is defined only for \(y>0\), \(\log1=0\), and it turns products into sums: \(\log(ab)=\log a+\log b\).</li>
+<li>\(\log(y)\), the <dfn data-g="natural-log">natural logarithm</dfn>, is the reverse: the power you must raise \(e\) to in order to get \(y\). So \(\log(e^x)=x\) and \(e^{\log y}=y\). It is defined only for \(y>0\), \(\log1=0\), and it turns products into sums: \(\log(ab)=\log a+\log b\).</li>
 </ul>
 <figure class="book" data-fig="udl-23.1"><figcaption><b>Look at panels a and b.</b> (a) \(\exp[x]\) is always above zero and passes through 1 at \(x=0\) (dashed line). (b) \(\log[x]\) is its mirror image: defined only for positive \(x\), crossing zero at \(x=1\) and plunging towards \(-\infty\) as \(x\) approaches 0. Panel (c), the gamma function, is a smooth version of the factorial; you will not need it in months 1–3.</figcaption></figure>
 <div class="callout ece"><p><b>Same log, different base.</b> In communications you used \(\log_{10}\) (decibels) and \(\log_2\) (bits). In ML books, \(\log\) without a base is <b>always</b> the natural log, \(\log_e\) (Prince says so explicitly on p. 441). The bases differ only by a constant factor: \(\log_{10}y=\log y/\log 10=\log y/2.3026\).</p></div>

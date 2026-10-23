@@ -35,14 +35,13 @@
         else if (y === 1) { out.push(x); why.push("B stretches 1 → " + x); }
         else { ok = false; out.push("✗"); why.push(x + " vs " + y + ": mismatch"); }
       }
-      var padA = sa.length < 2 ? ' <span style="color:var(--faint)">(padded on the left)</span>' : "";
-      var padB = sb.length < 2 ? ' <span style="color:var(--faint)">(padded on the left)</span>' : "";
-      var td = 'style="font-family:var(--mono);text-align:center;padding:6px 10px"';
-      rules.innerHTML = '<div class="tw" style="margin:6px 0"><table class="t"><thead><tr><th></th><th>axis 0</th><th>axis 1</th><th></th></tr></thead><tbody>' +
-        "<tr><td>A " + shp(sa) + "</td><td " + td + ">" + pa[0] + "</td><td " + td + ">" + pa[1] + "</td><td>" + padA + "</td></tr>" +
-        "<tr><td>B " + (sb.length ? shp(sb) : "scalar ()") + "</td><td " + td + ">" + pb[0] + "</td><td " + td + ">" + pb[1] + "</td><td>" + padB + "</td></tr>" +
-        "<tr><td><b>check</b></td>" + why.map(function (w) { var bad = /mismatch/.test(w); return '<td style="text-align:center;font-size:13px;color:var(' + (bad ? "--bad" : "--good") + ');font-weight:600">' + (bad ? "✗ " : "✓ ") + w + "</td>"; }).join("") + "<td></td></tr>" +
-        "<tr><td><b>result</b></td><td " + td + "><b>" + out[0] + "</b></td><td " + td + "><b>" + out[1] + "</b></td><td></td></tr></tbody></table></div>";
+      var cs = "padding:4px 10px;text-align:center;white-space:nowrap";
+      function rowH(lbl, v, note) { return '<tr><td style="padding:4px 10px 4px 0;white-space:nowrap">' + lbl + '</td><td style="' + cs + '">' + v[0] + '</td><td style="' + cs + '">' + v[1] + '</td><td style="padding:4px 0;color:var(--faint);font-size:12px;font-family:var(--body)">' + (note || "") + "</td></tr>"; }
+      rules.innerHTML = '<table style="border-collapse:collapse;font:14px var(--mono);margin:4px 0 6px"><thead><tr><th></th><th style="' + cs + ';font-size:11px;color:var(--muted)">axis 0</th><th style="' + cs + ';font-size:11px;color:var(--muted)">axis 1</th><th></th></tr></thead><tbody>' +
+        rowH("A " + shp(sa), pa, sa.length < 2 ? "padded with 1 on the left" : "") +
+        rowH("B " + (sb.length ? shp(sb) : "()"), pb, sb.length < 2 ? "padded with 1s on the left" : "") +
+        '<tr style="border-top:1.5px solid var(--line2)">' + '<td style="padding:4px 10px 4px 0"><b>result</b></td>' + out.map(function (o, k) { var bad = /mismatch/.test(why[k]); return '<td style="' + cs + ";font-weight:700;color:var(" + (bad ? "--bad" : "--ink") + ')">' + o + "</td>"; }).join("") + "<td></td></tr></tbody></table>" +
+        '<div style="font-size:13.5px;line-height:1.6">' + why.map(function (w, k) { var bad = /mismatch/.test(w); return '<span style="color:var(' + (bad ? "--bad" : "--good") + ');font-weight:600">' + (bad ? "✗" : "✓") + "</span> axis " + k + ": " + w; }).join("<br>") + "</div>";
       if (!ok) {
         pics.innerHTML = "";
         var bad = why.findIndex(function (w) { return /mismatch/.test(w); });
@@ -96,8 +95,7 @@
   });
 
   G.widget("np2-dist", function (body) {
-    var r = G.rng(7), train = [], test = [[2, 7.5], [5.5, 3], [8.5, 8]];
-    for (var i = 0; i < 6; i++) train.push([1 + r() * 8, 1 + r() * 8]);
+    var train = [[1.5, 8.5], [6, 8.6], [3, 4.2], [8.8, 5], [4.2, 1.5], [7.6, 2.3]], test = [[2.2, 6.3], [5.5, 3.2], [8.5, 8]];
     var pl = G.plot(body, { w: 440, h: 360, x: [0, 10], y: [0, 10], xlabel: "feature 1", ylabel: "feature 2", pad: { l: 44, r: 12, t: 12, b: 42 }, label: "training points (blue) and draggable test points (red)" });
     var tbl = G.el("div"); tbl.style.cssText = "margin:10px 0 0;overflow-x:auto"; body.appendChild(tbl);
     var drag = -1;
@@ -119,7 +117,7 @@
       var th = 'style="padding:5px 7px;color:var(--muted);font-weight:600;text-align:right;border-bottom:1px solid var(--line)"';
       var h = '<table style="border-collapse:collapse;font:13.5px var(--mono);width:100%;min-width:300px"><thead><tr><th ' + th.replace("right", "left") + '>D</th>' + train.map(function (_, j) { return "<th " + th + ">j=" + j + "</th>"; }).join("") + "<th " + th + ">argmin</th></tr></thead><tbody>";
       D.forEach(function (row, i) {
-        h += '<tr><td style="padding:5px 7px;color:var(--bad);font-weight:700;white-space:nowrap">i=' + i + "</td>" + row.map(function (v, j) { return '<td style="padding:5px 7px;text-align:right;border-radius:6px;' + (j === nn[i] ? "background:var(--hl1);color:#15181E;font-weight:700" : "") + '">' + v.toFixed(2) + "</td>"; }).join("") + '<td style="padding:5px 7px;text-align:right;font-weight:700">' + nn[i] + "</td></tr>";
+        h += '<tr><td style="padding:5px 7px;color:var(--bad);font-weight:700;white-space:nowrap">i=' + i + "</td>" + row.map(function (v, j) { return '<td style="padding:5px 7px;text-align:right;border-radius:6px;' + (j === nn[i] ? "background:var(--hl1);font-weight:700" : "") + '">' + v.toFixed(2) + "</td>"; }).join("") + '<td style="padding:5px 7px;text-align:right;font-weight:700">' + nn[i] + "</td></tr>";
       });
       tbl.innerHTML = h + "</tbody></table>" + '<div style="font-size:13px;color:var(--muted);margin-top:4px">Row i = test point i (red); column j = training point j (blue).</div>';
     }
