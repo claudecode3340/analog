@@ -8,15 +8,16 @@
   function shp(s) { return "(" + s.join(", ") + (s.length === 1 ? "," : "") + ")"; }
 
   G.widget("np2-broadcast", function (body) {
-    var As = { "3,4": [3, 4], "3,1": [3, 1], "1,4": [1, 4], "4": [4], "2,3": [2, 3] };
-    var Bs = { "s": [], "4": [4], "3": [3], "1,4": [1, 4], "3,1": [3, 1], "2,1": [2, 1] };
-    var a = "3,4", b = "4";
+    var AL = [["a34", [3, 4]], ["a31", [3, 1]], ["a14", [1, 4]], ["a4", [4]], ["a23", [2, 3]]];
+    var BL = [["s", []], ["b4", [4]], ["b3", [3]], ["b14", [1, 4]], ["b31", [3, 1]], ["b21", [2, 1]]];
+    var As = {}, Bs = {}; AL.forEach(function (p) { As[p[0]] = p[1]; }); BL.forEach(function (p) { Bs[p[0]] = p[1]; });
+    var a = "a34", b = "b4";
     var c1 = G.el("div", "ctrls"); body.appendChild(c1);
     c1.appendChild(G.el("span", "", "<b style='font-size:13px;color:var(--muted)'>A</b>"));
-    G.seg(c1, Object.keys(As).map(function (k) { return [k, shp(As[k])]; }), a, function (v) { a = v; draw(); });
+    G.seg(c1, AL.map(function (p) { return [p[0], shp(p[1])]; }), a, function (v) { a = v; draw(); });
     var c2 = G.el("div", "ctrls"); body.appendChild(c2);
     c2.appendChild(G.el("span", "", "<b style='font-size:13px;color:var(--muted)'>B</b>"));
-    G.seg(c2, Object.keys(Bs).map(function (k) { return [k, k === "s" ? "scalar" : shp(Bs[k])]; }), b, function (v) { b = v; draw(); });
+    G.seg(c2, BL.map(function (p) { return [p[0], p[0] === "s" ? "scalar" : shp(p[1])]; }), b, function (v) { b = v; draw(); });
     var expr = G.el("div"); expr.style.cssText = "font:700 16px var(--mono);margin:4px 0 8px;color:var(--tool)"; body.appendChild(expr);
     var rules = G.el("div"); body.appendChild(rules);
     var pics = G.el("div", "mrow"); body.appendChild(pics);
@@ -46,7 +47,7 @@
         pics.innerHTML = "";
         var bad = why.findIndex(function (w) { return /mismatch/.test(w); });
         msg.innerHTML = '<b style="color:var(--bad)">ValueError: operands could not be broadcast together with shapes ' + shp(sa).replace(/ /g, "") + " " + (sb.length ? shp(sb).replace(/ /g, "") : "()") + ".</b> On axis " + bad + " the sizes are " + pa[bad] + " and " + pb[bad] + ": they are not equal and neither is 1, so NumPy cannot stretch one to fit the other." +
-          (b === "3" && a === "3,4" ? " You meant one number per <i>row</i>: make B a column with <code>v[:, None]</code>, shape (3, 1)." : "");
+          (b === "b3" && a === "a34" ? " You meant one number per <i>row</i>: make B a column with <code>v[:, None]</code>, shape (3, 1)." : "");
         return;
       }
       var R = out[0], C = out[1];
@@ -97,8 +98,8 @@
   G.widget("np2-dist", function (body) {
     var r = G.rng(7), train = [], test = [[2, 7.5], [5.5, 3], [8.5, 8]];
     for (var i = 0; i < 6; i++) train.push([1 + r() * 8, 1 + r() * 8]);
-    var pl = G.plot(body, { w: 520, h: 360, x: [0, 10], y: [0, 10], xlabel: "feature 1", ylabel: "feature 2", label: "training points (blue) and draggable test points (red)" });
-    var tbl = G.el("div", "tw"); tbl.style.margin = "10px 0 0"; body.appendChild(tbl);
+    var pl = G.plot(body, { w: 440, h: 360, x: [0, 10], y: [0, 10], xlabel: "feature 1", ylabel: "feature 2", pad: { l: 44, r: 12, t: 12, b: 42 }, label: "training points (blue) and draggable test points (red)" });
+    var tbl = G.el("div"); tbl.style.cssText = "margin:10px 0 0;overflow-x:auto"; body.appendChild(tbl);
     var drag = -1;
     function dist(p, q) { return Math.hypot(p[0] - q[0], p[1] - q[1]); }
     function draw() {
@@ -107,19 +108,20 @@
       var nn = D.map(function (row) { var m = 0; row.forEach(function (v, j) { if (v < row[m]) m = j; }); return m; });
       test.forEach(function (t, i) { pl.line([t, train[nn[i]]], { stroke: "var(--bad)", "stroke-width": 2, "stroke-dasharray": "5 4" }); });
       train.forEach(function (q, j) {
-        pl.dot(q[0], q[1], { r: 8, fill: "var(--tool)", stroke: "var(--surface)", "stroke-width": 2 });
-        pl.text(q[0], q[1], String(j), { "text-anchor": "middle", dy: "4", fill: "#fff", "font-size": "10", "font-weight": "700", style: "pointer-events:none" });
+        pl.dot(q[0], q[1], { r: 7, fill: "var(--tool)", stroke: "var(--surface)", "stroke-width": 2 });
+        pl.text(q[0], q[1], "j=" + j, { dx: "10", dy: "-8", fill: "var(--tool)", "font-size": "14", "font-weight": "700", style: "pointer-events:none" });
       });
       test.forEach(function (t, i) {
         var c = pl.dot(t[0], t[1], { r: 11, fill: "var(--bad)", stroke: "var(--surface)", "stroke-width": 3, style: "cursor:grab" });
         c.addEventListener("pointerdown", function (e) { drag = i; e.preventDefault(); try { pl.svg.setPointerCapture(e.pointerId); } catch (er) {} });
-        pl.text(t[0], t[1], String(i), { "text-anchor": "middle", dy: "4", fill: "#fff", "font-size": "11", "font-weight": "700", style: "pointer-events:none" });
+        pl.text(t[0], t[1], String(i), { "text-anchor": "middle", dy: "5", fill: "#fff", "font-size": "14", "font-weight": "700", style: "pointer-events:none" });
       });
-      var h = '<table class="t"><thead><tr><th>D[i, j]</th>' + train.map(function (_, j) { return "<th>j=" + j + "</th>"; }).join("") + "<th>argmin</th></tr></thead><tbody>";
+      var th = 'style="padding:5px 7px;color:var(--muted);font-weight:600;text-align:right;border-bottom:1px solid var(--line)"';
+      var h = '<table style="border-collapse:collapse;font:13.5px var(--mono);width:100%;min-width:300px"><thead><tr><th ' + th.replace("right", "left") + '>D</th>' + train.map(function (_, j) { return "<th " + th + ">j=" + j + "</th>"; }).join("") + "<th " + th + ">argmin</th></tr></thead><tbody>";
       D.forEach(function (row, i) {
-        h += '<tr><td style="font-family:var(--mono);color:var(--bad);font-weight:700">test ' + i + "</td>" + row.map(function (v, j) { return '<td class="n" style="' + (j === nn[i] ? "background:var(--hl1);font-weight:700" : "") + '">' + v.toFixed(2) + "</td>"; }).join("") + '<td class="n"><b>' + nn[i] + "</b></td></tr>";
+        h += '<tr><td style="padding:5px 7px;color:var(--bad);font-weight:700;white-space:nowrap">i=' + i + "</td>" + row.map(function (v, j) { return '<td style="padding:5px 7px;text-align:right;border-radius:6px;' + (j === nn[i] ? "background:var(--hl1);color:#15181E;font-weight:700" : "") + '">' + v.toFixed(2) + "</td>"; }).join("") + '<td style="padding:5px 7px;text-align:right;font-weight:700">' + nn[i] + "</td></tr>";
       });
-      tbl.innerHTML = h + "</tbody></table>";
+      tbl.innerHTML = h + "</tbody></table>" + '<div style="font-size:13px;color:var(--muted);margin-top:4px">Row i = test point i (red); column j = training point j (blue).</div>';
     }
     function move(e) {
       if (drag < 0) return;

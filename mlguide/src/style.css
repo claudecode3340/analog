@@ -421,3 +421,6 @@ dfn{font-style:normal;border-bottom:1.5px dotted var(--faint);cursor:help}
 .predict.nudge{animation:nudge .5s 2}
 @keyframes nudge{50%{transform:translateX(6px)}}
 .py.gatedcell .ph .run{opacity:.6}
+/* checklist rows: text flows normally (inline code no longer becomes its own flex item) */
+.checklist label{display:block;position:relative;padding:4px 0 4px 28px}
+.checklist label input{position:absolute;left:0;top:9px;transform:none}

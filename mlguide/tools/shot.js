@@ -26,7 +26,7 @@ const path = require('path'), fs = require('fs');
   await p.setViewportSize({ width: 390, height: 860 }); await p.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
   await p.waitForTimeout(300);
   const over = await p.evaluate(id => { const s = document.getElementById(id); const bad = []; s.querySelectorAll('*').forEach(e => { const r = e.getBoundingClientRect(); if (r.right > innerWidth + 1 && !e.closest('.katex,.katex-display,.tw,.code,.out,pre,.mrow,.steps>li>div,svg')) bad.push(e.tagName + '.' + e.className + ' ' + Math.round(r.right)); }); return { doc: document.documentElement.scrollWidth, bad: bad.slice(0, 12) }; }, lid);
-  await p.evaluate(y => scrollTo(0, y), box.top); await p.waitForTimeout(200);
+  await p.evaluate(id => { const s = document.getElementById(id); scrollTo(0, s.getBoundingClientRect().top + scrollY); }, lid); await p.waitForTimeout(250);
   await p.screenshot({ path: path.join(outd, `${lid}-phone.png`) });
   console.log(`${i} light slices written to ${outd}`);
   console.log('phone width check: document scrollWidth =', over.doc, '(must be 390)', over.bad.length ? 'overflowing: ' + over.bad.join(' | ') : 'no overflowing elements');
