@@ -112,18 +112,25 @@
   function markStarted(id) { if (!id || S.started[id]) return; S.started[id] = 1; save("started"); renderProgress(); }
   var curId = null;
   function scrollSpy() {
-    var io = new IntersectionObserver(function (es) {
-      es.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        var id = e.target.id; if (curId === id) return; curId = id;
-        LESSONS.forEach(function (L) { L.link.classList.toggle("on", L.id === id); });
-        var L = LESSONS.find(function (x) { return x.id === id; });
-        $("#where-t").textContent = L ? L.title : ""; $("#where-k").textContent = L ? (L.monthName + (L.week ? " · Week " + L.week : "")) : "";
-        if (L && L.link.scrollIntoViewIfNeeded) L.link.scrollIntoViewIfNeeded(false);
-        renderProgress();
-      });
-    }, { rootMargin: "-45% 0px -50% 0px" });
-    $$("section.lesson").forEach(function (s) { io.observe(s); });
+    // Works out the current lesson from the scroll position (robust to jumps and to content above growing).
+    var secs = $$("section.lesson"), ticking = false;
+    function setCur(id) {
+      if (curId === id) return; curId = id;
+      LESSONS.forEach(function (L) { L.link.classList.toggle("on", L.id === id); });
+      var L = LESSONS.find(function (x) { return x.id === id; });
+      $("#where-t").textContent = L ? L.title : ""; $("#where-k").textContent = L ? (L.monthName + (L.week ? " · Week " + L.week : "")) : "";
+      if (L && L.link.scrollIntoViewIfNeeded) L.link.scrollIntoViewIfNeeded(false);
+      renderProgress();
+    }
+    function check() {
+      ticking = false; var y = innerHeight * 0.45, id = null;
+      for (var i = 0; i < secs.length; i++) { var r = secs[i].getBoundingClientRect(); if (r.top <= y && r.bottom > y) { id = secs[i].id; break; } }
+      if (id) setCur(id);
+    }
+    function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(check); } }
+    addEventListener("scroll", onScroll, { passive: true }); addEventListener("resize", onScroll);
+    if (window.ResizeObserver) new ResizeObserver(onScroll).observe(document.body);
+    check();
   }
 
   /* ================= code editor (textarea + highlight overlay) ================= */

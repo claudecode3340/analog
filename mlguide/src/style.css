@@ -428,3 +428,4 @@ dfn{font-style:normal;border-bottom:1.5px dotted var(--faint);cursor:help}
 .prob>.prh .tt{flex:1 1 220px}
 section.lesson pre:not(.src):not(.check):not(.solution){overflow-x:auto;max-width:100%}
 @media (max-width:640px){:not(pre)>code{white-space:normal;overflow-wrap:anywhere}}
+@media (max-width:640px){.chip{white-space:normal;max-width:100%;line-height:1.35}}
