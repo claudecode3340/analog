@@ -1,0 +1,42 @@
+{
+ "pd1-series": {
+  "term": "Series",
+  "def": "A 1-D pandas array of values with a label (index) for each position; one dtype.",
+  "at": "pd1"
+ },
+ "pd1-dataframe": {
+  "term": "DataFrame",
+  "def": "A pandas table: columns are Series of equal length sharing one index; each column has its own dtype.",
+  "at": "pd1"
+ },
+ "pd1-index": {
+  "term": "index",
+  "def": "The row labels of a Series or DataFrame. Used by <code>.loc</code>; need not be unique.",
+  "at": "pd1"
+ },
+ "pd1-category": {
+  "term": "categorical column",
+  "def": "A column whose values come from a small fixed set of labels (dtype <code>category</code>), treated as groups rather than quantities.",
+  "at": "pd1"
+ },
+ "pd1-scattermatrix": {
+  "term": "scatter matrix",
+  "def": "A grid of scatter plots of every pair of columns, with histograms on the diagonal (<code>pd.plotting.scatter_matrix</code>).",
+  "at": "pd1"
+ },
+ "pd1-loc": {
+  "term": "loc / iloc",
+  "def": "<code>.loc[rows, cols]</code> selects by labels (slices include the end); <code>.iloc[rows, cols]</code> by integer positions (slices exclude the end).",
+  "at": "pd1"
+ },
+ "pd1-groupby": {
+  "term": "groupby",
+  "def": "Split rows into groups by a column's values, apply a summary to each group, combine the results: <code>df.groupby('g')['y'].mean()</code>.",
+  "at": "pd1"
+ },
+ "pd1-nan": {
+  "term": "NaN (missing value)",
+  "def": "“Not a number”: pandas' marker for a missing entry. Find with <code>isna()</code>; remove with <code>dropna()</code>; replace with <code>fillna()</code>.",
+  "at": "pd1"
+ }
+}

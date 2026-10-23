@@ -1,0 +1,565 @@
+<section class="lesson" id="pd1" data-book="ISLP §2.3.7–2.3.9, pp. 55–62">
+<p class="lede">Real datasets are tables: rows of cars, patients or days, and columns with names, of different types, with gaps. pandas is the Python library for such tables, and every ISLP lab starts by loading one. This lesson teaches you to load, inspect, slice, summarise, clean and plot a table, so that the Auto, College and Advertising data hold no surprises.</p>
+<div class="uses"><b>You'll use</b> <a href="#np1">NumPy I</a> (indexing, masks, axis) · <a href="#np2">NumPy II</a> (random generators) · <a href="#plt1">matplotlib</a> (figures and axes)</div>
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>build a Series and a DataFrame, and load a CSV file with <code>pd.read_csv</code>, handling missing-value codes (<code>na_values</code>) and row labels (<code>index_col</code>);</li>
+<li>inspect a table with <code>head</code>, <code>shape</code>, <code>columns</code>, <code>dtypes</code>, <code>info</code> and <code>describe</code>;</li>
+<li>select columns, and rows by label (<code>.loc</code>), by position (<code>.iloc</code>) or by a condition, and say what each returns;</li>
+<li>sort, add columns, count values, and compute group summaries with <code>groupby</code>;</li>
+<li>find and drop missing values, convert a table to NumPy arrays, and make the plots the ISLP lab makes (scatter, histogram, box plot, scatter matrix).</li></ul></div>
+
+<div class="callout book"><blockquote>We can think of a data frame as a sequence of arrays of identical length; these are the columns.</blockquote><cite>ISLP p. 55</cite></div>
+
+<div class="py" id="c-pd1-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+</pre><div class="pynote">The setup cell: everyone writes <code>import pandas as pd</code>, just as NumPy is <code>np</code>. It runs first whenever you run any cell of this lesson.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-objects">1. Series and DataFrame</h3>
+<p>pandas has two main objects. A <dfn data-g="pd1-series">Series</dfn> is a 1-D array of values with a <b>label</b> for each position. A <dfn data-g="pd1-dataframe">DataFrame</dfn> is a table: several Series side by side, one per column, sharing the same row labels. The row labels are called the <dfn data-g="pd1-index">index</dfn>.</p>
+<div class="tw"><table class="t"><thead><tr><th>index ↓ / columns →</th><th>mpg</th><th>cylinders</th><th>horsepower</th></tr></thead><tbody>
+<tr><td><b>chevrolet chevelle malibu</b></td><td class="n">18.0</td><td class="n">8</td><td class="n">130</td></tr>
+<tr><td><b>buick skylark 320</b></td><td class="n">15.0</td><td class="n">8</td><td class="n">165</td></tr>
+<tr><td><b>plymouth satellite</b></td><td class="n">18.0</td><td class="n">8</td><td class="n">150</td></tr>
+</tbody></table></div>
+<p>Each column is a Series with its own dtype (here float, int, int); the bold labels on the left are the index. Compare a NumPy 2-D array: one dtype for everything, and rows and columns known only by number.</p>
+<div class="py" id="c-pd1-02"><pre class="src">
+s = pd.Series([18.0, 15.0, 18.0], index=["malibu", "skylark", "satellite"])
+print(s)
+print(s["skylark"], s.iloc[1])        # by label, or by position
+df = pd.DataFrame({"mpg": [18.0, 15.0, 18.0],
+                   "cylinders": [8, 8, 8],
+                   "horsepower": [130, 165, 150]},
+                  index=["malibu", "skylark", "satellite"])
+df
+</pre><div class="pynote"><b>Read the output:</b> the Series prints its labels on the left and its dtype at the bottom. <code>pd.DataFrame({...})</code> builds a table from a dictionary (Python II): each key becomes a column name and each list a column. The last line of the cell shows the DataFrame as a formatted table. ISLP Chapter 3 builds its first design matrix exactly like this: <code style="white-space:normal">pd.DataFrame({'intercept': np.ones(n), 'lstat': Boston['lstat']})</code>.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-read">2. Loading data with read_csv</h3>
+<p>A <b>CSV</b> file (comma-separated values) is a plain text table: one line per row, commas between values, column names on the first line. <code>pd.read_csv(filename)</code> reads it into a DataFrame. The file must be in the working folder (or you give its full path). The first rows of <code>Auto.csv</code> look like this:</p>
+<pre class="code" style="font:13px var(--mono);background:var(--panel);padding:10px 12px;border-radius:10px;overflow-x:auto">mpg,cylinders,displacement,horsepower,weight,acceleration,year,origin,name
+18,8,307,130,3504,12,70,1,chevrolet chevelle malibu
+15,8,350,165,3693,11.5,70,1,buick skylark 320</pre>
+<div class="py" id="c-pd1-03"><pre class="src">
+Auto = pd.read_csv("Auto.csv")       # ISLP In[73]
+print(Auto.shape)
+Auto.head()
+</pre><div class="pynote"><b>Read the output:</b> 397 cars and 9 columns. <code>head()</code> shows the first 5 rows (<code>head(10)</code> shows 10). The bold numbers 0, 1, 2… on the left are the index: pandas made up row labels because we did not give any.</div></div>
+
+<h4>The horsepower puzzle: a missing-value code</h4>
+<p>ISLP (In[75]–[76]) notices something odd: the <code>horsepower</code> column has dtype <code>object</code>, which means text, not numbers.</p>
+<div class="predict" data-correct="2"><p>Why would pandas read a column of horsepower numbers as text?</p><ol class="opts"><li>pandas always reads CSV files as text</li><li>Somewhere in the column there is a value that is not a number</li><li>Horsepower values are too large for integers</li></ol>
+<div class="why">A column gets one dtype. If even one entry cannot be read as a number, pandas keeps the whole column as text (dtype <code>object</code>). The other columns became numbers, so option 1 is wrong. The culprit here is <code>?</code>, which the file uses to mean “unknown”.</div></div>
+<div class="py" id="c-pd1-04"><pre class="src">
+print(Auto["horsepower"].dtype)
+print(np.unique(Auto["horsepower"])[-5:])     # the last few distinct values, sorted as text
+print((Auto["horsepower"] == "?").sum(), "entries are '?'")
+</pre><div class="pynote"><b>Read the output:</b> <code>object</code>; the distinct values end with <code>'95' '96' '97' '98' '?'</code> (sorted as text, so <code>'?'</code> comes last); and 5 entries are <code>'?'</code>. The fix is to tell <code>read_csv</code> that <code>?</code> means “missing”.</div></div>
+
+<p>The argument <code>na_values=['?']</code> turns every <code>?</code> into <code>np.nan</code>, the “not a number” marker from NumPy I. Now the column can be numeric. The book's whitespace-separated version, <code>Auto.data</code>, needs one more argument saying that the separator is any run of spaces: <code>sep=r"\s+"</code>. (ISLP writes <code>delim_whitespace=True</code>; current pandas warns that this spelling is going away, so we use the new one.)</p>
+<div class="py" id="c-pd1-05"><pre class="src">
+Auto = pd.read_csv("Auto.data", na_values=["?"], sep=r"\s+")   # ISLP In[77]
+print(Auto["horsepower"].dtype)
+print(Auto["horsepower"].sum())     # 40952.0, as in the book
+print(Auto.shape)                   # (397, 9)
+Auto_new = Auto.dropna()            # drop every row that has a missing value
+print(Auto_new.shape)               # (392, 9): five rows had a '?'
+Auto = Auto_new                     # ISLP In[80]: keep the clean version
+</pre><div class="pynote"><b>Read the output:</b> horsepower is now <code>float64</code> (a float, because <code>nan</code> is a float), its total is 40952 exactly as ISLP prints, and dropping the five incomplete rows leaves 392 cars. <code>r"\s+"</code> is a <i>pattern</i> meaning “one or more spaces or tabs”; the <code>r</code> before the quotes stops Python from interpreting the backslash. Section 9 shows other ways to handle missing values.</div></div>
+
+<h4>Row labels from a column: index_col</h4>
+<p>Some files store a name for each row in the first column. <code>College.csv</code> (ISLP Exercise 2.8) has the college name there. <code>index_col=0</code> says “use column 0 as the index”:</p>
+<div class="py" id="c-pd1-06"><pre class="src">
+College = pd.read_csv("College.csv", index_col=0)
+print(College.shape)
+College.iloc[:3, :6]       # first 3 rows, first 6 columns (iloc is in section 4)
+</pre><div class="pynote"><b>Read the output:</b> 777 colleges and 18 columns; the college names are now row labels rather than a data column. Without <code>index_col=0</code> you would get a 19th column with an empty name (pandas calls it <code>Unnamed: 0</code>).</div></div>
+
+<h4>Loading ISLP's built-in copies</h4>
+<p>The ISLP package ships the book's datasets already cleaned. <code>load_data('Auto')</code> gives the 392 complete cars, with the car names as the index. You will use this in most labs:</p>
+<div class="py" id="c-pd1-07"><pre class="src">
+from ISLP import load_data
+AutoI = load_data("Auto")
+print(AutoI.shape)
+print(AutoI.index[:3])
+AutoI.dtypes
+</pre><div class="pynote"><b>Read the output:</b> (392, 8): no <code>name</code> column, because the names became the index. Every column is numeric, horsepower included.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-inspect">3. Inspecting a table</h3>
+<div class="tw"><table class="t"><thead><tr><th>Code</th><th>Tells you</th></tr></thead><tbody>
+<tr><td><code>df.head(n)</code>, <code>df.tail(n)</code></td><td>the first / last n rows (default 5)</td></tr>
+<tr><td><code>df.shape</code></td><td>(rows, columns), like NumPy</td></tr>
+<tr><td><code>df.columns</code>, <code>df.index</code></td><td>the column names, the row labels</td></tr>
+<tr><td><code>df.dtypes</code></td><td>the type of each column</td></tr>
+<tr><td><code>df.info()</code></td><td>all of the above plus non-missing counts and memory use</td></tr>
+<tr><td><code>df.describe()</code></td><td>count, mean, std, min, quartiles and max of each numeric column</td></tr>
+<tr><td><code>df["col"].unique()</code>, <code>.nunique()</code></td><td>the distinct values, how many there are</td></tr>
+</tbody></table></div>
+<div class="py" id="c-pd1-08"><pre class="src">
+print(Auto.columns)
+Auto.info()
+</pre><div class="pynote"><b>Read the output:</b> <code>info()</code> prints one line per column: its position, name, number of non-missing entries (392 for all of them now) and dtype. <code>object</code> for <code>name</code> means text. It is the quickest way to spot columns with missing values or the wrong type.</div></div>
+<div class="py" id="c-pd1-09"><pre class="src">
+Auto[["mpg", "horsepower", "weight"]].describe()     # ISLP In[112]
+</pre><div class="pynote"><b>Read the output:</b> a summary table. <i>count</i> is the number of non-missing values; <i>std</i> is the standard deviation, which pandas computes dividing by \(n-1\) (NumPy divides by \(n\)); <i>25%</i>, <i>50%</i> and <i>75%</i> are quartiles: a quarter of the cars have mpg below 17, half below 22.75 (the median), three quarters below 29. The mean mpg is 23.4.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-select">4. Selecting columns and rows</h3>
+<h4>Columns</h4>
+<p>Square brackets with a <b>string</b> pick one column as a Series. With a <b>list</b> of strings they pick several columns as a DataFrame (ISLP In[83]). For column names without spaces, <code>Auto.mpg</code> is a shortcut for <code>Auto["mpg"]</code>.</p>
+<div class="predict" data-correct="2"><p>What is the difference between <code>Auto["mpg"]</code> and <code>Auto[["mpg"]]</code>?</p><ol class="opts"><li>None: both are the mpg column</li><li>The first is a Series (1-D); the second is a DataFrame with one column (2-D)</li><li>The second raises an error</li></ol>
+<div class="why">The outer brackets mean “select”; the inner brackets make a list. A list of column names always returns a DataFrame, even a list of one. This matches NumPy's rule: <code>A[:, 2]</code> is 1-D but <code>A[:, 2:3]</code> is 2-D.</div></div>
+<div class="py" id="c-pd1-10"><pre class="src">
+print(type(Auto["mpg"]), Auto["mpg"].shape)
+print(type(Auto[["mpg"]]), Auto[["mpg"]].shape)
+Auto[["mpg", "horsepower"]].head(3)
+</pre><div class="pynote"><b>Read the output:</b> a Series of shape (392,) and a DataFrame of shape (392, 1). The last line shows the two-column table.</div></div>
+
+<h4>Rows: slices and conditions</h4>
+<p>Quirk to remember: inside plain square brackets a <i>string</i> picks columns, but a <i>slice</i> picks rows. <code>Auto[:3]</code> is the first three rows (ISLP In[81]). A boolean Series picks the rows where it is True (In[82]), exactly like a NumPy mask.</p>
+<div class="py" id="c-pd1-11"><pre class="src">
+idx_80 = Auto["year"] &gt; 80          # a boolean Series: True for cars built after 1980
+print(idx_80.sum(), "cars after 1980")
+Auto[idx_80].head(3)
+</pre><div class="pynote"><b>Read the output:</b> 58 cars have <code>year</code> above 80 (the year is stored as two digits, 81 or 82). Their rows keep their original index labels (338, 339…), which is how you can trace them back.</div></div>
+
+<h3 id="pd1-loc">5. .loc and .iloc: by label or by position</h3>
+<p>For anything beyond the simple cases above, use the two explicit selectors, <dfn data-g="pd1-loc">.loc and .iloc</dfn>. Both take <code>[rows, columns]</code>, like a NumPy array.</p>
+<div class="symbols"><div class="row h"><span>Selector</span><span>Picks by</span><span>Example</span></div>
+<div class="row"><span class="s">.loc</span><span><b>labels</b>: index labels and column names (also booleans). A label slice <b>includes</b> its end.</span><span class="eg"><code style="white-space:normal">Auto_re.loc["ford torino", "mpg"]</code></span></div>
+<div class="row"><span class="s">.iloc</span><span><b>integer positions</b>, counting from 0, exactly like NumPy. A slice <b>excludes</b> its end.</span><span class="eg"><code>Auto_re.iloc[4, 0]</code></span></div></div>
+<p>ISLP first moves the car names into the index with <code>set_index("name")</code> (In[85]), so that rows can be picked by name:</p>
+<div class="py" id="c-pd1-12"><pre class="src">
+Auto_re = Auto.set_index("name")
+print(Auto_re.columns.tolist())         # 'name' is gone: it became the index
+rows = ["amc rebel sst", "ford torino"]
+Auto_re.loc[rows]                       # ISLP In[87]: rows by name
+</pre><div class="pynote"><b>Read the output:</b> the column list no longer contains <code>name</code>. <code>.loc[rows]</code> with a list of labels returns those two rows and all columns.</div></div>
+
+<p>Here are the same two rows and three columns selected both ways. The highlighted cells are what is selected:</p>
+<div class="tw"><table class="t"><thead><tr><th>name</th><th>mpg (0)</th><th>cylinders (1)</th><th>displacement (2)</th><th>horsepower (3)</th><th>weight (4)</th></tr></thead><tbody>
+<tr><td>chevrolet chevelle malibu (0)</td><td class="n">18.0</td><td class="n">8</td><td class="n">307.0</td><td class="n">130.0</td><td class="n">3504.0</td></tr>
+<tr><td>buick skylark 320 (1)</td><td class="n">15.0</td><td class="n">8</td><td class="n">350.0</td><td class="n">165.0</td><td class="n">3693.0</td></tr>
+<tr><td>plymouth satellite (2)</td><td class="n">18.0</td><td class="n">8</td><td class="n">318.0</td><td class="n">150.0</td><td class="n">3436.0</td></tr>
+<tr><td><b>amc rebel sst (3)</b></td><td class="n"><span class="hlc">16.0</span></td><td class="n">8</td><td class="n"><span class="hlc">304.0</span></td><td class="n"><span class="hlc">150.0</span></td><td class="n">3433.0</td></tr>
+<tr><td><b>ford torino (4)</b></td><td class="n"><span class="hlc">17.0</span></td><td class="n">8</td><td class="n"><span class="hlc">302.0</span></td><td class="n"><span class="hlc">140.0</span></td><td class="n">3449.0</td></tr>
+</tbody></table></div>
+<div class="py" id="c-pd1-13"><pre class="src">
+a = Auto_re.loc[["amc rebel sst", "ford torino"], ["mpg", "displacement", "horsepower"]]
+b = Auto_re.iloc[[3, 4], [0, 2, 3]]          # ISLP In[90]: the same cells, by position
+print(a.equals(b))
+b
+</pre><div class="pynote"><b>Read the output:</b> <code>True</code>: the label version and the position version select the same 2 × 3 block (rows 3–4, columns 0, 2, 3). Positions count from 0, so the 4th and 5th rows are positions 3 and 4.</div></div>
+
+<div class="predict" data-correct="1"><p>How many rows does <code style="white-space:normal">Auto_re.loc["buick skylark 320":"ford torino"]</code> return, and how many does <code>Auto_re.iloc[1:4]</code> return?</p><ol class="opts"><li>4 and 3</li><li>3 and 3</li><li>4 and 4</li></ol>
+<div class="why">A <code>.loc</code> slice includes both end labels: buick (position 1), plymouth, amc, ford torino (position 4): 4 rows. An <code>.iloc</code> slice follows Python's rule and stops <i>before</i> position 4: positions 1, 2, 3, so 3 rows. Labels have no natural “one past the end”, which is why pandas includes the end for label slices.</div></div>
+<div class="py" id="c-pd1-14"><pre class="src">
+print(Auto_re.loc["buick skylark 320":"ford torino"].shape)
+print(Auto_re.iloc[1:4].shape)
+print(Auto_re.loc["ford torino", "mpg"], Auto_re.iloc[4, 0])   # a single cell, both ways
+Auto_re.loc["ford galaxie 500", ["mpg", "origin"]]             # ISLP In[91]: labels can repeat!
+</pre><div class="pynote"><b>Read the output:</b> (4, 8) and (3, 8); the single cell is 17.0 both ways. The last line returns <b>three</b> rows, because three different cars are called “ford galaxie 500”. An index does not have to be unique, so <code>.loc</code> with one label can return several rows.</div></div>
+
+<p>Explore the two selectors on the first six cars. Click row labels and column names to select them; the widget writes the matching <code>.loc</code> and <code>.iloc</code> code, using slices when your selection is a contiguous block.</p>
+<div class="widget" data-w="pd1-lociloc" data-title=".loc versus .iloc on the first six cars"><div class="wn">Select rows 1 to 3 and the columns mpg to horsepower. Compare the two slices: <code>.loc</code> ends <i>at</i> the last label, <code>.iloc</code> ends one position <i>after</i> the last row. Then try the boolean filter button.</div></div>
+
+<h4>Conditions with .loc, &amp;, | and lambda</h4>
+<p><code>.loc</code> accepts a boolean Series for the rows and a list of names for the columns (ISLP In[92]). Combine conditions with <code>&amp;</code> (and), <code>|</code> (or) and <code>~</code> (not), with brackets around each, exactly as in NumPy. Text columns (and a text index) have string methods under <code>.str</code>, such as <code>.str.contains("ford")</code>.</p>
+<div class="py" id="c-pd1-15"><pre class="src">
+idx_80 = Auto_re["year"] &gt; 80
+print(Auto_re.loc[idx_80, ["weight", "origin"]].shape)                        # ISLP In[92]
+both = (Auto_re["year"] &gt; 80) &amp; (Auto_re["mpg"] &gt; 30)
+print(Auto_re.loc[both, ["weight", "origin"]].shape)                          # ISLP In[94]
+fd = (Auto_re["displacement"] &lt; 300) &amp; (Auto_re.index.str.contains("ford")
+                                        | Auto_re.index.str.contains("datsun"))
+Auto_re.loc[fd, ["weight", "origin"]].head()                                  # ISLP In[95]
+</pre><div class="pynote"><b>Read the output:</b> 58 cars after 1980; 34 of them also do more than 30 mpg; and the first Ford and Datsun cars with displacement under 300. The origin codes are 1 = America, 2 = Europe, 3 = Japan, so Fords show 1 and Datsuns 3.</div></div>
+
+<div class="callout"><div class="ct">New in this lesson · lambda inside .loc</div><p>ISLP also writes <code style="white-space:normal">Auto_re.loc[lambda df: df["year"] &gt; 80, ["weight", "origin"]]</code> (In[93]). <code>lambda df: ...</code> is a one-line function without a name (you met it in the plotting lesson). When <code>.loc</code> receives a function, it calls it with the DataFrame itself and uses the boolean Series it returns. The result is the same as with <code>idx_80</code>. The advantage: it works in the middle of a chain of operations, where the intermediate table has no name of its own.</p></div>
+<div class="py" id="c-pd1-16"><pre class="src">
+r1 = Auto_re.loc[lambda df: df["year"] &gt; 80, ["weight", "origin"]]
+r2 = Auto_re.loc[Auto_re["year"] &gt; 80, ["weight", "origin"]]
+print(r1.equals(r2))
+print(Auto_re["origin"].isin([2, 3]).sum(), "European or Japanese cars")   # isin: membership test
+</pre><div class="pynote"><b>Read the output:</b> <code>True</code>, and 147 cars from Europe or Japan. <code>isin</code> is the tidy way to write “equals any of these values” instead of a chain of <code>|</code>.</div></div>
+<div class="callout key"><p><b>ISLP's summary, which is worth memorising:</b> for integer-based queries use <code>iloc</code>; for string and Boolean selections use <code>loc</code>; to filter rows with a function, use <code>loc</code> with a lambda.</p></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-sort">6. Sorting</h3>
+<div class="py" id="c-pd1-17"><pre class="src">
+print(Auto_re.sort_values("mpg", ascending=False)["mpg"].head(3))    # most efficient first
+print(Auto_re.nlargest(3, "horsepower")["horsepower"])              # shortcut for the top 3
+Auto_re.sort_values(["cylinders", "mpg"]).head(4)                    # by cylinders, then mpg
+</pre><div class="pynote"><b>Read the output:</b> the most efficient car is the mazda glc at 46.6 mpg; the most powerful is a pontiac grand prix at 230 hp. Sorting by two columns sorts by the first, then breaks ties with the second: the 3-cylinder cars come first, the least efficient of them at the top. <code>sort_index()</code> sorts by the row labels instead.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-new">7. New columns, dropping and renaming</h3>
+<p>Assigning to a new column name creates the column; the right-hand side is computed for all rows at once, like NumPy arithmetic. One mile per US gallon is 0.4251 kilometres per litre:</p>
+<div class="py" id="c-pd1-18"><pre class="src">
+Auto_re["kpl"] = Auto_re["mpg"] * 0.4251                       # a new column
+Auto_re["power_to_weight"] = Auto_re["horsepower"] / Auto_re["weight"]
+print(Auto_re[["mpg", "kpl", "power_to_weight"]].head(3))
+terms = Auto_re.columns.drop(["kpl", "power_to_weight"])   # a list of names minus some (ISLP Ch. 3)
+print(list(terms))
+Auto_re = Auto_re.drop(columns=["kpl", "power_to_weight"])     # remove them again
+print(Auto_re.shape)
+</pre><div class="pynote"><b>Read the output:</b> 18 mpg is 7.65 km per litre. <code>columns.drop</code> returns the list of column names without the ones you name; ISLP Chapter 3 uses <code>Boston.columns.drop('medv')</code> to get “every predictor except the response”. <code>df.drop(columns=[...])</code> returns a new DataFrame without those columns, so we assign it back. <code style="white-space:normal">df.rename(columns={"old": "new"})</code> renames in the same style.</div></div>
+
+<div class="callout pitfall"><p><b>Changing a selection: use .loc, and .copy() when you mean a copy.</b> As in NumPy, a selection may or may not share data with the original. Code like <code>sub = Auto[Auto["year"] &gt; 80]</code> followed by <code>sub["mpg"] = 0</code> makes pandas print a <code>SettingWithCopyWarning</code>: it cannot tell whether you wanted to change <code>Auto</code> too. Two clean rules: to change the original, use one <code>.loc</code> call, <code style="white-space:normal">Auto.loc[Auto["year"] &gt; 80, "mpg"] = ...</code>; to work on a separate table, write <code style="white-space:normal">sub = Auto[Auto["year"] &gt; 80].copy()</code>.</p></div>
+<div class="py" id="c-pd1-19"><pre class="src">
+late = Auto[Auto["year"] &gt; 80].copy()     # an independent copy: no warning, original safe
+late["mpg_rounded"] = late["mpg"].round()
+print(late.shape, "mpg_rounded" in Auto.columns)
+</pre><div class="pynote"><b>Read the output:</b> the copy has 58 rows and the new column; the original <code>Auto</code> did not gain a column (<code>False</code>).</div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-group">8. Counting and group summaries</h3>
+<h4>value_counts and categorical columns</h4>
+<p><code>s.value_counts()</code> counts how often each distinct value appears, most frequent first. ISLP then turns <code>cylinders</code> into a <dfn data-g="pd1-category">categorical</dfn> column (In[106]): a column whose values are labels from a small fixed set, not quantities. Cylinders take only the values 3, 4, 5, 6 and 8, and a 5-cylinder car is not “halfway” between 4 and 6 in any useful sense.</p>
+<div class="py" id="c-pd1-20"><pre class="src">
+print(Auto["cylinders"].value_counts())
+Auto.cylinders = pd.Series(Auto.cylinders, dtype="category")    # ISLP In[106]
+print(Auto.cylinders.dtype)
+Auto["cylinders"].describe()                                      # ISLP In[113]
+</pre><div class="pynote"><b>Read the output:</b> 199 four-cylinder cars, 103 eight, 83 six, 4 three and 3 five. After the conversion the dtype is <code>category</code> with five categories, and <code>describe()</code> now reports count, number of unique values, the most common value (<i>top</i>, 4) and its frequency (199) instead of a mean. <code>pd.Categorical(values)</code> is another way to build the same kind of column.</div></div>
+
+<h4>groupby: split, apply, combine</h4>
+<p><dfn data-g="pd1-groupby">groupby</dfn>: <code style="white-space:normal">df.groupby("cylinders")["mpg"].mean()</code> does three things: it <b>splits</b> the rows into groups that share a value of <code>cylinders</code>, <b>applies</b> the mean to each group's <code>mpg</code>, and <b>combines</b> the results into one Series indexed by the group values.</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>a groupby by hand</b></div>
+<div class="given">Six cars: cylinders <code>[4, 8, 4, 6, 8, 4]</code>, mpg <code>[30, 15, 26, 20, 13, 28]</code>. Find <code style="white-space:normal">groupby("cylinders")["mpg"].mean()</code>.</div>
+<ol class="steps">
+<li><div>Split by cylinders: group 4 holds rows 0, 2, 5 with mpg <span class="hlc">30, 26, 28</span>; group 6 holds row 3 with <span class="hlb">20</span>; group 8 holds rows 1, 4 with <span class="hlg">15, 13</span>.</div></li>
+<li><div>Apply the mean to each group: \((30+26+28)/3=28\); \(20/1=20\); \((15+13)/2=14\).</div></li>
+<li><div>Combine into a Series indexed by the group values 4, 6, 8, sorted.</div></li>
+</ol>
+<div class="result"><code>4 → 28.0, 6 → 20.0, 8 → 14.0</code></div></div>
+<div class="predict" data-correct="3"><p>In the real Auto data, which group of cars will have the highest mean mpg?</p><ol class="opts"><li>8 cylinders</li><li>6 cylinders</li><li>4 cylinders</li></ol>
+<div class="why">Fewer cylinders usually means a smaller engine and better fuel economy: 4-cylinder cars average about 29.3 mpg. (The 5-cylinder group, only 3 cars, is close behind at 27.4; the 3-cylinder group, 4 rotary-engined Mazdas, does only 20.6.)</div></div>
+<div class="py" id="c-pd1-21"><pre class="src">
+toy = pd.DataFrame({"cylinders": [4, 8, 4, 6, 8, 4], "mpg": [30, 15, 26, 20, 13, 28]})
+print(toy.groupby("cylinders")["mpg"].mean())
+print(Auto.groupby("cylinders", observed=True)["mpg"].mean().round(2))
+Auto.groupby("origin")[["mpg", "weight"]].agg(["mean", "count"])
+</pre><div class="pynote"><b>Read the output:</b> first the worked example's 28, 20, 14. Then the real data: 4-cylinder cars average 29.28 mpg, 8-cylinder cars 14.96. (<code>observed=True</code> tells pandas to list only categories that actually occur; it silences a warning for categorical columns.) The last table uses <code>agg</code> to compute several summaries per group: Japanese cars (origin 3) average 30.45 mpg and are the lightest, American cars (origin 1) 20.03 mpg and the heaviest.</div></div>
+
+<h4>map and apply: a function on every value</h4>
+<p><code>s.map(dictionary)</code> replaces each value by its entry in the dictionary; <code>s.apply(function)</code> calls a function on each value; <code>df.apply(function)</code> calls it on each <b>column</b> (or on each row with <code>axis=1</code>). When a vectorised version exists (arithmetic, <code>.str</code> methods, NumPy functions), prefer it: <code>apply</code> is a Python loop in disguise.</p>
+<div class="py" id="c-pd1-22"><pre class="src">
+names = Auto["origin"].map({1: "America", 2: "Europe", 3: "Japan"})
+print(names.value_counts())
+print(Auto["name"].apply(lambda s: s.split()[0]).head(3))   # first word = the maker
+num = Auto[["mpg", "horsepower", "weight"]]
+num.apply(lambda col: col.max() - col.min())                  # the range of each column
+</pre><div class="pynote"><b>Read the output:</b> 245 American, 79 Japanese and 68 European cars; the makers of the first three cars; and the range of each column (mpg spans 37.6, horsepower 184, weight 3527 pounds).</div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-missing">9. Missing values</h3>
+<p>pandas marks missing entries as <dfn data-g="pd1-nan"><code>NaN</code></dfn>. <code>df.isna()</code> gives a table of True/False; summing it counts the gaps per column, and its mean gives the <i>fraction</i> missing (True counts as 1, as in NumPy). Most summaries such as <code>mean()</code> skip missing values automatically. To deal with them you can drop rows (<code>dropna()</code>), fill them (<code>fillna(value)</code>), or keep them and let later steps handle them.</p>
+<p>ISLP (In[99]–[100]) builds a table with about 20% of its entries missing, then prints the percentage missing in each column. It uses <code style="white-space:normal">rng.choice([0, np.nan], p=[0.8, 0.2], size=A.shape)</code> from NumPy II: adding <code>nan</code> to a number gives <code>nan</code>, so about one entry in five is wiped out.</p>
+<div class="py" id="c-pd1-23"><pre class="src">
+rng = np.random.default_rng(1)
+A = rng.standard_normal((127, 5))
+M = rng.choice([0, np.nan], p=[0.8, 0.2], size=A.shape)
+A += M
+D = pd.DataFrame(A, columns=["food", "bar", "pickle", "snack", "popcorn"])
+for col in D.columns:
+    template = 'Column "{0}" has {1:.2%} missing values'
+    print(template.format(col, np.isnan(D[col]).mean()))
+D[:3]
+</pre><div class="pynote"><b>Read the output:</b> each column is missing between about 16% and 30% of its values. <code style="white-space:normal">pd.DataFrame(array, columns=[...])</code> turns a NumPy array into a table with column names. The <code>template.format(...)</code> fills <code>{0}</code> with the first argument and <code>{1:.2%}</code> with the second, written as a percentage with 2 decimals. The modern f-string does the same: <code style="white-space:normal">f'Column "{col}" has {frac:.2%} missing values'</code>.</div></div>
+<div class="predict" data-correct="2"><p>Each of D's 5 columns is missing about 20% of its values, independently. Roughly how many of the 127 rows survive <code>D.dropna()</code>?</p><ol class="opts"><li>About 100 (80%)</li><li>About 40 (a third)</li><li>None</li></ol>
+<div class="why">A row survives only if all five entries are present: \(0.8^5\approx0.33\), so about 42 rows. The actual count is 35, because these columns happen to be missing a little more than 20% on average. The tempting 80% forgets that a row needs <i>every</i> column to be complete.</div></div>
+<div class="py" id="c-pd1-24"><pre class="src">
+print(D.isna().sum())              # gaps per column
+print(D.dropna().shape)            # rows with no gaps at all
+print(D.mean().round(3))           # means skip NaN automatically
+D_filled = D.fillna(D.mean())      # fill each gap with its column's mean
+print(D_filled.isna().sum().sum())
+</pre><div class="pynote"><b>Read the output:</b> only about a third of the 127 rows are complete, because a row is dropped if <i>any</i> of its five entries is missing (\(0.8^5\approx0.33\)). Dropping is fine for Auto (5 rows out of 397) but wasteful here. <code>fillna(D.mean())</code> fills each column's gaps with that column's mean, leaving 0 missing values. (Mean-filling is simple but shrinks the spread of the data; ISLP Chapter 12 shows better methods.)</div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-numpy">10. From pandas to NumPy</h3>
+<p>Models eventually need NumPy arrays. <code>df.to_numpy()</code> (or the older <code>df.values</code>, which ISLP also uses) returns the table's numbers as a 2-D array; a Series gives a 1-D array. You lose the labels, so pick and order your columns first.</p>
+<div class="py" id="c-pd1-25"><pre class="src">
+X = Auto[["horsepower", "weight"]].to_numpy()
+y = Auto["mpg"].to_numpy()
+print(type(X), X.shape, X.dtype, y.shape)
+X1 = np.column_stack([np.ones(len(X)), X])          # add an intercept column (NumPy I)
+beta = np.linalg.lstsq(X1, y, rcond=None)[0]        # least squares (NumPy II)
+print(beta.round(4).tolist())
+</pre><div class="pynote"><b>Read the output:</b> a (392, 2) float array and a (392,) vector. The fitted coefficients say: predicted mpg is about 45.64, minus 0.0473 per horsepower, minus 0.0058 per pound of weight. That is a multiple linear regression, the topic of <a href="#isl3-2">ISLP 3.2</a>, done with tools you now have.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-plot">11. Plotting straight from a DataFrame</h3>
+<p>ISLP's section 2.3.9 plots Auto. Writing <code>ax.plot(horsepower, mpg)</code> fails with a <code>NameError</code>, because <code>horsepower</code> is a column, not a variable: use <code>Auto["horsepower"]</code>. DataFrames also have plotting methods that take column names and return a matplotlib axes, so everything from the plotting lesson still works on the result.</p>
+<div class="py" id="c-pd1-26"><pre class="src">
+fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
+Auto.plot.scatter("horsepower", "mpg", ax=axes[0], alpha=0.5)      # ISLP In[103], In[105]
+axes[0].set_title("Horsepower vs. MPG")
+Auto.hist("mpg", color="red", bins=12, ax=axes[1])                 # ISLP In[109]
+Auto.boxplot("mpg", by="cylinders", ax=axes[2])                    # ISLP In[107]
+axes[2].set_ylabel("mpg")
+fig.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> left, mpg falls as horsepower rises, along a <i>curve</i> rather than a straight line (ISLP Chapter 3 fits a quadratic to exactly this). Middle, the mpg histogram with 12 bins. Right, one box per number of cylinders: 4-cylinder cars are the most efficient, 8-cylinder the least. pandas adds its own title “Boxplot grouped by cylinders” above the figure. The <code>ax=</code> argument tells each method which panel to draw in.</div></div>
+
+<p>A <dfn data-g="pd1-scattermatrix">scatter matrix</dfn> draws every pair of columns against each other, with histograms on the diagonal: the fastest overview of a dataset (ISLP In[110]–[111]).</p>
+<div class="py" id="c-pd1-27"><pre class="src">
+axs = pd.plotting.scatter_matrix(Auto[["mpg", "displacement", "weight"]], figsize=(6.5, 6.5), alpha=0.5)
+</pre><div class="pynote"><b>Read the output:</b> a 3 × 3 grid. The diagonal shows each variable's histogram; each off-diagonal panel is a scatter plot of one pair. Displacement and weight rise together almost along a line (heavier cars have bigger engines), and both fall with mpg along curves. Strongly related predictors like these cause trouble for regression (collinearity, ISLP §3.3.3). ISLP also runs <code>scatter_matrix(Auto)</code> on all columns; it works, but 64 small panels are hard to read.</div></div>
+<p><code>df.plot()</code> with no kind draws one line per column against the index, which is the natural plot for time series (prices, sensor readings). For example <code>D[["food", "bar"]].plot()</code> would draw two noisy lines with gaps where values are missing.</p>
+
+<!-- ============================================================ -->
+<h3 id="pd1-ex">12. Exercises</h3>
+<p>The cells above defined <code>Auto</code> (392 rows, from <code>Auto.data</code>, with <code>cylinders</code> categorical), <code>Auto_re</code> (indexed by name) and <code>College</code>. Your functions take the table as an argument, so they work on any table with the same columns.</p>
+
+<div class="ex" id="x-pd1-01" data-title="load Auto properly"><div class="task"><p>Write <code>load_auto()</code> that reads <code>"Auto.csv"</code>, treats <code>?</code> as missing, drops rows with missing values, and returns the DataFrame. Its shape must be (392, 9) and <code>horsepower</code> must be numeric.</p></div>
+<pre class="src">
+def load_auto():
+    return pd.read_csv("Auto.csv")
+</pre>
+<pre class="check">
+df_ = load_auto()
+assert df_.shape == (392, 9), f"expected shape (392, 9), got {df_.shape}"
+assert df_["horsepower"].dtype == float, f"horsepower should be float64, got {df_['horsepower'].dtype}"
+assert df_["horsepower"].sum() == 40952.0, "horsepower should total 40952"
+</pre>
+<div class="hint"><p><code>na_values=["?"]</code>, then <code>.dropna()</code>.</p></div>
+<pre class="solution">
+def load_auto():
+    return pd.read_csv("Auto.csv", na_values=["?"]).dropna()
+</pre><div class="explain"><p>The comma-separated file needs no <code>sep</code>. Once <code>?</code> becomes <code>NaN</code>, the column parses as numbers, and <code>dropna</code> removes the 5 incomplete cars.</p></div></div>
+
+<div class="ex" id="x-pd1-02" data-title="heavy cars"><div class="task"><p>Write <code>heavy(df)</code> returning a DataFrame with only the <code>mpg</code> and <code>weight</code> columns of the cars whose weight is above 4000 pounds.</p></div>
+<pre class="src">
+def heavy(df):
+    return df[df["weight"] &gt; 4000]
+</pre>
+<pre class="check">
+h = heavy(Auto)
+assert list(h.columns) == ["mpg", "weight"], f"columns should be ['mpg', 'weight'], got {list(h.columns)}"
+assert len(h) == (Auto["weight"] &gt; 4000).sum() == 64, f"expected 64 heavy cars, got {len(h)}"
+assert (h["weight"] &gt; 4000).all(), "every car should weigh more than 4000"
+</pre>
+<div class="hint"><p><code style="white-space:normal">df.loc[condition, ["mpg", "weight"]]</code></p></div>
+<pre class="solution">
+def heavy(df):
+    return df.loc[df["weight"] &gt; 4000, ["mpg", "weight"]]
+</pre><div class="explain"><p>One <code>.loc</code> call: a boolean Series for the rows, a list of names for the columns.</p></div></div>
+
+<div class="ex" id="x-pd1-03" data-title="mean mpg per number of cylinders"><div class="task"><p>Write <code>mpg_by_cyl(df)</code> returning a Series: the mean <code>mpg</code> for each value of <code>cylinders</code>, indexed by cylinders.</p></div>
+<pre class="src">
+def mpg_by_cyl(df):
+    return df["mpg"].mean()
+</pre>
+<pre class="check">
+r = mpg_by_cyl(Auto)
+assert hasattr(r, "index") and len(r) == 5, f"expected 5 group means, got {r!r}"
+assert abs(r.loc[4] - 29.2836) &lt; 1e-3 and abs(r.loc[8] - 14.9631) &lt; 1e-3, f"4 cylinders should average 29.28 and 8 cylinders 14.96, got\n{r}"
+</pre>
+<div class="hint"><p><code style="white-space:normal">df.groupby("cylinders")["mpg"].mean()</code>. Add <code>observed=True</code> if pandas warns about categories.</p></div>
+<pre class="solution">
+def mpg_by_cyl(df):
+    return df.groupby("cylinders", observed=True)["mpg"].mean()
+</pre><div class="explain"><p>Split by cylinders, apply the mean to mpg, combine into a Series indexed by 3, 4, 5, 6, 8.</p></div></div>
+
+<div class="ex" id="x-pd1-04" data-title="power-to-weight column"><div class="task"><p>Write <code>add_ptw(df)</code> that returns a <b>copy</b> of <code>df</code> with a new column <code>"ptw"</code> = horsepower divided by weight. The input must not gain the column.</p></div>
+<pre class="src">
+def add_ptw(df):
+    df["ptw"] = df["horsepower"] / df["weight"]
+    return df
+</pre>
+<pre class="check">
+src_ = Auto[["horsepower", "weight"]].head(10).copy()
+out = add_ptw(src_)
+assert "ptw" in out.columns, "the result needs a 'ptw' column"
+assert np.allclose(out["ptw"], src_["horsepower"] / src_["weight"]), "ptw = horsepower / weight"
+assert "ptw" not in src_.columns, "the input DataFrame was modified: work on df.copy()"
+</pre>
+<div class="hint"><p>Start with <code>out = df.copy()</code>, add the column to <code>out</code>, return <code>out</code>. Or use <code>df.assign(ptw=...)</code>, which always returns a new table.</p></div>
+<pre class="solution">
+def add_ptw(df):
+    out = df.copy()
+    out["ptw"] = out["horsepower"] / out["weight"]
+    return out
+</pre><div class="explain"><p>Functions that silently change their input cause hard-to-find bugs, as in NumPy I. <code style="white-space:normal">df.assign(ptw=df["horsepower"] / df["weight"])</code> is the one-line equivalent.</p></div></div>
+
+<div class="ex" id="x-pd1-05" data-title="the five most efficient cars"><div class="task"><p>Write <code>top_mpg(df_named, k)</code>: <code>df_named</code> is indexed by car name (like <code>Auto_re</code>). Return a <b>list</b> of the names of the <code>k</code> cars with the highest mpg, highest first.</p></div>
+<pre class="src">
+def top_mpg(df_named, k):
+    return list(df_named.index[:k])
+</pre>
+<pre class="check">
+t = top_mpg(Auto_re, 3)
+assert t[0] == "mazda glc", f"the most efficient car is the mazda glc, got {t[0]!r}"
+assert len(t) == 3 and isinstance(t, list), "return a list of k names"
+exp = list(Auto_re.sort_values("mpg", ascending=False).index[:5])
+assert top_mpg(Auto_re, 5) == exp, f"expected {exp}"
+</pre>
+<div class="hint"><p><code style="white-space:normal">df_named.sort_values("mpg", ascending=False)</code>, then the first k labels of its index. Or <code>nlargest</code>.</p></div>
+<pre class="solution">
+def top_mpg(df_named, k):
+    return list(df_named.sort_values("mpg", ascending=False).index[:k])
+</pre><div class="explain"><p>Sorting reorders the rows together with their labels, so the index of the sorted table lists the names in mpg order.</p></div></div>
+
+<div class="ex" id="x-pd1-06" data-title="percent missing per column"><div class="task"><p>Write <code>pct_missing(df)</code> returning a dictionary that maps each column name to the percentage (0–100) of its values that are missing. For a column with 1 missing value out of 4 the entry is 25.0.</p></div>
+<pre class="src">
+def pct_missing(df):
+    return {col: 0.0 for col in df.columns}
+</pre>
+<pre class="check">
+T = pd.DataFrame({"a": [1, np.nan, 3, 4], "b": [np.nan, np.nan, 1, 1], "c": [1, 2, 3, 4]})
+r = pct_missing(T)
+assert r == {"a": 25.0, "b": 50.0, "c": 0.0}, f"expected {{'a': 25.0, 'b': 50.0, 'c': 0.0}}, got {r}"
+rD = pct_missing(D)
+assert set(rD) == set(D.columns) and abs(rD["food"] - 100 * D["food"].isna().mean()) &lt; 1e-9, "should work on ISLP's D table too"
+</pre>
+<div class="hint"><p><code>df.isna().mean()</code> is a Series of fractions per column. Multiply by 100.</p></div>
+<div class="hint"><p>Turn a Series into a dict with <code>.to_dict()</code>, or build it with a comprehension.</p></div>
+<pre class="solution">
+def pct_missing(df):
+    return (100 * df.isna().mean()).to_dict()
+</pre><div class="explain"><p><code>isna()</code> is a table of True/False, its column means are the fractions missing, and <code>to_dict()</code> turns the labelled Series into a dictionary.</p></div></div>
+
+<div class="ex" id="x-pd1-07" data-title="positions with iloc"><div class="task"><p>Write <code>block(df)</code> returning rows 10 to 14 (positions, five rows) and the first three columns of <code>df</code>, using <code>.iloc</code>.</p></div>
+<pre class="src">
+def block(df):
+    return df.iloc[10:14, :3]
+</pre>
+<pre class="check">
+b_ = block(Auto)
+assert b_.shape == (5, 3), f"expected shape (5, 3), got {b_.shape}"
+assert b_.equals(Auto.iloc[[10, 11, 12, 13, 14], [0, 1, 2]]), "rows at positions 10..14, columns 0..2"
+</pre>
+<div class="hint"><p>Slices in <code>.iloc</code> exclude the end, like NumPy. Positions 10 to 14 inclusive is <code>10:15</code>.</p></div>
+<pre class="solution">
+def block(df):
+    return df.iloc[10:15, :3]
+</pre><div class="explain"><p><code>10:15</code> covers positions 10, 11, 12, 13, 14. With <code>.loc</code> and integer labels you would write <code>10:14</code>, since label slices include the end: one of the commonest off-by-one bugs in pandas.</p></div></div>
+
+<div class="ex" id="x-pd1-08" data-title="label slices with loc"><div class="task"><p>Write <code>college_block(college)</code> returning, for the colleges from <code>"Adelphi University"</code> to <code>"Albertson College"</code> (inclusive, in file order), the columns from <code>"Apps"</code> to <code>"Enroll"</code> (inclusive). Use <code>.loc</code> with label slices.</p></div>
+<pre class="src">
+def college_block(college):
+    return college.iloc[1:4, 1:4]
+</pre>
+<pre class="check">
+cb = college_block(College)
+assert list(cb.columns) == ["Apps", "Accept", "Enroll"], f"columns should be Apps, Accept, Enroll; got {list(cb.columns)}"
+assert cb.index[0] == "Adelphi University" and cb.index[-1] == "Albertson College", f"rows should run from Adelphi University to Albertson College, got {list(cb.index)}"
+assert cb.shape == (5, 3), f"expected 5 colleges, got {cb.shape[0]}"
+</pre>
+<div class="hint"><p><code style="white-space:normal">college.loc["Adelphi University":"Albertson College", "Apps":"Enroll"]</code></p></div>
+<pre class="solution">
+def college_block(college):
+    return college.loc["Adelphi University":"Albertson College", "Apps":"Enroll"]
+</pre><div class="explain"><p>Label slices include both ends and work for columns too. The starter used positions 1:4, which stop before position 4, so it missed the last two colleges (positions 4 and 5).</p></div></div>
+
+<div class="ex" id="x-pd1-09" data-title="count cars by region name"><div class="task"><p>Write <code>region_counts(df)</code> returning a Series that counts cars per region, with the codes replaced by names: 1 → <code>"America"</code>, 2 → <code>"Europe"</code>, 3 → <code>"Japan"</code>.</p></div>
+<pre class="src">
+def region_counts(df):
+    return df["origin"].value_counts()
+</pre>
+<pre class="check">
+rc = region_counts(Auto)
+assert rc["America"] == 245 and rc["Europe"] == 68 and rc["Japan"] == 79, f"expected America 245, Europe 68, Japan 79; got\n{rc}"
+</pre>
+<div class="hint"><p><code style="white-space:normal">df["origin"].map({1: "America", 2: "Europe", 3: "Japan"})</code>, then <code>.value_counts()</code>.</p></div>
+<pre class="solution">
+def region_counts(df):
+    return df["origin"].map({1: "America", 2: "Europe", 3: "Japan"}).value_counts()
+</pre><div class="explain"><p><code>map</code> with a dictionary translates codes into names; <code>value_counts</code> then counts each name.</p></div></div>
+
+<div class="ex" id="x-pd1-10" data-title="design matrix from a table"><div class="task"><p>Write <code>design_matrix(df, cols)</code> returning a NumPy array whose first column is all ones and whose other columns are the columns <code>cols</code> of <code>df</code>, in that order. For <code style="white-space:normal">cols = ["horsepower", "weight"]</code> on Auto the shape is (392, 3).</p></div>
+<pre class="src">
+def design_matrix(df, cols):
+    return df[cols]
+</pre>
+<pre class="check">
+Xd = design_matrix(Auto, ["horsepower", "weight"])
+assert isinstance(Xd, np.ndarray), f"return a NumPy array, got {type(Xd).__name__}"
+assert Xd.shape == (392, 3), f"expected shape (392, 3), got {Xd.shape}"
+assert np.all(Xd[:, 0] == 1) and np.allclose(Xd[:, 2], Auto["weight"]), "column 0 ones, then the requested columns in order"
+</pre>
+<div class="hint"><p><code>df[cols].to_numpy()</code> gives the numbers; <code>np.column_stack</code> adds the ones.</p></div>
+<pre class="solution">
+def design_matrix(df, cols):
+    return np.column_stack([np.ones(len(df)), df[cols].to_numpy()])
+</pre><div class="explain"><p><code>column_stack</code> accepts a mix of 1-D (the ones) and 2-D (the selected columns) arrays. ISLP's <code>ModelSpec</code> builds this matrix for you in Chapter 3, as a DataFrame with an <code>intercept</code> column.</p></div></div>
+
+<div class="ex" id="x-pd1-11" data-title="standardise the numeric columns"><div class="task"><p>Write <code>zscore(df)</code> that returns a new DataFrame in which every column is standardised: minus its mean, divided by its standard deviation (pandas' default <code>std</code>, which divides by \(n-1\)). Column names and index must be kept.</p></div>
+<pre class="src">
+def zscore(df):
+    return (df - df.mean()) / df.std(ddof=0)
+</pre>
+<pre class="check">
+num_ = Auto[["mpg", "horsepower", "weight"]]
+z = zscore(num_)
+assert list(z.columns) == ["mpg", "horsepower", "weight"] and z.index.equals(num_.index), "keep the column names and the index"
+assert np.allclose(z.mean(), 0) and np.allclose(z.std(), 1), "each column should have mean 0 and (pandas) std 1"
+</pre>
+<div class="hint"><p>The starter divides by NumPy's \(n\) version. pandas' <code>df.std()</code> already divides by \(n-1\).</p></div>
+<pre class="solution">
+def zscore(df):
+    return (df - df.mean()) / df.std()
+</pre><div class="explain"><p><code>df.mean()</code> is a Series indexed by column name, and pandas lines it up with the columns by <b>name</b> (not just by position, as NumPy broadcasting does), so each column gets its own mean and standard deviation.</p></div></div>
+
+<div class="ex" id="x-pd1-12" data-title="Fords after 1975"><div class="task"><p>Write <code>ford_mpg(df_named, year)</code>: using a table indexed by car name, return the mean mpg of the cars whose name contains <code>"ford"</code> and whose <code>year</code> is greater than <code>year</code>.</p></div>
+<pre class="src">
+def ford_mpg(df_named, year):
+    return df_named.loc[df_named["year"] &gt; year, "mpg"].mean()
+</pre>
+<pre class="check">
+exp = Auto_re.loc[Auto_re.index.str.contains("ford") &amp; (Auto_re["year"] &gt; 75), "mpg"].mean()
+got = ford_mpg(Auto_re, 75)
+assert abs(got - exp) &lt; 1e-9, f"expected {exp:.3f}, got {got:.3f}"
+assert abs(ford_mpg(Auto_re, 79) - Auto_re.loc[Auto_re.index.str.contains("ford") &amp; (Auto_re["year"] &gt; 79), "mpg"].mean()) &lt; 1e-9, "should work for any year"
+</pre>
+<div class="hint"><p>The name is in the index: <code style="white-space:normal">df_named.index.str.contains("ford")</code>. Combine with <code>&amp;</code>, brackets around each condition.</p></div>
+<pre class="solution">
+def ford_mpg(df_named, year):
+    rows = df_named.index.str.contains("ford") &amp; (df_named["year"] &gt; year)
+    return df_named.loc[rows, "mpg"].mean()
+</pre><div class="explain"><p>A mask built from the index (a NumPy boolean array) and a mask from a column (a boolean Series) combine with <code>&amp;</code> because they have the same length and order.</p></div></div>
+
+<!-- ============================================================ -->
+<h3 id="pd1-quiz">13. Quiz</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">After <code>pd.read_csv("Auto.csv")</code>, the horsepower column has dtype <code>object</code>. Why?</p><ol class="opts"><li>Horsepower is stored as text in every CSV</li><li>Some entries are <code>?</code>, so the column cannot be numeric</li><li>pandas reads all integers as objects</li></ol><div class="why">One non-numeric entry makes the whole column text. <code>na_values=['?']</code> fixes it.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">What does <code>Auto[["mpg"]]</code> return?</p><ol class="opts"><li>A Series</li><li>A float</li><li>A DataFrame with one column</li></ol><div class="why">A list of column names always gives a DataFrame. <code>Auto["mpg"]</code> gives a Series.</div></div>
+<div class="q" data-type="num" data-answer="4" data-tol="0"><p class="stem">An index has labels a, b, c, d, e in order. How many rows does <code>df.loc["b":"e"]</code> return?</p><div class="why">Label slices include both ends: b, c, d, e, so 4 rows. <code>df.iloc[1:4]</code> would return 3 (b, c, d).</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Which line keeps cars built after 1980 that also do more than 30 mpg?</p><ol class="opts"><li><code style="white-space:normal">Auto[(Auto.year &gt; 80) &amp; (Auto.mpg &gt; 30)]</code></li><li><code style="white-space:normal">Auto[Auto.year &gt; 80 and Auto.mpg &gt; 30]</code></li><li><code style="white-space:normal">Auto.iloc[Auto.year &gt; 80, Auto.mpg &gt; 30]</code></li></ol><div class="why">Element-wise <code>&amp;</code> with brackets. <code>and</code> fails on a Series (ambiguous truth value). <code>.iloc</code> takes positions, not conditions on columns.</div></div>
+<div class="q" data-type="num" data-answer="20" data-tol="0.001"><p class="stem">Groups: A has values 10 and 30, B has value 20. What is the mean of B in <code>groupby(...).mean()</code>?</p><div class="why">B has one value, 20, so its mean is 20. A's mean would be 20 as well.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem"><code>df.dropna()</code> on a 100-row table where each of 4 columns is missing 10% of values independently. Roughly how many rows survive?</p><ol class="opts"><li>90</li><li>About 66</li><li>60</li></ol><div class="why">A row survives only if all 4 entries are present: \(0.9^4\approx0.66\), so about 66 rows. This is why dropping rows can waste a lot of data.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">What does <code>df.std()</code> divide by, for a column of n values?</p><ol class="opts"><li>n, like NumPy</li><li>n + 1</li><li>n − 1</li></ol><div class="why">pandas defaults to the sample standard deviation (<code>ddof=1</code>); NumPy defaults to <code>ddof=0</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Why does ISLP convert <code>cylinders</code> to a categorical column?</p><ol class="opts"><li>It takes only a few distinct values, so it is better treated as qualitative (groups) than as a quantity</li><li>To save memory only</li><li>Because numbers cannot be plotted</li></ol><div class="why">With few distinct values, treating cylinders as groups lets box plots and models handle each level separately (ISLP §3.3.1 on qualitative predictors).</div></div>
+<div class="q" data-type="open"><p class="stem">Explain the difference between <code>.loc</code> and <code>.iloc</code> to a classmate, including how slices behave, with an example from Auto.</p><div class="model"><code>.loc</code> selects by labels: index labels and column names (or booleans). <code>.iloc</code> selects by integer position, exactly like NumPy. Label slices include the end label; position slices exclude the end position. With Auto indexed by name, <code style="white-space:normal">Auto_re.loc["amc rebel sst", "mpg"]</code> and <code>Auto_re.iloc[3, 0]</code> both give 16.0, but <code style="white-space:normal">Auto_re.loc["buick skylark 320":"ford torino"]</code> has 4 rows while <code>Auto_re.iloc[1:4]</code> has 3.</div></div>
+</div>
+
+<h3 id="pd1-cards">14. Flashcards</h3>
+<div class="cards">
+<div class="fc"><div class="f">Series vs DataFrame?</div><div class="b">Series: 1-D labelled values with one dtype. DataFrame: a table of Series (columns) sharing one index; each column has its own dtype.</div></div>
+<div class="fc"><div class="f">Read a CSV where <code>?</code> means missing and the first column holds row names?</div><div class="b"><code style="white-space:normal">pd.read_csv("file.csv", na_values=["?"], index_col=0)</code></div></div>
+<div class="fc"><div class="f">Read a whitespace-separated file in current pandas?</div><div class="b"><code style="white-space:normal">pd.read_csv("Auto.data", sep=r"\s+")</code> (ISLP's <code>delim_whitespace=True</code> is deprecated).</div></div>
+<div class="fc"><div class="f">Five quick ways to inspect a DataFrame?</div><div class="b"><code>head()</code>, <code>shape</code>, <code>dtypes</code>, <code>info()</code>, <code>describe()</code>.</div></div>
+<div class="fc"><div class="f"><code>df["a"]</code> vs <code>df[["a"]]</code>?</div><div class="b">A Series vs a one-column DataFrame.</div></div>
+<div class="fc"><div class="f"><code>.loc</code> vs <code>.iloc</code>?</div><div class="b">Labels (slices include the end) vs integer positions (slices exclude the end).</div></div>
+<div class="fc"><div class="f">Rows where two conditions hold, two columns, one call?</div><div class="b"><code style="white-space:normal">df.loc[(df.a &gt; 1) &amp; (df.b &lt; 5), ["a", "b"]]</code></div></div>
+<div class="fc"><div class="f">Mean of y within each group of g?</div><div class="b"><code>df.groupby("g")["y"].mean()</code>: split, apply, combine.</div></div>
+<div class="fc"><div class="f">Count each distinct value of a column?</div><div class="b"><code>df["col"].value_counts()</code></div></div>
+<div class="fc"><div class="f">Fraction missing in each column?</div><div class="b"><code>df.isna().mean()</code></div></div>
+<div class="fc"><div class="f">Add a column without changing the original table?</div><div class="b"><code style="white-space:normal">out = df.copy(); out["new"] = ...</code> or <code>df.assign(new=...)</code>.</div></div>
+<div class="fc"><div class="f">Table to NumPy?</div><div class="b"><code>df[cols].to_numpy()</code> (older: <code>.values</code>).</div></div>
+<div class="fc"><div class="f">Plot every pair of columns?</div><div class="b"><code style="white-space:normal">pd.plotting.scatter_matrix(df[cols])</code></div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> <span>I can build Series and DataFrames, and load a CSV with <code>na_values</code>, <code>index_col</code> and <code>sep</code>.</span></label>
+<label><input type="checkbox"> <span>I can inspect a table with <code>head</code>, <code>shape</code>, <code>dtypes</code>, <code>info</code> and <code>describe</code>, and explain what <code>describe</code> reports.</span></label>
+<label><input type="checkbox"> <span>I can select with <code>[]</code>, <code>.loc</code> and <code>.iloc</code>, including boolean and lambda filters, and I know which slices include their end.</span></label>
+<label><input type="checkbox"> <span>I can sort, add and drop columns, count values, and compute <code>groupby</code> summaries.</span></label>
+<label><input type="checkbox"> <span>I can find, count, drop and fill missing values.</span></label>
+<label><input type="checkbox"> <span>I can turn a table into NumPy arrays and make ISLP's scatter, histogram, box plot and scatter-matrix figures.</span></label>
+</div>
+</section>

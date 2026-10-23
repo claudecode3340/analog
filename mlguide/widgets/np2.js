@@ -19,7 +19,7 @@
     c2.appendChild(G.el("span", "", "<b style='font-size:13px;color:var(--muted)'>B</b>"));
     G.seg(c2, BL.map(function (p) { return [p[0], p[0] === "s" ? "scalar" : shp(p[1])]; }), b, function (v) { b = v; draw(); });
     var expr = G.el("div"); expr.style.cssText = "font:700 16px var(--mono);margin:4px 0 8px;color:var(--tool)"; body.appendChild(expr);
-    var rules = G.el("div"); body.appendChild(rules);
+    var rules = G.el("div"); rules.style.overflowX = "auto"; body.appendChild(rules);
     var pics = G.el("div", "mrow"); body.appendChild(pics);
     var msg = G.el("p"); msg.style.cssText = "font-size:14.5px;line-height:1.55;margin:8px 0 0"; body.appendChild(msg);
     function draw() {
@@ -35,11 +35,11 @@
         else if (y === 1) { out.push(x); why.push("B stretches 1 → " + x); }
         else { ok = false; out.push("✗"); why.push(x + " vs " + y + ": mismatch"); }
       }
-      var cs = "padding:4px 10px;text-align:center;white-space:nowrap";
+      var cs = "padding:4px 7px;text-align:center;white-space:nowrap";
       function rowH(lbl, v, note) { return '<tr><td style="padding:4px 10px 4px 0;white-space:nowrap">' + lbl + '</td><td style="' + cs + '">' + v[0] + '</td><td style="' + cs + '">' + v[1] + '</td><td style="padding:4px 0;color:var(--faint);font-size:12px;font-family:var(--body)">' + (note || "") + "</td></tr>"; }
       rules.innerHTML = '<table style="border-collapse:collapse;font:14px var(--mono);margin:4px 0 6px"><thead><tr><th></th><th style="' + cs + ';font-size:11px;color:var(--muted)">axis 0</th><th style="' + cs + ';font-size:11px;color:var(--muted)">axis 1</th><th></th></tr></thead><tbody>' +
-        rowH("A " + shp(sa), pa, sa.length < 2 ? "padded with 1 on the left" : "") +
-        rowH("B " + (sb.length ? shp(sb) : "()"), pb, sb.length < 2 ? "padded with 1s on the left" : "") +
+        rowH("A " + shp(sa), pa, sa.length < 2 ? "padded on the left" : "") +
+        rowH("B " + (sb.length ? shp(sb) : "()"), pb, sb.length < 2 ? "padded on the left" : "") +
         '<tr style="border-top:1.5px solid var(--line2)">' + '<td style="padding:4px 10px 4px 0"><b>result</b></td>' + out.map(function (o, k) { var bad = /mismatch/.test(why[k]); return '<td style="' + cs + ";font-weight:700;color:var(" + (bad ? "--bad" : "--ink") + ')">' + o + "</td>"; }).join("") + "<td></td></tr></tbody></table>" +
         '<div style="font-size:13.5px;line-height:1.6">' + why.map(function (w, k) { var bad = /mismatch/.test(w); return '<span style="color:var(' + (bad ? "--bad" : "--good") + ');font-weight:600">' + (bad ? "✗" : "✓") + "</span> axis " + k + ": " + w; }).join("<br>") + "</div>";
       if (!ok) {
@@ -96,7 +96,7 @@
 
   G.widget("np2-dist", function (body) {
     var train = [[1.5, 8.5], [6, 8.6], [3, 4.2], [8.8, 5], [4.2, 1.5], [7.6, 2.3]], test = [[2.2, 6.3], [5.5, 3.2], [8.5, 8]];
-    var pl = G.plot(body, { w: 440, h: 360, x: [0, 10], y: [0, 10], xlabel: "feature 1", ylabel: "feature 2", pad: { l: 44, r: 12, t: 12, b: 42 }, label: "training points (blue) and draggable test points (red)" });
+    var pl = G.plot(body, { w: 400, h: 340, x: [0, 10], y: [0, 10], xlabel: "feature 1", ylabel: "feature 2", pad: { l: 44, r: 12, t: 12, b: 42 }, label: "training points (blue) and draggable test points (red)" });
     var tbl = G.el("div"); tbl.style.cssText = "margin:10px 0 0;overflow-x:auto"; body.appendChild(tbl);
     var drag = -1;
     function dist(p, q) { return Math.hypot(p[0] - q[0], p[1] - q[1]); }

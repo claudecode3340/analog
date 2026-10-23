@@ -1,0 +1,645 @@
+<section class="lesson" id="plt1" data-book="ISLP §2.3.4, pp. 48–50 · Fig. 2.1">
+<p class="lede">Before you fit any model, look at the data. A single picture can show a curve where you expected a line, an outlier that will drag your fit, or two groups that should be modelled separately. This lesson teaches matplotlib, the plotting library behind every figure in the ISLP labs, from a first scatter plot to a faithful copy of ISLP's Figure 2.1.</p>
+<div class="uses"><b>You'll use</b> <a href="#np1">NumPy I</a> (arrays, <code>linspace</code>, masks) · <a href="#np2">NumPy II</a> (random generators, broadcasting, <code>polyfit</code>)</div>
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>create a figure and axes with <code>fig, ax = plt.subplots()</code> and explain what each object is for;</li>
+<li>draw line plots, scatter plots, histograms, bar charts, box plots, heatmaps and contour plots;</li>
+<li>label axes (with units), add titles and legends, set limits and scales, and choose colours, markers and line styles;</li>
+<li>arrange several plots in a grid with shared axes, and save a figure to a file;</li>
+<li>reproduce ISLP Figure 2.1 (sales against TV, radio and newspaper budgets with fitted lines) from <code>Advertising.csv</code>.</li></ul></div>
+
+<div class="callout book"><blockquote>In matplotlib, a plot consists of a figure and one or more axes. You can think of the figure as the blank canvas upon which one or more plots will be displayed.</blockquote><cite>ISLP p. 48</cite></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-why">1. Why look first: four datasets, one set of statistics</h3>
+<p>In 1973 the statistician Francis Anscombe built four small datasets that agree on almost every summary number: the same mean of \(x\) (9), the same mean of \(y\) (7.50), the same variance, the same correlation (0.816) and the same least-squares line, \(\hat y = 3.00 + 0.500x\). Here they are, checked with NumPy.</p>
+<div class="py" id="c-plt1-01" data-mode="setup"><pre class="src">
+import numpy as np
+import matplotlib.pyplot as plt          # the usual nickname
+from matplotlib.pyplot import subplots   # ISLP's style: import just this one function
+
+x123 = np.array([10, 8, 13, 9, 11, 14, 6, 4, 12, 7, 5])
+x4 = np.array([8, 8, 8, 8, 8, 8, 8, 19, 8, 8, 8])
+ys = [np.array([8.04, 6.95, 7.58, 8.81, 8.33, 9.96, 7.24, 4.26, 10.84, 4.82, 5.68]),
+      np.array([9.14, 8.14, 8.74, 8.77, 9.26, 8.10, 6.13, 3.10, 9.13, 7.26, 4.74]),
+      np.array([7.46, 6.77, 12.74, 7.11, 7.81, 8.84, 6.08, 5.39, 8.15, 6.42, 5.73]),
+      np.array([6.58, 5.76, 7.71, 8.84, 8.47, 7.04, 5.25, 12.50, 5.56, 7.91, 6.89])]
+xs = [x123, x123, x123, x4]
+</pre><div class="pynote">This setup cell runs first whenever you run any cell of this lesson. <code>matplotlib.pyplot</code> is the part of matplotlib you talk to; everyone calls it <code>plt</code>. ISLP instead imports only the <code>subplots</code> function. Both styles appear in this lesson so that you can read either.</div></div>
+<div class="py" id="c-plt1-02"><pre class="src">
+for k in range(4):
+    x, y = xs[k], ys[k]
+    slope, intercept = np.polyfit(x, y, 1)      # least-squares line (from NumPy II)
+    r = np.corrcoef(x, y)[0, 1]
+    print(f"set {k+1}: mean x={x.mean():.2f}  mean y={y.mean():.2f}  "
+          f"var y={y.var(ddof=1):.2f}  r={r:.3f}  line: y = {intercept:.2f} + {slope:.3f} x")
+</pre><div class="pynote"><b>Read the output:</b> four lines of nearly identical numbers. If you only looked at summaries you would conclude the four datasets are the same. Now plot them.</div></div>
+
+<div class="predict" data-correct="3"><p>The four datasets share their means, variances, correlation and fitted line. What will their scatter plots look like?</p><ol class="opts"><li>Four nearly identical clouds of points</li><li>Four clouds with different slopes</li><li>Four completely different shapes</li></ol>
+<div class="why">Summary numbers throw away almost everything about the <i>shape</i> of the data. The plots show a noisy line, a smooth curve, a perfect line spoiled by one outlier, and a vertical stack plus one extreme point. Only the first is a good fit for a straight line.</div></div>
+<div class="py" id="c-plt1-03"><pre class="src">
+fig, axes = plt.subplots(1, 4, figsize=(12, 3), sharex=True, sharey=True)
+grid = np.linspace(3, 20, 2)
+for k in range(4):
+    ax = axes[k]
+    ax.scatter(xs[k], ys[k], color="C0")
+    ax.plot(grid, 3 + 0.5 * grid, color="C1")      # the shared fitted line
+    ax.set_title(f"Anscombe set {k+1}")
+    ax.set_xlabel("x")
+axes[0].set_ylabel("y")
+fig.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> one figure with four panels side by side. Set 1 suits a straight line. Set 2 is a curve (a line is the wrong model). Set 3 is a perfect line with one outlier pulling the fit. In set 4 a single point creates the whole slope. Everything in this cell (subplots, scatter, plot, titles, labels, <code>tight_layout</code>) is explained in the sections below. The lesson: <b>always plot first</b>.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-fig">2. Figure and axes: the two objects you work with</h3>
+<p>A matplotlib picture is made of two kinds of object. The <dfn data-g="plt1-figure">figure</dfn> is the whole canvas: its size, its background, the file it is saved to. An <dfn data-g="plt1-axes">axes</dfn> is one plotting area inside it, with its own x-axis, y-axis, ticks, labels, title and data. A figure can hold several axes. (ISLP warns that “axes” here is <i>not</i> the plural of “axis”: one axes object contains two axis objects, the x-axis and the y-axis.)</p>
+<p>You make both at once with <code>plt.subplots()</code>. It returns a tuple of two things, and you unpack it into two names, exactly as ISLP does:</p>
+<div class="py" id="c-plt1-04"><pre class="src">
+rng = np.random.default_rng(1)
+x = rng.standard_normal(100)
+y = rng.standard_normal(100)
+
+fig, ax = subplots(figsize=(5, 4))   # figsize = (width, height) in inches
+# ISLP In[39]: ax.plot draws a LINE plot by default
+ax.plot(x, y);
+</pre><div class="pynote"><b>Read the output:</b> a tangle of lines. <code>ax.plot</code> joins consecutive points with straight lines, which only makes sense when the points are in order (a time series, a function). These points are random, so joining them makes no sense: we want dots. The semicolon at the end hides a line of text that <code>ax.plot</code> would otherwise print (a list describing the line object); it does not affect the picture. ISLP ends plotting lines with <code>;</code> for this reason.</div></div>
+
+<div class="callout"><div class="ct">New in this lesson · unpacking a tuple</div><p><code>fig, ax = subplots()</code> is short for <code>output = subplots()</code>, then <code>fig = output[0]</code> and <code>ax = output[1]</code> (ISLP In[40]). Python lets you unpack any tuple or list into the same number of names: <code>a, b = (3, 4)</code> gives <code>a = 3</code> and <code>b = 4</code>. You saw the same trick in NumPy II with <code>np.linalg.lstsq</code>.</p></div>
+
+<p>To draw dots instead of lines, give <code>ax.plot</code> a third argument, a <i>format string</i>: <code>'o'</code> means “circle markers, no line”. Or use <code>ax.scatter</code>, which is designed for scatter plots:</p>
+<div class="py" id="c-plt1-05"><pre class="src">
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.6))
+axes[0].plot(x, y, 'o')                  # ISLP In[41]
+axes[0].set_title("ax.plot(x, y, 'o')")
+axes[1].scatter(x, y, marker='o')        # ISLP In[42]
+axes[1].set_title("ax.scatter(x, y)")
+fig.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> two scatter plots of the same points. They look alike. The difference: <code>scatter</code> can give every point its own size and colour (you will use that soon), while <code>plot</code> is faster for many points of one style.</div></div>
+
+<p>Here is a fully labelled figure. Every part you will configure is named on it, with the method that controls it:</p>
+<div class="py" id="c-plt1-06"><pre class="src">
+t = np.linspace(0, 1, 200)
+fig, ax = plt.subplots(figsize=(8, 4.2))
+ax.plot(t, np.sin(2*np.pi*2*t), label="2 Hz sine")
+ax.plot(t, 0.5*np.cos(2*np.pi*3*t), '--', label="3 Hz cosine")
+ax.set_xlabel("time (s)"); ax.set_ylabel("amplitude (V)")
+ax.set_title("Two test signals"); ax.legend(loc="upper right")
+red = dict(color="#C0392F", fontsize=9.5, xycoords="axes fraction", annotation_clip=False,
+           arrowprops=dict(arrowstyle="-&gt;", color="#C0392F"))
+ax.annotate("title: ax.set_title", xy=(0.62, 1.04), xytext=(1.04, 1.04), **red)
+ax.annotate("legend: ax.legend", xy=(0.99, 0.86), xytext=(1.04, 0.86), **red)
+ax.annotate("a line: ax.plot", xy=(0.95, -0.59), xytext=(1.04, 0.50),
+            **{**red, "xycoords": "data", "textcoords": "axes fraction"})   # xy in data units
+ax.annotate("tick labels: ax.set_xticks", xy=(0.80, -0.06), xytext=(1.04, 0.14), **red)
+ax.annotate("x-axis label: ax.set_xlabel", xy=(0.55, -0.13), xytext=(1.04, -0.10), **red)
+fig.text(0.01, 0.01, "the whole canvas is the figure: fig", fontsize=9.5, color="#1C7650")
+fig.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> the red notes and arrows name the parts of the <b>axes</b>; the green note names the <b>figure</b>. <code>ax.annotate</code> writes text at a position; <code>xycoords="axes fraction"</code> means (0, 0) is the bottom-left of the plotting area and (1, 1) its top-right. You will rarely annotate, but you will use every labelled part constantly.</div></div>
+
+<div class="callout pitfall"><p><b>Two ways to plot, and why we use one.</b> You will meet code like <code>plt.plot(x, y)</code>, <code>plt.xlabel("x")</code>: the “pyplot” style, which draws on whichever axes is current. It is fine for a quick look, but it becomes confusing with several panels. This guide (and ISLP) uses the <b>object style</b>: <code>fig, ax = plt.subplots()</code>, then <code>ax.plot</code>, <code>ax.set_xlabel</code>. Note the names: <code>plt.xlabel</code> but <code>ax.set_xlabel</code>.</p></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-labels">3. Labels, titles, legends, limits</h3>
+<p>A plot without labels is a puzzle. These methods of <code>ax</code> label everything:</p>
+<div class="tw"><table class="t"><thead><tr><th>Method</th><th>Does</th></tr></thead><tbody>
+<tr><td><code style="white-space:normal">ax.set_xlabel("TV budget ($1000s)")</code></td><td>label under the x-axis</td></tr>
+<tr><td><code style="white-space:normal">ax.set_ylabel("Sales (1000 units)")</code></td><td>label beside the y-axis</td></tr>
+<tr><td><code>ax.set_title("...")</code></td><td>title above the axes</td></tr>
+<tr><td><code>ax.plot(..., label="name")</code> then <code>ax.legend()</code></td><td>a legend listing every labelled line or point set</td></tr>
+<tr><td><code>ax.set_xlim(0, 10)</code>, <code>ax.set_ylim(...)</code></td><td>the visible range of each axis</td></tr>
+<tr><td><code>ax.set_xscale("log")</code></td><td>a logarithmic axis (for data spanning many orders of magnitude)</td></tr>
+<tr><td><code style="white-space:normal">ax.set(xlabel=..., ylabel=..., title=...)</code></td><td>several settings in one call (keyword arguments)</td></tr>
+<tr><td><code>fig.set_size_inches(12, 3)</code></td><td>resize the whole figure afterwards (ISLP p. 49)</td></tr>
+</tbody></table></div>
+<div class="py" id="c-plt1-07"><pre class="src">
+fig, ax = subplots(figsize=(5, 4))
+ax.scatter(x, y, marker='o')
+ax.set_xlabel("this is the x-axis")       # ISLP In[44]
+ax.set_ylabel("this is the y-axis")
+ax.set_title("Plot of X vs Y")
+ax.set_xlim(-3, 3)
+ax.set_ylim(-3, 3);
+</pre><div class="pynote"><b>Read the output:</b> ISLP's labelled scatter plot, with both axes fixed to run from −3 to 3. Fixing limits matters when you compare plots: two panels with different automatic ranges can make the same spread look different.</div></div>
+
+<div class="callout key"><p><b>Always label axes with units.</b> “TV” is ambiguous; “TV budget (thousands of $)” is not. A reader should understand a figure without reading your code. The title can state the finding (“Sales rise with TV spending”), not just the variable names.</p></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-func">4. Plotting a function: sample it finely</h3>
+<p>To plot a function \(f(x)\), make a fine grid of \(x\) values with <code>np.linspace</code>, compute \(f\) on the whole grid at once, and join the points with <code>ax.plot</code>. Matplotlib only ever draws straight segments between the points you give it, so the curve looks smooth only if the points are close together.</p>
+<div class="predict" data-correct="2"><p>We plot \(\sin(2\pi\cdot 3x)\) on \([0, 1]\) (three full cycles) using only 7 evenly spaced points from <code>np.linspace(0, 1, 7)</code>. What will we see?</p><ol class="opts"><li>A smooth sine wave with three cycles</li><li>A flat or jagged line that looks nothing like a sine</li><li>An error, because 7 points are not enough</li></ol>
+<div class="why">Seven samples over three cycles is about 2.3 samples per cycle, barely above the Nyquist rate, and matplotlib joins them with straight lines. Here every sample falls exactly on a zero crossing, so the picture is a flat line that looks nothing like a sine. With 200 points the curve is smooth.</div></div>
+<div class="py" id="c-plt1-08"><pre class="src">
+f = lambda x: np.sin(2 * np.pi * 3 * x)     # a tiny one-line function (explained below)
+x_coarse = np.linspace(0, 1, 7)
+x_fine = np.linspace(0, 1, 200)
+fig, ax = plt.subplots(figsize=(7, 3.2))
+ax.plot(x_fine, f(x_fine), label="200 points")
+ax.plot(x_coarse, f(x_coarse), 'o-', label="7 points")
+ax.set_xlabel("x"); ax.set_ylabel("f(x)")
+ax.legend();
+</pre><div class="pynote"><b>Read the output:</b> the 200-point curve is a smooth sine; the 7-point version is almost flat, because the samples land at \(x=0, 1/6, 2/6,\dots\), where \(\sin(2\pi\cdot3x)=\sin(\pi k)\approx0\). <code>f = lambda x: ...</code> defines a function in one line: <code>lambda x: expression</code> is a nameless function that takes <code>x</code> and returns the expression. It is the same as <code style="white-space:normal">def f(x): return np.sin(2*np.pi*3*x)</code>. You will meet <code>lambda</code> again in pandas.</div></div>
+<div class="callout ece"><p><b>This is sampling and interpolation.</b> Plotting is reconstruction with a first-order hold: straight lines between samples. If you sample a function below about twice its highest frequency you see aliasing, exactly as in your signals course. A safe habit: a few hundred points across the plotted range.</p></div>
+
+<p>Line styles, markers and colours are set with a short format string (<code>'o-'</code>, <code>'r--'</code>) or with keyword arguments (<code>color=</code>, <code>linestyle=</code>, <code>marker=</code>, <code>linewidth=</code>). Build any combination here and copy the code:</p>
+<div class="widget" data-w="plt1-style" data-title="Format strings and line styles"><div class="wn">Pick a colour, marker and line style. The format string and the equivalent keyword version are written for you. Notice that choosing “no line” with a marker gives a scatter plot, which is what ISLP's <code>'o'</code> does.</div></div>
+
+<div class="tw"><table class="t"><thead><tr><th>Colour</th><th>Marker</th><th>Line style</th></tr></thead><tbody>
+<tr><td><code>'b'</code> blue, <code>'r'</code> red, <code>'g'</code> green, <code>'k'</code> black; <code>'C0'</code>…<code>'C9'</code> the default cycle; any name (<code>'orange'</code>) or hex (<code>'#1C7650'</code>)</td><td><code>'o'</code> circle, <code>'s'</code> square, <code>'^'</code> triangle, <code>'+'</code> plus, <code>'x'</code> cross, <code>'.'</code> point</td><td><code>'-'</code> solid, <code>'--'</code> dashed, <code>':'</code> dotted, <code>'-.'</code> dash-dot</td></tr>
+</tbody></table></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-kinds">5. The plot types you will use</h3>
+<h4>Scatter plots with colour and size</h4>
+<p><code style="white-space:normal">ax.scatter(x, y, c=values, s=sizes, alpha=0.5, cmap="viridis")</code> colours each point by a number (through a <dfn data-g="plt1-colormap">colormap</dfn>), sizes it by another, and makes points semi-transparent with <code>alpha</code> (0 invisible, 1 solid) so that overlapping points show up darker. <code>fig.colorbar(...)</code> adds the colour key.</p>
+<div class="py" id="c-plt1-09"><pre class="src">
+rng = np.random.default_rng(0)
+x = rng.uniform(0, 10, 300)
+y = 2 + 0.5 * x + rng.normal(0, 1, 300)
+fig, ax = plt.subplots(figsize=(6, 4))
+pts = ax.scatter(x, y, c=y - (2 + 0.5 * x), cmap="coolwarm", s=18, alpha=0.8)
+fig.colorbar(pts, ax=ax, label="residual (y minus true line)")
+ax.set_xlabel("x"); ax.set_ylabel("y");
+</pre><div class="pynote"><b>Read the output:</b> points above the true line are red, points below are blue, and the colour bar maps colour back to the number. This is how you will colour points by class (in classification) or by error (in regression diagnostics).</div></div>
+
+<h4>Histograms: the shape of one variable</h4>
+<p>A <dfn data-g="plt1-hist">histogram</dfn> splits the range of a variable into bins and draws a bar for how many values fall in each. <code>ax.hist(values, bins=12)</code>. The number of bins changes the picture a lot:</p>
+<div class="widget" data-w="plt1-bins" data-title="Histogram of Auto mpg: how many bins?" data-args="{&quot;mpg&quot;: [18.0, 15.0, 18.0, 16.0, 17.0, 15.0, 14.0, 14.0, 14.0, 15.0, 15.0, 14.0, 15.0, 14.0, 24.0, 22.0, 18.0, 21.0, 27.0, 26.0, 25.0, 24.0, 25.0, 26.0, 21.0, 10.0, 10.0, 11.0, 9.0, 27.0, 28.0, 25.0, 19.0, 16.0, 17.0, 19.0, 18.0, 14.0, 14.0, 14.0, 14.0, 12.0, 13.0, 13.0, 18.0, 22.0, 19.0, 18.0, 23.0, 28.0, 30.0, 30.0, 31.0, 35.0, 27.0, 26.0, 24.0, 25.0, 23.0, 20.0, 21.0, 13.0, 14.0, 15.0, 14.0, 17.0, 11.0, 13.0, 12.0, 13.0, 19.0, 15.0, 13.0, 13.0, 14.0, 18.0, 22.0, 21.0, 26.0, 22.0, 28.0, 23.0, 28.0, 27.0, 13.0, 14.0, 13.0, 14.0, 15.0, 12.0, 13.0, 13.0, 14.0, 13.0, 12.0, 13.0, 18.0, 16.0, 18.0, 18.0, 23.0, 26.0, 11.0, 12.0, 13.0, 12.0, 18.0, 20.0, 21.0, 22.0, 18.0, 19.0, 21.0, 26.0, 15.0, 16.0, 29.0, 24.0, 20.0, 19.0, 15.0, 24.0, 20.0, 11.0, 20.0, 19.0, 15.0, 31.0, 26.0, 32.0, 25.0, 16.0, 16.0, 18.0, 16.0, 13.0, 14.0, 14.0, 14.0, 29.0, 26.0, 26.0, 31.0, 32.0, 28.0, 24.0, 26.0, 24.0, 26.0, 31.0, 19.0, 18.0, 15.0, 15.0, 16.0, 15.0, 16.0, 14.0, 17.0, 16.0, 15.0, 18.0, 21.0, 20.0, 13.0, 29.0, 23.0, 20.0, 23.0, 24.0, 25.0, 24.0, 18.0, 29.0, 19.0, 23.0, 23.0, 22.0, 25.0, 33.0, 28.0, 25.0, 25.0, 26.0, 27.0, 17.5, 16.0, 15.5, 14.5, 22.0, 22.0, 24.0, 22.5, 29.0, 24.5, 29.0, 33.0, 20.0, 18.0, 18.5, 17.5, 29.5, 32.0, 28.0, 26.5, 20.0, 13.0, 19.0, 19.0, 16.5, 16.5, 13.0, 13.0, 13.0, 31.5, 30.0, 36.0, 25.5, 33.5, 17.5, 17.0, 15.5, 15.0, 17.5, 20.5, 19.0, 18.5, 16.0, 15.5, 15.5, 16.0, 29.0, 24.5, 26.0, 25.5, 30.5, 33.5, 30.0, 30.5, 22.0, 21.5, 21.5, 43.1, 36.1, 32.8, 39.4, 36.1, 19.9, 19.4, 20.2, 19.2, 20.5, 20.2, 25.1, 20.5, 19.4, 20.6, 20.8, 18.6, 18.1, 19.2, 17.7, 18.1, 17.5, 30.0, 27.5, 27.2, 30.9, 21.1, 23.2, 23.8, 23.9, 20.3, 17.0, 21.6, 16.2, 31.5, 29.5, 21.5, 19.8, 22.3, 20.2, 20.6, 17.0, 17.6, 16.5, 18.2, 16.9, 15.5, 19.2, 18.5, 31.9, 34.1, 35.7, 27.4, 25.4, 23.0, 27.2, 23.9, 34.2, 34.5, 31.8, 37.3, 28.4, 28.8, 26.8, 33.5, 41.5, 38.1, 32.1, 37.2, 28.0, 26.4, 24.3, 19.1, 34.3, 29.8, 31.3, 37.0, 32.2, 46.6, 27.9, 40.8, 44.3, 43.4, 36.4, 30.0, 44.6, 33.8, 29.8, 32.7, 23.7, 35.0, 32.4, 27.2, 26.6, 25.8, 23.5, 30.0, 39.1, 39.0, 35.1, 32.3, 37.0, 37.7, 34.1, 34.7, 34.4, 29.9, 33.0, 33.7, 32.4, 32.9, 31.6, 28.1, 30.7, 25.4, 24.2, 22.4, 26.6, 20.2, 17.6, 28.0, 27.0, 34.0, 31.0, 29.0, 27.0, 24.0, 36.0, 37.0, 31.0, 38.0, 36.0, 36.0, 36.0, 34.0, 38.0, 32.0, 38.0, 25.0, 38.0, 26.0, 22.0, 32.0, 36.0, 27.0, 27.0, 44.0, 32.0, 28.0, 31.0]}"><div class="wn">Start with 3 bins: all you learn is that low mpg is more common than high. Around 12–20 bins you see its real shape: most cars between 15 and 30 mpg, a long tail to the right. At 80 bins the picture is mostly noise. ISLP uses <code>bins=12</code> for this very variable.</div></div>
+<div class="py" id="c-plt1-10"><pre class="src">
+z = np.random.default_rng(2).normal(loc=20, scale=5, size=1000)
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.2))
+axes[0].hist(z, bins=12, color="C0", edgecolor="white")
+axes[0].set_title("bins=12 (counts)")
+counts, edges, bars = axes[1].hist(z, bins=30, density=True, color="C2", alpha=0.7)
+grid = np.linspace(0, 40, 200)
+axes[1].plot(grid, np.exp(-(grid - 20)**2 / (2 * 5**2)) / (5 * np.sqrt(2 * np.pi)), color="C1")
+axes[1].set_title("bins=30, density=True")
+for a in axes: a.set_xlabel("value")
+fig.tight_layout()
+print(len(counts), "bins; first edges:", np.round(edges[:3], 2))
+</pre><div class="pynote"><b>Read the output:</b> with <code>density=True</code> the bar heights are scaled so the total area is 1, which lets you overlay a probability density (the orange normal curve with mean 20 and standard deviation 5). <code>ax.hist</code> also <i>returns</i> the counts and the bin edges, which is handy for checking; there are 31 edges for 30 bins.</div></div>
+
+<h4>Bar charts and box plots</h4>
+<p><code>ax.bar(names, heights)</code> draws one bar per category. A <dfn data-g="plt1-boxplot">box plot</dfn> summarises a distribution in five numbers: the box spans the middle half of the data (25th to 75th percentile), the line inside is the median, the whiskers reach to the furthest points within 1.5 box-lengths, and points beyond are drawn individually as possible outliers. ISLP Figure 1.1 (right) and 1.2 use box plots.</p>
+<div class="py" id="c-plt1-11"><pre class="src">
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.4))
+names = ["America", "Europe", "Japan"]
+counts = [245, 68, 79]                      # cars of each origin in ISLP's Auto data
+axes[0].bar(names, counts, color=["C0", "C1", "C2"])
+axes[0].set_ylabel("number of cars"); axes[0].set_title("A bar chart")
+rng = np.random.default_rng(3)
+groups = [rng.normal(20, 4, 100), rng.normal(27, 6, 100), rng.normal(30, 5, 100)]
+axes[1].boxplot(groups)
+axes[1].set_xticks([1, 2, 3], names)        # boxes sit at x = 1, 2, 3
+axes[1].set_ylabel("mpg (simulated)"); axes[1].set_title("A box plot")
+fig.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> left, one bar per origin. Right, three simulated groups: you can compare their medians, spreads and outliers at a glance. <code>set_xticks(positions, labels)</code> puts names under the boxes.</div></div>
+
+<h4>Reference lines: axhline, axvline, axline</h4>
+<p><code>ax.axhline(0)</code> draws a horizontal line across the whole axes (for example \(y=0\) on a residual plot), <code>ax.axvline(5)</code> a vertical one, and <code>ax.axline((0, b), slope=m)</code> an infinite straight line through a point with a given slope: the easiest way to draw a fitted regression line. ISLP Chapter 3 writes a small helper called <code>abline</code> for the same job.</p>
+<div class="py" id="c-plt1-12"><pre class="src">
+fig, ax = plt.subplots(figsize=(6, 3.6))
+ax.scatter(x, y, s=10, alpha=0.5)
+b1, b0 = np.polyfit(x, y, 1)                     # slope, intercept
+ax.axline((0, b0), slope=b1, color="C1", linewidth=2, label=f"fit: y = {b0:.2f} + {b1:.2f}x")
+ax.axhline(y.mean(), color="gray", linestyle=":", label="mean of y")
+ax.axvline(5, color="C2", linestyle="--", label="x = 5")
+ax.set_xlabel("x"); ax.set_ylabel("y"); ax.legend(fontsize=8);
+</pre><div class="pynote"><b>Read the output:</b> the fitted line is close to the true line \(y=2+0.5x\) used to simulate the data. The label uses an f-string so the legend shows the actual coefficients.</div></div>
+
+<h4>Heatmaps and contour plots of a function of two variables</h4>
+<p>ISLP's lab (In[49]–[51]) shows a function \(f(x, y)\) on a grid in two ways. <code>ax.contour(x, y, f)</code> draws lines of equal height, like a topographic map; <code>ax.imshow(f)</code> colours every grid cell (a <dfn data-g="plt1-heatmap">heatmap</dfn>). You will see contour plots of loss surfaces in Prince and ISLP Chapter 6. The table <code>f</code> is built by broadcasting, as in NumPy II.</p>
+<div class="py" id="c-plt1-13"><pre class="src">
+xg = np.linspace(-np.pi, np.pi, 50)
+yg = xg
+f = np.multiply.outer(np.cos(yg), 1 / (1 + xg**2))   # f[i, j] = cos(y_i) / (1 + x_j^2)
+fig, axes = plt.subplots(1, 3, figsize=(12, 3.6))
+axes[0].contour(xg, yg, f)
+axes[0].set_title("contour (default levels)")
+axes[1].contour(xg, yg, f, levels=45)
+axes[1].set_title("contour, levels=45")
+im = axes[2].imshow(f, origin="lower", extent=[-np.pi, np.pi, -np.pi, np.pi], cmap="viridis")
+fig.colorbar(im, ax=axes[2]); axes[2].set_title("imshow (heatmap)")
+for a in axes: a.set_xlabel("x"); a.set_ylabel("y")
+fig.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> all three show the same hill: highest at the centre (\(\cos 0/(1+0)=1\)) and negative near the top and bottom edges, where \(\cos y\lt 0\). <code>imshow</code> treats the array like an image, with row 0 at the <i>top</i>; <code>origin="lower"</code> puts row 0 at the bottom, matching the contour plots, and <code>extent</code> labels the axes with real x and y values instead of row and column numbers.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-grid">6. Several plots in one figure</h3>
+<p><code>plt.subplots(nrows, ncols)</code> returns the figure and an <b>array</b> of axes. With one row or one column the array is 1-D (<code>axes[0]</code>, <code>axes[1]</code>…); with several rows and columns it is 2-D, indexed like a NumPy matrix: <code>axes[0, 1]</code> is row 0, column 1. ISLP's example (In[45]–[46]):</p>
+<div class="predict" data-correct="2"><p>What will <code>axes.shape</code> be after <code style="white-space:normal">fig, axes = subplots(nrows=2, ncols=3)</code>?</p><ol class="opts"><li><code>(6,)</code></li><li><code>(2, 3)</code></li><li><code>(3, 2)</code></li></ol>
+<div class="why">The axes come back in a NumPy array laid out like the grid: 2 rows, 3 columns, so <code>axes[0, 1]</code> is the top-middle panel. (With a single row, <code>subplots(1, 3)</code>, the array is 1-D, shape <code>(3,)</code>.)</div></div>
+<div class="py" id="c-plt1-14"><pre class="src">
+rng = np.random.default_rng(4)
+x = rng.standard_normal(100); y = rng.standard_normal(100)
+fig, axes = subplots(nrows=2, ncols=3, figsize=(10, 5))
+axes[0, 1].plot(x, y, 'o')            # row 0, column 1
+axes[1, 2].scatter(x, y, marker='+')  # row 1, column 2
+print(type(axes), axes.shape)
+</pre><div class="pynote"><b>Read the output:</b> a 2 × 3 grid with only two panels filled. <code>axes</code> is a NumPy array of shape (2, 3) whose elements are axes objects, so everything you learned about indexing applies.</div></div>
+
+<p><code>sharex=True</code> and <code>sharey=True</code> make all panels use the same axis range, so the eye can compare them honestly. <code>fig.suptitle</code> adds a title over the whole figure, and <code>fig.tight_layout()</code> (or <code style="white-space:normal">plt.subplots(..., layout="constrained")</code>) spaces the panels so labels do not overlap.</p>
+<div class="predict" data-correct="1"><p>Three panels show signals with amplitudes 1, 2 and 4. With <code>sharey=True</code>, how will they look?</p><ol class="opts"><li>The three waves have visibly different heights, on one common y-range from about −4 to 4</li><li>All three waves look the same height, each panel scaled to its own data</li><li>Only the first panel shows a wave</li></ol>
+<div class="why">With a shared y-axis every panel uses the range needed by the largest signal, so the amplitude-1 wave looks small and the amplitude-4 wave fills its panel. Without <code>sharey</code> each panel autoscales and all three would look identical, which hides exactly the difference you want to see.</div></div>
+<div class="py" id="c-plt1-15"><pre class="src">
+t = np.linspace(0, 1, 300)
+fig, axes = plt.subplots(1, 3, figsize=(10, 3), sharey=True, layout="constrained")
+for ax, amp in zip(axes, [1, 2, 4]):
+    ax.plot(t, amp * np.sin(2 * np.pi * 2 * t))
+    ax.set_title(f"amplitude {amp}")
+    ax.set_xlabel("time (s)")
+axes[0].set_ylabel("voltage (V)")
+fig.suptitle("sharey=True: one common y-axis");
+</pre><div class="pynote"><b>Read the output:</b> only the first panel has y tick labels, because the others share them. <code>zip(axes, [1, 2, 4])</code> (from Python II) walks through the panels and amplitudes in step. Change <code>sharey=True</code> to <code>False</code> and run again: the three waves now look the same size.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-save">7. Saving a figure</h3>
+<p><code style="white-space:normal">fig.savefig("name.png", dpi=200)</code> writes the figure to a file. The format comes from the extension: <code>.png</code> (pixels, good for the web), <code>.pdf</code> or <code>.svg</code> (vector graphics: sharp at any size, best for reports and LaTeX). <code>dpi</code> (dots per inch) sets the resolution of pixel formats: a 6-inch-wide figure at <code>dpi=200</code> is 1200 pixels wide. <code>bbox_inches="tight"</code> trims empty margins. ISLP (In[47]) saves at <code>dpi=400</code>.</p>
+<div class="py" id="c-plt1-16"><pre class="src">
+import os
+fig, ax = plt.subplots(figsize=(4, 3))
+ax.plot([0, 1, 2], [0, 1, 4], 'o-')
+ax.set_xlabel("x"); ax.set_ylabel("x squared")
+fig.savefig("my_first_figure.png", dpi=200, bbox_inches="tight")
+fig.savefig("my_first_figure.pdf")
+print([f for f in os.listdir(".") if f.startswith("my_first")])
+</pre><div class="pynote"><b>Read the output:</b> both files now exist in the working folder (<code>os.listdir(".")</code> lists the files in the current folder). In the browser they live in the page's temporary file system; on your Mac they appear next to your notebook. You can keep changing <code>fig</code> after saving, for example <code>ax.set_xlim(-1, 1)</code>, and save again (ISLP In[48]).</div></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-fig21">8. Reproducing ISLP Figure 2.1</h3>
+<p>Figure 2.1 opens ISLP Chapter 2: sales of a product in 200 markets, plotted against the advertising budget spent on TV, radio and newspaper, each with a least-squares line. Look at it carefully first.</p>
+<figure class="book" data-fig="islp-2.1"><figcaption>Three scatter plots sharing the y-axis (Sales). <b>Look at</b> the style: red open circles, a thick blue fitted line, one panel per medium, x-axis ranges that differ (TV up to 300, radio up to 50, newspaper up to about 115). The TV and radio lines rise clearly; the newspaper line is much flatter and the cloud around it is wide.</figcaption></figure>
+<p>We need the data in Python. The file <code>Advertising.csv</code> is a table; the <a href="#pd1">pandas lesson</a> teaches tables properly, so here we use just two pandas commands: <code>pd.read_csv</code> loads the file into a table called a DataFrame, and <code>ads["TV"]</code> picks one column, which works with NumPy and matplotlib like an array.</p>
+<div class="py" id="c-plt1-17"><pre class="src">
+import pandas as pd
+ads = pd.read_csv("Advertising.csv", index_col=0)   # the first column is just a row number
+print(ads.shape)
+ads.head()     # the first five rows
+</pre><div class="pynote"><b>Read the output:</b> 200 markets (rows) and 4 columns: the three budgets in thousands of dollars, and sales in thousands of units. <code>index_col=0</code> uses the file's first, unnamed column as row labels instead of treating it as data.</div></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>planning the figure before coding it</b></div>
+<div class="given">Goal: a 1 × 3 grid of scatter plots, same y-axis (sales), red open circles, blue fitted line, labelled axes.</div>
+<ol class="steps">
+<li><div>Layout: <code style="white-space:normal">fig, axes = plt.subplots(1, 3, figsize=(12, 4), sharey=True)</code>.<span class="why">Shared y makes the three slopes directly comparable.</span></div></li>
+<li><div>Open circles: <code style="white-space:normal">ax.scatter(x, y, facecolors="none", edgecolors="C1")</code>.<span class="why">“none” means an empty inside; C1 is red in this guide's colour cycle.</span></div></li>
+<li><div>Fitted line: <code>b1, b0 = np.polyfit(x, y, 1)</code>, then <code style="white-space:normal">ax.axline((0, b0), slope=b1, color="blue", linewidth=3)</code>.</div></li>
+<li><div>Repeat for the three columns with a loop over <code>["TV", "radio", "newspaper"]</code>, labelling each x-axis.</div></li>
+</ol>
+<div class="result">One loop, three panels, about ten lines of code</div></div>
+<div class="predict" data-correct="2"><p>Look at the book's figure. Which medium do you expect to have the largest fitted slope, measured in extra sales per extra $1000?</p><ol class="opts"><li>TV, because its line rises the most across the panel</li><li>Radio</li><li>Newspaper</li></ol>
+<div class="why">The TV line rises the most <i>across its panel</i>, but its panel spans $300k while radio's spans only $50k. Per $1000, radio's slope (about 0.20) is roughly four times TV's (about 0.048). Always read slopes in the units of the x-axis, not by eye.</div></div>
+<div class="py" id="c-plt1-18"><pre class="src">
+fig, axes = plt.subplots(1, 3, figsize=(12, 4), sharey=True)
+labels = {"TV": "TV budget ($1000s)", "radio": "Radio budget ($1000s)",
+          "newspaper": "Newspaper budget ($1000s)"}
+for ax, col in zip(axes, ["TV", "radio", "newspaper"]):
+    x, y = ads[col], ads["sales"]
+    b1, b0 = np.polyfit(x, y, 1)
+    ax.scatter(x, y, facecolors="none", edgecolors="C1", s=22)
+    ax.axline((0, b0), slope=b1, color="blue", linewidth=3)
+    ax.set_xlim(left=-0.03 * x.max())
+    ax.set_xlabel(labels[col])
+    ax.set_title(f"slope {b1:.4f} per $1000")
+axes[0].set_ylabel("Sales (thousands of units)")
+fig.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> compare with the book's figure above: same clouds, same lines. The titles give the slopes: about <b>0.0475</b> extra thousand units of sales per extra $1000 of TV, <b>0.2025</b> for radio and <b>0.0547</b> for newspaper (ISLP reports these same TV numbers in Chapter 3: intercept 7.03, slope 0.0475). Radio's slope is the largest per dollar, but notice how much wider the newspaper cloud is: the line explains little there. Whether these slopes are “real” is exactly what Chapter 3 tests.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-habits">9. Good plotting habits</h3>
+<div class="tw"><table class="t"><thead><tr><th>Habit</th><th>Why</th></tr></thead><tbody>
+<tr><td>Label every axis, with units</td><td>A reader must understand the plot without your code.</td></tr>
+<tr><td>Share axes when comparing panels (<code>sharex</code>, <code>sharey</code>)</td><td>Different automatic ranges make equal things look different.</td></tr>
+<tr><td>Use <code>alpha</code> or smaller markers when points overlap</td><td>Otherwise 1,000 points in one spot look like one point.</td></tr>
+<tr><td>Prefer perceptually uniform colormaps (<code>viridis</code>, <code>cividis</code>); avoid rainbow (<code>jet</code>)</td><td>Rainbow maps create false boundaries and fail for colour-blind readers.</td></tr>
+<tr><td>Don't rely on red versus green alone</td><td>About 1 in 12 men cannot tell them apart; add marker shapes or line styles.</td></tr>
+<tr><td>Start bar charts at zero</td><td>Bar <i>length</i> encodes the value; a cut axis exaggerates differences.</td></tr>
+<tr><td>One message per figure; say it in the title</td><td>The reader should know what to look at.</td></tr>
+</tbody></table></div>
+<div class="py" id="c-plt1-19"><pre class="src">
+rng = np.random.default_rng(5)
+a = rng.normal(0, 1, 5000); b = a + rng.normal(0, 0.5, 5000)
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.6), sharex=True, sharey=True)
+axes[0].scatter(a, b)                            # default: an opaque blob
+axes[0].set_title("before: overplotted, unlabelled")
+axes[1].scatter(a, b, s=4, alpha=0.15)
+axes[1].set_title("after: small, transparent markers")
+axes[1].set_xlabel("signal a (V)"); axes[1].set_ylabel("signal b (V)")
+fig.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> on the left 5,000 points merge into a solid shape and you cannot see where most of them are. On the right, density shows as darkness: most points sit near the centre along a line of slope 1.</div></div>
+<div class="callout exam"><p><b>In interviews and on the job</b> you will often be handed a dataset and asked “what do you see?”. The strong answer starts with plots: a histogram of each variable, scatter plots of the target against each feature, and a check for outliers and missing values, before any model. That is exactly what this lesson and the next (<a href="#pd1">pandas</a>) give you.</p></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-ex">10. Exercises</h3>
+<p>Each function must <b>return</b> the figure and axes it creates; the checks inspect them (the labels, the plotted data, the number of panels). Create the figure inside the function with <code>plt.subplots</code>.</p>
+
+<div class="ex" id="x-plt1-01" data-title="label everything"><div class="task"><p>Write <code>labelled()</code> that plots the points (0, 0), (1, 1), (2, 4), (3, 9) as a line with circle markers, sets the x-label to <code>"time (s)"</code>, the y-label to <code>"distance (m)"</code> and the title to <code>"Falling ball"</code>, and returns <code>fig, ax</code>.</p></div>
+<pre class="src">
+def labelled():
+    fig, ax = plt.subplots()
+    ax.plot([0, 1, 2, 3], [0, 1, 4, 9], 'o-')
+    return fig, ax
+</pre>
+<pre class="check">
+fig, ax = labelled()
+assert ax.get_xlabel() == "time (s)", f"x-label should be 'time (s)', got {ax.get_xlabel()!r}"
+assert ax.get_ylabel() == "distance (m)", f"y-label should be 'distance (m)', got {ax.get_ylabel()!r}"
+assert ax.get_title() == "Falling ball", f"title should be 'Falling ball', got {ax.get_title()!r}"
+assert len(ax.lines) == 1 and list(ax.lines[0].get_ydata()) == [0, 1, 4, 9], "plot exactly one line through the four points"
+assert ax.lines[0].get_marker() == "o", "use circle markers ('o')"
+</pre>
+<div class="hint"><p><code>ax.set_xlabel(...)</code>, <code>ax.set_ylabel(...)</code>, <code>ax.set_title(...)</code>.</p></div>
+<pre class="solution">
+def labelled():
+    fig, ax = plt.subplots()
+    ax.plot([0, 1, 2, 3], [0, 1, 4, 9], 'o-')
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("distance (m)")
+    ax.set_title("Falling ball")
+    return fig, ax
+</pre><div class="explain"><p>The getters <code>get_xlabel</code>, <code>get_title</code> and <code>ax.lines</code> are how the checks (and you) can inspect a plot from code.</p></div></div>
+
+<div class="ex" id="x-plt1-02" data-title="a smooth sine"><div class="task"><p>Write <code>sine_plot(freq)</code> that plots one second of \(\sin(2\pi\,\text{freq}\,t)\) using exactly 500 points from <code>np.linspace(0, 1, 500)</code>, labels the x-axis <code>"time (s)"</code>, and returns <code>fig, ax</code>.</p></div>
+<pre class="src">
+def sine_plot(freq):
+    t = np.linspace(0, 1, 10)
+    fig, ax = plt.subplots()
+    ax.plot(t, np.sin(2 * np.pi * freq * t))
+    return fig, ax
+</pre>
+<pre class="check">
+fig, ax = sine_plot(3)
+line = ax.lines[0]
+tx, ty = line.get_xdata(), line.get_ydata()
+assert len(tx) == 500, f"use 500 points, got {len(tx)}"
+assert np.allclose(ty, np.sin(2 * np.pi * 3 * np.linspace(0, 1, 500))), "y should be sin(2*pi*freq*t)"
+assert ax.get_xlabel() == "time (s)", "label the x-axis 'time (s)'"
+</pre>
+<div class="hint"><p>Change the 10 to 500 and add <code>ax.set_xlabel("time (s)")</code>.</p></div>
+<pre class="solution">
+def sine_plot(freq):
+    t = np.linspace(0, 1, 500)
+    fig, ax = plt.subplots()
+    ax.plot(t, np.sin(2 * np.pi * freq * t))
+    ax.set_xlabel("time (s)")
+    return fig, ax
+</pre><div class="explain"><p>500 points over one second is plenty for frequencies up to a few tens of hertz, so the curve looks smooth.</p></div></div>
+
+<div class="ex" id="x-plt1-03" data-title="scatter with transparency"><div class="task"><p>Write <code>soft_scatter(x, y)</code> that makes a scatter plot (with <code>ax.scatter</code>) of the points with <code>alpha=0.3</code> and marker size <code>s=10</code>, and returns <code>fig, ax</code>.</p></div>
+<pre class="src">
+def soft_scatter(x, y):
+    fig, ax = plt.subplots()
+    ax.plot(x, y)
+    return fig, ax
+</pre>
+<pre class="check">
+xx = np.arange(5.); yy = xx**2
+fig, ax = soft_scatter(xx, yy)
+assert len(ax.collections) == 1, "use ax.scatter (it creates one 'collection' of points)"
+pc = ax.collections[0]
+assert np.allclose(pc.get_offsets(), np.column_stack([xx, yy])), "plot the given x and y"
+assert abs(pc.get_alpha() - 0.3) &lt; 1e-9, f"alpha should be 0.3, got {pc.get_alpha()}"
+assert np.allclose(pc.get_sizes(), 10), f"marker size should be 10, got {pc.get_sizes()}"
+</pre>
+<div class="hint"><p><code style="white-space:normal">ax.scatter(x, y, alpha=0.3, s=10)</code></p></div>
+<pre class="solution">
+def soft_scatter(x, y):
+    fig, ax = plt.subplots()
+    ax.scatter(x, y, alpha=0.3, s=10)
+    return fig, ax
+</pre><div class="explain"><p><code>scatter</code> returns a <i>PathCollection</i>: one object for all the points, with offsets (positions), sizes and colours. <code>ax.plot</code> creates a <i>Line2D</i> instead.</p></div></div>
+
+<div class="ex" id="x-plt1-04" data-title="a histogram with 12 bins"><div class="task"><p>Write <code>hist12(values)</code> that draws a histogram of <code>values</code> with 12 bins, labels the x-axis <code>"mpg"</code> and the y-axis <code>"count"</code>, and returns <code>fig, ax</code>.</p></div>
+<pre class="src">
+def hist12(values):
+    fig, ax = plt.subplots()
+    ax.hist(values)
+    return fig, ax
+</pre>
+<pre class="check">
+v = np.random.default_rng(0).normal(23, 7, 392)
+fig, ax = hist12(v)
+assert len(ax.patches) == 12, f"expected 12 bars, got {len(ax.patches)}"
+assert sum(p.get_height() for p in ax.patches) == 392, "all 392 values should be counted"
+assert ax.get_xlabel() == "mpg" and ax.get_ylabel() == "count", "label the axes 'mpg' and 'count'"
+</pre>
+<div class="hint"><p>The keyword is <code>bins=12</code>. The default is 10 bins.</p></div>
+<pre class="solution">
+def hist12(values):
+    fig, ax = plt.subplots()
+    ax.hist(values, bins=12)
+    ax.set_xlabel("mpg"); ax.set_ylabel("count")
+    return fig, ax
+</pre><div class="explain"><p>Each bar is a rectangle “patch”; their heights are the counts and add up to the number of values.</p></div></div>
+
+<div class="ex" id="x-plt1-05" data-title="three panels, one y-axis"><div class="task"><p>Write <code>three_panels(xs, ys)</code>: <code>xs</code> and <code>ys</code> are lists of three arrays. Make a 1 × 3 grid with a <b>shared y-axis</b>, scatter <code>xs[k]</code> against <code>ys[k]</code> in panel <code>k</code>, and return <code>fig, axes</code>.</p></div>
+<pre class="src">
+def three_panels(xs, ys):
+    fig, axes = plt.subplots(1, 3)
+    for k in range(3):
+        axes[k].scatter(xs[k], ys[k])
+    return fig, axes
+</pre>
+<pre class="check">
+X3 = [np.arange(5.), np.arange(5.), np.arange(5.)]; Y3 = [np.arange(5.), 2 * np.arange(5.), 10 * np.arange(5.)]
+fig, axes = three_panels(X3, Y3)
+assert len(fig.axes) == 3, f"expected 3 panels, got {len(fig.axes)}"
+assert all(len(a.collections) == 1 for a in axes), "one scatter per panel"
+assert axes[0].get_shared_y_axes().joined(axes[0], axes[2]), "the panels must share the y-axis (sharey=True)"
+assert np.allclose(axes[2].collections[0].get_offsets()[:, 1], Y3[2]), "panel 2 should show ys[2]"
+</pre>
+<div class="hint"><p><code style="white-space:normal">plt.subplots(1, 3, sharey=True)</code>.</p></div>
+<pre class="solution">
+def three_panels(xs, ys):
+    fig, axes = plt.subplots(1, 3, figsize=(10, 3), sharey=True)
+    for k in range(3):
+        axes[k].scatter(xs[k], ys[k])
+    return fig, axes
+</pre><div class="explain"><p>With <code>sharey=True</code> the panel with values up to 40 sets the range for all three, so the three slopes (1, 2, 10) look as different as they are.</p></div></div>
+
+<div class="ex" id="x-plt1-06" data-title="a legend"><div class="task"><p>Write <code>two_lines()</code> that plots \(y=x\) and \(y=x^2\) for <code>x = np.linspace(0, 2, 50)</code> with labels <code>"linear"</code> and <code>"quadratic"</code>, shows a legend, and returns <code>fig, ax</code>.</p></div>
+<pre class="src">
+def two_lines():
+    x = np.linspace(0, 2, 50)
+    fig, ax = plt.subplots()
+    ax.plot(x, x)
+    ax.plot(x, x**2)
+    return fig, ax
+</pre>
+<pre class="check">
+fig, ax = two_lines()
+leg = ax.get_legend()
+assert leg is not None, "call ax.legend()"
+texts = [t.get_text() for t in leg.get_texts()]
+assert texts == ["linear", "quadratic"], f"legend entries should be ['linear', 'quadratic'], got {texts}"
+</pre>
+<div class="hint"><p>Give each <code>ax.plot</code> a <code>label="..."</code>, then call <code>ax.legend()</code>.</p></div>
+<pre class="solution">
+def two_lines():
+    x = np.linspace(0, 2, 50)
+    fig, ax = plt.subplots()
+    ax.plot(x, x, label="linear")
+    ax.plot(x, x**2, label="quadratic")
+    ax.legend()
+    return fig, ax
+</pre><div class="explain"><p>The legend collects every artist that has a label, in the order they were drawn.</p></div></div>
+
+<div class="ex" id="x-plt1-07" data-title="bar chart of counts"><div class="task"><p>Write <code>count_bars(labels)</code>: <code>labels</code> is a list of strings such as <code>["a", "b", "a", "c", "a"]</code>. Draw a bar chart with one bar per <b>distinct</b> label (in sorted order) whose height is how often it occurs, and return <code>fig, ax</code>. Hint: NumPy II's <code style="white-space:normal">np.unique(..., return_counts=True)</code>.</p></div>
+<pre class="src">
+def count_bars(labels):
+    fig, ax = plt.subplots()
+    ax.bar(labels, 1)
+    return fig, ax
+</pre>
+<pre class="check">
+fig, ax = count_bars(["a", "b", "a", "c", "a", "b"])
+h = [p.get_height() for p in ax.patches]
+assert h == [3, 2, 1], f"bar heights should be [3, 2, 1] for a, b, c; got {h}"
+names = [t.get_text() for t in ax.get_xticklabels()]
+assert names == ["a", "b", "c"], f"bars should be labelled a, b, c; got {names}"
+</pre>
+<div class="hint"><p><code style="white-space:normal">vals, counts = np.unique(labels, return_counts=True)</code> gives the distinct labels sorted, and their counts.</p></div>
+<pre class="solution">
+def count_bars(labels):
+    vals, counts = np.unique(labels, return_counts=True)
+    fig, ax = plt.subplots()
+    ax.bar(vals, counts)
+    return fig, ax
+</pre><div class="explain"><p>When the x-values are strings, matplotlib places one bar per category and writes the names as tick labels. pandas' <code>value_counts().plot.bar()</code> does the same in one line (next lesson).</p></div></div>
+
+<div class="ex" id="x-plt1-08" data-title="add the fitted line"><div class="task"><p>Write <code>scatter_with_fit(x, y)</code>: scatter the points, then add the least-squares line with <code style="white-space:normal">ax.axline((0, b0), slope=b1, color="C1")</code>, where <code>b1, b0 = np.polyfit(x, y, 1)</code>. Return <code>fig, ax, (b0, b1)</code>.</p></div>
+<pre class="src">
+def scatter_with_fit(x, y):
+    fig, ax = plt.subplots()
+    ax.scatter(x, y)
+    b0, b1 = np.polyfit(x, y, 1)      # careful: polyfit returns slope first
+    return fig, ax, (b0, b1)
+</pre>
+<pre class="check">
+xx = np.array([0., 1., 2.]); yy = np.array([1., 3., 4.])
+fig, ax, (b0, b1) = scatter_with_fit(xx, yy)
+assert abs(b0 - 7/6) &lt; 1e-9 and abs(b1 - 1.5) &lt; 1e-9, f"expected intercept 1.1667 and slope 1.5, got ({b0}, {b1})"
+assert len(ax.lines) == 1, "draw exactly one line with ax.axline"
+assert abs(ax.lines[0]._slope - 1.5) &lt; 1e-9, "the drawn line should have the fitted slope"
+</pre>
+<div class="hint"><p><code>np.polyfit(x, y, 1)</code> returns <code>[slope, intercept]</code>, so unpack as <code>b1, b0 = ...</code>.</p></div>
+<pre class="solution">
+def scatter_with_fit(x, y):
+    fig, ax = plt.subplots()
+    ax.scatter(x, y)
+    b1, b0 = np.polyfit(x, y, 1)
+    ax.axline((0, b0), slope=b1, color="C1")
+    return fig, ax, (b0, b1)
+</pre><div class="explain"><p>The order of <code>polyfit</code>'s output (highest power first) trips up everyone once. <code>axline</code> draws the line across the whole visible range, however you later change the limits.</p></div></div>
+
+<div class="ex" id="x-plt1-09" data-title="a log scale"><div class="task"><p>Write <code>growth()</code> that plots \(y=10^x\) for <code>x = np.linspace(0, 5, 50)</code> on a <b>logarithmic y-axis</b> and returns <code>fig, ax</code>. On a log axis exponential growth becomes a straight line.</p></div>
+<pre class="src">
+def growth():
+    x = np.linspace(0, 5, 50)
+    fig, ax = plt.subplots()
+    ax.plot(x, 10**x)
+    return fig, ax
+</pre>
+<pre class="check">
+fig, ax = growth()
+assert ax.get_yscale() == "log", f"the y-axis scale should be 'log', got {ax.get_yscale()!r}"
+assert np.allclose(ax.lines[0].get_ydata(), 10**np.linspace(0, 5, 50)), "plot y = 10**x"
+</pre>
+<div class="hint"><p><code>ax.set_yscale("log")</code></p></div>
+<pre class="solution">
+def growth():
+    x = np.linspace(0, 5, 50)
+    fig, ax = plt.subplots()
+    ax.plot(x, 10**x)
+    ax.set_yscale("log")
+    return fig, ax
+</pre><div class="explain"><p>Log axes are how you will plot learning rates, regularisation strengths (ISLP Chapter 6) and training losses that fall by orders of magnitude, and Bode plots in your circuits courses.</p></div></div>
+
+<div class="ex" id="x-plt1-10" data-title="a heatmap with a colour bar"><div class="task"><p>Write <code>heat(M)</code> that shows the 2-D array <code>M</code> with <code>ax.imshow</code> and adds a colour bar with <code>fig.colorbar</code>. Return <code>fig, ax</code>.</p></div>
+<pre class="src">
+def heat(M):
+    fig, ax = plt.subplots()
+    ax.imshow(M)
+    return fig, ax
+</pre>
+<pre class="check">
+M_ = np.arange(12.).reshape(3, 4)
+fig, ax = heat(M_)
+assert len(ax.images) == 1 and np.allclose(ax.images[0].get_array(), M_), "show M with ax.imshow"
+assert len(fig.axes) == 2, f"a colour bar adds a second (thin) axes to the figure; found {len(fig.axes)} axes"
+</pre>
+<div class="hint"><p><code>im = ax.imshow(M)</code>, then <code>fig.colorbar(im, ax=ax)</code>.</p></div>
+<pre class="solution">
+def heat(M):
+    fig, ax = plt.subplots()
+    im = ax.imshow(M, cmap="viridis")
+    fig.colorbar(im, ax=ax)
+    return fig, ax
+</pre><div class="explain"><p>The colour bar is drawn in its own small axes, which is why the figure now has two. You will use <code>imshow</code> for images in computer vision and for confusion matrices in classification.</p></div></div>
+
+<div class="ex" id="x-plt1-11" data-title="ISLP Figure 2.1 as a function"><div class="task"><p>Write <code>figure_2_1(ads)</code> that takes the Advertising DataFrame and returns <code>fig, axes</code> for a 1 × 3 figure: in each panel a scatter of one budget column (<code>"TV"</code>, <code>"radio"</code>, <code>"newspaper"</code>, in that order) against <code>ads["sales"]</code>, plus one fitted line drawn with <code>ax.axline</code>, and the x-label equal to the column name.</p></div>
+<pre class="src">
+def figure_2_1(ads):
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+    for ax, col in zip(axes, ["TV", "radio", "newspaper"]):
+        ax.scatter(ads[col], ads["sales"])
+    return fig, axes
+</pre>
+<pre class="check">
+fig, axes = figure_2_1(ads)
+assert len(fig.axes) == 3, "three panels"
+for ax, col in zip(axes, ["TV", "radio", "newspaper"]):
+    assert ax.get_xlabel() == col, f"x-label should be {col!r}, got {ax.get_xlabel()!r}"
+    assert len(ax.collections) == 1 and len(ax.lines) == 1, f"panel {col}: one scatter and one fitted line"
+    slope = np.polyfit(ads[col], ads["sales"], 1)[0]
+    assert abs(ax.lines[0]._slope - slope) &lt; 1e-9, f"panel {col}: the line should be the least-squares fit (slope {slope:.4f})"
+</pre>
+<div class="hint"><p>Inside the loop: <code style="white-space:normal">b1, b0 = np.polyfit(ads[col], ads["sales"], 1)</code>, <code>ax.axline((0, b0), slope=b1)</code>, <code>ax.set_xlabel(col)</code>.</p></div>
+<pre class="solution">
+def figure_2_1(ads):
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4), sharey=True)
+    for ax, col in zip(axes, ["TV", "radio", "newspaper"]):
+        b1, b0 = np.polyfit(ads[col], ads["sales"], 1)
+        ax.scatter(ads[col], ads["sales"], facecolors="none", edgecolors="C1")
+        ax.axline((0, b0), slope=b1, color="blue", linewidth=3)
+        ax.set_xlabel(col)
+    axes[0].set_ylabel("sales")
+    return fig, axes
+</pre><div class="explain"><p>Wrapping a figure in a function means you can redraw it for any dataset with the same columns: a habit that pays off when you make the same plot for training and test data.</p></div></div>
+
+<!-- ============================================================ -->
+<h3 id="plt1-quiz">11. Quiz</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In <code>fig, ax = plt.subplots()</code>, what is <code>ax</code>?</p><ol class="opts"><li>The x-axis</li><li>One plotting area, with its own x-axis, y-axis, labels and data</li><li>The whole image file</li></ol><div class="why">An axes object is one panel. The figure is the canvas that holds one or more axes. The x-axis is a part of the axes.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">What does <code>ax.plot(x, y)</code> draw when <code>x</code> and <code>y</code> are random, unsorted points?</p><ol class="opts"><li>A scatter plot</li><li>A histogram</li><li>Straight lines joining the points in the order given, a tangle</li></ol><div class="why"><code>plot</code> joins consecutive points with lines by default. Use <code>'o'</code> or <code>ax.scatter</code> for a scatter plot.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">You want to compare the spread of three groups in three panels honestly. Which option?</p><ol class="opts"><li><code>sharey=True</code></li><li>Different y-limits chosen automatically for each panel</li><li><code>alpha=0.5</code></li></ol><div class="why">A shared y-axis puts all panels on the same scale, so equal spreads look equal and different spreads look different.</div></div>
+<div class="q" data-type="num" data-answer="6" data-tol="0"><p class="stem"><code>fig, axes = plt.subplots(2, 3)</code>. How many axes objects are in <code>axes</code>?</p><div class="why">A 2 × 3 grid: <code>axes.shape</code> is (2, 3), so 6 panels.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Which format string draws red dashed lines with circle markers?</p><ol class="opts"><li><code>'r-o'</code></li><li><code>'ro--'</code></li><li><code>'red--circle'</code></li></ol><div class="why">Colour <code>r</code>, marker <code>o</code>, line style <code>--</code>. Option 1 is a solid line with circles. Format strings use single characters only.</div></div>
+<div class="q" data-type="num" data-answer="1200" data-tol="0"><p class="stem">A figure is 6 inches wide and saved with <code>dpi=200</code> as a PNG. How many pixels wide is the image?</p><div class="why">Dots per inch times inches: \(6\times200=1200\).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Four datasets have the same means, variances, correlation and regression line. What can you conclude about their scatter plots?</p><ol class="opts"><li>They are identical</li><li>They differ only by noise</li><li>Nothing: they can look completely different (Anscombe's quartet)</li></ol><div class="why">Summary statistics do not determine the shape of the data. Plot first.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In ISLP Figure 2.1, which budget has the largest fitted slope (extra sales per extra $1000)?</p><ol class="opts"><li>TV (0.0475)</li><li>Radio (0.2025)</li><li>Newspaper (0.0547)</li></ol><div class="why">Radio's slope is about four times TV's. TV budgets are much larger, though (up to $300k against $50k for radio), which is why the TV line still rises a lot across its range.</div></div>
+<div class="q" data-type="open"><p class="stem">You are handed a new dataset with a numeric target and five numeric features. Describe the first three plots you would make, and what each could reveal.</p><div class="model">(1) A histogram of the target (and of each feature): shape, skew, outliers, impossible values. (2) Scatter plots of the target against each feature, ideally in one row with a shared y-axis (like Figure 2.1): which relationships look strong, linear or curved. (3) A scatter matrix of the features (pandas' <code>scatter_matrix</code>): pairs of features that are strongly related to each other, which matters for regression (collinearity). All with labelled axes and transparency if points overlap.</div></div>
+</div>
+
+<h3 id="plt1-cards">12. Flashcards</h3>
+<div class="cards">
+<div class="fc"><div class="f">Figure vs axes in matplotlib?</div><div class="b">Figure: the whole canvas (size, saving). Axes: one plotting area inside it, with its own axis lines, labels and data.</div></div>
+<div class="fc"><div class="f">Create one figure with one axes, 8 by 4 inches?</div><div class="b"><code style="white-space:normal">fig, ax = plt.subplots(figsize=(8, 4))</code></div></div>
+<div class="fc"><div class="f"><code>ax.plot(x, y)</code> vs <code>ax.plot(x, y, 'o')</code> vs <code>ax.scatter(x, y)</code>?</div><div class="b">Lines joining points; circles only; a scatter whose points can each have their own size and colour.</div></div>
+<div class="fc"><div class="f">Label axes and title?</div><div class="b"><code>ax.set_xlabel(...)</code>, <code>ax.set_ylabel(...)</code>, <code>ax.set_title(...)</code> (pyplot style: <code>plt.xlabel</code>).</div></div>
+<div class="fc"><div class="f">Make a legend?</div><div class="b">Give each plot call <code>label="..."</code>, then call <code>ax.legend()</code>.</div></div>
+<div class="fc"><div class="f">Index the panel in row 1, column 2 of <code>fig, axes = plt.subplots(2, 3)</code>?</div><div class="b"><code>axes[1, 2]</code></div></div>
+<div class="fc"><div class="f">Make panels comparable?</div><div class="b"><code>sharex=True</code> / <code>sharey=True</code> in <code>plt.subplots</code>.</div></div>
+<div class="fc"><div class="f">Histogram with 12 bins?</div><div class="b"><code>ax.hist(values, bins=12)</code>; <code>density=True</code> scales the area to 1.</div></div>
+<div class="fc"><div class="f">Draw a fitted line \(y=b_0+b_1x\) across the axes?</div><div class="b"><code>ax.axline((0, b0), slope=b1)</code></div></div>
+<div class="fc"><div class="f">Save a figure at high resolution?</div><div class="b"><code style="white-space:normal">fig.savefig("fig.png", dpi=300, bbox_inches="tight")</code>; use <code>.pdf</code> for vector output.</div></div>
+<div class="fc"><div class="f">Heatmap of a 2-D array with a colour key?</div><div class="b"><code>im = ax.imshow(M)</code>, then <code>fig.colorbar(im, ax=ax)</code>.</div></div>
+<div class="fc"><div class="f">What is Anscombe's quartet a warning about?</div><div class="b">Identical summary statistics can hide completely different data: always plot before modelling.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> <span>I can create a figure and axes and explain the difference between them.</span></label>
+<label><input type="checkbox"> <span>I can draw line, scatter, histogram, bar, box, contour and heatmap plots.</span></label>
+<label><input type="checkbox"> <span>I always label my axes with units, and I can add titles, legends, limits and log scales.</span></label>
+<label><input type="checkbox"> <span>I can make a grid of panels with shared axes and save the figure to a file.</span></label>
+<label><input type="checkbox"> <span>I reproduced ISLP Figure 2.1 from <code>Advertising.csv</code>, including the fitted lines.</span></label>
+</div>
+</section>

@@ -1,0 +1,32 @@
+{
+ "plt1-figure": {
+  "term": "figure",
+  "def": "The whole matplotlib canvas: its size, background and the file it is saved to. Holds one or more axes.",
+  "at": "plt1"
+ },
+ "plt1-axes": {
+  "term": "axes",
+  "def": "One plotting area inside a figure, with its own x-axis, y-axis, ticks, labels, title and data. Not the plural of axis.",
+  "at": "plt1"
+ },
+ "plt1-colormap": {
+  "term": "colormap",
+  "def": "A rule mapping numbers to colours, e.g. <code>viridis</code>; used by <code>scatter(c=...)</code> and <code>imshow</code>.",
+  "at": "plt1"
+ },
+ "plt1-hist": {
+  "term": "histogram",
+  "def": "Bars counting how many values fall in each of a set of equal-width bins; shows the shape of one variable.",
+  "at": "plt1"
+ },
+ "plt1-boxplot": {
+  "term": "box plot",
+  "def": "A five-number summary: box from the 25th to 75th percentile, median line, whiskers to 1.5 box-lengths, outliers as points.",
+  "at": "plt1"
+ },
+ "plt1-heatmap": {
+  "term": "heatmap",
+  "def": "A picture of a 2-D array where colour encodes each cell's value (<code>ax.imshow</code>).",
+  "at": "plt1"
+ }
+}
