@@ -1,0 +1,908 @@
+<section class="lesson" id="proj1" data-book="Project · Advertising data (ISLP Ch. 3)">
+<style>
+#proj1 pre.term{background:var(--code-bg);color:var(--code-ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:6px 0 12px;font:400 14px/1.55 var(--mono);white-space:pre;overflow-x:auto;max-width:100%}
+#proj1 pre.term.see{background:var(--panel);color:var(--ink2);border-style:dashed}
+#proj1 .tl{font:700 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:12px 0 2px!important}
+#proj1 .flags{margin:6px 0 10px;padding-left:20px}
+#proj1 .flags li{margin:3px 0}
+</style>
+<p class="lede">Up to now a library has fitted every regression for you. In this project you build linear regression yourself, twice: once with one line of linear algebra (the normal equations) and once by walking downhill (gradient descent). When your numbers match scikit-learn and statsmodels to six decimal places, you will know exactly what <code>LinearRegression().fit()</code> does, and you will have your first portfolio project on GitHub.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#np2">NumPy II</a> <a href="#m-linalg">Vectors &amp; matrices</a> <a href="#m-calc">Derivatives &amp; gradients</a> <a href="#pd1">pandas</a> <a href="#plt1">matplotlib</a> <a href="#isl3-1">ISLP 3.1</a> <a href="#isl3-2">ISLP 3.2</a> <a href="#git1">Git &amp; GitHub</a> <a href="#s0-setup">Mac setup</a></div>
+<div class="goals"><h4>By the end of this project you can</h4><ul>
+<li>load and explore a real dataset, and say what you expect before you model it;</li>
+<li>build a design matrix from a table and explain what every column is for;</li>
+<li>derive the normal equations \(\bX\T\bX\hat\bbeta=\bX\T\by\) and solve them with <code>np.linalg.solve</code> (and say why not with an inverse);</li>
+<li>check your own numbers against scikit-learn and statsmodels to \(10^{-6}\);</li>
+<li>derive the gradient of the mean squared error, write gradient descent from scratch, and choose a learning rate;</li>
+<li>explain, with a picture, why feature scaling makes gradient descent thousands of times faster;</li>
+<li>split data into training and test sets by hand, fill in a results table, and read diagnostic plots;</li>
+<li>see overfitting happen with polynomial features;</li>
+<li>run the project as a repository on your Mac and publish it on GitHub with a clear README.</li></ul></div>
+
+<div class="callout key"><p><b>How a guided project works.</b> You will not be handed a finished program. You build it one function at a time. Each yellow exercise box asks for one small function, and its hidden tests tell you at once whether it is right. Hints open one at a time; the full solution is always there if you are stuck. Every later cell uses the functions you wrote, so do the exercises in order. At the end you will copy your functions into one file, <code>linreg.py</code>, and that file is your project.</p></div>
+
+<h3 id="proj1-plan">The plan: ten small steps</h3>
+<p>A project is a big job made of small jobs. Here is the whole route, and how you will know each step is right before you move on:</p>
+<div class="tw"><table class="t"><thead><tr><th>Step</th><th>What you build</th><th>How you know it is right</th></tr></thead><tbody>
+<tr><td class="n">0</td><td>A first look at the data: summary numbers and scatter plots</td><td>You can say which budget matters most before fitting anything</td></tr>
+<tr><td class="n">1</td><td>The design matrix \(\bX\) from the Advertising table</td><td>Its shape is \(200\times 4\) and its first column is all ones</td></tr>
+<tr><td class="n">2</td><td>Closed-form least squares with <code>np.linalg.solve</code></td><td>Matches a hand calculation on a 3-point example</td></tr>
+<tr><td class="n">3</td><td>A comparison with scikit-learn and statsmodels</td><td>Largest difference below \(10^{-6}\)</td></tr>
+<tr><td class="n">4</td><td>The gradient of the loss, and a gradient check</td><td>Agrees with finite differences</td></tr>
+<tr><td class="n">5</td><td>Gradient descent, with loss curves</td><td>Reaches the closed-form answer</td></tr>
+<tr><td class="n">6</td><td>Feature scaling and the learning-rate experiment</td><td>Steps needed drop from tens of thousands to about ten</td></tr>
+<tr><td class="n">7</td><td>A train/test split by hand and a results table</td><td>Test MSE reported for three models</td></tr>
+<tr><td class="n">8</td><td>Diagnostic plots: residuals, predicted vs actual, \(R^2\)</td><td>You spot a pattern, fix it, and the test error halves</td></tr>
+<tr><td class="n">9</td><td>Stretch: polynomial features and overfitting</td><td>Training error falls while test error rises</td></tr>
+</tbody></table></div>
+<p>Then you write up the results, run the project as a repository on your Mac, and push it to GitHub.</p>
+
+<h3 id="proj1-explore">Step 0 · Load the data and look at it</h3>
+<p>The data is the Advertising set from ISLP Chapter 3: for 200 markets, the budget spent on TV, radio and newspaper adverts (in thousands of dollars) and the sales of the product (in thousands of units). You met it in <a href="#isl3-1">ISLP 3.1</a> and <a href="#isl3-2">ISLP 3.2</a>, so you already know roughly what the answer should be. That is deliberate. <b>When you build something new, test it on a problem whose answer you know.</b> If your code then disagrees with the book, the bug is in your code.</p>
+
+<div class="py" id="c-proj1-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+ads = pd.read_csv('Advertising.csv', index_col=0)   # first column is just a row number
+print(ads.shape)
+ads.head()
+</pre><div class="pynote"><b>Read the output:</b> 200 rows (markets) and 4 columns. <code>index_col=0</code> tells pandas that the first column of the file is a row label, not data, so it does not become a fifth column. Each row is one market: TV, radio and newspaper budgets, then sales.</div></div>
+
+<p>Before any model, look at the numbers. <code>describe()</code> gives each column's count, mean, standard deviation, smallest value, quartiles and largest value.</p>
+<div class="py" id="c-proj1-02"><pre class="src">
+ads.describe().round(2)
+</pre><div class="pynote"><b>Read the output:</b> TV budgets run from 0.7 to 296.4 with a mean of 147.04; radio from 0 to 49.6; newspaper from 0.3 to 114. Sales average 14.02 thousand units. Notice the very different <i>ranges</i>: TV numbers are about six times bigger than radio numbers. Remember this. In Step 6 it will make gradient descent crawl.</div></div>
+
+<div class="predict" data-correct="1"><p>The next cell draws sales against each budget. Which plot will show the tightest upward pattern?</p><ol class="opts"><li>TV</li><li>radio</li><li>newspaper</li></ol><div class="why">TV has the strongest straight-line relationship with sales (correlation 0.78), radio is weaker but clear (0.58), and newspaper is a loose cloud (0.23). This is ISLP Figure 2.1, drawn by you.</div></div>
+<div class="py" id="c-proj1-03"><pre class="src">
+fig, axes = plt.subplots(1, 3, figsize=(10, 3.2), sharey=True)
+for ax, col in zip(axes, ['TV', 'radio', 'newspaper']):
+    ax.scatter(ads[col], ads['sales'], s=12, alpha=0.6)
+    ax.set_xlabel(col + ' budget ($1000s)')
+axes[0].set_ylabel('sales (1000 units)')
+plt.tight_layout()
+plt.show()
+ads.corr().round(3)
+</pre><div class="pynote"><b>Read the output:</b> three scatter plots and a correlation table. Look at the TV plot closely: the cloud <b>bends</b> (it rises steeply for small budgets and flattens for large ones) and it <b>fans out</b> (the spread grows with the budget). A straight line will miss both, and you will see that mismatch again in the residual plot of Step 8. In the table, sales correlates 0.782 with TV, 0.576 with radio and 0.228 with newspaper. Newspaper also correlates 0.354 with radio, which is why newspaper looks useful on its own but not once radio is in the model (ISLP 3.2). <code>plt.subplots(1, 3)</code> makes one row of three panels; <code>sharey=True</code> gives them the same y-axis.</div></div>
+
+<div class="ex" id="x-proj1-01" data-title="the best single predictor"><div class="task"><p>Write <code>best_single_predictor(df, target)</code> that returns the <b>name</b> of the column (other than <code>target</code>) whose correlation with <code>target</code> is largest in absolute value. For Advertising with <code>target='sales'</code> it should return <code>'TV'</code>.</p>
+<p><b>New tool:</b> <code>df.corr()[target]</code> is one column of the correlation table, a pandas Series indexed by column name. <code>.drop(target)</code> removes the row for the target itself (its correlation with itself is always 1). <code>.abs()</code> takes absolute values and <code>.idxmax()</code> returns the <i>label</i> of the largest entry.</p></div>
+<pre class="src">
+def best_single_predictor(df, target):
+    c = df.corr()[target]
+    c = ...            # drop the target itself, then take absolute values
+    return ...         # the label of the largest value
+</pre>
+<pre class="check">
+got = best_single_predictor(ads, 'sales')
+assert got == 'TV', f"for Advertising the answer should be 'TV', got {got!r}"
+toy = pd.DataFrame({'a': [2, 1, 4, 3], 'b': [1, 2, 3, 4], 'y': [10, 7, 5, 1]})
+got2 = best_single_predictor(toy, 'y')
+assert got2 == 'b', f"a strong NEGATIVE correlation counts too: expected 'b', got {got2!r}"
+</pre>
+<div class="hint"><p>Chain the three methods: <code>c.drop(target).abs()</code>.</p></div>
+<div class="hint"><p><code>c = c.drop(target).abs()</code> then <code>return c.idxmax()</code>.</p></div>
+<pre class="solution">
+def best_single_predictor(df, target):
+    c = df.corr()[target]
+    c = c.drop(target).abs()
+    return c.idxmax()
+</pre>
+<div class="explain"><p>Without <code>drop</code> the answer would always be the target itself (correlation 1). Without <code>abs</code> a strongly <i>negative</i> predictor would be missed; the toy table checks exactly that: <code>b</code> rises while <code>y</code> falls (correlation about \(-0.99\)), and <code>a</code> is only weakly related. <code>idxmax</code> returns a label, not a position, which is what we want.</p></div></div>
+
+<h3 id="proj1-design">Step 1 · The design matrix</h3>
+<p>The model from ISLP 3.2 is</p>
+<div class="mathblock" data-sheet="Multiple linear regression (Advertising)"><div class="eqlabel">Multiple linear regression for Advertising</div>
+\[\text{sales}_i \approx \beta_0 + \beta_1\,\text{TV}_i + \beta_2\,\text{radio}_i + \beta_3\,\text{newspaper}_i\]
+<p class="say">Read: the sales of market \(i\) are roughly beta-nought, plus beta-one times its TV budget, plus beta-two times its radio budget, plus beta-three times its newspaper budget.</p></div>
+<p>Writing that sum out 200 times is tedious. Linear algebra lets us write all 200 equations at once. We stack the inputs into a table of numbers called the <dfn data-g="design-matrix">design matrix</dfn> \(\bX\) (read <i>bold X</i>), stack the outputs into a vector \(\by\) (<i>bold y</i>), and stack the coefficients into a vector \(\bbeta\) (<i>bold beta</i>):</p>
+<div class="mathblock" data-sheet="Design matrix"><div class="eqlabel">All the equations at once</div>
+\[\underbrace{\begin{pmatrix} y_1\\ y_2\\ \vdots\\ y_n\end{pmatrix}}_{\by\ (n\times 1)} \approx \underbrace{\begin{pmatrix} 1 & x_{11} & x_{12} & x_{13}\\ 1 & x_{21} & x_{22} & x_{23}\\ \vdots&\vdots&\vdots&\vdots\\ 1 & x_{n1} & x_{n2} & x_{n3}\end{pmatrix}}_{\bX\ (n\times(p+1))}\underbrace{\begin{pmatrix}\beta_0\\ \beta_1\\ \beta_2\\ \beta_3\end{pmatrix}}_{\bbeta\ ((p+1)\times 1)}\]
+<p class="say">Read: the vector of all sales is approximately the design matrix times the coefficient vector. Row \(i\) of \(\bX\bbeta\) is \(1\cdot\beta_0 + x_{i1}\beta_1 + x_{i2}\beta_2 + x_{i3}\beta_3\): exactly the prediction for market \(i\).</p></div>
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(n\)</span><span>"n": number of rows (markets)</span><span class="eg">\(n=200\)</span></div>
+<div class="row"><span class="s">\(p\)</span><span>"p": number of predictors (not counting the intercept)</span><span class="eg">\(p=3\)</span></div>
+<div class="row"><span class="s">\(x_{ij}\)</span><span>"x sub i j": predictor \(j\) for market \(i\)</span><span class="eg">\(x_{12}=37.8\) (radio, market 1)</span></div>
+<div class="row"><span class="s">\(\bX\bbeta\)</span><span>"X beta": every prediction at once</span><span class="eg">a column of 200 numbers</span></div>
+<div class="row"><span class="s">\(\hat\bbeta\)</span><span>"beta-hat": the coefficients we <i>estimate</i> from data</span><span class="eg">\(\hat\beta_1=0.0458\)</span></div>
+</div>
+<p><b>Why the column of ones?</b> Matrix multiplication only ever multiplies a column by a coefficient and adds. The intercept \(\beta_0\) is not multiplied by any data value. The trick is to invent a fake predictor that is always 1: then \(1\times\beta_0=\beta_0\) slides into the same multiply-and-add pattern as everything else. Forget the ones and your plane is forced through the origin, which for Advertising would say "zero budget means zero sales". That is false: the intercept turns out to be about 2.9 thousand units.</p>
+
+<div class="worked"><div class="wt">Worked example · <b>the first three rows of \(\bX\), and a guess at \(\bbeta\)</b></div>
+<div class="given">The first three markets have (TV, radio, newspaper, sales) = (230.1, 37.8, 69.2, 22.1), (44.5, 39.3, 45.1, 10.4) and (17.2, 45.9, 69.3, 9.3).</div>
+<ol class="steps">
+<li><div>Put a 1 in front of each row's three budgets: \[\bX_{1:3}=\begin{pmatrix}1&230.1&37.8&69.2\\1&44.5&39.3&45.1\\1&17.2&45.9&69.3\end{pmatrix},\qquad \by_{1:3}=\begin{pmatrix}22.1\\10.4\\9.3\end{pmatrix}.\]</div></li>
+<li><div>Try a guess \(\bbeta=(3,\ 0.05,\ 0.2,\ 0)\). Row 1 of \(\bX\bbeta\): \(1(3)+230.1(0.05)+37.8(0.2)+69.2(0)=3+11.505+7.56+0=\) <span class=\"hlc\">22.065</span>.<span class="why">Each row of \(\bX\) dotted with \(\bbeta\) gives one prediction.</span></div></li>
+<li><div>Row 2: \(3+44.5(0.05)+39.3(0.2)+0=3+2.225+7.86=\) <span class=\"hlc\">13.085</span>. Row 3: \(3+17.2(0.05)+45.9(0.2)+0=3+0.86+9.18=\) <span class=\"hlc\">13.04</span>.</div></li>
+<li><div>Residuals \(y_i-\hat y_i\) (read <i>y-i minus y-hat-i</i>): \(22.1-22.065=0.035\), \(10.4-13.085=-2.685\), \(9.3-13.04=-3.74\). The first market is predicted well, the other two not so well. Least squares will find the \(\bbeta\) that makes the sum of squared residuals as small as possible.</div></li>
+</ol>
+<div class="result">\(\bX\bbeta = (22.065,\ 13.085,\ 13.04)\) for the first three markets</div></div>
+
+<div class="ex" id="x-proj1-02" data-title="build the design matrix"><div class="task"><p>Write <code>design_matrix(df, cols)</code> that returns a NumPy array whose first column is all ones and whose other columns are <code>df[cols]</code>, in the order given. For example <code>design_matrix(ads, ['TV'])</code> has shape <code>(200, 2)</code> and first row <code>[1, 230.1]</code>.</p>
+<p><b>New tools:</b> <code>np.ones(n)</code> makes <code>n</code> ones. <code>df[cols].to_numpy()</code> turns the selected pandas columns into a plain 2-D array. <code>np.column_stack([a, B])</code> glues a 1-D array <code>a</code> and a 2-D array <code>B</code> side by side, as columns.</p></div>
+<pre class="src">
+def design_matrix(df, cols):
+    n = len(df)
+    ones = ...                      # n ones
+    data = ...                      # the chosen columns as a 2-D array
+    return np.column_stack([ones, data])
+</pre>
+<pre class="check">
+X1 = design_matrix(ads, ['TV'])
+assert X1.shape == (200, 2), f"shape should be (200, 2), got {X1.shape}"
+X3 = design_matrix(ads, ['TV', 'radio', 'newspaper'])
+assert X3.shape == (200, 4), f"shape should be (200, 4), got {X3.shape}"
+assert np.all(X3[:, 0] == 1), "the first column must be all ones"
+assert np.allclose(X3[0], [1, 230.1, 37.8, 69.2]), f"first row should be [1, 230.1, 37.8, 69.2], got {X3[0]}"
+X2 = design_matrix(ads, ['radio', 'TV'])
+assert np.allclose(X2[1], [1, 39.3, 44.5]), "columns must follow the order of cols"
+</pre>
+<div class="hint"><p><code>ones = np.ones(n)</code>. For the data, select the columns with <code>df[cols]</code> and convert with <code>.to_numpy()</code>.</p></div>
+<div class="hint"><p><code>data = df[cols].to_numpy()</code>. Because <code>cols</code> is a list, <code>df[cols]</code> is a table even when it has one column.</p></div>
+<pre class="solution">
+def design_matrix(df, cols):
+    n = len(df)
+    ones = np.ones(n)
+    data = df[cols].to_numpy()
+    return np.column_stack([ones, data])
+</pre>
+<div class="explain"><p><code>df[cols]</code> with a list keeps the result 2-D (shape <code>(200, k)</code>), so <code>column_stack</code> places the ones in front of those <code>k</code> columns. The check also swaps the column order to make sure you respected <code>cols</code>.</p></div></div>
+
+<div class="py" id="c-proj1-04"><pre class="src">
+X = design_matrix(ads, ['TV', 'radio', 'newspaper'])
+y = ads['sales'].to_numpy()
+print("X shape:", X.shape, "  y shape:", y.shape)
+print(X[:3])
+</pre><div class="pynote"><b>Read the output:</b> the same three rows you built by hand in the worked example. From now on <code>X</code> and <code>y</code> are the full data. (If this cell says <code>NameError</code>, you have not yet solved the exercise above: press "Show solution", or run the solution, first.)</div></div>
+
+<h3 id="proj1-normal">Step 2 · Closed form: the normal equations</h3>
+<p>Least squares chooses \(\bbeta\) to make the <dfn data-g="rss">residual sum of squares</dfn> as small as possible. In vector form the residuals are \(\by-\bX\bbeta\), and the sum of their squares is the dot product of that vector with itself:</p>
+<div class="mathblock" data-sheet="RSS in matrix form"><div class="eqlabel">RSS in matrix form</div>
+\[\begin{aligned}\RSS(\bbeta)&=\sum_{i=1}^n (y_i-\hat y_i)^2\\&=(\by-\bX\bbeta)\T(\by-\bX\bbeta)\end{aligned}\]
+<p class="say">Read: RSS of beta equals (y minus X beta) transpose times (y minus X beta). A row vector times the same column vector multiplies each entry by itself and adds: a sum of squares. Tiny example: residuals \((0.035,-2.685,-3.74)\) give \(0.0012+7.209+13.988=21.198\).</p></div>
+
+<h4>Deriving the normal equations, every step</h4>
+<p>At the bottom of a smooth bowl the slope is zero in every direction. So we take the gradient of RSS with respect to \(\bbeta\) (the vector of its partial derivatives, taught in <a href="#m-calc">Derivatives &amp; gradients</a>) and set it to zero.</p>
+<div class="worked" data-reveal><div class="wt">Derivation · <b>from RSS to \(\bX\T\bX\hat\bbeta=\bX\T\by\)</b></div>
+<div class="given">\(\RSS(\bbeta)=(\by-\bX\bbeta)\T(\by-\bX\bbeta)\). We want the \(\bbeta\) where \(\nabla_{\bbeta}\RSS=\mathbf 0\).</div>
+<ol class="steps">
+<li><div>Multiply out the brackets, like \((a-b)^2=a^2-2ab+b^2\): \[\RSS=\by\T\by-\by\T\bX\bbeta-\bbeta\T\bX\T\by+\bbeta\T\bX\T\bX\bbeta.\]<span class="why">The transpose of a product reverses the order: \((\bX\bbeta)\T=\bbeta\T\bX\T\).</span></div></li>
+<li><div>The two middle terms are the same single number (a \(1\times1\) matrix equals its own transpose), so \[\RSS=\by\T\by-2\,\bbeta\T\bX\T\by+\bbeta\T\bX\T\bX\bbeta.\]</div></li>
+<li><div>Differentiate term by term with two rules from the maths lesson: \(\nabla_{\bbeta}(\bbeta\T\mathbf a)=\mathbf a\), and \(\nabla_{\bbeta}(\bbeta\T A\bbeta)=2A\bbeta\) when \(A\) is symmetric. \(\by\T\by\) has no \(\bbeta\) in it, so its derivative is 0: \[\nabla_{\bbeta}\RSS=-2\bX\T\by+2\bX\T\bX\bbeta.\]<span class="why">These are the vector versions of \(\frac{d}{db}(ab)=a\) and \(\frac{d}{db}(ab^2)=2ab\).</span></div></li>
+<li><div>Set it to zero and divide by 2: \(\bX\T\bX\hat\bbeta=\bX\T\by\). These are the <dfn data-g="normal-equations">normal equations</dfn>. The hat says "the particular \(\bbeta\) that solves them: our estimate".</div></li>
+<li><div>Rearranged: \(\bX\T(\by-\bX\hat\bbeta)=\mathbf 0\). Every column of \(\bX\) is perpendicular ("normal") to the residual vector. That is where the name comes from.</div></li>
+</ol>
+<div class="result">\(\bX\T\bX\,\hat\bbeta=\bX\T\by\)</div></div>
+<div class="mathblock" data-sheet="Normal equations"><div class="eqlabel">The normal equations</div>
+\[\bX\T\bX\,\hat\bbeta=\bX\T\by\qquad\Longrightarrow\qquad \hat\bbeta=(\bX\T\bX)^{-1}\bX\T\by\ \ \text{(on paper only)}\]
+<p class="say">Read: X-transpose-X times beta-hat equals X-transpose-y. It is a square system of \(p+1\) equations in \(p+1\) unknowns: for Advertising, 4 equations in 4 unknowns.</p></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>solving the normal equations by hand</b></div>
+<div class="given">Three points: \(x=(1,2,3)\), \(y=(1,3,4)\). Fit \(y\approx\beta_0+\beta_1x\).</div>
+<ol class="steps">
+<li><div>Build \(\bX\) and \(\by\): \(\bX=\begin{pmatrix}1&1\\1&2\\1&3\end{pmatrix},\ \by=\begin{pmatrix}1\\3\\4\end{pmatrix}\).</div></li>
+<li><div>\(\bX\T\bX=\begin{pmatrix}1&1&1\\1&2&3\end{pmatrix}\begin{pmatrix}1&1\\1&2\\1&3\end{pmatrix}=\begin{pmatrix}\boldsymbol{3}&\boldsymbol{6}\\\boldsymbol{6}&\boldsymbol{14}\end{pmatrix}\).<span class="why">Top-left: \(1+1+1=3\) (the number of points). Off-diagonal: \(1+2+3=6\) (the sum of \(x\)). Bottom-right: \(1+4+9=14\) (the sum of \(x^2\)).</span></div></li>
+<li><div>\(\bX\T\by=\begin{pmatrix}1+3+4\\ 1(1)+2(3)+3(4)\end{pmatrix}=\begin{pmatrix}8\\19\end{pmatrix}\).<span class="why">The sum of \(y\), and the sum of \(xy\).</span></div></li>
+<li><div>Solve \(\begin{pmatrix}3&6\\6&14\end{pmatrix}\begin{pmatrix}\beta_0\\\beta_1\end{pmatrix}=\begin{pmatrix}8\\19\end{pmatrix}\). Double the first equation: \(6\beta_0+12\beta_1=16\). Subtract it from the second: \(2\beta_1=3\), so \(\beta_1=\mathbf{1.5}\).<span class="why">This is Gaussian elimination: what <code>np.linalg.solve</code> does, with extra care about rounding.</span></div></li>
+<li><div>Back-substitute into the first equation: \(3\beta_0+6(1.5)=8\Rightarrow 3\beta_0=-1\Rightarrow\beta_0=\mathbf{-0.3333}\).</div></li>
+<li><div>Check perpendicularity. Predictions \(-0.3333+1.5x=(1.1667,\ 2.6667,\ 4.1667)\); residuals \((-0.1667,\ 0.3333,\ -0.1667)\). Their sum is \(0\), and \(1(-0.1667)+2(0.3333)+3(-0.1667)=0\). Both columns of \(\bX\) are perpendicular to the residuals, as promised.</div></li>
+</ol>
+<div class="result">\(\hat\beta_0=-1/3,\ \hat\beta_1=3/2\), RSS \(=0.0278+0.1111+0.0278=0.1667\)</div></div>
+
+<div class="callout ece"><p><b>You have seen these equations before.</b> In adaptive filtering, the optimal (Wiener) filter solves the <b>Wiener–Hopf equations</b> \(R\,\mathbf w=\mathbf p\), where \(R\) is the autocorrelation matrix of the input and \(\mathbf p\) the cross-correlation between the input and the desired signal. Divide the normal equations by \(n\): \(\tfrac1n\bX\T\bX\) is the sample autocorrelation of the inputs and \(\tfrac1n\bX\T\by\) the sample cross-correlation. Least squares <i>is</i> the Wiener filter with sample averages, and the gradient descent you write in Step 5 is the steepest-descent algorithm that LMS approximates.</p></div>
+
+<h4>Why <code>solve</code> and never <code>inv</code></h4>
+<p>On paper we write \((\bX\T\bX)^{-1}\). On a computer you should almost never form an inverse. <code>np.linalg.solve(A, b)</code> finds the \(\mathbf x\) with \(A\mathbf x=\mathbf b\) directly by elimination (an LU factorisation). Computing <code>inv(A) @ b</code> does more work and, more importantly, loses more accuracy when \(A\) is nearly singular. "Nearly singular" is measured by the <dfn data-g="condition-number">condition number</dfn> \(\kappa(A)\) (read <i>kappa of A</i>), the ratio of the largest to the smallest stretch \(A\) applies to a vector. A rough rule: you can lose about \(\log_{10}\kappa\) of your 16 decimal digits. For Advertising, \(\kappa(\bX\T\bX)\approx 2\times10^5\), so about 5 digits are at risk, which is still fine. With polynomial features it gets far worse, as the cell after the next exercise shows.</p>
+
+<div class="ex" id="x-proj1-03" data-title="closed-form OLS"><div class="task"><p>Write <code>ols_fit(X, y)</code> that returns \(\hat\bbeta\) by solving the normal equations with <code>np.linalg.solve</code>. On the three-point example it must return <code>[-1/3, 1.5]</code>.</p>
+<p><b>Reminder:</b> <code>A @ B</code> is matrix multiplication and <code>X.T</code> is the transpose.</p></div>
+<pre class="src">
+def ols_fit(X, y):
+    A = ...        # X transpose X
+    b = ...        # X transpose y
+    return np.linalg.solve(A, b)
+</pre>
+<pre class="check">
+Xs = np.array([[1, 1], [1, 2], [1, 3.]]); ys = np.array([1, 3, 4.])
+got = ols_fit(Xs, ys)
+assert np.allclose(got, [-1/3, 1.5]), f"three-point example should give [-0.3333, 1.5], got {got}"
+b = ols_fit(X, y)
+assert b.shape == (4,), f"for Advertising beta-hat should have 4 entries, got shape {b.shape}"
+ref = np.linalg.lstsq(X, y, rcond=None)[0]
+assert np.allclose(b, ref, atol=1e-8), f"Advertising coefficients should be {ref.round(5)}, got {b.round(5)}"
+</pre>
+<div class="hint"><p>\(\bX\T\bX\) is <code>X.T @ X</code>.</p></div>
+<div class="hint"><p><code>A = X.T @ X</code> and <code>b = X.T @ y</code>.</p></div>
+<pre class="solution">
+def ols_fit(X, y):
+    A = X.T @ X
+    b = X.T @ y
+    return np.linalg.solve(A, b)
+</pre>
+<div class="explain"><p>Two matrix products build the square system, and <code>solve</code> does the elimination. The check compares with <code>np.linalg.lstsq</code>, which uses an even more careful method (the singular value decomposition) and never forms \(\bX\T\bX\) at all.</p></div></div>
+
+<div class="predict" data-correct="3"><p>The next cell fits Advertising with your <code>ols_fit</code>. What do you expect the newspaper coefficient to be?</p><ol class="opts"><li>About +0.05, like TV</li><li>About +0.19, like radio</li><li>About −0.001: essentially zero</li></ol><div class="why">ISLP's multiple regression (Table 3.4) found that once TV and radio are in the model, newspaper adds nothing: its coefficient is \(-0.0010\) with a p-value of 0.86. Your from-scratch code must reproduce exactly that. Newspaper looked useful on its own only because it is correlated with radio (0.354 in Step 0).</div></div>
+<div class="py" id="c-proj1-05"><pre class="src">
+beta_cf = ols_fit(X, y)
+for name, b in zip(['intercept', 'TV', 'radio', 'newspaper'], beta_cf):
+    print(f"{name:10s} {b: .6f}")
+rss = np.sum((y - X @ beta_cf) ** 2)
+print("RSS =", round(rss, 3), "  training MSE =", round(rss / len(y), 4))
+</pre><div class="pynote"><b>Read the output:</b> \(\hat\beta_0=2.938889\), \(\hat\beta_1=0.045765\), \(\hat\beta_2=0.188530\), \(\hat\beta_3=-0.001037\): exactly ISLP Table 3.4. Each extra thousand dollars of radio goes with about 189 extra units sold, holding TV and newspaper fixed. <code>zip</code> walks through two lists side by side; <code>f"{b: .6f}"</code> prints a number with 6 decimals and a space for the sign, so the columns line up.</div></div>
+
+<div class="py" id="c-proj1-06"><pre class="src">
+# How much accuracy do inv and solve lose on a badly conditioned problem?
+x = np.linspace(0, 1, 50)
+V = np.vander(x, 12, increasing=True)      # columns 1, x, x^2, ..., x^11
+true_beta = np.ones(12)
+yv = V @ true_beta                          # exact data, no noise at all
+A, b = V.T @ V, V.T @ yv
+print(f"condition number of V^T V: {np.linalg.cond(A):.1e}")
+for name, est in [("inv(A) @ b", np.linalg.inv(A) @ b),
+                  ("solve(A, b)", np.linalg.solve(A, b)),
+                  ("lstsq(V, y)", np.linalg.lstsq(V, yv, rcond=None)[0])]:
+    print(f"{name:12s} |A beta - b| = {np.linalg.norm(A @ est - b):.1e}   "
+          f"|beta - true| = {np.linalg.norm(est - true_beta):.1e}")
+</pre><div class="pynote"><b>Read the output:</b> the condition number is about \(10^{16}\): every one of our 16 digits is at risk. The inverse leaves a residual of order 1 to 10 in its own equations and misses the true coefficients badly. <code>solve</code> satisfies its equations almost perfectly (about \(10^{-14}\)), but still misses the true coefficients by order 1, because the problem itself is too sensitive. <code>lstsq</code>, which never squares the condition number by forming \(V\T V\), recovers them to about \(10^{-9}\). (At this condition number the last digits depend on your processor, so your exact numbers may differ a little from the reference output; the ranking does not.) Lesson: <code>solve</code> beats <code>inv</code>; for ill-conditioned problems <code>lstsq</code> beats both. For the well-behaved Advertising problem all three agree to many digits.</div></div>
+
+<div class="callout exam"><p><b>Interview favourite.</b> Code like <code>inv(X.T @ X) @ X.T @ y</code> invites the question "why?". The answer they want: "inverting is slower and less numerically stable; I would use <code>solve</code>, or <code>lstsq</code>/QR when the design matrix might be ill-conditioned".</p></div>
+
+<h3 id="proj1-check">Step 3 · Check against scikit-learn and statsmodels</h3>
+<p>A from-scratch implementation is only worth something if you prove it is correct. The professional tools are your reference. Two things to know before you call them:</p>
+<ul>
+<li>scikit-learn's <code>LinearRegression</code> adds the intercept itself (<code>fit_intercept=True</code> by default), so you give it the budgets <i>without</i> the ones column. The intercept comes back in <code>.intercept_</code> and the slopes in <code>.coef_</code>.</li>
+<li>statsmodels' <code>sm.OLS(y, X)</code> uses exactly the matrix you give it, so you give it your \(\bX\) <i>with</i> the ones column. The coefficients come back in <code>.params</code>.</li>
+</ul>
+<div class="py" id="c-proj1-07"><pre class="src">
+from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
+
+sk = LinearRegression().fit(X[:, 1:], y)           # no ones column: sklearn adds the intercept
+beta_sk = np.r_[sk.intercept_, sk.coef_]            # np.r_ glues them into one vector
+beta_sm = sm.OLS(y, X).fit().params                 # statsmodels: give it the ones column
+
+compare = pd.DataFrame({'mine': beta_cf, 'sklearn': beta_sk, 'statsmodels': beta_sm},
+                       index=['intercept', 'TV', 'radio', 'newspaper'])
+print("max |mine - sklearn|     =", np.max(np.abs(beta_cf - beta_sk)))
+print("max |mine - statsmodels| =", np.max(np.abs(beta_cf - beta_sm)))
+compare
+</pre><div class="pynote"><b>Read the output:</b> differences of about \(10^{-14}\). That is not "close": it is identical up to rounding in the last digits a computer stores (about 16 significant digits). Your implementation is correct. <code>X[:, 1:]</code> means "all rows, columns from 1 onwards": the design matrix without its ones column.</div></div>
+
+<div class="ex" id="x-proj1-04" data-title="a reusable agreement check"><div class="task"><p>Write <code>agree(a, b, tol=1e-6)</code> that returns <code>True</code> when every entry of the arrays <code>a</code> and <code>b</code> differs by less than <code>tol</code>, and <code>False</code> otherwise. It also returns <code>False</code> if the shapes differ. You will use it in every project.</p></div>
+<pre class="src">
+def agree(a, b, tol=1e-6):
+    a, b = np.asarray(a), np.asarray(b)
+    ...
+</pre>
+<pre class="check">
+assert agree(beta_cf, beta_sk) == True, "your coefficients and sklearn's should agree"
+assert agree([1.0, 2.0], [1.0, 2.001]) == False, "a difference of 0.001 must fail at tol=1e-6"
+assert agree([1.0, 2.0], [1.0, 2.001], tol=0.01) == True, "with tol=0.01 they should agree"
+assert agree([1.0, 2.0], [1.0, 2.0, 3.0]) == False, "different shapes must give False"
+assert agree([-5.0], [-5.0000000001]) == True, "tiny differences must pass"
+</pre>
+<div class="hint"><p>First compare <code>a.shape</code> with <code>b.shape</code>. Then look at the largest entry of <code>np.abs(a - b)</code>.</p></div>
+<div class="hint"><p><code>if a.shape != b.shape: return False</code>, then <code>return bool(np.max(np.abs(a - b)) &lt; tol)</code>.</p></div>
+<pre class="solution">
+def agree(a, b, tol=1e-6):
+    a, b = np.asarray(a), np.asarray(b)
+    if a.shape != b.shape:
+        return False
+    return bool(np.max(np.abs(a - b)) &lt; tol)
+</pre>
+<div class="explain"><p>Checking the shape first matters: broadcasting could otherwise compare arrays of different shapes without complaint (a shape <code>(1,)</code> array against a shape <code>(3,)</code> one, for example). <code>bool(...)</code> turns NumPy's <code>np.True_</code> into a plain Python <code>True</code>. NumPy's own version is <code>np.allclose(a, b, rtol=0, atol=tol)</code>.</p></div></div>
+
+<h3 id="proj1-grad">Step 4 · The gradient of the loss</h3>
+<p>The closed form needs a square system you can solve. Neural networks have no such formula: they are trained by walking downhill on the loss. Linear regression is the perfect place to learn the walk, because we know exactly where the bottom is and can check that we arrive.</p>
+<p>We use the <dfn data-g="mse">mean squared error</dfn> (MSE) as the loss. It is RSS divided by \(n\). Dividing by \(n\) does not move the minimum, but it keeps the numbers a sensible size whatever \(n\) is:</p>
+<div class="mathblock" data-sheet="MSE loss and its gradient"><div class="eqlabel">Loss and gradient for linear regression</div>
+\[L(\bbeta)=\frac1n\sum_{i=1}^n\big(y_i-\bx_i\T\bbeta\big)^2=\frac1n\|\by-\bX\bbeta\|^2,\qquad \nabla L(\bbeta)=-\frac2n\,\bX\T(\by-\bX\bbeta)\]
+<p class="say">Read: the loss is the average squared residual. Its gradient is minus two over n, times X-transpose, times the residual vector. Entry \(j\) of the gradient is \(-\frac2n\sum_i x_{ij}\,r_i\): "how strongly predictor \(j\) lines up with what we are still getting wrong".</p></div>
+<p><b>Derivation for one coefficient</b>, with the chain rule from <a href="#m-calc">Derivatives &amp; gradients</a>. Write the residual \(r_i=y_i-\sum_k x_{ik}\beta_k\). Only the \(k=j\) term contains \(\beta_j\), so \(\partial r_i/\partial\beta_j=-x_{ij}\). Then</p>
+\[\frac{\partial L}{\partial\beta_j}=\frac1n\sum_i 2r_i\cdot\frac{\partial r_i}{\partial\beta_j}=\frac1n\sum_i 2r_i(-x_{ij})=-\frac2n\sum_i x_{ij}r_i.\]
+<p>Stacking the \(p+1\) entries gives \(-\frac2n\bX\T\mathbf r\). Setting it to zero gives back the normal equations: the two methods are aiming at the same point.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>two gradient-descent steps by hand</b></div>
+<div class="given">The three points again: \(x=(1,2,3),\ y=(1,3,4)\). Start at \(\bbeta^{(0)}=(0,0)\) with learning rate \(\eta=0.1\) (read <i>eta</i>).</div>
+<ol class="steps">
+<li><div>All predictions are 0, so the residuals are \(\mathbf r=\by-\bX\bbeta=(1,3,4)\). Loss \(L=\frac13(1+9+16)=\mathbf{8.667}\).</div></li>
+<li><div>\(\bX\T\mathbf r=\begin{pmatrix}1+3+4\\1(1)+2(3)+3(4)\end{pmatrix}=\begin{pmatrix}8\\19\end{pmatrix}\). Gradient \(=-\frac23\begin{pmatrix}8\\19\end{pmatrix}=\begin{pmatrix}\boldsymbol{-5.333}\\\boldsymbol{-12.667}\end{pmatrix}\).<span class="why">Both entries are negative: increasing either coefficient would lower the loss.</span></div></li>
+<li><div>Step against the gradient: \(\bbeta^{(1)}=\bbeta^{(0)}-\eta\nabla L=\begin{pmatrix}0\\0\end{pmatrix}-0.1\begin{pmatrix}\boldsymbol{-5.333}\\\boldsymbol{-12.667}\end{pmatrix}=\begin{pmatrix}\boldsymbol{0.5333}\\\boldsymbol{1.2667}\end{pmatrix}\).</div></li>
+<li><div>New predictions \(0.5333+1.2667x=(1.8,\ 3.0667,\ 4.3333)\); residuals \((-0.8,\ -0.0667,\ -0.3333)\); loss \(\frac13(0.64+0.0044+0.1111)=\mathbf{0.2519}\).</div></li>
+<li><div>Second step. \(\bX\T\mathbf r=\begin{pmatrix}-0.8-0.0667-0.3333\\-0.8-0.1333-1.0\end{pmatrix}=\begin{pmatrix}-1.2\\-1.9333\end{pmatrix}\), gradient \(=-\frac23(\cdot)=\begin{pmatrix}0.8\\1.2889\end{pmatrix}\). So \(\bbeta^{(2)}=\begin{pmatrix}0.5333-0.08\\1.2667-0.1289\end{pmatrix}=\begin{pmatrix}\boldsymbol{0.4533}\\\boldsymbol{1.1378}\end{pmatrix}\), loss \(\mathbf{0.1469}\).<span class="why">The gradient is now positive: the first step overshot a little, and the second step pulls back.</span></div></li>
+<li><div>Keep going and \(\bbeta\) settles at \((-0.333,\ 1.5)\), the closed-form answer, where the loss is \(0.1667/3=0.0556\).</div></li>
+</ol>
+<div class="result">Loss: \(8.667\to0.252\to0.147\to\dots\to0.0556\)</div></div>
+
+<div class="ex" id="x-proj1-05" data-title="the MSE and its gradient"><div class="task"><p>Write <code>mse(X, y, beta)</code> and <code>mse_grad(X, y, beta)</code> using the formulas above. On the three-point example at <code>beta = [0, 0]</code>, <code>mse</code> gives <code>8.6667</code> and <code>mse_grad</code> gives <code>[-5.3333, -12.6667]</code>. Use matrix operations, no loops.</p></div>
+<pre class="src">
+def mse(X, y, beta):
+    r = y - X @ beta
+    return ...
+
+def mse_grad(X, y, beta):
+    n = len(y)
+    r = y - X @ beta
+    return ...
+</pre>
+<pre class="check">
+Xs = np.array([[1, 1], [1, 2], [1, 3.]]); ys = np.array([1, 3, 4.])
+assert np.isclose(mse(Xs, ys, np.zeros(2)), 26/3), f"mse at 0 should be 8.6667, got {mse(Xs, ys, np.zeros(2))}"
+g = mse_grad(Xs, ys, np.zeros(2))
+assert np.allclose(g, [-16/3, -38/3]), f"gradient at 0 should be [-5.3333, -12.6667], got {g}"
+assert np.allclose(mse_grad(X, y, beta_cf), 0, atol=1e-8), "at the closed-form solution the gradient must be (almost) zero"
+b0 = np.array([1.0, 0.01, 0.1, 0.0])
+assert np.isclose(mse(X, y, b0), np.mean((y - X @ b0) ** 2)), "mse on Advertising is wrong"
+</pre>
+<div class="hint"><p>The mean of the squared residuals is <code>np.mean(r ** 2)</code>.</p></div>
+<div class="hint"><p>The gradient is <code>-2 / n * X.T @ r</code>.</p></div>
+<pre class="solution">
+def mse(X, y, beta):
+    r = y - X @ beta
+    return np.mean(r ** 2)
+
+def mse_grad(X, y, beta):
+    n = len(y)
+    r = y - X @ beta
+    return -2 / n * X.T @ r
+</pre>
+<div class="explain"><p>The third check is the deepest: at \(\hat\bbeta\) from the normal equations the gradient vanishes. That is the normal equations, read backwards.</p></div></div>
+
+<h4>Gradient checking: trust, but verify</h4>
+<p>A wrong sign or a missing factor of 2 in a gradient is the most common bug in machine learning, and it does not crash: the model just trains badly. The cure is to compare your formula with a <dfn data-g="finite-difference">finite-difference</dfn> estimate, which only needs the loss itself: nudge one coefficient up by a tiny \(h\), nudge it down by \(h\), and measure the slope.</p>
+<div class="mathblock" data-sheet="Centred finite difference"><div class="eqlabel">Centred finite difference</div>
+\[\frac{\partial L}{\partial\beta_j}\approx\frac{L(\bbeta+h\mathbf e_j)-L(\bbeta-h\mathbf e_j)}{2h}\]
+<p class="say">Read: the slope in direction \(j\) is about the loss a little to the right minus the loss a little to the left, over the distance between them. \(\mathbf e_j\) is the vector with a 1 in position \(j\) and zeros elsewhere. Tiny example: for \(f(b)=b^2\) at \(b=2\) with \(h=0.01\): \((4.0401-3.9601)/0.02=4.0000\), exactly \(f'(2)=4\).</p></div>
+<div class="ex" id="x-proj1-06" data-title="numerical gradient"><div class="task"><p>Write <code>num_grad(f, beta, h=1e-5)</code> that returns the centred finite-difference gradient of any function <code>f(beta)</code>. For <code>f(b) = b[0]**2 + 3*b[1]</code> at <code>[2, 5]</code> the answer is <code>[4, 3]</code>.</p></div>
+<pre class="src">
+def num_grad(f, beta, h=1e-5):
+    beta = np.asarray(beta, dtype=float)
+    g = np.zeros_like(beta)
+    for j in range(len(beta)):
+        e = np.zeros_like(beta)
+        e[j] = h
+        g[j] = ...
+    return g
+</pre>
+<pre class="check">
+gq = num_grad(lambda b: b[0]**2 + 3*b[1], [2.0, 5.0])
+assert np.allclose(gq, [4, 3], atol=1e-6), f"expected [4, 3], got {gq}"
+bt = np.array([1.0, 0.02, 0.1, 0.01])
+gn = num_grad(lambda b: mse(X, y, b), bt)
+ga = mse_grad(X, y, bt)
+rel = np.max(np.abs(gn - ga) / np.maximum(1e-8, np.abs(gn) + np.abs(ga)))
+assert rel &lt; 1e-6, f"numerical and analytic gradients should agree (relative error {rel:.2e})"
+</pre>
+<div class="hint"><p>Evaluate <code>f(beta + e)</code> and <code>f(beta - e)</code>.</p></div>
+<div class="hint"><p><code>g[j] = (f(beta + e) - f(beta - e)) / (2 * h)</code>.</p></div>
+<pre class="solution">
+def num_grad(f, beta, h=1e-5):
+    beta = np.asarray(beta, dtype=float)
+    g = np.zeros_like(beta)
+    for j in range(len(beta)):
+        e = np.zeros_like(beta)
+        e[j] = h
+        g[j] = (f(beta + e) - f(beta - e)) / (2 * h)
+    return g
+</pre>
+<div class="explain"><p><code>lambda b: mse(X, y, b)</code> is a one-line nameless function: it turns the three-input <code>mse</code> into a one-input function of <code>b</code> that <code>num_grad</code> can nudge. The check uses the <dfn data-g="relative-error">relative error</dfn> \(|g_n-g_a|/(|g_n|+|g_a|)\), which does not care whether the gradient entries are big or small. Below \(10^{-6}\) means your formula is right.</p></div></div>
+
+<h3 id="proj1-gd">Step 5 · Gradient descent from scratch</h3>
+<p>Gradient descent repeats one line: \(\bbeta\leftarrow\bbeta-\eta\,\nabla L(\bbeta)\). The <dfn data-g="learning-rate">learning rate</dfn> \(\eta\) sets the step size. We record the loss at each step so that we can draw the <dfn data-g="loss-curve">loss curve</dfn>, the single most useful picture when training any model.</p>
+<div class="mathblock" data-sheet="Gradient descent update"><div class="eqlabel">Gradient descent</div>
+\[\bbeta^{(t+1)}=\bbeta^{(t)}-\eta\,\nabla L\big(\bbeta^{(t)}\big)\]
+<p class="say">Read: the new beta is the old beta minus eta times the gradient at the old beta. The superscript \((t)\) means "after \(t\) steps", not a power. Tiny example: \((0,0)-0.1(-5.333,-12.667)=(0.533,1.267)\).</p></div>
+
+<div class="ex" id="x-proj1-07" data-title="gradient descent loop"><div class="task"><p>Write <code>gd(X, y, lr, steps)</code>: start at zeros, take <code>steps</code> gradient steps with learning rate <code>lr</code>, and return <code>(beta, losses)</code>, where <code>losses</code> is a list of the loss <i>before</i> each step (so it has length <code>steps</code>). On the three-point example with <code>lr=0.1</code> and 2 steps you should get <code>beta = [0.4533, 1.1378]</code> and losses <code>[8.6667, 0.2519]</code>, as in the worked example.</p></div>
+<pre class="src">
+def gd(X, y, lr, steps):
+    beta = np.zeros(X.shape[1])
+    losses = []
+    for t in range(steps):
+        losses.append(mse(X, y, beta))
+        beta = ...
+    return beta, losses
+</pre>
+<pre class="check">
+Xs = np.array([[1, 1], [1, 2], [1, 3.]]); ys = np.array([1, 3, 4.])
+b2, L2 = gd(Xs, ys, 0.1, 2)
+assert len(L2) == 2, f"losses should have 2 entries, got {len(L2)}"
+assert np.allclose(b2, [0.45333, 1.13778], atol=1e-4), f"after 2 steps expected [0.4533, 1.1378], got {b2}"
+assert np.allclose(L2, [8.66667, 0.25185], atol=1e-4), f"losses expected [8.6667, 0.2519], got {L2}"
+bL, _ = gd(Xs, ys, 0.1, 3000)
+assert np.allclose(bL, [-1/3, 1.5], atol=1e-4), f"after many steps it should reach [-0.333, 1.5], got {bL}"
+</pre>
+<div class="hint"><p>Use your <code>mse_grad</code>.</p></div>
+<div class="hint"><p><code>beta = beta - lr * mse_grad(X, y, beta)</code>.</p></div>
+<pre class="solution">
+def gd(X, y, lr, steps):
+    beta = np.zeros(X.shape[1])
+    losses = []
+    for t in range(steps):
+        losses.append(mse(X, y, beta))
+        beta = beta - lr * mse_grad(X, y, beta)
+    return beta, losses
+</pre>
+<div class="explain"><p>The loop is the whole algorithm. The last check confirms the walk ends at the closed-form answer. Write <code>beta = beta - ...</code> rather than <code>beta -= ...</code> while you are learning: it makes a new array each time and avoids surprises with arrays shared between variables.</p></div></div>
+
+<div class="predict" data-correct="1"><p>Now run gradient descent on the <b>raw</b> Advertising budgets with \(\eta=10^{-5}\) for 2,000 steps. What happens?</p><ol class="opts"><li>The loss drops quickly at first, then stalls well above the best possible value; the intercept is still far from 2.94</li><li>It converges to the closed-form answer</li><li>The loss explodes to infinity</li></ol><div class="why">The TV column has values up to 296 while the ones column is always 1. The loss is extremely steep in the TV direction and very flat in the intercept direction. A learning rate small enough not to explode along TV is far too small to make progress along the intercept. You will see the loss stall around 4.0 (the best is 2.78) with an intercept of about 0.02. Try \(\eta=10^{-4}\) afterwards: it explodes.</div></div>
+<div class="py" id="c-proj1-08"><pre class="src">
+beta_raw, loss_raw = gd(X, y, lr=1e-5, steps=2000)
+print("after 2000 steps:", beta_raw.round(4), "  loss =", round(loss_raw[-1], 4))
+print("closed form     :", beta_cf.round(4), "  loss =", round(mse(X, y, beta_cf), 4))
+
+plt.figure(figsize=(6.4, 3.4))
+plt.semilogy(loss_raw, label='raw features, lr = 1e-5')
+plt.axhline(mse(X, y, beta_cf), color='k', ls='--', lw=1, label='best possible (closed form)')
+plt.xlabel('step'); plt.ylabel('training MSE (log scale)'); plt.legend()
+plt.title('Unscaled features: fast start, then a crawl')
+plt.show()
+</pre><div class="pynote"><b>Read the output:</b> the loss falls fast for about a hundred steps and then barely moves. The slopes have moved, but the intercept has crawled only from 0 to about 0.02, because each step can move it by only a minuscule amount. <code>plt.semilogy</code> draws the y-axis on a log scale, so equal ratios are equal distances: the right way to view a loss that shrinks by factors.</div></div>
+
+<h3 id="proj1-scale">Step 6 · Feature scaling and the learning rate</h3>
+<p><dfn data-g="standardise">Standardising</dfn> a column means subtracting its mean and dividing by its standard deviation, so that every predictor is measured "in standard deviations from average":</p>
+<div class="mathblock" data-sheet="Standardisation"><div class="eqlabel">Standardisation (z-scores)</div>
+\[z_{ij}=\frac{x_{ij}-m_j}{s_j},\qquad m_j=\frac1n\sum_i x_{ij},\quad s_j=\sqrt{\frac1n\sum_i(x_{ij}-m_j)^2}\]
+<p class="say">Read: z sub i j is x sub i j minus the column mean, divided by the column standard deviation. A TV budget of 233 with \(m=147.04\) and \(s=85.64\) becomes \((233-147.04)/85.64=1.00\): one standard deviation above average.</p></div>
+<p><b>Why does this help?</b> For the MSE, the shape of the loss bowl is set by the matrix \(H=\frac2n\bX\T\bX\), the <dfn data-g="hessian">Hessian</dfn> (the matrix of second derivatives: how fast the slope changes). Its eigenvalues are the curvatures along the bowl's main directions. Two facts follow:</p>
+<ul>
+<li>Gradient descent is stable only if \(\eta\lt 2/\lambda_{\max}\) (read <i>lambda max</i>, the largest curvature). Above that, each step overshoots further than the last.</li>
+<li>Along the flattest direction (curvature \(\lambda_{\min}\)) each step removes only a fraction \(\eta\lambda_{\min}\) of the remaining error. With \(\eta\) close to \(2/\lambda_{\max}\), that fraction is about \(2\lambda_{\min}/\lambda_{\max}\).</li>
+</ul>
+<p>So the number of steps needed grows like \(\lambda_{\max}/\lambda_{\min}\), the condition number. Here are the actual numbers for Advertising (you will compute them in the next cell):</p>
+<div class="tw"><table class="t"><thead><tr><th></th><th>\(\lambda_{\max}\) of \(H\)</th><th>\(\lambda_{\min}\) of \(H\)</th><th>condition number</th><th>largest safe \(\eta\)</th></tr></thead><tbody>
+<tr><td>raw budgets</td><td class="n">60,278</td><td class="n">0.292</td><td class="n">206,000</td><td class="n">\(3.3\times10^{-5}\)</td></tr>
+<tr><td>standardised</td><td class="n">2.74</td><td class="n">1.29</td><td class="n">2.1</td><td class="n">0.73</td></tr>
+</tbody></table></div>
+<p>A condition number of 206,000 means hundreds of thousands of steps; 2.1 means about ten.</p>
+<div class="callout ece"><p><b>The LMS step-size bound.</b> In adaptive filtering you learned that LMS is stable for \(0\lt\mu\lt 2/\lambda_{\max}(R)\) and that convergence is slow when the eigenvalue spread of \(R\) is large (strongly coloured input). Same maths, same cure: standardising features is the ML cousin of pre-whitening the input. (It is only half of whitening: it equalises the diagonal but does not remove correlations between columns.)</p></div>
+
+<div class="ex" id="x-proj1-08" data-title="standardise using training statistics"><div class="task"><p>Write <code>standardise(A, m=None, s=None)</code>. If <code>m</code> and <code>s</code> are not given, compute the column means and standard deviations of <code>A</code> (with <code>A.mean(axis=0)</code> and <code>A.std(axis=0)</code>). Return <code>(Z, m, s)</code> where <code>Z = (A - m) / s</code>. Passing <code>m</code> and <code>s</code> in lets you scale test data with the <i>training</i> statistics later.</p></div>
+<pre class="src">
+def standardise(A, m=None, s=None):
+    if m is None:
+        m = ...
+        s = ...
+    Z = ...
+    return Z, m, s
+</pre>
+<pre class="check">
+A = np.array([[1., 10.], [2., 20.], [3., 60.]])
+Z, m, s = standardise(A)
+assert np.allclose(m, [2, 30]), f"means should be [2, 30], got {m}"
+assert np.allclose(Z.mean(axis=0), 0) and np.allclose(Z.std(axis=0), 1), "Z columns should have mean 0 and std 1"
+Z2, m2, s2 = standardise(np.array([[2., 30.]]), m, s)
+assert np.allclose(Z2, [[0, 0]]), f"with given m, s the point (2, 30) should map to (0, 0), got {Z2}"
+assert np.allclose(m2, m) and np.allclose(s2, s), "when m and s are given they must be returned unchanged"
+</pre>
+<div class="hint"><p><code>axis=0</code> means "down the rows", giving one number per column.</p></div>
+<div class="hint"><p><code>m = A.mean(axis=0)</code>, <code>s = A.std(axis=0)</code>, <code>Z = (A - m) / s</code>. Broadcasting subtracts <code>m</code> from every row.</p></div>
+<pre class="solution">
+def standardise(A, m=None, s=None):
+    if m is None:
+        m = A.mean(axis=0)
+        s = A.std(axis=0)
+    Z = (A - m) / s
+    return Z, m, s
+</pre>
+<div class="explain"><p><code>A - m</code> uses broadcasting (from <a href="#np2">NumPy II</a>): <code>m</code> has shape <code>(2,)</code> and is subtracted from each row of <code>A</code>. Never standardise the ones column: its standard deviation is 0, and you would divide by zero.</p></div></div>
+
+<div class="py" id="c-proj1-09"><pre class="src">
+Zb, m_all, s_all = standardise(X[:, 1:])            # scale the three budgets, not the ones
+Xz = np.column_stack([np.ones(len(y)), Zb])
+H_raw, H_z = 2 / len(y) * X.T @ X, 2 / len(y) * Xz.T @ Xz
+print("eigenvalues of H, raw   :", np.linalg.eigvalsh(H_raw).round(3))
+print("eigenvalues of H, scaled:", np.linalg.eigvalsh(H_z).round(3))
+
+plt.figure(figsize=(6.4, 3.6))
+for lr in [0.01, 0.1, 0.5, 0.75]:
+    _, L = gd(Xz, y, lr, 150)
+    plt.semilogy(L, label=f'lr = {lr}')
+plt.axhline(mse(X, y, beta_cf), color='k', ls='--', lw=1)
+plt.ylim(1, 300); plt.xlabel('step'); plt.ylabel('training MSE (log)'); plt.legend()
+plt.title('Standardised features: the learning-rate experiment')
+plt.show()
+</pre><div class="pynote"><b>Read the output:</b> the scaled curvatures all lie between 1.29 and 2.74. With <code>lr = 0.01</code> the loss falls slowly and has not arrived after 150 steps; <code>0.1</code> reaches the dashed line in about 25 steps; <code>0.5</code> in about 10. At <code>0.75</code>, just above the limit \(2/2.74=0.73\), the loss turns round and grows: each step overshoots further. The best learning rate sits a little below the stability limit. <code>np.linalg.eigvalsh</code> returns the eigenvalues of a symmetric matrix, smallest first.</div></div>
+
+<div class="widget" data-w="proj1-gd" data-title="Gradient descent on the loss bowl: raw versus standardised TV" data-args='{}'><div class="wn">This is the TV-only model \(\text{sales}\approx\beta_0+\beta_1\text{TV}\); each grey ellipse is a contour of equal loss. Start on <b>raw TV</b> and press Run: the path drops to the valley floor and then crawls along it towards the minimum. Push the learning rate up a notch at a time until the readout says "diverged!". Then switch to <b>standardised TV</b>: the ellipses become circles and the path walks almost straight to the minimum in a handful of steps.</div></div>
+
+<h4>Back to the original units</h4>
+<p>Coefficients fitted on standardised features answer "per standard deviation" questions. To compare them with the closed form, convert them back. If \(\hat y=b_0+\sum_j b_j\frac{x_j-m_j}{s_j}\), expand the brackets and collect what multiplies each \(x_j\) and what is left over:</p>
+\[\hat y=\Big(b_0-\sum_j\frac{b_j m_j}{s_j}\Big)+\sum_j\frac{b_j}{s_j}x_j\]
+<p>Reading off what multiplies each \(x_j\), and the constant that is left over:</p>
+\[\beta_j=\frac{b_j}{s_j},\qquad \beta_0=b_0-\sum_j\beta_j m_j.\]
+<p>Tiny example (TV only): \(b_0=14.0225\), \(b_1=4.0711\) per standard deviation, \(m=147.04\), \(s=85.64\). Then \(\beta_1=4.0711/85.64=0.04754\) per thousand dollars, and \(\beta_0=14.0225-0.04754\times147.04=14.0225-6.9902=7.0323\): the TV-only line of ISLP Table 3.1.</p>
+<div class="ex" id="x-proj1-09" data-title="unscale the coefficients"><div class="task"><p>Write <code>unscale(b, m, s)</code>: <code>b</code> is the vector \((b_0,b_1,\dots,b_p)\) from standardised features, <code>m</code> and <code>s</code> the means and standard deviations. Return the coefficients \((\beta_0,\dots,\beta_p)\) in original units. The check runs gradient descent on <code>Xz</code> and compares your answer with the closed form.</p></div>
+<pre class="src">
+def unscale(b, m, s):
+    slopes = ...
+    intercept = ...
+    return np.r_[intercept, slopes]
+</pre>
+<pre class="check">
+bz, _ = gd(Xz, y, 0.5, 200)
+got = unscale(bz, m_all, s_all)
+assert got.shape == (4,), f"should return 4 coefficients, got shape {got.shape}"
+assert np.allclose(got, beta_cf, atol=1e-6), f"expected {beta_cf.round(6)}, got {got.round(6)}"
+assert np.allclose(unscale(np.array([1., 2.]), np.array([3.]), np.array([4.])), [-0.5, 0.5]), "unscale([1,2],[3],[4]) should be [-0.5, 0.5]"
+</pre>
+<div class="hint"><p>The slopes are <code>b[1:] / s</code>.</p></div>
+<div class="hint"><p><code>intercept = b[0] - np.sum(slopes * m)</code>.</p></div>
+<pre class="solution">
+def unscale(b, m, s):
+    slopes = b[1:] / s
+    intercept = b[0] - np.sum(slopes * m)
+    return np.r_[intercept, slopes]
+</pre>
+<div class="explain"><p>With scaling, 200 steps at <code>lr = 0.5</code> reach the closed-form answer to six decimals. Without scaling, two thousand steps were not enough to get the intercept right. Same algorithm, same data: only the units changed.</p></div></div>
+
+<div class="py" id="c-proj1-10"><pre class="src">
+def steps_to_converge(Xd, lr, tol=1e-6, max_steps=20000):
+    target = mse(Xd, y, np.linalg.lstsq(Xd, y, rcond=None)[0])
+    beta = np.zeros(Xd.shape[1])
+    for t in range(max_steps):
+        if mse(Xd, y, beta) - target &lt; tol:
+            return t
+        beta = beta - lr * mse_grad(Xd, y, beta)
+    return f"more than {max_steps}"
+
+print("scaled, lr = 0.5  :", steps_to_converge(Xz, 0.5), "steps")
+print("raw,    lr = 3e-5 :", steps_to_converge(X, 3e-5), "steps")
+</pre><div class="pynote"><b>Read the output:</b> scaled features reach the best loss (to within \(10^{-6}\)) in 9 steps. Raw features, even at the largest stable learning rate, have not got there after 20,000 steps; the theory says it would take several hundred thousand. Feature scaling is not a detail: here it is worth a factor of more than ten thousand.</div></div>
+
+<div class="callout pitfall"><p><b>Pitfall: scaling with statistics from all the data.</b> When you split into training and test sets (next step), compute \(m\) and \(s\) on the training rows only and reuse them for the test rows. Using the test rows' statistics lets information about the test set leak into training. The leak is small here, but the habit matters: in Project 2 it becomes a real error.</p></div>
+
+<h3 id="proj1-split">Step 7 · Train/test split by hand, and the results table</h3>
+<p>Training MSE flatters every model, because the model has seen those exact points (<a href="#isl2-2">ISLP 2.2</a>). To estimate how it does on new markets, hold some markets back. A <dfn data-g="train-test-split">train/test split</dfn> shuffles the row numbers and cuts them in two. We shuffle with a seeded random generator so that anyone who runs your code gets the same split: that is what makes a result reproducible.</p>
+<p><b>New tool:</b> <code>rng = np.random.default_rng(seed)</code> makes a random generator; <code>rng.permutation(n)</code> returns the numbers <code>0 … n-1</code> in a random order. Same seed, same order, every time.</p>
+<div class="ex" id="x-proj1-10" data-title="split indices by hand"><div class="task"><p>Write <code>split_indices(n, test_frac, seed)</code> that returns <code>(train_idx, test_idx)</code>: shuffle <code>0 … n-1</code> with <code>np.random.default_rng(seed).permutation(n)</code>, put the first <code>round(test_frac * n)</code> shuffled indices in the test set and the rest in the training set.</p></div>
+<pre class="src">
+def split_indices(n, test_frac, seed):
+    perm = np.random.default_rng(seed).permutation(n)
+    n_test = ...
+    test_idx = ...
+    train_idx = ...
+    return train_idx, test_idx
+</pre>
+<pre class="check">
+tr, te = split_indices(200, 0.25, 1)
+assert len(te) == 50 and len(tr) == 150, f"expected 150 train / 50 test, got {len(tr)} / {len(te)}"
+assert len(set(tr) &amp; set(te)) == 0, "a row must not be in both sets"
+assert sorted(np.r_[tr, te]) == list(range(200)), "together the two sets must contain every row exactly once"
+tr2, te2 = split_indices(200, 0.25, 1)
+assert np.array_equal(te, te2), "the same seed must give the same split"
+_, te3 = split_indices(200, 0.25, 2)
+assert not np.array_equal(te, te3), "a different seed should give a different split"
+assert len(split_indices(10, 0.3, 0)[1]) == 3, "10 rows at 30% should give 3 test rows"
+</pre>
+<div class="hint"><p><code>n_test = round(test_frac * n)</code>. Then slice <code>perm</code>.</p></div>
+<div class="hint"><p><code>test_idx = perm[:n_test]</code> and <code>train_idx = perm[n_test:]</code>.</p></div>
+<pre class="solution">
+def split_indices(n, test_frac, seed):
+    perm = np.random.default_rng(seed).permutation(n)
+    n_test = round(test_frac * n)
+    test_idx = perm[:n_test]
+    train_idx = perm[n_test:]
+    return train_idx, test_idx
+</pre>
+<div class="explain"><p>Slicing one shuffled list into two pieces guarantees no overlap and full coverage. The checks test exactly those properties, plus reproducibility. scikit-learn's <code>train_test_split</code> does the same job.</p></div></div>
+
+<div class="predict" data-correct="2"><p>The next cell fits three models on 150 training markets and tests them on 50. Adding newspaper to the TV + radio model will…</p><ol class="opts"><li>clearly lower the test MSE</li><li>lower the training MSE by a hair, and leave the test MSE about the same (or slightly worse)</li><li>raise the training MSE</li></ol><div class="why">Adding a column can never raise training RSS: least squares could always set its coefficient to zero. But newspaper carries no extra information, so on unseen markets it gives nothing back, and the noise it fitted can make test error a little worse. Training error alone would mislead you.</div></div>
+<div class="py" id="c-proj1-11"><pre class="src">
+tr, te = split_indices(len(y), 0.25, seed=1)
+rows = []
+for cols in [['TV'], ['TV', 'radio'], ['TV', 'radio', 'newspaper']]:
+    Xd = design_matrix(ads, cols)
+    b_cf = ols_fit(Xd[tr], y[tr])                               # closed form, training rows only
+    Ztr, m, s = standardise(Xd[tr, 1:])                         # training statistics only
+    b_gd = unscale(gd(np.column_stack([np.ones(len(tr)), Ztr]), y[tr], 0.5, 500)[0], m, s)
+    b_sk = LinearRegression().fit(Xd[tr, 1:], y[tr])
+    rows.append({'model': ' + '.join(cols),
+                 'train MSE': mse(Xd[tr], y[tr], b_cf), 'test MSE': mse(Xd[te], y[te], b_cf),
+                 'GD = closed form': agree(b_gd, b_cf),
+                 'sklearn = closed form': agree(np.r_[b_sk.intercept_, b_sk.coef_], b_cf)})
+results = pd.DataFrame(rows).round(3)
+results
+</pre><div class="pynote"><b>Read the output:</b> TV alone: test MSE 8.474. Adding radio cuts it to 1.399, a huge gain. Adding newspaper lowers training MSE only in the fourth decimal (3.268 to 3.268) and raises test MSE slightly, to 1.404. In every row your gradient descent, your closed form and scikit-learn agree. This table is the heart of your README. <code>' + '.join(cols)</code> glues a list of names into one string with " + " between them.</div></div>
+
+<div class="callout key"><p><b>One split is one sample.</b> A different seed gives different test MSEs (try <code>seed=2</code>). With only 50 test markets the numbers move by 10–30%. In Project 2 you will fix this with k-fold cross-validation, which averages over several splits.</p></div>
+
+<h3 id="proj1-diag">Step 8 · Diagnostic plots: is a straight plane good enough?</h3>
+<p>A single number such as test MSE tells you <i>how big</i> the errors are, not <i>what shape</i> they have. Diagnostic plots show the shape. The most useful one is <dfn data-g="residual-plot">residuals against fitted values</dfn>: for each market, put \(\hat y_i\) on the x-axis and \(r_i=y_i-\hat y_i\) on the y-axis. If the model has captured everything systematic, the dots form a shapeless horizontal band around zero. Any pattern (a curve, a funnel) is something the model missed (<a href="#isl3-3">ISLP 3.3.3</a>).</p>
+<p>We also report \(R^2\), the fraction of the variance of \(y\) that the model explains:</p>
+<div class="mathblock" data-sheet="R squared"><div class="eqlabel">Coefficient of determination</div>
+\[R^2=1-\frac{\RSS}{\TSS}=1-\frac{\sum_i(y_i-\hat y_i)^2}{\sum_i(y_i-\bar y)^2}\]
+<p class="say">Read: R-squared is one minus the residual sum of squares over the total sum of squares. TSS is the error of the laziest model, "always predict the mean \(\bar y\)". Tiny example: \(y=(1,3,4)\), \(\bar y=2.667\), TSS \(=2.778+0.111+1.778=4.667\); with RSS \(=0.1667\), \(R^2=1-0.1667/4.667=0.964\).</p></div>
+<div class="ex" id="x-proj1-11" data-title="R squared from scratch"><div class="task"><p>Write <code>r2(y_true, y_pred)</code> using the formula. On <code>y_true = [1, 3, 4]</code>, <code>y_pred = [1.1667, 2.6667, 4.1667]</code> it gives about <code>0.964</code>. The check compares with <code>sklearn.metrics.r2_score</code>.</p></div>
+<pre class="src">
+def r2(y_true, y_pred):
+    y_true, y_pred = np.asarray(y_true), np.asarray(y_pred)
+    rss = ...
+    tss = ...
+    return 1 - rss / tss
+</pre>
+<pre class="check">
+from sklearn.metrics import r2_score
+got = r2([1, 3, 4], [7/6, 8/3, 25/6])
+assert abs(got - 0.9643) &lt; 1e-3, f"expected about 0.964, got {got}"
+assert abs(r2([1, 2, 3], [2, 2, 2]) - 0.0) &lt; 1e-12, "predicting the mean must give R^2 = 0"
+assert r2([1, 2, 3], [3, 2, 1]) &lt; 0, "a model worse than the mean gives a NEGATIVE R^2"
+yp = X @ beta_cf
+assert abs(r2(y, yp) - r2_score(y, yp)) &lt; 1e-12, "should match sklearn's r2_score"
+</pre>
+<div class="hint"><p>RSS is the sum of squared residuals; TSS is the sum of squared distances from <code>y_true.mean()</code>.</p></div>
+<div class="hint"><p><code>rss = np.sum((y_true - y_pred) ** 2)</code> and <code>tss = np.sum((y_true - y_true.mean()) ** 2)</code>.</p></div>
+<pre class="solution">
+def r2(y_true, y_pred):
+    y_true, y_pred = np.asarray(y_true), np.asarray(y_pred)
+    rss = np.sum((y_true - y_pred) ** 2)
+    tss = np.sum((y_true - y_true.mean()) ** 2)
+    return 1 - rss / tss
+</pre>
+<div class="explain"><p>\(R^2=0\) means "no better than the mean"; \(R^2=1\) means perfect. On a <i>test</i> set \(R^2\) can be negative, which means the model is worse than predicting the training mean. That is a real warning sign, and the check makes sure your function allows it.</p></div></div>
+
+<div class="py" id="c-proj1-12"><pre class="src">
+X2 = design_matrix(ads, ['TV', 'radio'])
+b2 = ols_fit(X2[tr], y[tr])
+fit_tr, res_tr = X2[tr] @ b2, y[tr] - X2[tr] @ b2
+fit_te = X2[te] @ b2
+print(f"TV + radio:  R^2 train = {r2(y[tr], fit_tr):.3f},  R^2 test = {r2(y[te], fit_te):.3f}")
+
+fig, ax = plt.subplots(1, 3, figsize=(11, 3.3))
+ax[0].scatter(fit_tr, res_tr, s=12); ax[0].axhline(0, color='k', lw=1)
+ax[0].set_xlabel('fitted sales'); ax[0].set_ylabel('residual'); ax[0].set_title('Residuals vs fitted')
+ax[1].scatter(y[te], fit_te, s=14); ax[1].plot([0, 27], [0, 27], 'k--', lw=1)
+ax[1].set_xlabel('actual sales (test)'); ax[1].set_ylabel('predicted'); ax[1].set_title('Predicted vs actual')
+ax[2].hist(res_tr, bins=20); ax[2].set_xlabel('residual'); ax[2].set_title('Residual histogram')
+plt.tight_layout(); plt.show()
+</pre><div class="pynote"><b>Read the output:</b> \(R^2\) is 0.882 on training and 0.944 on test (the test set happens to be a little easier; with 50 points this happens). Now the left plot: the residuals are <b>not</b> a shapeless band. They are positive at both ends and negative in the middle, a <b>U-shape</b>, so the plane underpredicts markets with very small and very large fitted sales. The histogram has a long left tail: a few markets sell up to 8.6 thousand units <i>less</i> than predicted. In the middle plot, those markets are the points well below the dashed line.</div></div>
+
+<div class="callout intuition"><p><b>What the U-shape is telling you.</b> ISLP 3.2 and 3.3 found the reason: TV and radio work better <i>together</i> than separately (a <b>synergy</b>, or <dfn data-g="interaction">interaction</dfn>). A market with a large budget on both sells more than "TV effect + radio effect". The model can learn that if you give it a column \(\text{TV}\times\text{radio}\). It is still linear regression: you only add one column to \(\bX\).</p></div>
+<div class="predict" data-correct="2"><p>Add the column TV × radio and refit on the same training rows. The test MSE of TV + radio was 1.399. With the interaction it will be about…</p><ol class="opts"><li>1.40: no change</li><li>0.69: about half</li><li>0.05: almost perfect</li></ol><div class="why">The interaction captures the synergy that caused the U-shape, and test MSE halves to 0.693. It is not near zero, because sales also have randomness no model of these three budgets can predict, plus the bend you saw in Step 0.</div></div>
+<div class="py" id="c-proj1-13"><pre class="src">
+ads['TVxradio'] = ads['TV'] * ads['radio']               # a new column: the product
+Xi = design_matrix(ads, ['TV', 'radio', 'TVxradio'])
+bi = ols_fit(Xi[tr], y[tr])
+print("coefficients:", bi.round(5))
+print(f"test MSE: TV + radio = {mse(X2[te], y[te], b2):.3f}   with interaction = {mse(Xi[te], y[te], bi):.3f}")
+plt.figure(figsize=(5.2, 3.2))
+plt.scatter(Xi[tr] @ bi, y[tr] - Xi[tr] @ bi, s=12); plt.axhline(0, color='k', lw=1)
+plt.xlabel('fitted sales'); plt.ylabel('residual'); plt.title('With TV x radio: the U is mostly gone')
+plt.show()
+sk_i = LinearRegression().fit(Xi[tr, 1:], y[tr])
+results.loc[len(results)] = ['TV + radio + TV x radio', round(mse(Xi[tr], y[tr], bi), 3),
+                             round(mse(Xi[te], y[te], bi), 3), 'not run',
+                             agree(np.r_[sk_i.intercept_, sk_i.coef_], bi)]
+results
+</pre><div class="pynote"><b>Read the output:</b> the interaction coefficient is small (about 0.001) but TV×radio values are large (up to about 14,000), so it matters. Test MSE drops from 1.399 to 0.693, and the residual plot is much flatter. This is the full loop of applied ML: fit, look at the residuals, form a hypothesis, add a feature, re-measure on held-out data. <code>results.loc[len(results)] = [...]</code> appends a row to the table.</div></div>
+
+<h3 id="proj1-poly">Step 9 · Stretch: polynomial features and overfitting</h3>
+<p>Sales against TV bends: it rises fast for small budgets and flattens for large ones (ISLP Figure 3.1). A straight line cannot bend, but we can give the linear model bent inputs: \(x, x^2, x^3,\dots\). The model is still <i>linear in the coefficients</i>, so the normal equations still apply. These are <dfn data-g="polynomial-features">polynomial features</dfn>.</p>
+<p>To make overfitting visible we use a deliberately small training set of 20 markets. With 20 points, a degree-10 polynomial has 11 coefficients: enough freedom to chase noise.</p>
+<div class="ex" id="x-proj1-12" data-title="polynomial design matrix"><div class="task"><p>Write <code>poly_design(z, degree)</code> that returns the matrix with columns \(1, z, z^2,\dots,z^{\text{degree}}\). For <code>z = [1, 2]</code> and degree 3: <code>[[1, 1, 1, 1], [1, 2, 4, 8]]</code>.</p></div>
+<pre class="src">
+def poly_design(z, degree):
+    z = np.asarray(z, dtype=float)
+    cols = [z ** k for k in ...]
+    return np.column_stack(cols)
+</pre>
+<pre class="check">
+P = poly_design([1, 2], 3)
+assert P.shape == (2, 4), f"shape should be (2, 4), got {P.shape}"
+assert np.allclose(P, [[1, 1, 1, 1], [1, 2, 4, 8]]), f"got {P}"
+assert np.allclose(poly_design([3.], 1), [[1, 3]]), "degree 1 should give columns 1, z"
+assert np.allclose(poly_design(np.linspace(0, 1, 5), 4), np.vander(np.linspace(0, 1, 5), 5, increasing=True)), "should match np.vander(z, degree+1, increasing=True)"
+</pre>
+<div class="hint"><p>You need the powers \(0,1,\dots,\text{degree}\). <code>range(a, b)</code> stops <i>before</i> <code>b</code>.</p></div>
+<div class="hint"><p><code>range(degree + 1)</code>.</p></div>
+<pre class="solution">
+def poly_design(z, degree):
+    z = np.asarray(z, dtype=float)
+    cols = [z ** k for k in range(degree + 1)]
+    return np.column_stack(cols)
+</pre>
+<div class="explain"><p>\(z^0=1\) gives the ones column for free. Use standardised TV as \(z\): raw TV to the 10th power is about \(10^{24}\), which would wreck the condition number.</p></div></div>
+
+<div class="py" id="c-proj1-14"><pre class="src">
+tv = ads['TV'].to_numpy()
+tr20, te180 = split_indices(len(y), 0.9, seed=3)      # only 20 training markets
+z, m_tv, s_tv = standardise(tv[tr20])
+z_te, _, _ = standardise(tv[te180], m_tv, s_tv)
+degs, tr_err, te_err = range(1, 11), [], []
+for d in degs:
+    b = np.linalg.lstsq(poly_design(z, d), y[tr20], rcond=None)[0]   # lstsq: safer for high degrees
+    tr_err.append(mse(poly_design(z, d), y[tr20], b))
+    te_err.append(mse(poly_design(z_te, d), y[te180], b))
+plt.figure(figsize=(6.4, 3.4))
+plt.semilogy(degs, tr_err, 'o-', label='training MSE (20 markets)')
+plt.semilogy(degs, te_err, 's-', label='test MSE (180 markets)')
+plt.xlabel('polynomial degree'); plt.ylabel('MSE (log)'); plt.legend()
+plt.title('Overfitting: training error falls, test error turns up')
+plt.show()
+print("best test degree:", degs[int(np.argmin(te_err))])
+</pre><div class="pynote"><b>Read the output:</b> the training MSE goes down at every degree, from 7.4 to 4.4. The test MSE is lowest (about 12) for the straight line, creeps up through degree 4, and then shoots up: above 80 at degree 7 and above 400 by degree 10. With only 20 points, every extra bend is spent on noise. This is the U-shape of ISLP Figure 2.9, made with your own code. <code>np.argmin</code> returns the position of the smallest value.</div></div>
+
+<div class="widget" data-w="proj1-poly" data-title="Polynomial degree versus overfitting (20 training markets)" data-args='{}'><div class="wn">Move the degree from 1 to 10. Watch the red curve start to wiggle through the 20 teal dots (training) while missing the faint grey dots (test). In the right panel, the training line keeps falling while the test line turns up. Press "New training sample" a few times: high-degree fits change wildly from sample to sample. That instability is what <i>variance</i> means.</div></div>
+
+<div class="callout exam"><p><b>Interview classic.</b> "Your training error is tiny but your test error is large. What is happening and what do you do?" Overfitting (high variance). Remedies: more data; a simpler model (lower degree, fewer features); regularisation (ridge or lasso, <a href="#isl6-2">ISLP 6.2</a>); and choosing the complexity by cross-validation rather than by training error.</p></div>
+
+<h3 id="proj1-writeup">The write-up</h3>
+<p>A project is finished when someone else can understand it in one minute. Your write-up has four parts, always in this order: the <b>problem</b> (one sentence), the <b>method</b> (a few bullets), the <b>results</b> (a table, with the numbers you measured, and one figure), and <b>what I learned</b> (two or three honest sentences, each tied to a number). The next cell writes this README for you from your actual results, so no number is ever typed by hand. It turns the <code>results</code> table into Markdown, the plain-text format GitHub shows as a formatted page: <code>#</code> makes a heading, <code>-</code> a bullet, <code>|</code> separates table cells.</p>
+<div class="py" id="c-proj1-15"><pre class="src">
+def md_table(df):
+    head = "| " + " | ".join(df.columns) + " |"
+    rule = "|" + "---|" * len(df.columns)
+    body = ["| " + " | ".join(str(v) for v in row) + " |" for row in df.itertuples(index=False)]
+    return "\n".join([head, rule] + body)
+
+readme = f"""# Linear regression from scratch
+
+## Problem
+Predict product sales from TV, radio and newspaper advertising budgets (ISLP Advertising data, 200 markets).
+
+## Method
+- Closed-form least squares: solve the normal equations X^T X b = X^T y with `np.linalg.solve`.
+- Gradient descent on the mean squared error, gradient -2/n X^T (y - X b), checked by finite differences.
+- Features standardised with training-set statistics; coefficients converted back to original units.
+- 75/25 train/test split by hand (seed 1). Checked against scikit-learn and statsmodels (max difference 1e-14).
+
+## Results
+{md_table(results)}
+
+![Residuals vs fitted](figures/residuals.png)
+
+## What I learned
+- Without scaling, gradient descent needed more than 20,000 steps; with scaling, 9 (condition number 206,000 vs 2.1).
+- Newspaper adds nothing once TV and radio are known: training MSE fell, test MSE rose slightly.
+- A U-shaped residual plot pointed to a TV x radio interaction; adding it halved the test MSE.
+- With 20 training points, polynomials above degree 1 overfit: training MSE kept falling, test MSE rose.
+
+## How to run
+    uv venv --python 3.12 &amp;&amp; source .venv/bin/activate
+    uv pip install -r requirements.txt
+    python linreg.py
+"""
+with open("README.md", "w") as f:
+    f.write(readme)
+print(readme)
+</pre><div class="pynote"><b>Read the output:</b> a complete README with your real numbers. <code>f"""..."""</code> is a multi-line f-string: everything inside <code>{ }</code> is replaced by its value. <code>with open(...) as f</code> opens a file for writing and closes it automatically at the end of the block. On your Mac this writes <code>README.md</code> next to the notebook. Edit the "What I learned" bullets so they are in your own words.</div></div>
+
+<h3 id="proj1-mac">Run it as a repository on your Mac</h3>
+<p>So far everything ran inside this page. A real project lives in a folder on your computer, in Git, with its code in a <code>.py</code> file. Do this once, slowly, and you will reuse the pattern for every project. You need the setup from <a href="#s0-setup">Set up your Mac</a> (Terminal, uv, VS Code) and the Git basics from <a href="#git1">Git &amp; GitHub</a>.</p>
+
+<div class="callout mac"><p class="tl">1 · Make the project folder and its own Python</p>
+<pre class="term">cd ~
+mkdir linreg-from-scratch
+cd linreg-from-scratch
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install numpy pandas matplotlib scikit-learn statsmodels jupyterlab ipykernel</pre>
+<ul class="flags">
+<li><code>mkdir linreg-from-scratch</code>: a new folder just for this project, next to <code>ml-course</code> (not inside it), because it will be its own Git repository.</li>
+<li><code>uv venv</code> and <code>source .venv/bin/activate</code>: the same two steps as in the setup lesson, giving this project its own private Python. Look for <code>(.venv)</code> at the start of the prompt.</li></ul>
+<p class="tl">What you should see at the end</p>
+<pre class="term see">Installed 60 packages in 1.2s
+(.venv) you@MacBook-Air linreg-from-scratch %</pre>
+<p>(The exact number of packages may differ. Any "Installed … packages" line means it worked.)</p></div>
+
+<div class="callout mac"><p class="tl">2 · Copy in the data and the notebook</p>
+<pre class="term">mkdir figures
+cp ~/ml-course/Advertising.csv .
+mv ~/Downloads/proj1.ipynb experiment.ipynb</pre>
+<ul class="flags">
+<li><code>cp ~/ml-course/Advertising.csv .</code>: copy the data file from your course folder into <i>this</i> folder (the final dot means "here"). If it is not there, download the data pack again (see the setup lesson).</li>
+<li>The <code>proj1.ipynb</code> notebook comes from the <b>Download as a Jupyter notebook</b> button at the bottom of this lesson. <code>mv</code> moves it here and renames it.</li></ul></div>
+
+<div class="callout mac"><p class="tl">3 · Put your functions in <code>linreg.py</code></p>
+<p>Open the folder in VS Code with <code>code .</code>, make a new file called <code>linreg.py</code>, and paste in your solutions to the exercises: <code>design_matrix</code>, <code>ols_fit</code>, <code>agree</code>, <code>mse</code>, <code>mse_grad</code>, <code>num_grad</code>, <code>gd</code>, <code>standardise</code>, <code>unscale</code>, <code>split_indices</code>, <code>r2</code> and <code>poly_design</code>. Put <code>import numpy as np</code> at the top. Then add these lines at the very bottom, so that <code>python linreg.py</code> runs a quick self-test:</p>
+<pre class="term">if __name__ == "__main__":
+    import pandas as pd
+    ads = pd.read_csv("Advertising.csv", index_col=0)
+    X = design_matrix(ads, ["TV", "radio", "newspaper"])
+    y = ads["sales"].to_numpy()
+    print("closed form:", ols_fit(X, y).round(6))</pre>
+<ul class="flags">
+<li><code>if __name__ == "__main__":</code> means "only run this block when the file is run directly, not when another file imports it". Your notebook can then say <code>from linreg import ols_fit, gd</code> without triggering the self-test.</li></ul>
+<p class="tl">Type this, then what you should see</p>
+<pre class="term">python linreg.py</pre>
+<pre class="term see">closed form: [ 2.938889  0.045765  0.18853  -0.001037]</pre></div>
+
+<div class="callout mac"><p class="tl">4 · Run the notebook top to bottom, save the README and figures</p>
+<p>Open <code>experiment.ipynb</code> in VS Code, choose the <code>.venv</code> kernel (top right), and use <b>Restart</b> then <b>Run All</b>. The README cell writes <code>README.md</code>. To save a figure, add <code>plt.savefig("figures/residuals.png", dpi=150, bbox_inches="tight")</code> just before <code>plt.show()</code> in the diagnostic-plot cell. Then record the exact library versions so anyone can rebuild your environment:</p>
+<pre class="term">uv pip freeze &gt; requirements.txt</pre></div>
+
+<div class="callout mac"><p class="tl">5 · Make it a Git repository and commit</p>
+<pre class="term">printf ".venv/\n.ipynb_checkpoints/\n__pycache__/\n.DS_Store\n" &gt; .gitignore
+git init
+git add README.md linreg.py experiment.ipynb Advertising.csv requirements.txt figures .gitignore
+git commit -m "Linear regression from scratch: closed form, gradient descent, diagnostics"</pre>
+<ul class="flags">
+<li>The <code>.gitignore</code> line writes four lines into a file that tells Git what to leave out: the 300 MB <code>.venv</code> folder, notebook autosaves, Python's cache and macOS's <code>.DS_Store</code> files.</li>
+<li><code>git add</code> then <code>git commit</code>: exactly as in <a href="#git1">Git &amp; GitHub</a>.</li></ul>
+<p class="tl">What you should see</p>
+<pre class="term see">[main (root-commit) 3f2a9c1] Linear regression from scratch: closed form, gradient descent, diagnostics
+ 7 files changed, 412 insertions(+)</pre>
+<p>(Your commit id and counts will differ. If it says <code>master</code> instead of <code>main</code>, run <code>git branch -M main</code>.)</p></div>
+
+<div class="callout mac"><p class="tl">6 · Push it to GitHub as a public repository</p>
+<pre class="term">gh repo create linreg-from-scratch --public --source=. --push</pre>
+<ul class="flags">
+<li><code>gh repo create</code>: makes the repository on GitHub (you logged in with <code>gh auth login</code> in the Git lesson).</li>
+<li><code>--public</code>: portfolio projects are public. <code>--source=.</code>: use this folder. <code>--push</code>: upload your commit straight away.</li></ul>
+<p>If you set up a personal access token instead of <code>gh</code>, make an empty public repository named <code>linreg-from-scratch</code> on github.com, then run <code>git remote add origin https://github.com/YOUR-USERNAME/linreg-from-scratch.git</code> and <code>git push -u origin main</code>.</p>
+<p class="tl">What you should see</p>
+<pre class="term see">✓ Created repository YOUR-USERNAME/linreg-from-scratch on GitHub
+✓ Added remote https://github.com/YOUR-USERNAME/linreg-from-scratch.git
+✓ Pushed commits to https://github.com/YOUR-USERNAME/linreg-from-scratch.git</pre>
+<p>Open the link: your README, with its results table and figure, is the front page of the repository. Pin it on your GitHub profile.</p></div>
+
+<div class="callout pitfall"><p><b>Before you push, the two classic mistakes.</b> (1) A notebook that only works when its cells are run in a special order: always Restart and Run All first. (2) Committing <code>.venv</code>: it is hundreds of megabytes and useless to anyone else. If <code>git status</code> lists <code>.venv/</code>, your <code>.gitignore</code> is missing or misspelt.</p></div>
+
+<h3 id="proj1-rubric">Self-graded rubric</h3>
+<p>Grade yourself honestly. A strong portfolio project ticks every box.</p>
+<div class="tw"><table class="t"><thead><tr><th>Area</th><th>Meets the bar when…</th></tr></thead><tbody>
+<tr><td>Correctness</td><td>Closed form, gradient descent, scikit-learn and statsmodels agree to \(10^{-6}\), and the README says so.</td></tr>
+<tr><td>Derivation</td><td>You can derive the normal equations and the gradient on a blank sheet of paper.</td></tr>
+<tr><td>Experiment</td><td>The scaling and learning-rate experiment has a plot and a one-sentence conclusion with numbers.</td></tr>
+<tr><td>Evaluation</td><td>Test MSE comes from rows never used for fitting or for scaling statistics.</td></tr>
+<tr><td>Diagnostics</td><td>There is a residual plot, and the write-up says what it showed and what you changed.</td></tr>
+<tr><td>Reproducibility</td><td>Seeds are fixed; Restart and Run All works; <code>requirements.txt</code> and the data file are in the repository.</td></tr>
+<tr><td>Communication</td><td>README has problem, method, results table, what I learned; figures have labelled axes.</td></tr>
+</tbody></table></div>
+<div class="checklist">
+<label><input type="checkbox"> My <code>ols_fit</code> uses <code>solve</code>, not <code>inv</code>, and I can explain why.</label>
+<label><input type="checkbox"> My coefficients match scikit-learn and statsmodels to \(10^{-6}\).</label>
+<label><input type="checkbox"> My gradient passes a finite-difference check.</label>
+<label><input type="checkbox"> I have a loss-curve plot comparing learning rates, and a raw-versus-scaled comparison.</label>
+<label><input type="checkbox"> I scaled the test set with the training mean and standard deviation.</label>
+<label><input type="checkbox"> My results table reports train and test MSE for at least three models.</label>
+<label><input type="checkbox"> I made a residual plot and acted on what it showed.</label>
+<label><input type="checkbox"> (Stretch) I have a training-versus-test-error plot over polynomial degree.</label>
+<label><input type="checkbox"> The repository is public on GitHub with a README, requirements.txt and .gitignore.</label>
+</div>
+
+<h3 id="proj1-practice">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Why does the design matrix have a column of ones?</p><ol class="opts"><li>To make \(\bX\T\bX\) invertible</li><li>So that the intercept \(\beta_0\) fits the same multiply-and-add pattern as the slopes</li><li>To standardise the data</li><li>NumPy requires it</li></ol><div class="why">Row \(i\) of \(\bX\bbeta\) is \(\sum_j x_{ij}\beta_j\); a constant-1 column makes the term \(1\cdot\beta_0\) appear. It does not help invertibility (it can even hurt it), it has nothing to do with scaling, and NumPy does not care.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">The normal equations say \(\bX\T(\by-\bX\hat\bbeta)=\mathbf 0\). In words:</p><ol class="opts"><li>The residuals are all zero</li><li>The predictions equal the data</li><li>Every column of \(\bX\) is perpendicular to the residual vector</li><li>\(\bX\) is an orthogonal matrix</li></ol><div class="why">Each entry of \(\bX\T\mathbf r\) is the dot product of one column with the residuals. The residuals themselves are not zero (RSS is 556.8 for Advertising). Because the ones column is one of the columns, the residuals also sum to zero.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Why prefer <code>np.linalg.solve(A, b)</code> over <code>np.linalg.inv(A) @ b</code>?</p><ol class="opts"><li>They give different answers in exact arithmetic</li><li><code>solve</code> is faster and loses less accuracy when \(A\) is ill-conditioned</li><li><code>inv</code> does not work for symmetric matrices</li><li><code>solve</code> works for non-square \(A\)</li></ol><div class="why">In exact arithmetic they are equal. In floating point, forming the inverse costs more and amplifies rounding errors (in the polynomial test, a residual about \(10^{14}\) times larger than <code>solve</code>'s). Both need a square \(A\); for non-square problems use <code>lstsq</code>.</div></div>
+<div class="q" data-type="num" data-answer="-12.6667" data-tol="0.01"><p class="stem">For \(x=(1,2,3)\), \(y=(1,3,4)\), at \(\bbeta=(0,0)\), what is \(\partial L/\partial\beta_1\) for the MSE loss?</p><div class="why">\(-\frac23\sum_i x_i r_i=-\frac23(1\cdot1+2\cdot3+3\cdot4)=-\frac23\times19=-12.667\).</div></div>
+<div class="q" data-type="num" data-answer="0.73" data-tol="0.02"><p class="stem">The Hessian of the scaled problem has largest eigenvalue 2.74. Above what learning rate does gradient descent diverge? (2 decimals)</p><div class="why">It is stable only if \(\eta\lt 2/\lambda_{\max}=2/2.74=0.73\). The cell with <code>lr = 0.75</code> diverged, as predicted.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">You standardise all 200 rows, then split into train and test. What is wrong?</p><ol class="opts"><li>The test rows influenced the scaling used in training: a (small) leak</li><li>Nothing: scaling is not fitting</li><li>The coefficients become biased</li><li>Gradient descent will diverge</li></ol><div class="why">Means and standard deviations are statistics estimated from data. Computing them with the test rows lets the test set shape training. Compute them on the training rows and reuse them for the test rows.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">Adding the newspaper column to TV + radio will always…</p><ol class="opts"><li>lower the test MSE</li><li>raise the test MSE</li><li>raise the training MSE</li><li>leave the training MSE the same or lower it</li></ol><div class="why">Least squares on more columns can always reproduce the smaller model (coefficient 0), so training RSS cannot rise. Test error can go either way; here it rose slightly, from 1.399 to 1.404.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">A residuals-versus-fitted plot shows residuals positive at both ends and negative in the middle. What does it mean?</p><ol class="opts"><li>The model is overfitting</li><li>The learning rate was too high</li><li>The model misses a systematic non-linear pattern (here, a TV × radio interaction)</li><li>Nothing: residuals are always U-shaped</li></ol><div class="why">A good fit leaves a shapeless band. A U-shape is structure the model has not captured. For Advertising, adding TV × radio flattened the plot and halved the test MSE. Overfitting shows up as a gap between training and test error, not as a U in the residuals.</div></div>
+<div class="q" data-type="num" data-answer="0.964" data-tol="0.002"><p class="stem">\(y=(1,3,4)\) and the fitted values give RSS \(=0.1667\). What is \(R^2\)? (3 decimals)</p><div class="why">\(\bar y=8/3\); TSS \(=(1-2.667)^2+(3-2.667)^2+(4-2.667)^2=2.778+0.111+1.778=4.667\). \(R^2=1-0.1667/4.667=0.964\).</div></div>
+<div class="q" data-type="open"><p class="stem">Explain to a friend, with no formulas, why gradient descent is slow on raw Advertising budgets and fast after standardising.</p><div class="model">The loss is a valley. With raw budgets the TV column has huge numbers and the ones column tiny ones, so the valley is extremely steep across and almost flat along its floor. The step size must be small enough not to bounce out across the steep sides, and then the steps along the flat floor are tiny, so you crawl. Standardising puts every column on the same scale, the valley becomes a round bowl, and one step size works well in every direction.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">The normal equations</div><div class="b">\(\bX\T\bX\hat\bbeta=\bX\T\by\)</div></div>
+<div class="fc"><div class="f">Gradient of \(L=\frac1n\|\by-\bX\bbeta\|^2\)</div><div class="b">\(\nabla L=-\frac2n\bX\T(\by-\bX\bbeta)\)</div></div>
+<div class="fc"><div class="f">Gradient descent update</div><div class="b">\(\bbeta\leftarrow\bbeta-\eta\nabla L(\bbeta)\)</div></div>
+<div class="fc"><div class="f">Why the ones column in \(\bX\)?</div><div class="b">It carries the intercept: \(1\cdot\beta_0\).</div></div>
+<div class="fc"><div class="f">Why <code>solve</code>, not <code>inv</code>?</div><div class="b">Fewer operations, and less loss of accuracy on ill-conditioned systems.</div></div>
+<div class="fc"><div class="f">Stability limit for gradient descent on a quadratic loss</div><div class="b">\(\eta\lt 2/\lambda_{\max}\) of the Hessian \(\frac2n\bX\T\bX\).</div></div>
+<div class="fc"><div class="f">What sets how slowly GD converges on a quadratic?</div><div class="b">The condition number \(\lambda_{\max}/\lambda_{\min}\) of the Hessian.</div></div>
+<div class="fc"><div class="f">Standardised feature</div><div class="b">\(z=(x-m)/s\), with \(m,s\) from the <b>training</b> rows.</div></div>
+<div class="fc"><div class="f">Convert standardised coefficients back</div><div class="b">\(\beta_j=b_j/s_j\), \(\beta_0=b_0-\sum_j\beta_jm_j\).</div></div>
+<div class="fc"><div class="f">Centred finite difference</div><div class="b">\(\frac{f(\beta+h)-f(\beta-h)}{2h}\); error shrinks like \(h^2\).</div></div>
+<div class="fc"><div class="f">\(R^2\)</div><div class="b">\(1-\RSS/\TSS\): the fraction of variance explained; can be negative on a test set.</div></div>
+<div class="fc"><div class="f">What should a residuals-vs-fitted plot look like?</div><div class="b">A shapeless horizontal band around 0. A curve or funnel means missed structure.</div></div>
+<div class="fc"><div class="f">Advertising coefficients (ISLP Table 3.4)</div><div class="b">2.939; TV 0.0458; radio 0.1885; newspaper −0.0010.</div></div>
+<div class="fc"><div class="f">Signature of overfitting</div><div class="b">Training error keeps falling while test error rises.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can derive the normal equations from RSS in matrix form.</label>
+<label><input type="checkbox"> I can solve a 2×2 least-squares problem by hand.</label>
+<label><input type="checkbox"> I can derive and code the MSE gradient, and check it numerically.</label>
+<label><input type="checkbox"> I can explain the learning-rate limit and why scaling speeds up gradient descent.</label>
+<label><input type="checkbox"> I can split data by hand with a seed and report honest test error.</label>
+<label><input type="checkbox"> I can read a residual plot and act on it.</label>
+<label><input type="checkbox"> I can show overfitting with polynomial features.</label>
+<label><input type="checkbox"> My project is on GitHub with a README and results table.</label>
+</div>
+</section>

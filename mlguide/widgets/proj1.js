@@ -19,11 +19,11 @@
 
   G.widget("proj1-gd", function (body) {
     var mTV = mean(TV), sTV = sd(TV, mTV), my = mean(SALES);
-    var mode = "raw", logLr = Math.log10(3e-5), steps = 300, anim = null;
+    var mode = "raw", logLr = Math.log10(3e-5), steps = 1000, anim = null;
     var ctr = G.el("div", "ctrls"); body.appendChild(ctr);
-    G.seg(ctr, [["raw", "raw TV"], ["z", "standardised TV"]], mode, function (v) { mode = v; logLr = v === "raw" ? Math.log10(3e-5) : -1; lrS.set(logLr); draw(); });
-    var lrS = G.slider(ctr, { label: "learning rate η", min: -6, max: 0.2, step: 0.05, value: logLr, fmt: function (v) { return Math.pow(10, v).toExponential(1); }, onChange: function (v) { logLr = v; draw(); } });
-    var stS = G.slider(ctr, { label: "steps", min: 1, max: 2000, step: 1, value: steps, onChange: function (v) { steps = v; draw(); } });
+    G.seg(ctr, [["raw", "raw TV"], ["z", "standardised TV"]], mode, function (v) { mode = v; logLr = v === "raw" ? Math.log10(3e-5) : -1; lrS.set(logLr); steps = v === "raw" ? 1000 : 30; stS.set(steps); draw(); });
+    var lrS = G.slider(ctr, { label: "step size η", min: -6, max: 0.2, step: 0.05, value: logLr, fmt: function (v) { return Math.pow(10, v).toExponential(1); }, onChange: function (v) { logLr = v; draw(); } });
+    var stS = G.slider(ctr, { label: "steps", min: 1, max: 2000, step: 1, value: 1000, onChange: function (v) { steps = v; draw(); } });
     G.button(ctr, "Run ▶", function () {
       if (anim) clearInterval(anim); var t = 1;
       anim = setInterval(function () { t = Math.min(2000, Math.ceil(t * 1.12 + 1)); steps = t; stS.set(t); draw(); if (t >= 2000) { clearInterval(anim); anim = null; } }, 60);
@@ -40,12 +40,12 @@
     function loss(S, b0, b1) { return S.yy - 2 * (b0 * S.c1 + b1 * S.c2) + S.a11 * b0 * b0 + 2 * S.a12 * b0 * b1 + S.a22 * b1 * b1; }
     function draw() {
       var S = stats(), lr = Math.pow(10, logLr), Lst = loss(S, S.b0, S.b1);
-      var R = mode === "raw" ? { x: [-1, 9], y: [-0.01, 0.08] } : { x: [-2, 16], y: [-1.5, 6.3] };
+      var R = mode === "raw" ? { x: [-1, 9], y: [-0.01, 0.1] } : { x: [-2, 16], y: [-3, 8.5] };
       hs[0].innerHTML = ""; hs[1].innerHTML = "";
       var pl = G.plot(hs[0], { w: 520, h: 340, x: R.x, y: R.y, xlabel: "β₀ (intercept)", ylabel: mode === "raw" ? "β₁ (per $1k of TV)" : "β₁ (per SD of TV)", pad: { l: 64, r: 16, t: 14, b: 44 }, label: "loss contours with the gradient descent path" });
       clip(pl);
-      var tr = S.a11 + S.a22, dt = S.a11 * S.a22 - S.a12 * S.a12, disc = Math.sqrt(tr * tr / 4 - dt);
-      var l1 = tr / 2 + disc, l2 = tr / 2 - disc, v1 = [S.a12, l1 - S.a11], nv = Math.hypot(v1[0], v1[1]); v1 = [v1[0] / nv, v1[1] / nv]; var v2 = [-v1[1], v1[0]];
+      var tr = S.a11 + S.a22, dt = S.a11 * S.a22 - S.a12 * S.a12, disc = Math.sqrt(Math.max(0, tr * tr / 4 - dt));
+      var l1 = tr / 2 + disc, l2 = tr / 2 - disc, v1 = Math.abs(S.a12) < 1e-12 ? (S.a11 >= S.a22 ? [1, 0] : [0, 1]) : [S.a12, l1 - S.a11], nv = Math.hypot(v1[0], v1[1]); v1 = [v1[0] / nv, v1[1] / nv]; var v2 = [-v1[1], v1[0]];
       [0.5, 2, 8, 30, 100, 300].forEach(function (c) {
         var pts = []; for (var k = 0; k <= 200; k++) { var th = k / 200 * 2 * Math.PI, u = Math.sqrt(c / l1) * Math.cos(th), w = Math.sqrt(c / l2) * Math.sin(th); pts.push([S.b0 + u * v1[0] + w * v2[0], S.b1 + u * v1[1] + w * v2[1]]); }
         pl.line(pts, { stroke: "var(--line2)", "stroke-width": 1.2 });

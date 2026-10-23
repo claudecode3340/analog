@@ -1,0 +1,11 @@
+{
+  "condition-number": {"term": "condition number", "def": "For a matrix \\(A\\), the ratio of its largest to its smallest stretch (for symmetric \\(A\\), \\(\\lambda_{\\max}/\\lambda_{\\min}\\)). Large \\(\\kappa(A)\\) means solving \\(A\\mathbf x=\\mathbf b\\) loses about \\(\\log_{10}\\kappa\\) digits, and gradient descent on a quadratic with Hessian \\(A\\) is slow.", "at": "proj1"},
+  "finite-difference": {"term": "finite difference (gradient check)", "def": "Estimate a derivative from the function alone: \\(\\frac{f(\\beta+h)-f(\\beta-h)}{2h}\\). Used to check a hand-derived gradient.", "at": "proj1"},
+  "hessian": {"term": "Hessian", "def": "The matrix of second partial derivatives of a loss. For the MSE of linear regression it is \\(\\frac2n\\bX\\T\\bX\\); its eigenvalues are the curvatures of the loss bowl.", "at": "proj1"},
+  "learning-rate": {"term": "learning rate", "def": "The step size \\(\\eta\\) in gradient descent, \\(\\bbeta\\leftarrow\\bbeta-\\eta\\nabla L\\). On a quadratic loss it must be below \\(2/\\lambda_{\\max}\\) of the Hessian, or the steps grow and training diverges.", "at": "proj1"},
+  "loss-curve": {"term": "loss curve", "def": "A plot of the training loss against the step number, usually with a log y-axis. The first thing to look at when training any model.", "at": "proj1"},
+  "polynomial-features": {"term": "polynomial features", "def": "Extra columns \\(x^2, x^3,\\dots\\) added to the design matrix so that a model that is linear in its coefficients can fit a curve.", "at": "proj1"},
+  "relative-error": {"term": "relative error (gradient check)", "def": "\\(|g_{\\text{num}}-g_{\\text{ana}}|/(|g_{\\text{num}}|+|g_{\\text{ana}}|)\\): a scale-free comparison of two gradients. Below about \\(10^{-6}\\) means the analytic gradient is right.", "at": "proj1"},
+  "standardise": {"term": "standardise (z-score)", "def": "Replace each feature by \\(z=(x-m)/s\\), using the mean \\(m\\) and standard deviation \\(s\\) of the <b>training</b> rows, so every feature is on the same scale.", "at": "proj1"},
+  "train-test-split": {"term": "train/test split", "def": "Shuffle the rows (with a fixed seed) and hold some back as a test set that is never used for fitting, so the test error estimates performance on new data.", "at": "proj1"}
+}
