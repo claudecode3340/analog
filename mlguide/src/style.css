@@ -429,3 +429,5 @@ dfn{font-style:normal;border-bottom:1.5px dotted var(--faint);cursor:help}
 section.lesson pre:not(.src):not(.check):not(.solution){overflow-x:auto;max-width:100%}
 @media (max-width:640px){:not(pre)>code{white-space:normal;overflow-wrap:anywhere}}
 @media (max-width:640px){.chip{white-space:normal;max-width:100%;line-height:1.35}}
+.monthcards .soon{display:block;border:1px dashed var(--line2);border-radius:16px;padding:16px 18px;opacity:.7}
+span.later{color:var(--muted);border-bottom:1px dashed var(--line2);cursor:help}

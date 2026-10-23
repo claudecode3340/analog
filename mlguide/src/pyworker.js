@@ -34,7 +34,7 @@ async function run(m) {
     post({ type: "status", s: "busy", msg: "Running…" });
     try { await py.loadPackagesFromImports(m.code + "\n" + (m.check || "")); } catch (e) {}
     var src = (m.code || "") + "\n" + (m.check || "");
-    if (/\bstatsmodels\b|\bISLP\b/.test(src)) { try { await py.loadPackage(["statsmodels", "scikit-learn", "scipy"]); } catch (e) {} }
+    if (/\bstatsmodels\b|\bISLP\b|\bsummarize\b|read_html/.test(src)) { try { await py.loadPackage(["statsmodels", "scikit-learn", "scipy", "lxml"]); } catch (e) {} }
     py.globals.set("_c", m.code); py.globals.set("_k", m.check || null); py.globals.set("_n", m.ns || "main"); py.globals.set("_x", m.expectError || null);
     var r = py.runPython("import guide_rt; guide_rt.run(_c, _n, _k, _x)");
     post({ type: "result", id: m.id, res: JSON.parse(r) });

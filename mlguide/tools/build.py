@@ -178,9 +178,13 @@ def main():
     args = sys.argv[1:]
     check_only = "--check" in args
     only = None
+    cur = json.load(open(os.path.join(ROOT, "curriculum.json")))
+    release = None
     if "--only" in args:
         only = set(args[args.index("--only") + 1].split(","))
-    cur = json.load(open(os.path.join(ROOT, "curriculum.json")))
+    if "--months" in args:  # a release of months 1..N: lessons of those months, review sections, links to later months shown as "coming soon"
+        release = int(args[args.index("--months") + 1])
+        only = {L["id"] for L in cur["lessons"] if L["kind"] != "review" and L["month"].isdigit() and int(L["month"]) <= release}
     manifest = {}
     mp = os.path.join(FIGS, "manifest.json")
     if os.path.exists(mp):
@@ -213,8 +217,13 @@ def main():
     for s in secs:
         for a in s.select('a[href^="#"]'):
             h = a["href"][1:]
-            if h and h not in ids and h not in rev_ids and not (only and any(h == L["id"] for L in cur["lessons"])):
+            later = next((L for L in cur["lessons"] if L["id"] == h), None)
+            if h and h not in ids and h not in rev_ids and not (only and later):
                 err(f"{s['id']}: link to #{h} goes nowhere")
+            elif release and h and h not in ids and h not in rev_ids and later:
+                sp = s.new_tag("span", attrs={"class": "later", "title": f"Coming in Month {later['month']}"})
+                sp.string = a.get_text()
+                a.replace_with(sp)
     # glossary
     gloss = {}
     for f in sorted(glob.glob(os.path.join(ROOT, "glossary", "*.json"))):
@@ -225,7 +234,7 @@ def main():
     if ERR:
         print("\n".join("ERROR " + e for e in ERR))
         print(f"{len(ERR)} problem(s)")
-        if check_only or not only:
+        if check_only or not only or release:
             sys.exit(1)
     if check_only:
         print("check ok"); return
@@ -253,16 +262,19 @@ def main():
     body = []
     for L in cur["lessons"]:
         if L["kind"] == "review":
-            if only:
+            if only and not release:
                 continue
             body.append(rev[L["id"]].replace('class="lesson"', f'class="lesson k-review" data-month="R" data-week="" data-kind="review" data-title="{H.escape(L["title"])}" data-short="{H.escape(L["short"])}"', 1))
         else:
             s = next((x for x in secs if x["id"] == L["id"]), None)
             if s is not None:
                 body.append(str(s))
-    months_cards = "".join(
-        f'<a href="#{next((L["id"] for L in cur["lessons"] if L["month"] == m), "")}" data-m="{m}"><h4>{H.escape(cur["months"][m])}</h4><p class="cnt"></p><div class="mbar"><i></i></div></a>'
-        for m in ("1", "2", "3"))
+    def mcard(m):
+        first = next((L["id"] for L in cur["lessons"] if L["month"] == m), "")
+        if first not in ids:
+            return f'<div class="soon" data-m="{m}"><h4>{H.escape(cur["months"][m])}</h4><p class="cnt">Coming soon</p></div>'
+        return f'<a href="#{first}" data-m="{m}"><h4>{H.escape(cur["months"][m])}</h4><p class="cnt"></p><div class="mbar"><i></i></div></a>'
+    months_cards = "".join(mcard(m) for m in ("1", "2", "3"))
     hero = f'''<header class="hero"><div class="kick"><span class="chip kind k-start">Your ML / DL / CV path · part 1</span><span class="chip">ISLP · Prince UDL · Python · NumPy · PyTorch</span></div>
 <h1>Learn machine learning <em>from zero</em>,<br>one worked example at a time.</h1>
 <p>Twelve weeks. You start by typing your first line of Python and finish by training a neural network you wrote yourself, in NumPy and then in PyTorch. Every idea is built from the ground up, shown with real numbers, drawn, run, and practised until it sticks.</p>
@@ -292,9 +304,11 @@ def main():
     os.makedirs(os.path.join(ROOT, "build"), exist_ok=True)
     os.makedirs(os.path.join(ROOT, "dist"), exist_ok=True)
     tag = ("-" + "+".join(sorted(only))[:80]) if only else ""
+    if release:
+        tag = f"-M1-{release}" if release > 1 else "-M1"
     raw = os.path.join(ROOT, "build", f"raw{tag}.html")
     open(raw, "w", encoding="utf-8").write(page)
-    out = os.path.join(ROOT, "dist", "ML_Foundations_M1-3.html" if not only else f"preview{tag}.html")
+    out = os.path.join(ROOT, "dist", "ML_Foundations_M1-3.html" if not only else (f"ML_Foundations{tag}.html" if release else f"preview{tag}.html"))
     r = subprocess.run(["node", os.path.join(ROOT, "tools", "katex_render.js"), raw, out], capture_output=True, text=True)
     print(r.stdout.strip(), r.stderr.strip()[:6000])
     if r.returncode != 0:

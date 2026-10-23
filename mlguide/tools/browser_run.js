@@ -15,17 +15,11 @@ const path = require('path');
     for (const id of ids) {
       const isEx = await p.evaluate(id => document.getElementById(id).classList.contains('ex'), id);
       await p.evaluate(id => { const c = document.getElementById(id); c.scrollIntoView(); const o = c.querySelector('.out'); if (o) o.dataset.prev = '1'; }, id);
-      if (isEx) {
-        const sb = await p.$(`#${id} button:has-text("Show solution")`); if (sb) await sb.click();
-        await p.waitForTimeout(150);
-        const cb = await p.$(`#${id} .cbtn.check`); await cb.click();
-      } else {
-        const rb = await p.$(`#${id} .cbtn.run`); await rb.click();
-      }
+      const btn = isEx ? '.cbtn.check' : '.cbtn.run';
+      if (isEx) await p.evaluate(id => { const c = document.getElementById(id); const tas = c.querySelectorAll('textarea'); const sol = c.querySelector('.solwrap textarea'); tas[0].value = sol.value; tas[0].dispatchEvent(new Event('input')); }, id);
+      await (await p.$(`#${id} ${btn}`)).click();
       try {
-        await p.waitForFunction(([id, isEx]) => { const c = document.getElementById(id); const o = c.querySelector('.out'); if (!o) return false; const t = o.textContent;
-          if (/Running|Starting|Loading|Installing/.test(t) && !/Stopped after/.test(t)) return false;
-          return isEx ? /All tests passed|Not yet|Error|Traceback|Stopped/.test(t) || !!o.querySelector('pre.err') : (o.children.length > 0 && !o.querySelector('.spin')); }, [id, isEx], { timeout: 300000, polling: 300 });
+        await p.waitForFunction(([id, btn]) => { const b = document.querySelector('#' + id + ' ' + btn); return b && !b.disabled; }, [id, btn], { timeout: 300000, polling: 300 });
       } catch (e) { console.log(`[${lid}] TIMEOUT ${id}`); bad++; continue; }
       await p.waitForTimeout(100);
       const r = await p.evaluate(([id, isEx]) => { const c = document.getElementById(id); const o = c.querySelector('.out'); const err = o.querySelector('pre.err');
