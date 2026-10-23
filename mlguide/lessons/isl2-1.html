@@ -1,0 +1,583 @@
+<section class="lesson" id="isl2-1" data-book="ISLP §2.1, pp. 15–27">
+<p class="lede">Every method in this guide, from a straight line to a deep network, is an attempt to answer one question: given some inputs, how do we learn the rule \(f\) that turns them into an output? This lesson sets up that question precisely, \(Y = f(X) + \varepsilon\), and explains why even a perfect model still makes mistakes. Everything else in ISLP and Prince is built on these few pages.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#m-prob">Probability &amp; statistics</a> <a href="#np1">NumPy I</a> <a href="#np2">NumPy II</a> <a href="#plt1">Plotting</a> <a href="#pd1">pandas</a> <a href="#m-linalg">Vectors &amp; matrices</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>write the model \(Y = f(X) + \varepsilon\), read every symbol aloud, and say what each part means on a real data set;</li>
+<li>explain the difference between <b>prediction</b> and <b>inference</b>, and sort real problems into each;</li>
+<li>derive \(\E(Y-\hat Y)^2 = [f(X)-\hat f(X)]^2 + \Var(\varepsilon)\) line by line and compute both parts for given numbers;</li>
+<li>describe parametric and non-parametric methods, fit a linear model by least squares in NumPy, and recognise overfitting;</li>
+<li>place methods on the flexibility–interpretability map, and tell supervised from unsupervised and regression from classification.</li></ul></div>
+
+<div class="callout book"><blockquote>Suppose that we are statistical consultants hired by a client to investigate the association between advertising and sales of a particular product.</blockquote><cite>ISLP p. 15</cite></div>
+
+<h3 id="isl2-1-setting">The story: advertising budgets and sales</h3>
+<p>A company sells one product in 200 different markets (think of 200 cities). In each market it spent some money on TV adverts, some on radio adverts and some on newspaper adverts, and it recorded how many units it sold. This is the <b>Advertising</b> data set. The company cannot change sales directly. It <i>can</i> change the three budgets. So the useful question is: if we know the budgets, can we predict sales, and which budget actually matters?</p>
+<p>The budgets are the <dfn data-g="predictor">input variables</dfn>. The book calls them by many names: <b>predictors</b>, <b>independent variables</b>, <b>features</b>, or just <b>variables</b>. Sales is the <dfn data-g="response">output variable</dfn>, also called the <b>response</b> or <b>dependent variable</b>. In machine learning you will mostly hear “features” and “target”: they mean the same things.</p>
+
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example (Advertising)</span></div>
+<div class="row"><span class="s">\(X_1, X_2, X_3\)</span><span>“X-one, X-two, X-three”: the input variables (capital letter = the variable in general)</span><span class="eg">\(X_1\) = TV budget, \(X_2\) = radio, \(X_3\) = newspaper</span></div>
+<div class="row"><span class="s">\(X\)</span><span>“big X”: all the inputs together, \(X=(X_1,X_2,\dots,X_p)\)</span><span class="eg">\(X=(\text{TV},\text{radio},\text{newspaper})\)</span></div>
+<div class="row"><span class="s">\(p\)</span><span>“p”: how many predictors there are</span><span class="eg">\(p=3\)</span></div>
+<div class="row"><span class="s">\(Y\)</span><span>“big Y”: the response</span><span class="eg">sales (thousands of units)</span></div>
+<div class="row"><span class="s">\(n\)</span><span>“n”: how many observations (rows) we have</span><span class="eg">\(n=200\) markets</span></div>
+</div>
+
+<p>Let us load the data and look at it. The first cell is a <b>setup</b> cell: it imports the libraries and loads every data set this lesson uses, so you can come back to this lesson later and everything still works. If you have forgotten what <code>pd.read_csv</code> does, it reads a comma-separated text file into a pandas table (a <i>DataFrame</i>; see <a href="#pd1">pandas</a>). <code>index_col=0</code> says “the first column is just a row number, use it as the row labels, not as data”.</p>
+
+<div class="py" id="c-isl2-1-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+ad = pd.read_csv('Advertising.csv', index_col=0)     # 200 markets
+inc1 = pd.read_csv('Income1.csv', index_col=0)       # 30 people: Education, Income
+inc2 = pd.read_csv('Income2.csv', index_col=0)       # 30 people: Education, Seniority, Income
+print(ad.shape, inc1.shape, inc2.shape)
+ad.head()
+</pre><div class="pynote"><b>Read the output:</b> <code>(200, 4)</code> means 200 rows (markets) and 4 columns. The table shows the first five markets. Market 1 spent 230.1 thousand dollars on TV, 37.8 on radio, 69.2 on newspapers, and sold 22.1 thousand units. Budgets are in thousands of dollars, sales in thousands of units.</div></div>
+
+<p>Figure 2.1 of the book plots sales against each budget separately, with a straight line through each cloud of points. The line is the simplest possible model: “sales go up by a fixed amount for every extra thousand dollars”. We will meet the method that draws the line, <b>least squares</b>, later in this lesson and properly in <a href="#isl3-1">ISLP 3.1</a>. For now <code>np.polyfit(x, y, 1)</code> does it for us: it returns the slope and the intercept of the best straight line (a degree-1 polynomial).</p>
+
+<div class="predict" data-correct="2"><p>Think about Figure 2.1 (just below): for which medium does one extra thousand dollars of budget go with the <i>largest</i> rise in sales (the steepest slope, in units per dollar)?</p><ol class="opts"><li>TV, because its cloud of points rises most clearly</li><li>Radio</li><li>Newspaper</li></ol>
+<div class="why">Radio: about 0.203 thousand units per thousand dollars, against 0.048 for TV and 0.055 for newspaper. The TV picture <i>looks</i> steepest because its x-axis runs from 0 to 300 while radio only runs from 0 to 50. Always read the axes before judging a slope. (TV still matters a lot: TV budgets are much larger, and its points sit much closer to the line.)</div></div>
+<div class="py" id="c-isl2-1-02"><pre class="src">
+for medium in ['TV', 'radio', 'newspaper']:
+    slope, intercept = np.polyfit(ad[medium], ad['sales'], 1)
+    print(f"{medium:10s} slope = {slope:.4f}   intercept = {intercept:.3f}")
+</pre><div class="pynote"><b>Read the output:</b> each line is one fitted straight line \(\text{sales} \approx \text{intercept} + \text{slope}\times\text{budget}\). For TV: sales \(\approx 7.033 + 0.0475\times\)TV. A market with zero TV budget is predicted to sell about 7 thousand units; each extra thousand dollars of TV goes with about 47.5 more units. <code>f"..."</code> is an <i>f-string</i> (see <a href="#py1">Python I</a>): <code>{slope:.4f}</code> prints the number with 4 decimals, <code>{medium:10s}</code> pads the word to 10 characters so the columns line up.</div></div>
+
+<div class="py" id="c-isl2-1-03"><pre class="src">
+fig, axes = plt.subplots(1, 3, figsize=(11, 3.4), sharey=True)
+for ax, medium in zip(axes, ['TV', 'radio', 'newspaper']):
+    slope, intercept = np.polyfit(ad[medium], ad['sales'], 1)
+    ax.scatter(ad[medium], ad['sales'], s=12, facecolors='none', edgecolors='C1')
+    xs = np.linspace(0, ad[medium].max(), 50)
+    ax.plot(xs, intercept + slope * xs, color='C0', lw=2.5)
+    ax.set_xlabel(medium)
+axes[0].set_ylabel('sales');
+</pre><div class="pynote">This redraws the book's Figure 2.1 from the raw data. <code>plt.subplots(1, 3)</code> makes one row of three panels; <code>zip(axes, [...])</code> walks through the panels and the column names together, in pairs (see <a href="#plt1">Plotting</a>).</div></div>
+
+<figure class="book" data-fig="islp-2.1"><figcaption>The book's version of the plots you just made. <b>Look at</b> how tightly the points hug the TV line compared with the newspaper line. A line explains sales well when the points sit close to it; the newspaper points are scattered everywhere, so newspaper budget tells you little about sales on its own.</figcaption></figure>
+
+<h3 id="isl2-1-model">The model: \(Y = f(X) + \varepsilon\)</h3>
+<p>Here is the one idea the whole book rests on. We assume the response is made of two parts added together. One part depends on the inputs through some fixed rule \(f\). The other part is random noise that the inputs cannot explain.</p>
+
+<div class="mathblock" data-sheet="The statistical learning model"><div class="eqlabel">The general model (ISLP 2.1)</div>
+\[Y = f(X) + \varepsilon\]
+<p class="say">Read: “Y equals f of X plus epsilon.” The response is a <i>systematic</i> part, \(f(X)\), plus a random <i>error</i>, \(\varepsilon\) (the Greek letter epsilon). \(f\) is fixed but unknown. \(\varepsilon\) has mean zero and is independent of \(X\).</p></div>
+
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(f\)</span><span>“f”: the true rule linking inputs to the response. It exists, but nobody tells us what it is.</span><span class="eg">\(f(16\text{ years}) \approx 50\) thousand dollars</span></div>
+<div class="row"><span class="s">\(f(X)\)</span><span>“f of X”: the <dfn data-g="systematic">systematic</dfn> part, what X tells us about Y</span><span class="eg">the height of the blue curve in Figure 2.2</span></div>
+<div class="row"><span class="s">\(\varepsilon\)</span><span>“epsilon”: the <dfn data-g="error-term">error term</dfn>, everything X cannot explain</span><span class="eg">a person earns 54 where \(f\) says 50: \(\varepsilon=+4\)</span></div>
+<div class="row"><span class="s">\(\E(\varepsilon)=0\)</span><span>“the expected value of epsilon is zero”: on average the errors cancel out</span><span class="eg">errors \(+4, -3, -1\): mean \(0\)</span></div>
+</div>
+
+<p>Two properties of \(\varepsilon\) matter. First, its mean is zero, so \(f(X)\) is the <i>average</i> value of \(Y\) for a given \(X\). Second, it is independent of \(X\): knowing the inputs tells you nothing about which way the error will go. If it did, that information would belong inside \(f\).</p>
+
+<p>The <b>Income</b> data shows this picture clearly. It records years of education and income (in thousands of dollars) for 30 people. The data are <i>simulated</i>: the authors chose a true \(f\) and added noise, so for once we can see the true \(f\).</p>
+
+<div class="py" id="c-isl2-1-04"><pre class="src">
+fig, ax = plt.subplots(figsize=(5, 3.6))
+ax.scatter(inc1['Education'], inc1['Income'], color='C1')
+ax.set_xlabel('Years of Education'); ax.set_ylabel('Income');
+print(inc1.head(3))
+</pre><div class="pynote">The left panel of Figure 2.2, drawn from <code>Income1.csv</code>. Income clearly rises with education, and the rise looks S-shaped rather than straight: flat below 12 years, steep between 13 and 19, flattening above 20.</div></div>
+
+<figure class="book" data-fig="islp-2.2"><figcaption><b>Left:</b> the 30 observed people. <b>Right:</b> the same points with the true \(f\) (blue curve) and the error of each person drawn as a black vertical line. <b>Look at</b> the black lines: some point up (\(\varepsilon &gt; 0\), the person earns more than \(f\) predicts) and some point down (\(\varepsilon &lt; 0\)). Roughly half go each way, which is what “mean zero” looks like.</figcaption></figure>
+
+<div class="worked"><div class="wt">Worked example · <b>splitting one person's income into \(f(X)\) and \(\varepsilon\)</b></div>
+<div class="given">Reading off the blue curve in Figure 2.2, suppose \(f(16) = 50\) (thousand dollars). Three people with 16 years of education earn 54, 47 and 49.</div>
+<ol class="steps">
+<li><div>Each income is \(Y = f(X) + \varepsilon\), so \(\varepsilon = Y - f(X)\).<span class="why">Just rearrange the model.</span></div></li>
+<li><div>Person A: \(\varepsilon_A = 54 - 50 = \mathbf{+4}\). Person B: \(\varepsilon_B = 47 - 50 = \mathbf{-3}\). Person C: \(\varepsilon_C = 49 - 50 = \mathbf{-1}\).</div></li>
+<li><div>Their average error: \(\frac{4 + (-3) + (-1)}{3} = \frac{0}{3} = 0\).<span class="why">With many people the average error is close to zero; here the numbers were chosen to cancel exactly.</span></div></li>
+</ol>
+<div class="result">\(f(16)=50\) is the part education explains; \(+4, -3, -1\) are the parts it does not.</div></div>
+
+<p>With two inputs, \(f\) is no longer a curve but a surface over a plane. Figure 2.3 shows income as a function of education <i>and</i> seniority (years in the job). Each red dot is a person; the vertical black stick joining it to the blue surface is that person's \(\varepsilon\).</p>
+<figure class="book" data-fig="islp-2.3"><figcaption>The true \(f\) for two predictors is the blue surface. <b>Look at</b> its shape: it rises steeply with years of education (the S-shape again) and gently with seniority. With \(p\) predictors \(f\) lives in \(p+1\) dimensions and we can no longer draw it, which is why we need methods rather than eyes.</figcaption></figure>
+
+<div class="callout key"><p><b>In essence, statistical learning is a set of approaches for estimating \(f\).</b> The rest of the chapter asks three questions: <i>why</i> do we want \(f\), <i>how</i> do we estimate it, and <i>how do we judge</i> an estimate (the next lesson, <a href="#isl2-2">ISLP 2.2</a>).</p></div>
+
+<h3 id="isl2-1-why">Why estimate \(f\)? Prediction</h3>
+<p>Often the inputs are cheap to measure but the output is expensive, slow or dangerous to find out. Then we want to <dfn data-g="prediction">predict</dfn> \(Y\) from \(X\). Since the error averages to zero, the best guess we can make from \(X\) is our estimate of \(f(X)\):</p>
+
+<div class="mathblock" data-sheet="Prediction"><div class="eqlabel">Prediction (ISLP 2.2)</div>
+\[\hat Y = \hat f(X)\]
+<p class="say">Read: “Y-hat equals f-hat of X.” The hat means <i>estimate</i>. \(\hat f\) (f-hat) is our estimate of the unknown \(f\), built from data; \(\hat Y\) (Y-hat) is the resulting prediction of \(Y\).</p></div>
+
+<p>Example: if our estimate is the TV line from above, \(\hat f(\text{TV}) = 7.033 + 0.0475\,\text{TV}\), then for a market spending 100 thousand dollars on TV, \(\hat Y = 7.033 + 0.0475 \times 100 = 7.033 + 4.75 = 11.78\) thousand units.</p>
+<p>When prediction is the only goal, \(\hat f\) can be a <b>black box</b>: we do not care what is inside as long as the predictions are accurate. The book's example: \(X\) is a set of measurements from a patient's blood sample, \(Y\) is the risk of a severe reaction to a drug. We want to predict \(Y\) so we can avoid giving the drug to high-risk patients. Nobody needs to understand the formula inside \(\hat f\) to use it.</p>
+
+<h4>Reducible and irreducible error</h4>
+<p>How accurate can \(\hat Y\) be? Two different things make it wrong.</p>
+<ul>
+<li><b>\(\hat f\) is not exactly \(f\).</b> We learned it from a limited data set with an imperfect method. This error is <dfn data-g="reducible-error">reducible</dfn>: a better method or more data could shrink it.</li>
+<li><b>Even \(f\) itself is not \(Y\).</b> If we somehow knew \(f\) perfectly, so \(\hat Y = f(X)\), we would still be wrong by \(\varepsilon\), because \(\varepsilon\) cannot be predicted from \(X\). This error is <dfn data-g="irreducible-error">irreducible</dfn>: no method, however clever, can remove it.</li>
+</ul>
+<p>Why is the irreducible error bigger than zero? Because \(\varepsilon\) contains (i) variables that matter but were never measured (the patient's genes, if we only measured blood), and (ii) variation that cannot be measured at all (the drug batch varies slightly; the patient feels different today).</p>
+
+<div class="callout key"><div class="ct">New in this lesson · three rules for expected values</div>
+<p>\(\E(Z)\), read “the expected value of Z”, is the long-run average of a random quantity \(Z\) (see <a href="#m-prob">Probability</a>). You need three rules:</p>
+<ol>
+<li><b>Constants pass straight through:</b> if \(c\) is a fixed number, \(\E(c) = c\) and \(\E(cZ) = c\,\E(Z)\). Example: \(\E(3)=3\); if \(\E(Z)=2\) then \(\E(5Z)=10\).</li>
+<li><b>The expectation of a sum is the sum of the expectations:</b> \(\E(A + B) = \E(A) + \E(B)\). Example: \(\E(Z + 3) = \E(Z) + 3\).</li>
+<li><b>Variance:</b> \(\Var(Z) = \E\big[(Z - \E Z)^2\big]\), the average squared distance from the mean. If \(\E(Z) = 0\) this is simply \(\Var(Z) = \E(Z^2)\).</li>
+</ol></div>
+
+<p>Now we can split the expected squared prediction error into the two parts. The book says “it is easy to show”; here is every line. Fix one input value \(X\) and one estimate \(\hat f\), so the only randomness left is \(\varepsilon\).</p>
+
+<div class="worked"><div class="wt">Derivation · <b>the reducible / irreducible split (ISLP 2.3)</b></div>
+<div class="given">\(Y = f(X) + \varepsilon\), \(\hat Y = \hat f(X)\), with \(X\) and \(\hat f\) held fixed. \(\E(\varepsilon) = 0\). Write \(a = f(X) - \hat f(X)\): this is just a fixed number (how far our estimate is from the truth at this \(X\)).</div>
+<ol class="steps">
+<li><div>Write out the prediction error: \[Y - \hat Y = f(X) + \varepsilon - \hat f(X) = \underbrace{f(X) - \hat f(X)}_{a} + \varepsilon = a + \varepsilon.\]<span class="why">Substitute the model for \(Y\) and regroup.</span></div></li>
+<li><div>Square it, expanding \((a+\varepsilon)^2\) like \((u+v)^2 = u^2 + 2uv + v^2\): \[(Y-\hat Y)^2 = a^2 + 2a\varepsilon + \varepsilon^2.\]</div></li>
+<li><div>Take expectations of each term (rule 2): \[\E(Y-\hat Y)^2 = \E(a^2) + \E(2a\varepsilon) + \E(\varepsilon^2).\]</div></li>
+<li><div>\(a\) is a constant, so (rule 1) \(\E(a^2) = a^2\) and \(\E(2a\varepsilon) = 2a\,\E(\varepsilon) = 2a \times 0 = 0\).<span class="why">This is where “the error has mean zero” is used: the cross term disappears.</span></div></li>
+<li><div>Because \(\E(\varepsilon) = 0\), rule 3 gives \(\E(\varepsilon^2) = \Var(\varepsilon)\).</div></li>
+<li><div>Put the pieces back: \[\E(Y-\hat Y)^2 = a^2 + 0 + \Var(\varepsilon) = \underbrace{[f(X)-\hat f(X)]^2}_{\text{reducible}} + \underbrace{\Var(\varepsilon)}_{\text{irreducible}}.\]</div></li>
+</ol>
+<div class="result">\(\E(Y-\hat Y)^2 = [f(X)-\hat f(X)]^2 + \Var(\varepsilon)\)</div></div>
+
+<div class="mathblock" data-sheet="Reducible + irreducible error"><div class="eqlabel">Expected squared prediction error (ISLP 2.3)</div>
+\[\E(Y-\hat Y)^2 = \E[f(X)+\varepsilon-\hat f(X)]^2 = \underbrace{[f(X)-\hat f(X)]^2}_{\text{Reducible}} + \underbrace{\Var(\varepsilon)}_{\text{Irreducible}}\]
+<p class="say">Read: “The expected squared difference between Y and Y-hat equals the squared gap between f and f-hat, plus the variance of epsilon.” The first part shrinks as \(\hat f\) gets closer to \(f\). The second part never goes away.</p></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>both parts with numbers, and a check by brute force</b></div>
+<div class="given">At some \(X\): the truth is \(f(X) = 50\), our estimate is \(\hat f(X) = 47\). The error \(\varepsilon\) takes only three values: \(-4\) with probability \(\tfrac14\), \(0\) with probability \(\tfrac12\), \(+4\) with probability \(\tfrac14\).</div>
+<ol class="steps">
+<li><div>Reducible part: \(a = f(X) - \hat f(X) = 50 - 47 = \mathbf{3}\), so \(a^2 = \mathbf{9}\).</div></li>
+<li><div>Check the error has mean zero: \(\E(\varepsilon) = (-4)\cdot\tfrac14 + 0\cdot\tfrac12 + 4\cdot\tfrac14 = -1 + 0 + 1 = 0\). ✓</div></li>
+<li><div>Irreducible part: \(\Var(\varepsilon) = \E(\varepsilon^2) = 16\cdot\tfrac14 + 0\cdot\tfrac12 + 16\cdot\tfrac14 = 4 + 0 + 4 = \mathbf{8}\).</div></li>
+<li><div>Formula: \(\E(Y-\hat Y)^2 = 9 + 8 = \mathbf{17}\).</div></li>
+<li><div>Brute force, without the formula. \(Y - \hat Y = a + \varepsilon = 3 + \varepsilon\) takes the values \(3-4 = -1\), \(3+0 = 3\), \(3+4 = 7\). Squared: \(1, 9, 49\). Weighted by the probabilities: \(1\cdot\tfrac14 + 9\cdot\tfrac12 + 49\cdot\tfrac14 = 0.25 + 4.5 + 12.25 = \mathbf{17}\). ✓<span class="why">The two routes agree, which is what the derivation promised.</span></div></li>
+<li><div>Now imagine a perfect estimate, \(\hat f(X) = 50\). Then \(a = 0\) and \(\E(Y-\hat Y)^2 = 0 + 8 = 8\). Even a perfect model has expected squared error 8.</div></li>
+</ol>
+<div class="result">reducible \(= 9\), irreducible \(= 8\), total \(= 17\); the best possible is \(8\).</div></div>
+
+<p>Let us check the same thing by simulation, with normal noise this time: \(f(X)=50\), \(\hat f(X)=47\), \(\varepsilon \sim N(0, 5^2)\) (read “epsilon is normally distributed with mean 0 and standard deviation 5”). The formula predicts \(3^2 + 5^2 = 9 + 25 = 34\). <code>np.random.default_rng(0)</code> makes a seeded random generator, so you get the same numbers every time (see <a href="#np2">NumPy II</a>).</p>
+
+<div class="predict" data-correct="3"><p>We draw 100,000 values of \(\varepsilon\), form \(Y\), and average \((Y-\hat Y)^2\). Then we repeat with a perfect \(\hat f(X) = 50\). Roughly what two averages will print?</p><ol class="opts"><li>9 and 0</li><li>34 and 34</li><li>34 and 25</li><li>25 and 0</li></ol>
+<div class="why">The first average estimates \(9 + 25 = 34\). With a perfect estimate the reducible part is 0 but the irreducible part \(\Var(\varepsilon) = 25\) remains. Option 1 forgets the noise entirely, which is the most common misunderstanding of what “a perfect model” can do.</div></div>
+<div class="py" id="c-isl2-1-05"><pre class="src">
+rng = np.random.default_rng(0)
+f_X, sigma = 50.0, 5.0
+eps = rng.normal(0, sigma, size=100_000)    # 100,000 draws of the noise
+Y = f_X + eps
+for fhat_X in [47.0, 50.0]:
+    avg_sq_err = np.mean((Y - fhat_X) ** 2)
+    theory = (f_X - fhat_X) ** 2 + sigma ** 2
+    print(f"fhat = {fhat_X}: simulated {avg_sq_err:.2f}   formula {theory:.2f}")
+</pre><div class="pynote"><b>Read the output:</b> the simulated averages land within a few hundredths of 34 and 25. They are not exact because 100,000 draws is a lot, but not infinitely many. Change <code>sigma</code> to 1 and run again: the irreducible part falls to 1 and the total to 10.</div></div>
+
+<div class="widget" data-w="isl2-1-noise" data-title="Reducible and irreducible error, live" data-args='{"seed":3}'><div class="wn">The blue curve is the true \(f\) (an Income-like S-shape); the orange line is \(\hat f\). At the chosen \(x_0\) the green dots are 200 possible values of \(Y\). Switch \(\hat f\) to “the true f”: the reducible part drops to 0 but the total does not. Then slide the noise \(\sigma\) down: only now does the total shrink. With the straight line, move \(x_0\) to 13 or 21, where the line misses the S-curve badly, and watch the reducible part (red bar) grow.</div></div>
+
+<div class="callout ece"><p><b>You already know this from communications.</b> The irreducible error is the noise floor: no receiver, however clever, can recover a symbol more precisely than the channel noise allows, and \(\Var(\varepsilon)\) plays exactly the role of the noise power. The reducible error is like a mismatch between the true channel and your channel estimate: better estimation (more pilot symbols, a better estimator) shrinks it. The book's sentence “the irreducible error will always provide an upper bound on the accuracy of our prediction” is the ML version of “you cannot beat the noise floor”.</p></div>
+
+<p>The focus of the whole book is on methods that make the <i>reducible</i> error small. Keep in mind that in practice we never know \(\Var(\varepsilon)\), so we never know how close to the best possible we already are.</p>
+
+<h3 id="isl2-1-inference">Why estimate \(f\)? Inference</h3>
+<p>Sometimes we do not mainly want predictions. We want to <b>understand</b> how \(Y\) depends on \(X\). This is <dfn data-g="inference">inference</dfn>. Now \(\hat f\) cannot be a black box: we need to look inside it. Typical questions:</p>
+<ul>
+<li><b>Which predictors are associated with the response?</b> Often only a few of many inputs really matter, and finding them is valuable in itself.</li>
+<li><b>What is the relationship between the response and each predictor?</b> Positive (more \(X\), more \(Y\)) or negative? Does the effect of one predictor depend on the value of another?</li>
+<li><b>Is the relationship linear, or more complicated?</b> A straight-line summary is easy to explain, but may be wrong.</li>
+</ul>
+<p>For Advertising, inference questions are: Which media are associated with sales? Which media generate the biggest boost in sales? How much do sales rise for a given increase in TV advertising?</p>
+
+<div class="tw"><table class="t"><thead><tr><th>Situation (from the book)</th><th>Goal</th><th>Why</th></tr></thead><tbody>
+<tr><td>Direct-marketing campaign: who will respond to a mailing, from demographic variables?</td><td><b>Prediction</b></td><td>The company only wants an accurate list of likely responders, not an understanding of each variable.</td></tr>
+<tr><td>Advertising: which media matter, and by how much?</td><td><b>Inference</b></td><td>The answer is a statement about the relationship itself.</td></tr>
+<tr><td>Which brand will a customer buy, from price, store location, discounts, competitor price…?</td><td><b>Inference</b></td><td>The interest is in how price is associated with the probability of buying.</td></tr>
+<tr><td>House prices from crime rate, zoning, distance to river, air quality, schools…</td><td><b>Both</b></td><td>“How much is a river view worth?” is inference; “is this house over- or under-valued?” is prediction.</td></tr>
+</tbody></table></div>
+
+<p>The goal decides the method. <b>Linear models</b> are easy to interpret, so they are good for inference, but they may predict less accurately. Highly non-linear methods (later chapters) may predict very well but are hard to interpret.</p>
+
+<h3 id="isl2-1-how">How do we estimate \(f\)? The training data</h3>
+<p>Every method starts from \(n\) observed data points, the <dfn data-g="training-data">training data</dfn>, so called because we use them to train (teach) the method how to estimate \(f\). We need notation for “the value of the \(j\)-th predictor for the \(i\)-th observation”.</p>
+
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Advertising example</span></div>
+<div class="row"><span class="s">\(x_{ij}\)</span><span>“x sub i j”: predictor \(j\) for observation \(i\). First index = row, second = column.</span><span class="eg">\(x_{12} = 37.8\) (market 1, radio)</span></div>
+<div class="row"><span class="s">\(y_i\)</span><span>“y sub i”: the response of observation \(i\)</span><span class="eg">\(y_1 = 22.1\)</span></div>
+<div class="row"><span class="s">\(x_i\)</span><span>“x sub i”: the whole input vector of observation \(i\), written as a column: \(x_i = (x_{i1}, \dots, x_{ip})^T\)</span><span class="eg">\(x_1 = (230.1, 37.8, 69.2)^T\)</span></div>
+<div class="row"><span class="s">\(\{(x_1,y_1),\dots,(x_n,y_n)\}\)</span><span>the training set: \(n\) pairs of (inputs, response)</span><span class="eg">200 pairs</span></div>
+<div class="row"><span class="s">\(^T\)</span><span>“transpose”: turns a row into a column (see <a href="#m-linalg">Vectors &amp; matrices</a>)</span><span class="eg">\((1,2)^T = \begin{pmatrix}1\\2\end{pmatrix}\)</span></div>
+</div>
+
+<p>Stack the input vectors as rows and you get the data matrix. For the first three markets:</p>
+\[\begin{pmatrix} x_{11} & x_{12} & x_{13}\\ x_{21} & x_{22} & x_{23}\\ x_{31} & x_{32} & x_{33}\end{pmatrix} = \begin{pmatrix} 230.1 & 37.8 & 69.2\\ 44.5 & 39.3 & 45.1\\ 17.2 & 45.9 & 69.3\end{pmatrix}, \qquad \begin{pmatrix}y_1\\y_2\\y_3\end{pmatrix} = \begin{pmatrix}22.1\\10.4\\9.3\end{pmatrix}\]
+
+<div class="predict" data-correct="1"><p>In NumPy, <code>X[0, 1]</code> on this matrix gives which book symbol?</p><ol class="opts"><li>\(x_{12}\) = 37.8</li><li>\(x_{01}\) = 230.1</li><li>\(x_{21}\) = 44.5</li></ol>
+<div class="why">Python counts from 0, the book counts from 1. Row 0 is market 1, column 1 is the second predictor (radio). So <code>X[0, 1]</code> is the book's \(x_{12} = 37.8\). Keeping “Python index = book index − 1” in your head saves many bugs.</div></div>
+<div class="py" id="c-isl2-1-06"><pre class="src">
+X = ad[['TV', 'radio', 'newspaper']].to_numpy()   # n x p matrix
+y = ad['sales'].to_numpy()                         # length-n vector
+print("shape of X:", X.shape)        # (n, p)
+print("x_1 =", X[0])                 # first market's inputs
+print("x_12 =", X[0, 1], "  y_1 =", y[0])
+</pre><div class="pynote"><code>.to_numpy()</code> turns a pandas table into a plain NumPy array. <code>X.shape</code> is <code>(200, 3)</code>: \(n = 200\) rows, \(p = 3\) columns. Every method in this book takes exactly this kind of \(X\) and \(y\).</div></div>
+
+<p>Our goal is to find a function \(\hat f\) such that \(Y \approx \hat f(X)\) for any observation \((X, Y)\), including ones we have not seen. Most methods are one of two kinds: <b>parametric</b> or <b>non-parametric</b>.</p>
+
+<h3 id="isl2-1-param">Parametric methods: assume a shape, then fit numbers</h3>
+<p>A <dfn data-g="parametric">parametric</dfn> method works in two steps.</p>
+<p><b>Step 1. Assume a shape for \(f\).</b> The simplest assumption is that \(f\) is linear in \(X\):</p>
+<div class="mathblock" data-sheet="Linear model"><div class="eqlabel">The linear model (ISLP 2.4)</div>
+\[f(X) = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_p X_p\]
+<p class="say">Read: “f of X equals beta-nought plus beta-one X-one plus … plus beta-p X-p.” \(\beta_0\) (beta-nought) is the intercept, the value when every input is 0. Each \(\beta_j\) (beta-j) is the change in \(f\) when \(X_j\) rises by 1 and the other inputs stay fixed.</p></div>
+<p>The assumption turns an impossible problem (find <i>any</i> function of \(p\) variables) into an easy one: find just \(p + 1\) numbers \(\beta_0, \beta_1, \dots, \beta_p\), the <b>parameters</b> or <b>coefficients</b>. For Advertising, \(p = 3\), so 4 numbers.</p>
+<p><b>Step 2. Fit (train) the model.</b> Use the training data to choose the parameters so that \(Y \approx \beta_0 + \beta_1X_1 + \cdots + \beta_pX_p\). The most common way is <dfn data-g="least-squares">(ordinary) least squares</dfn>: choose the \(\beta\)s that make the sum of squared vertical gaps between the data and the fitted surface as small as possible. (Chapter 6 shows other ways to fit the same linear model.)</p>
+
+<h4>A first taste of least squares (preview of Chapter 3)</h4>
+<p>For a single predictor the least-squares line \(\hat y = \hat\beta_0 + \hat\beta_1 x\) has a closed-form answer:</p>
+<div class="mathblock"><div class="eqlabel">Least-squares line, one predictor (proved in ISLP 3.1)</div>
+\[\hat\beta_1 = \frac{\sum_{i=1}^n (x_i-\bar x)(y_i-\bar y)}{\sum_{i=1}^n (x_i-\bar x)^2}, \qquad \hat\beta_0 = \bar y - \hat\beta_1 \bar x\]
+<p class="say">\(\hat\beta_1\) is read <i>beta-one-hat</i>: our <i>estimate</i> of the slope. \(\bar x\) (x-bar) and \(\bar y\) (y-bar) are the means. The slope is “how x and y move together” divided by “how much x moves on its own”.</p></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>least-squares line through three points by hand</b></div>
+<div class="given">Points \((x, y)\): \((1, 2)\), \((2, 3)\), \((3, 5)\).</div>
+<ol class="steps">
+<li><div>Means: \(\bar x = \frac{1+2+3}{3} = 2\), \(\bar y = \frac{2+3+5}{3} = \frac{10}{3} \approx 3.333\).</div></li>
+<li><div>Deviations: \(x_i - \bar x = -1, 0, 1\); \(y_i - \bar y = -\tfrac43, -\tfrac13, \tfrac53\).</div></li>
+<li><div>Numerator: \((-1)(-\tfrac43) + (0)(-\tfrac13) + (1)(\tfrac53) = \tfrac43 + 0 + \tfrac53 = \mathbf{3}\).</div></li>
+<li><div>Denominator: \((-1)^2 + 0^2 + 1^2 = \mathbf{2}\).</div></li>
+<li><div>Slope: \(\hat\beta_1 = 3/2 = \mathbf{1.5}\). Intercept: \(\hat\beta_0 = \tfrac{10}{3} - 1.5 \times 2 = 3.333 - 3 = \mathbf{0.333}\).</div></li>
+<li><div>Fitted values: \(\hat y = 0.333 + 1.5x\) gives \(1.833, 3.333, 4.833\). Residuals \(y - \hat y\): \(0.167, -0.333, 0.167\). They add to 0, as least-squares residuals always do when there is an intercept.</div></li>
+</ol>
+<div class="result">\(\hat y = 0.333 + 1.5\,x\)</div></div>
+
+<div class="py" id="c-isl2-1-07"><pre class="src">
+x = np.array([1.0, 2.0, 3.0]); yy = np.array([2.0, 3.0, 5.0])
+b1 = np.sum((x - x.mean()) * (yy - yy.mean())) / np.sum((x - x.mean()) ** 2)
+b0 = yy.mean() - b1 * x.mean()
+print("by the formula:", round(b0, 4), round(b1, 4))
+print("np.polyfit    :", np.round(np.polyfit(x, yy, 1)[::-1], 4))   # polyfit gives [slope, intercept]
+</pre><div class="pynote">Both give intercept 0.3333 and slope 1.5. <code>[::-1]</code> reverses the array, because <code>np.polyfit</code> returns the highest power first (slope, then intercept).</div></div>
+
+<p>With several predictors we let NumPy solve the least-squares problem directly. We add a column of ones to \(X\) (it multiplies \(\beta_0\)) and call <code>np.linalg.lstsq</code>, which finds the \(\beta\) that minimises the sum of squared errors (see <a href="#np2">NumPy II</a>). With the column of ones, the first three rows become</p>
+\[\begin{pmatrix} 1 & 230.1 & 37.8 & 69.2\\ 1 & 44.5 & 39.3 & 45.1\\ 1 & 17.2 & 45.9 & 69.3\end{pmatrix}\begin{pmatrix}\beta_0\\ \beta_1\\ \beta_2\\ \beta_3\end{pmatrix} \approx \begin{pmatrix}22.1\\10.4\\9.3\end{pmatrix}\]
+
+<div class="py" id="c-isl2-1-08"><pre class="src">
+X1 = np.column_stack([np.ones(len(X)), X])          # add the column of 1s for beta_0
+beta, *_ = np.linalg.lstsq(X1, y, rcond=None)
+print("beta_0..beta_3 =", np.round(beta, 4).tolist())
+x1 = X1[0]                                          # market 1, with its leading 1
+print("prediction for market 1:", round(x1 @ beta, 3), "  actual:", y[0])
+</pre><div class="pynote"><b>Read the output:</b> \(\hat\beta_0 \approx 2.939\), \(\hat\beta_1 \approx 0.0458\) (TV), \(\hat\beta_2 \approx 0.1885\) (radio), \(\hat\beta_3 \approx -0.0010\) (newspaper). With TV and radio already in the model, newspaper adds almost nothing. That is an inference result you could tell the client. <code>x1 @ beta</code> is the dot product \(1\cdot\hat\beta_0 + 230.1\,\hat\beta_1 + 37.8\,\hat\beta_2 + 69.2\,\hat\beta_3 \approx 20.52\), the model's prediction for market 1, which really sold 22.1. <code>beta, *_ = ...</code> keeps the first thing <code>lstsq</code> returns and throws away the rest.</div></div>
+
+<p>Figure 2.4 applies the same idea to the Income data with two predictors: \(\text{income} \approx \beta_0 + \beta_1 \times \text{education} + \beta_2 \times \text{seniority}\). The fitted \(f\) is a flat plane.</p>
+
+<div class="py" id="c-isl2-1-09"><pre class="src">
+E = inc2['Education'].to_numpy(); S = inc2['Seniority'].to_numpy(); I = inc2['Income'].to_numpy()
+A = np.column_stack([np.ones(30), E, S])
+b, *_ = np.linalg.lstsq(A, I, rcond=None)
+print("income ~ %.2f + %.3f*education + %.4f*seniority" % tuple(b))
+print("training MSE of the plane:", round(np.mean((I - A @ b) ** 2), 2))
+</pre><div class="pynote">The plane: income \(\approx -50.09 + 5.896\times\)education \(+ 0.1729\times\)seniority. One more year of education goes with about 5.9 thousand dollars more income; one more year of seniority with about 0.17 thousand. That matches the book's description: a positive relationship with education and a “slightly less positive” one with seniority. The <i>training MSE</i> (average squared error on these same 30 people) is about 46.5; we use it in a moment.</div></div>
+
+<figure class="book" data-fig="islp-2.4"><figcaption>The yellow plane is the least-squares fit you just computed. <b>Compare with Figure 2.3:</b> the true surface curves (S-shape in education), the plane cannot. Yet it still captures the main story: income rises with education and, more gently, with seniority. With only 30 people, this may be the best we can do.</figcaption></figure>
+
+<p><b>The price of assuming a shape.</b> The chosen form will usually not match the true \(f\) exactly. If it is far from the truth, the estimate is poor however much data we have. We can choose more <dfn data-g="flexible">flexible</dfn> models that can take many shapes, but they have more parameters, and very flexible models can <dfn data-g="overfitting">overfit</dfn>: they follow the errors, the <b>noise</b>, too closely.</p>
+
+<h3 id="isl2-1-nonparam">Non-parametric methods: let the data choose the shape</h3>
+<p>A <dfn data-g="non-parametric">non-parametric</dfn> method makes no explicit assumption about the form of \(f\). It looks for an \(\hat f\) that gets as close to the data points as possible without being too rough or wiggly.</p>
+<ul>
+<li><b>Advantage:</b> because no shape is assumed, it can fit a much wider range of true \(f\)s. There is no risk of having picked a completely wrong form.</li>
+<li><b>Disadvantage:</b> since the problem is not reduced to a few parameters, it needs <i>far more observations</i> to estimate \(f\) accurately.</li>
+</ul>
+<p>The book's example is a <b>thin-plate spline</b> (Chapter 7): a smooth surface that bends to follow the data, with a knob that sets how smooth it must be. SciPy has it: <code>RBFInterpolator</code> with <code>kernel='thin_plate_spline'</code> and a <code>smoothing</code> value. Large <code>smoothing</code> forces a smooth surface; <code>smoothing=0</code> forces the surface through every point exactly. We first rescale both predictors to mean 0 and standard deviation 1, because education (10–22) and seniority (20–188) are on very different scales and the spline measures distance.</p>
+
+<div class="predict" data-correct="1"><p>We fit a smooth spline (<code>smoothing=1</code>) and a rough one (<code>smoothing=0</code>) to the 30 people, and print each one's <b>training</b> MSE. Which statement will be true?</p><ol class="opts"><li>The rough spline's training MSE is (essentially) 0</li><li>Both training MSEs are around 46, like the plane</li><li>The smooth spline has the smaller training MSE</li></ol>
+<div class="why">With <code>smoothing=0</code> the surface is forced through every training point, so every training error is 0 (you will see a number like \(10^{-26}\), which is zero up to rounding). The smooth spline is allowed to miss points, so its training MSE is larger, about 16.5. Whether zero training error is <i>good</i> is the next question.</div></div>
+<div class="py" id="c-isl2-1-10"><pre class="src">
+from scipy.interpolate import RBFInterpolator
+Z = np.column_stack([E, S])
+Zs = (Z - Z.mean(axis=0)) / Z.std(axis=0)        # rescale both columns
+smooth = RBFInterpolator(Zs, I, kernel='thin_plate_spline', smoothing=1)
+rough  = RBFInterpolator(Zs, I, kernel='thin_plate_spline', smoothing=0)
+print("training MSE, smooth spline:", round(np.mean((I - smooth(Zs)) ** 2), 2))
+print("training MSE, rough spline :", np.mean((I - rough(Zs)) ** 2))
+</pre><div class="pynote">The rough spline “makes zero errors on the training data”, exactly as the book says about Figure 2.6. <code>Z.mean(axis=0)</code> takes the mean down each column (see <a href="#np2">NumPy II</a> on axes).</div></div>
+
+<figure class="book" data-fig="islp-2.5"><figcaption>The smooth thin-plate spline (yellow). <b>Compare with the true surface in Figure 2.3</b>: the shapes are remarkably close, the S-shape in education is captured, and no formula was assumed.</figcaption></figure>
+<figure class="book" data-fig="islp-2.6"><figcaption>The rough thin-plate spline passes through every red dot. <b>Look at</b> the bumps and dips between the dots: the true \(f\) has none of them. The surface has learned the noise \(\varepsilon\) of these particular 30 people. This is <b>overfitting</b>.</figcaption></figure>
+
+<p>How can we show that the rough fit is worse if its training error is zero? Pretend some people are new. Hide person 1, fit on the other 29, predict person 1, record the squared error; then do the same for person 2, and so on for all 30. The average is an honest estimate of the error on people the model has not seen. (This trick is called <i>leave-one-out cross-validation</i>; <a href="#isl5-1">ISLP 5.1</a> teaches it properly.)</p>
+
+<div class="predict" data-correct="3"><p>Which of the three fits will have the <b>smallest</b> error on the hidden people?</p><ol class="opts"><li>The rough spline (zero training error)</li><li>The plane (only 3 parameters)</li><li>The smooth spline</li></ol>
+<div class="why">The smooth spline wins (about 52.7). The plane is too rigid to follow the S-shape (about 57.2), and the rough spline chases noise, so its hidden-person error is the worst (about 75.6) despite its perfect training score.</div></div>
+<div class="py" id="c-isl2-1-11"><pre class="src">
+def hidden_error(fit_predict):
+    errs = []
+    for i in range(30):
+        keep = np.arange(30) != i                  # everyone except person i
+        pred = fit_predict(Zs[keep], I[keep], Zs[i:i+1])
+        errs.append((pred[0] - I[i]) ** 2)
+    return np.mean(errs)
+
+def plane(Ztr, ytr, Znew):
+    bb, *_ = np.linalg.lstsq(np.column_stack([np.ones(len(Ztr)), Ztr]), ytr, rcond=None)
+    return np.column_stack([np.ones(len(Znew)), Znew]) @ bb
+
+print("plane        :", round(hidden_error(plane), 1))
+for s in [1, 0]:
+    tps = lambda Ztr, ytr, Znew: RBFInterpolator(Ztr, ytr, kernel='thin_plate_spline', smoothing=s)(Znew)
+    print("spline s =", s, ":", round(hidden_error(tps), 1))
+</pre><div class="pynote"><b>Read the output:</b> plane ≈ 57.2, smooth spline ≈ 52.7, rough spline ≈ 75.6. Lowest training error (rough: 0) and lowest error on new people (smooth) are <i>different</i> models. This single fact drives the next lesson. <code>Zs[i:i+1]</code> keeps the row as a 2-D array of shape (1, 2), which the fitting functions expect; <code>lambda</code> makes a small unnamed function in one line (see <a href="#py2">Python II</a>).</div></div>
+
+<div class="py" id="c-isl2-1-12"><pre class="src">
+g1, g2 = np.meshgrid(np.linspace(-1.8, 1.6, 60), np.linspace(-1.7, 1.7, 60))
+grid = np.column_stack([g1.ravel(), g2.ravel()])
+fig, axes = plt.subplots(1, 3, figsize=(11, 3.3), sharey=True)
+for ax, (name, model) in zip(axes, [('plane', None), ('smooth spline', smooth), ('rough spline', rough)]):
+    zz = plane(Zs, I, grid) if model is None else model(grid)
+    ax.contourf(g1, g2, zz.reshape(g1.shape), levels=15, cmap='viridis')
+    ax.scatter(Zs[:, 0], Zs[:, 1], c='red', s=12)
+    ax.set_title(name); ax.set_xlabel('education (scaled)')
+axes[0].set_ylabel('seniority (scaled)');
+</pre><div class="pynote">The three fitted surfaces seen from above, as coloured contour maps (yellow = high income). The plane has straight parallel bands; the smooth spline has bands that bunch up in the middle of education (the steep part of the S); the rough spline has small islands around individual red points: those are the bumps of Figure 2.6. <code>np.meshgrid</code> builds a grid of points; <code>.ravel()</code> flattens it into a list of points; <code>.reshape</code> folds the predictions back into a grid.</div></div>
+
+<p>Now try the same story in one dimension, where you can see everything. The widget uses the 30 people of <code>Income1</code>.</p>
+<div class="widget" data-w="isl2-1-flex" data-title="Parametric vs flexible fits on the Income data" data-args='{}'><div class="wn">Start with “Polynomial”, flexibility 1 (a straight line, 2 parameters). Raise the flexibility step by step. The training MSE (red residuals) keeps falling. The hidden-person MSE (each person predicted by a fit that never saw them) falls at first, then rises as the curve starts to wiggle through individual points. Switch to “K-nearest average” (a non-parametric method: predict by averaging the incomes of the K people with the closest education): at flexibility 12, K = 1, the training error is zero and the hidden-person error is poor.</div></div>
+
+<div class="callout pitfall"><p><b>Zero training error is a warning sign, not a trophy.</b> Any method flexible enough can pass through every training point. What matters is accuracy on new observations. Chapter 5 discusses how to choose the right amount of smoothness.</p></div>
+
+<h3 id="isl2-1-tradeoff">The trade-off between prediction accuracy and interpretability</h3>
+<p>Some methods are <b>restrictive</b> (inflexible): they can produce only a small range of shapes. Linear regression can only make lines and planes. Others, like thin-plate splines, are <b>flexible</b>: they can produce a huge range of shapes. Why would anyone choose a restrictive method?</p>
+<ul>
+<li><b>For inference, restrictive models are far easier to interpret.</b> A linear model tells you directly “one more year of education goes with 5.9 thousand dollars”. A very flexible spline or boosted model can be so complicated that you cannot say how any single predictor relates to the response.</li>
+<li><b>Even for prediction, flexible is not automatically better.</b> Surprisingly, a less flexible method often predicts more accurately, because very flexible methods can overfit. You just saw this with the rough spline.</li>
+</ul>
+
+<figure class="book" data-fig="islp-2.7"><figcaption>Methods placed by flexibility (left to right) and interpretability (top to bottom). <b>Look at</b> the diagonal: as flexibility rises, interpretability falls. Subset selection and the lasso sit top left; deep learning sits bottom right. You will meet every name on this map in ISLP and Prince.</figcaption></figure>
+
+<div class="tw"><table class="t"><thead><tr><th>Method</th><th>Where in ISLP</th><th>Flexibility</th><th>Why it sits there</th></tr></thead><tbody>
+<tr><td>Subset selection, lasso</td><td>Ch. 6</td><td>Lowest</td><td>Linear model that also sets some coefficients to exactly zero, so the final model uses only a few predictors: very interpretable.</td></tr>
+<tr><td>Least squares</td><td>Ch. 3</td><td>Low</td><td>Linear in every predictor; each coefficient has a direct meaning.</td></tr>
+<tr><td>Generalized additive models (GAMs)</td><td>Ch. 7</td><td>Medium</td><td>Each predictor gets its own curve instead of a line: more flexible, a bit harder to read.</td></tr>
+<tr><td>Trees</td><td>Ch. 8</td><td>Medium</td><td>Simple yes/no rules; a small tree is easy to read.</td></tr>
+<tr><td>Bagging, boosting, SVMs with non-linear kernels, deep learning</td><td>Ch. 8, 9, 10</td><td>High</td><td>Fully non-linear; can fit almost anything; very hard to interpret.</td></tr>
+</tbody></table></div>
+
+<div class="callout exam"><p><b>Interview classic:</b> “Why not always use the most powerful model?” A strong answer names both reasons: (1) interpretability, when stakeholders need to know <i>why</i>; (2) overfitting, because a flexible model with limited data can predict worse on new data than a simple one. Then say how you would decide: compare on held-out data (cross-validation).</p></div>
+
+<h3 id="isl2-1-sup">Supervised versus unsupervised learning</h3>
+<p>Everything so far is <dfn data-g="supervised">supervised learning</dfn>: for every observation \(x_i\) we also have its response \(y_i\), and the response “supervises” the fit by telling the method when it is wrong. Linear regression, logistic regression (Chapter 4), GAMs, boosting and support vector machines are all supervised, and so is most of this book.</p>
+<p>In <dfn data-g="unsupervised">unsupervised learning</dfn> we observe the measurements \(x_i\) but <b>no response</b>. We cannot fit a regression because there is nothing to predict. We are “working blind”. What we can do is look for structure: relationships between variables, or groups among observations. The main tool is <dfn data-g="clustering">cluster analysis</dfn> (clustering): decide, from \(x_1, \dots, x_n\) alone, whether the observations fall into distinct groups. Example: market segmentation. We measure customers' postcode, family income and shopping habits, and hope to find groups such as big spenders and small spenders, without ever being told who spends what.</p>
+
+<figure class="book" data-fig="islp-2.8"><figcaption>150 observations measured on two variables, belonging to three groups (shown with three colours and symbols, which in real life we would <i>not</i> know). <b>Left:</b> the groups are well separated and a clustering method should find them. <b>Right:</b> the groups overlap, so some points will inevitably be put in the wrong group.</figcaption></figure>
+
+<p>Let us try it: make two data sets like Figure 2.8, hide the true labels, and ask <b>K-means</b> (a clustering method from Chapter 12, in scikit-learn) to find three groups. Then we compare its groups with the hidden truth.</p>
+<div class="predict" data-correct="2"><p>K-means will be asked to find 3 groups in each data set. Which agreement with the hidden truth do you expect?</p><ol class="opts"><li>100% on both</li><li>About 100% on the separated data, clearly less on the overlapping data</li><li>About 33% on both, because it does not know the labels</li></ol>
+<div class="why">Well-separated clusters are found almost perfectly. With overlap, points in the overlap zone are closer to the wrong centre and get assigned wrongly. The method never needed labels: the structure was in the \(x\) values themselves.</div></div>
+<div class="py" id="c-isl2-1-13"><pre class="src">
+from sklearn.cluster import KMeans
+rng = np.random.default_rng(1)
+def make_groups(centres, spread):
+    pts = [rng.normal(c, spread, size=(50, 2)) for c in centres]
+    return np.vstack(pts), np.repeat([0, 1, 2], 50)
+
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.6))
+for ax, (centres, sd, title) in zip(axes, [([(3, 9), (9, 6), (3, 3)], 0.9, 'separated'),
+                                           ([(3, 6), (5.5, 4.5), (3, 3)], 0.9, 'overlapping')]):
+    Xc, truth = make_groups(centres, sd)
+    found = KMeans(n_clusters=3, n_init=10, random_state=0).fit_predict(Xc)
+    # match each found cluster to the true group it overlaps most, then count agreement
+    agree = sum(np.bincount(truth[found == k]).max() for k in range(3)) / len(truth)
+    ax.scatter(Xc[:, 0], Xc[:, 1], c=found, cmap='viridis', s=14)
+    ax.set_title(f"{title}: {agree:.0%} agree with truth")
+</pre><div class="pynote">Colours are the clusters K-means found, not the truth. On separated data agreement is 100%; on overlapping data it drops (read the exact figure in the title). The cluster numbers 0, 1, 2 are arbitrary, so we match each found cluster to the true group it shares most points with before counting. <code>np.bincount</code> counts how many times each label appears.</div></div>
+
+<p>With two variables you can look at one scatterplot. With \(p\) variables there are \(p(p-1)/2\) different pairs, so \(p(p-1)/2\) scatterplots. For \(p = 10\) that is \(10 \times 9 / 2 = 45\) plots; for \(p = 100\) it is \(4{,}950\). Looking by eye stops working fast, which is why automated clustering matters (Chapter 12).</p>
+<div class="worked"><div class="wt">Worked example · <b>why \(p(p-1)/2\)?</b></div>
+<div class="given">Count the scatterplots for \(p = 4\) variables A, B, C, D.</div>
+<ol class="steps">
+<li><div>Each variable can be paired with the \(p - 1 = 3\) others: \(4 \times 3 = 12\) ordered pairs.</div></li>
+<li><div>But (A, B) and (B, A) are the same plot with the axes swapped, so every plot was counted twice: \(12 / 2 = 6\).</div></li>
+<li><div>List them to check: AB, AC, AD, BC, BD, CD. Six. ✓</div></li>
+</ol><div class="result">\(p(p-1)/2 = 4 \cdot 3/2 = 6\)</div></div>
+
+<p>Some problems sit in between. If we have \(n\) observations but only \(m &lt; n\) of them have a response (responses are expensive, predictors cheap), we have a <dfn data-g="semi-supervised">semi-supervised</dfn> problem: we want a method that uses the \(m\) labelled and the \(n - m\) unlabelled observations. It is beyond the scope of ISLP, but very common in practice (and in computer vision, where labelling images is expensive).</p>
+
+<h3 id="isl2-1-regclass">Regression versus classification</h3>
+<p>Variables are either <dfn data-g="quantitative">quantitative</dfn> (numbers: age, height, income, house value, a stock price) or <dfn data-g="qualitative">qualitative</dfn>, also called <b>categorical</b>: they take one of \(K\) classes (married or not; brand A, B or C; default yes or no; a leukaemia diagnosis of AML, ALL or none).</p>
+<p>Problems with a quantitative response are <dfn data-g="regression">regression</dfn> problems. Problems with a qualitative response are <dfn data-g="classification">classification</dfn> problems. The line is not perfectly crisp:</p>
+<ul>
+<li><b>Logistic regression</b> (Chapter 4) is used for a two-class (binary) response, so it is a <i>classification</i> method despite its name. But it estimates class <i>probabilities</i>, which are numbers, so it can be seen as a regression method too.</li>
+<li><b>K-nearest neighbours</b> (next lesson) and <b>boosting</b> (Chapter 8) work for both kinds of response.</li>
+<li>Whether the <i>predictors</i> are quantitative or qualitative matters much less: most methods handle both once qualitative predictors are coded as numbers (Chapter 3).</li>
+</ul>
+
+<div class="py" id="c-isl2-1-14"><pre class="src">
+people = pd.DataFrame({'age': [23, 35, 41], 'income': [31.5, 52.0, 47.2],
+                       'married': ['no', 'yes', 'yes'], 'brand': ['A', 'C', 'B']})
+for col in people.columns:
+    kind = 'quantitative' if pd.api.types.is_numeric_dtype(people[col]) else 'qualitative'
+    task = 'regression' if kind == 'quantitative' else 'classification'
+    print(f"{col:8s} {str(people[col].dtype):8s} {kind:13s} -> as a response: {task}")
+</pre><div class="pynote">pandas stores numbers as <code>int64</code>/<code>float64</code> and text as <code>object</code>. A quick dtype check is a first guess at which variables are qualitative. It is only a first guess: a column of numbers like cylinders (4, 6, 8) or a code like origin (1, 2, 3) can be qualitative, as you will see in the <a href="#isl2-lab">lab</a>.</div></div>
+
+<div class="callout pitfall"><p><b>Numbers are not always quantitative.</b> A PIN code is a number but it is a label: PIN 560002 is not “twice” 280001. Before choosing regression or classification, ask: does arithmetic on this value make sense?</p></div>
+
+<h3 id="isl2-1-practice">Practice</h3>
+
+<div class="ex" id="x-isl2-1-01" data-title="split the expected error"><div class="task"><p>Write <code>decompose(f_x, fhat_x, sigma)</code> that returns a tuple <code>(reducible, irreducible, total)</code> from equation (2.3), where <code>sigma</code> is the standard deviation of \(\varepsilon\). Example: <code>decompose(50, 47, 5)</code> → <code>(9, 25, 34)</code>.</p></div>
+<pre class="src">
+def decompose(f_x, fhat_x, sigma):
+    reducible = ...
+    irreducible = ...
+    return reducible, irreducible, reducible + irreducible
+</pre>
+<pre class="check">
+r = decompose(50, 47, 5)
+assert np.allclose(r, (9, 25, 34)), f"decompose(50, 47, 5) should be (9, 25, 34), got {r}"
+r = decompose(10, 12.5, 0)
+assert np.allclose(r, (6.25, 0, 6.25)), f"with no noise only the reducible part remains: expected (6.25, 0, 6.25), got {r}"
+r = decompose(3, 3, 2)
+assert np.allclose(r, (0, 4, 4)), f"a perfect estimate leaves only Var(eps) = 4: expected (0, 4, 4), got {r}"
+</pre>
+<div class="hint"><p>Reducible is the squared gap between truth and estimate. Irreducible is the <i>variance</i> of the noise, not its standard deviation.</p></div>
+<div class="hint"><p><code>reducible = (f_x - fhat_x) ** 2</code> and <code>irreducible = sigma ** 2</code>.</p></div>
+<pre class="solution">
+def decompose(f_x, fhat_x, sigma):
+    reducible = (f_x - fhat_x) ** 2
+    irreducible = sigma ** 2
+    return reducible, irreducible, reducible + irreducible
+</pre><div class="explain"><p>This is (2.3) as code. The checks include a noise-free case (only the reducible part) and a perfect estimate (only the irreducible part). A common slip is returning <code>sigma</code> instead of <code>sigma ** 2</code>.</p></div></div>
+
+<div class="ex" id="x-isl2-1-02" data-title="Monte Carlo check of (2.3)"><div class="task"><p>Write <code>mc_error(a, sigma, n, seed)</code>: draw <code>n</code> values of \(\varepsilon \sim N(0, \sigma^2)\) with <code>np.random.default_rng(seed)</code>, and return the average of \((a + \varepsilon)^2\), where \(a = f(X) - \hat f(X)\). For large <code>n</code> it should be close to \(a^2 + \sigma^2\).</p></div>
+<pre class="src">
+def mc_error(a, sigma, n, seed):
+    rng = np.random.default_rng(seed)
+    eps = ...
+    return ...
+</pre>
+<pre class="check">
+v = mc_error(3, 5, 200_000, 0)
+assert abs(v - 34) &lt; 0.5, f"with a=3, sigma=5 the average should be close to 34, got {v}"
+v = mc_error(0, 2, 200_000, 1)
+assert abs(v - 4) &lt; 0.1, f"with a=0, sigma=2 the average should be close to 4, got {v}"
+v = mc_error(2, 0.0, 10, 2)
+assert abs(v - 4) &lt; 1e-12, f"with no noise every squared error is a^2 = 4, got {v}"
+</pre>
+<div class="hint"><p><code>rng.normal(0, sigma, size=n)</code> draws the noise.</p></div>
+<div class="hint"><p>Then <code>np.mean((a + eps) ** 2)</code>.</p></div>
+<pre class="solution">
+def mc_error(a, sigma, n, seed):
+    rng = np.random.default_rng(seed)
+    eps = rng.normal(0, sigma, size=n)
+    return np.mean((a + eps) ** 2)
+</pre><div class="explain"><p>\(Y - \hat Y = a + \varepsilon\), so averaging \((a+\varepsilon)^2\) over many draws estimates \(\E(Y-\hat Y)^2\). The result approaches \(a^2 + \sigma^2\): the derivation, confirmed by simulation.</p></div></div>
+
+<div class="ex" id="x-isl2-1-03" data-title="least-squares line from the formula"><div class="task"><p>Write <code>ols_line(x, y)</code> that returns <code>(b0, b1)</code>, the least-squares intercept and slope, using the formulas \(\hat\beta_1 = \sum(x_i-\bar x)(y_i-\bar y) / \sum (x_i-\bar x)^2\) and \(\hat\beta_0 = \bar y - \hat\beta_1\bar x\). Do not use <code>np.polyfit</code> (the check compares against it). Example: the points \((1,2), (2,3), (3,5)\) give <code>(0.333..., 1.5)</code>.</p></div>
+<pre class="src">
+def ols_line(x, y):
+    x = np.asarray(x, dtype=float); y = np.asarray(y, dtype=float)
+    b1 = ...
+    b0 = ...
+    return b0, b1
+</pre>
+<pre class="check">
+b0, b1 = ols_line([1, 2, 3], [2, 3, 5])
+assert np.isclose(b1, 1.5) and np.isclose(b0, 1/3), f"expected (0.3333, 1.5), got ({b0}, {b1})"
+s, i = np.polyfit(ad['TV'], ad['sales'], 1)
+b0, b1 = ols_line(ad['TV'], ad['sales'])
+assert np.isclose(b1, s) and np.isclose(b0, i), f"on Advertising TV expected ({i:.4f}, {s:.4f}), got ({b0}, {b1})"
+b0, b1 = ols_line([0, 1, 2, 3], [5, 5, 5, 5])
+assert np.isclose(b1, 0) and np.isclose(b0, 5), f"a flat line y=5 should give (5, 0), got ({b0}, {b1})"
+</pre>
+<div class="hint"><p>Compute <code>x.mean()</code> and <code>y.mean()</code> first, then the two sums with <code>np.sum</code>.</p></div>
+<div class="hint"><p>The slope is a ratio of two sums:</p><pre>b1 = (np.sum((x - x.mean()) * (y - y.mean()))
+      / np.sum((x - x.mean()) ** 2))</pre></div>
+<pre class="solution">
+def ols_line(x, y):
+    x = np.asarray(x, dtype=float); y = np.asarray(y, dtype=float)
+    b1 = np.sum((x - x.mean()) * (y - y.mean())) / np.sum((x - x.mean()) ** 2)
+    b0 = y.mean() - b1 * x.mean()
+    return b0, b1
+</pre><div class="explain"><p>The checks run your function on the three-point example, on all 200 Advertising markets (compared with NumPy), and on flat data where the slope must be 0. You will prove this formula in <a href="#isl3-1">ISLP 3.1</a>.</p></div></div>
+
+<div class="ex" id="x-isl2-1-04" data-title="predict with a linear model"><div class="task"><p>Write <code>linear_predict(beta, X)</code> where <code>beta = [b0, b1, ..., bp]</code> and <code>X</code> is an \(n \times p\) array; return the \(n\) predictions \(\beta_0 + \beta_1 x_{i1} + \dots + \beta_p x_{ip}\). Example: with <code>beta = [1, 2, 3]</code> and the rows <code>[1, 1]</code> and <code>[0, 2]</code>, the answer is <code>[6, 7]</code>, because \(1 + 2\cdot1 + 3\cdot1 = 6\) and \(1 + 2\cdot0 + 3\cdot2 = 7\).</p></div>
+<pre class="src">
+def linear_predict(beta, X):
+    beta = np.asarray(beta, dtype=float); X = np.atleast_2d(np.asarray(X, dtype=float))
+    return ...
+</pre>
+<pre class="check">
+out = linear_predict([1, 2, 3], [[1, 1], [0, 2]])
+assert np.allclose(out, [6, 7]), f"expected [6, 7], got {out}"
+bt = [2.939, 0.0458, 0.1885, -0.001]
+out = linear_predict(bt, ad[['TV', 'radio', 'newspaper']].to_numpy()[:3])
+assert np.allclose(out, [20.53368, 12.34005, 12.30961], atol=1e-3), f"first three Advertising predictions wrong: {out}"
+out = linear_predict([5], np.zeros((4, 0)))
+assert np.allclose(out, [5, 5, 5, 5]), f"with no predictors every prediction is beta_0: got {out}"
+</pre>
+<div class="hint"><p>The intercept is <code>beta[0]</code>; the slopes are <code>beta[1:]</code>.</p></div>
+<div class="hint"><p><code>beta[0] + X @ beta[1:]</code> does all rows at once.</p></div>
+<pre class="solution">
+def linear_predict(beta, X):
+    beta = np.asarray(beta, dtype=float); X = np.atleast_2d(np.asarray(X, dtype=float))
+    return beta[0] + X @ beta[1:]
+</pre><div class="explain"><p><code>X @ beta[1:]</code> is a matrix–vector product: row \(i\) gives \(\sum_j x_{ij}\beta_j\). Adding <code>beta[0]</code> broadcasts the intercept to every row. The last check is the edge case \(p = 0\): the model is just the constant \(\beta_0\).</p></div></div>
+
+<div class="ex" id="x-isl2-1-05" data-title="how many scatterplots?"><div class="task"><p>Write <code>n_pairs(p)</code> returning the number of distinct two-variable scatterplots for \(p\) variables. <code>n_pairs(10)</code> → 45.</p></div>
+<pre class="src">
+def n_pairs(p):
+    return p * p
+</pre>
+<pre class="check">
+for p, want in [(2, 1), (4, 6), (10, 45), (100, 4950), (1, 0)]:
+    assert n_pairs(p) == want, f"n_pairs({p}) should be {want}, got {n_pairs(p)}"
+</pre>
+<div class="hint"><p>Count ordered pairs of different variables, then remove the double counting.</p></div>
+<div class="hint"><p><code>p * (p - 1) // 2</code>. The <code>//</code> keeps the answer an integer.</p></div>
+<pre class="solution">
+def n_pairs(p):
+    return p * (p - 1) // 2
+</pre><div class="explain"><p>\(p(p-1)\) ordered pairs, each plot counted twice. One variable gives no pairs at all.</p></div></div>
+
+<h3 id="isl2-1-quiz">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">In \(Y = f(X) + \varepsilon\), which statement about \(\varepsilon\) is part of the model's assumptions?</p><ol class="opts"><li>\(\varepsilon\) is always small</li><li>\(\varepsilon\) is larger when \(X\) is larger</li><li>\(\varepsilon\) has mean zero and is independent of \(X\)</li><li>\(\varepsilon\) can be predicted from \(X\) with enough data</li></ol><div class="why">Option 3 is the assumption. Option 1: nothing says it is small; it can be large (noisy data). Option 2 would make \(\varepsilon\) depend on \(X\), breaking independence. Option 4 is exactly what \(\varepsilon\) is not: anything predictable from \(X\) belongs in \(f\).</div></div>
+<div class="q" data-type="num" data-answer="13" data-tol="0.001"><p class="stem">At some \(X\): \(f(X)=20\), \(\hat f(X)=22\), \(\Var(\varepsilon)=9\). What is \(\E(Y-\hat Y)^2\)?</p><div class="why">Reducible \((20-22)^2 = 4\), irreducible \(9\), total \(13\).</div></div>
+<div class="q" data-type="num" data-answer="9" data-tol="0.001"><p class="stem">Same situation, but now your method is perfect: \(\hat f = f\). What is the smallest possible expected squared error?</p><div class="why">Only the irreducible part remains: \(\Var(\varepsilon) = 9\).</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">A bank wants to know whether a customer's age or income is more strongly associated with defaulting on a loan. This is mainly…</p><ol class="opts"><li>prediction</li><li>inference</li><li>unsupervised learning</li></ol><div class="why">The question is about the relationship (which variable matters more), so it is inference. If the bank only wanted a list of likely defaulters, it would be prediction. It is supervised, because we know who defaulted.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Which is a disadvantage of non-parametric methods compared with parametric ones?</p><ol class="opts"><li>They need many more observations to estimate \(f\) accurately</li><li>They can only fit straight lines</li><li>They always have higher training error</li><li>They assume the wrong form for \(f\)</li></ol><div class="why">Not reducing \(f\) to a few parameters means lots of data is needed. Option 2 describes linear (parametric) models. Option 3 is false: the rough spline had zero training error. Option 4 is the risk of <i>parametric</i> methods.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">A thin-plate spline fit to 30 points has training MSE 0. What can you conclude?</p><ol class="opts"><li>It is the best possible model</li><li>The data have no noise</li><li>Very little: it may well be overfitting, and only its error on new data can tell</li></ol><div class="why">A flexible enough method can interpolate any data, noise included. Our rough spline had training MSE 0 but the worst hidden-person error. Zero training error does not mean zero noise.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">You have photos of 10,000 skin lesions and no diagnoses. You want to find natural groups among them. This is…</p><ol class="opts"><li>supervised classification</li><li>unsupervised learning (clustering)</li><li>regression</li></ol><div class="why">There is no response, so it is unsupervised. If a dermatologist labelled 500 of them, it would become semi-supervised.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">Which of these responses makes the problem a <i>classification</i> problem?</p><ol class="opts"><li>A house's price in rupees</li><li>A person's height in cm</li><li>Tomorrow's temperature</li><li>Whether an email is spam</li></ol><div class="why">Spam / not spam is qualitative (two classes). The other three are quantitative, so they are regression problems.</div></div>
+<div class="q" data-type="num" data-answer="190" data-tol="0.001"><p class="stem">A data set has 20 variables. How many distinct pairwise scatterplots are there?</p><div class="why">\(20 \times 19 / 2 = 190\).</div></div>
+<div class="q" data-type="open"><p class="stem">In your own words, explain why a perfectly estimated \(f\) still makes prediction errors, and give one real example of where that irreducible error comes from.</p><div class="model">Because \(Y = f(X) + \varepsilon\), and \(\varepsilon\) is independent of \(X\), so no function of \(X\) can predict it. Even with \(\hat f = f\) the error is \(\varepsilon\), with expected square \(\Var(\varepsilon)\). Example: predicting a student's exam mark from hours studied; the mark also depends on sleep the night before, which was not measured, and on luck in which questions came up, which cannot be measured.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">The general model of statistical learning</div><div class="b">\(Y = f(X) + \varepsilon\): a fixed unknown systematic part plus a random error with mean 0, independent of \(X\).</div></div>
+<div class="fc"><div class="f">Four other names for “predictors”</div><div class="b">Input variables, independent variables, features, variables.</div></div>
+<div class="fc"><div class="f">Two other names for “response”</div><div class="b">Output variable, dependent variable (in ML: target).</div></div>
+<div class="fc"><div class="f">ISLP (2.3): decomposition of \(\E(Y-\hat Y)^2\)</div><div class="b">\([f(X)-\hat f(X)]^2 + \Var(\varepsilon)\) = reducible + irreducible.</div></div>
+<div class="fc"><div class="f">Why does the cross term vanish in the derivation of (2.3)?</div><div class="b">\(\E(2a\varepsilon) = 2a\,\E(\varepsilon) = 0\), because \(a = f(X)-\hat f(X)\) is fixed and \(\E(\varepsilon) = 0\).</div></div>
+<div class="fc"><div class="f">Prediction vs inference</div><div class="b">Prediction: accurate \(\hat Y\), \(\hat f\) may be a black box. Inference: understand how \(Y\) relates to each \(X_j\); \(\hat f\) must be interpretable.</div></div>
+<div class="fc"><div class="f">\(x_{ij}\)</div><div class="b">The value of predictor \(j\) for observation \(i\) (row \(i\), column \(j\)). In NumPy: <code>X[i-1, j-1]</code>.</div></div>
+<div class="fc"><div class="f">The two steps of a parametric method</div><div class="b">1. Assume a form for \(f\) (e.g. linear). 2. Fit its parameters to the training data (e.g. least squares).</div></div>
+<div class="fc"><div class="f">Main advantage and disadvantage of non-parametric methods</div><div class="b">+ No risk of assuming the wrong shape. − Need many more observations.</div></div>
+<div class="fc"><div class="f">Overfitting</div><div class="b">A fit that follows the noise in the training data too closely; low training error, poor accuracy on new data.</div></div>
+<div class="fc"><div class="f">Flexibility vs interpretability (Fig. 2.7)</div><div class="b">More flexible methods are generally less interpretable: lasso/least squares (high interpretability) … boosting/deep learning (low).</div></div>
+<div class="fc"><div class="f">Supervised vs unsupervised</div><div class="b">Supervised: each \(x_i\) has a response \(y_i\). Unsupervised: only \(x_i\); look for structure, e.g. clustering.</div></div>
+<div class="fc"><div class="f">Number of pairwise scatterplots for \(p\) variables</div><div class="b">\(p(p-1)/2\).</div></div>
+<div class="fc"><div class="f">Regression vs classification</div><div class="b">Decided by the <i>response</i>: quantitative → regression; qualitative (categorical) → classification.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can write \(Y = f(X)+\varepsilon\) and say what \(f\), \(\varepsilon\), \(X\), \(Y\), \(n\), \(p\) and \(x_{ij}\) mean on the Advertising data.</label>
+<label><input type="checkbox"> I can derive (2.3) line by line, and compute the reducible and irreducible parts for given numbers.</label>
+<label><input type="checkbox"> I can classify a problem as prediction, inference or both, and justify it.</label>
+<label><input type="checkbox"> I can fit a least-squares line by the formula and a multiple linear model with <code>np.linalg.lstsq</code>.</label>
+<label><input type="checkbox"> I can explain parametric vs non-parametric methods and why zero training error can be bad.</label>
+<label><input type="checkbox"> I can place methods on the flexibility–interpretability map and explain why simpler can predict better.</label>
+<label><input type="checkbox"> I can tell supervised, unsupervised and semi-supervised problems apart, and regression from classification.</label>
+</div>
+</section>
