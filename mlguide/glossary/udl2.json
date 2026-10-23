@@ -1,0 +1,18 @@
+{
+"udl2-tabular": {"term": "structured (tabular) data", "def": "Inputs that are vectors of fixed size whose entries always mean the same thing in the same order, like the columns of a spreadsheet.", "at": "udl2"},
+"udl2-model": {"term": "model (Prince)", "def": "An equation \\(\\by=\\mathrm{f}[\\bx,\\bphi]\\) of fixed form; it describes a family of input–output relations, and the parameters pick one member.", "at": "udl2"},
+"udl2-inference": {"term": "inference", "def": "Computing the output \\(\\by\\) from an input \\(\\bx\\) by running it through a (trained) model.", "at": "udl2"},
+"udl2-parameters": {"term": "parameters \\(\\bphi\\)", "def": "The adjustable numbers inside a model (Greek letters in Prince). Training chooses them.", "at": "udl2"},
+"udl2-training-set": {"term": "training set", "def": "The \\(I\\) example pairs \\(\\{\\bx_i,\\by_i\\}\\) used to choose the parameters.", "at": "udl2"},
+"udl2-loss": {"term": "loss \\(L[\\bphi]\\)", "def": "One number measuring the mismatch between model predictions and true outputs on the training set; smaller is better. Least squares: \\(\\sum_i(\\mathrm{f}[x_i,\\bphi]-y_i)^2\\).", "at": "udl2"},
+"udl2-training": {"term": "training (fitting, learning)", "def": "Finding \\(\\hat\\bphi=\\argmin_{\\bphi}L[\\bphi]\\), the parameters with the smallest loss.", "at": "udl2"},
+"udl2-test-data": {"term": "test data", "def": "Examples not used for training, used to measure how well the model generalises.", "at": "udl2"},
+"udl2-residual": {"term": "residual", "def": "The gap between a prediction and the truth for one example, \\(\\mathrm{f}[x_i,\\bphi]-y_i\\).", "at": "udl2"},
+"udl2-gradient": {"term": "gradient", "def": "The vector of partial derivatives of the loss with respect to each parameter; it points uphill on the loss surface.", "at": "udl2"},
+"udl2-gd": {"term": "gradient descent", "def": "Repeatedly update \\(\\bphi\\leftarrow\\bphi-\\alpha\\,\\partial L/\\partial\\bphi\\): small steps downhill on the loss surface.", "at": "udl2"},
+"udl2-underfitting": {"term": "underfitting", "def": "The model is too simple to capture the true relation: training and test loss are both high.", "at": "udl2"},
+"udl2-overfitting": {"term": "overfitting", "def": "The model describes quirks of the training data that are not real: low training loss, high test loss.", "at": "udl2"},
+"udl2-objective": {"term": "objective function", "def": "Any function that is maximised or minimised; loss and cost functions are objectives.", "at": "udl2"},
+"udl2-discriminative": {"term": "discriminative model", "def": "A model \\(y=\\mathrm{f}[x,\\bphi]\\) that predicts the output directly from the measurement.", "at": "udl2"},
+"udl2-generative": {"term": "generative model", "def": "A model \\(x=\\mathrm{g}[y,\\bphi]\\) of how the measurement is produced from the quantity of interest; prediction requires inverting it.", "at": "udl2"}
+}

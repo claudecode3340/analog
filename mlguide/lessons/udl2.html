@@ -1,0 +1,474 @@
+<section class="lesson" id="udl2" data-book="Prince Ch. 2, pp. 17–24">
+<p class="lede">Every deep network you will ever train, from a three-unit toy to a vision transformer, is built from the four ideas in this short chapter: a <b>model</b> with <b>parameters</b>, a <b>loss</b> that scores the parameters, <b>training</b> that searches for the best parameters, and <b>testing</b> on data the model has never seen. Prince teaches all four with a straight line and twelve points, so you can see every number. Get this chapter into your fingers and the rest of the book is "the same four ideas, with a bigger model".</p>
+
+<div class="uses"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> · <a href="#py2">Python II</a> (functions, loops) · <a href="#np2">NumPy II</a> (arrays, sums) · <a href="#plt1">matplotlib</a> · <a href="#m-linalg">Vectors &amp; matrices</a> · <a href="#m-calc">Derivatives &amp; gradients</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>read Prince's notation \(y=\mathrm{f}[x,\bphi]\) aloud and say what each piece means;</li>
+<li>explain the difference between a <i>model</i> (a family of functions) and its <i>parameters</i> (which member of the family);</li>
+<li>compute the least squares loss \(L[\bphi]\) by hand for a few points, and in NumPy for any number of points;</li>
+<li>picture the loss as a surface over the parameters, and explain training as "walking downhill" on it;</li>
+<li>derive the gradient of the loss and the closed-form best line (Problems 2.1 and 2.2), and explain why deep networks need the iterative method instead;</li>
+<li>explain testing, underfitting and overfitting, and the difference between discriminative and generative models (Problem 2.3).</li></ul></div>
+
+<div class="callout book"><blockquote>A supervised learning model defines a mapping from one or more inputs to one or more outputs.</blockquote><cite>Prince, p. 17</cite></div>
+
+<p>ISLP Chapter 2 describes statistical learning in the language of statisticians: \(Y=f(X)+\epsilon\), estimating \(f\), the bias–variance trade-off. Prince's Chapter 2 says the same kind of thing in the language of deep learning engineers. The two vocabularies meet in the middle, and you need both, because interviews and papers mix them freely. Whenever a Prince word means the same as an ISLP word, this lesson tells you.</p>
+
+<h3 id="udl2-notation">Prince's notation, read aloud</h3>
+<p>Prince writes functions with <b>square brackets</b>: \(\mathrm{f}[x,\bphi]\) instead of \(f(x,\phi)\). The reason is practical. In his book, round brackets always mean "group this", as in \(2(a+b)\). Square brackets always mean "these are the inputs of a function". So when you see \(\mathrm{a}[\theta_{10}+\theta_{11}x]\) in the next chapter, you know straight away that \(\mathrm{a}\) is a function being applied, not a number being multiplied. (<a href="#s0-maths">How to read the maths</a> covers this convention and lists the common symbols.)</p>
+<p>He also uses <b>Greek letters for parameters</b> (the numbers the computer learns) and Latin letters for data (the numbers you are given). Remember the rule: if it is Greek, training will change it.</p>
+
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(\bx,\ x\)</span><span>"x": the input. Bold \(\bx\) when it is a vector of several numbers, plain \(x\) when it is one number.</span><span class="eg">\(\bx=[5,\,60000]^T\) (age, km)</span></div>
+<div class="row"><span class="s">\(\by,\ y\)</span><span>"y": the output, the thing we predict.</span><span class="eg">\(y=1.54\)</span></div>
+<div class="row"><span class="s">\(\mathrm{f}[\bullet]\)</span><span>"f of …": the model, an equation that turns an input into an output. The dot \(\bullet\) is a placeholder for "whatever goes in".</span><span class="eg">\(\mathrm{f}[x]=0.8+0.5x\)</span></div>
+<div class="row"><span class="s">\(\bphi\)</span><span>"phi" (say "fye" or "fee"; both are common): the list (vector) of all parameters.</span><span class="eg">\(\bphi=[0.82,\,0.52]\)</span></div>
+<div class="row"><span class="s">\(\phi_0,\ \phi_1\)</span><span>"phi-zero", "phi-one": the intercept and the slope of a line.</span><span class="eg">\(\phi_0=0.82\)</span></div>
+<div class="row"><span class="s">\(I\)</span><span>"capital I": the number of training examples.</span><span class="eg">\(I=12\)</span></div>
+<div class="row"><span class="s">\(\{x_i,y_i\}\)</span><span>"the pairs x-i, y-i": the training set. Curly brackets mean "the collection of".</span><span class="eg">\(\{x_7,y_7\}=\{1.08,\,1.30\}\)</span></div>
+<div class="row"><span class="s">\(L[\bphi]\)</span><span>"L of phi": the loss, one number saying how badly the parameters \(\bphi\) fit the training data.</span><span class="eg">\(L[0.4,\,0.2]=7.07\)</span></div>
+<div class="row"><span class="s">\(\hat\bphi\)</span><span>"phi-hat": the <i>best</i> parameters, the ones training finds. A hat always means "estimated from data".</span><span class="eg">\(\hat\bphi=[0.826,\,0.522]\)</span></div>
+<div class="row"><span class="s">\(\argmin_{\bphi}\)</span><span>"arg-min over phi": "the value of \(\bphi\) that makes what follows smallest" (not the smallest value itself).</span><span class="eg">\(\argmin_\phi\,(\phi-3)^2=3\)</span></div>
+</div>
+
+<h3 id="udl2-overview">2.1 The supervised learning recipe</h3>
+<p>Supervised learning means: you are given examples of inputs <i>together with the right answers</i>, and you want a machine that produces right answers for new inputs. It is called "supervised" because the right answers act like a teacher marking your work.</p>
+<p>Prince's running example is a second-hand Toyota Prius. The input is the car's age and mileage; the output is its price. Every input has the same fixed list of numbers in the same order (age first, then mileage), so this kind of data is called <dfn data-g="udl2-tabular">structured or tabular data</dfn>: it would fit in a spreadsheet, one row per car.</p>
+
+<h4>Step 1 · the model</h4>
+<p>A <dfn data-g="udl2-model">model</dfn> is an equation that takes an input and returns an output:</p>
+<div class="mathblock"><div class="eqlabel">Equation 2.1 · a model</div>\[\by=\mathrm{f}[\bx]\]<p class="say">Read: "y equals f of x". Feed the input into the equation; out comes the prediction.</p></div>
+<p>Running an input through the model to get a prediction is called <dfn data-g="udl2-inference">inference</dfn>. (ISLP just calls this "predicting". Engineers say "inference" for the part that runs on the phone or the server after training has finished.)</p>
+<p>The equation has a fixed <i>form</i>, for example "a straight line", but it also contains adjustable numbers, the <dfn data-g="udl2-parameters">parameters</dfn> \(\bphi\). Change the parameters and you change which line you get. So we should really write:</p>
+<div class="mathblock" data-sheet="Supervised model (Prince)"><div class="eqlabel">Equation 2.2 · a model with parameters</div>\[\by=\mathrm{f}[\bx,\bphi]\]<p class="say">Read: "y equals f of x and phi". The input \(\bx\) comes from the world; the parameters \(\bphi\) are chosen by training.</p></div>
+<div class="callout key"><p><b>A model is a family; the parameters pick one member.</b> "Straight line" is a family with infinitely many members. \(\phi_0=0.82,\ \phi_1=0.52\) picks out one particular line. Every neural network in this book is the same idea with a much richer family and many more parameters.</p></div>
+
+<h4>Step 2 · the loss</h4>
+<p>We learn the parameters from a <dfn data-g="udl2-training-set">training set</dfn> of \(I\) pairs \(\{\bx_i,\by_i\}\). To decide which parameters are "good", we need a single number that measures the mismatch between what the model predicts, \(\mathrm{f}[\bx_i,\bphi]\), and what really happened, \(\by_i\). That number is the <dfn data-g="udl2-loss">loss</dfn> \(L\). A small loss means a good fit. The data are fixed, so the loss depends only on the parameters, and we write it \(L[\bphi]\), a function of \(\bphi\). (Strictly it also depends on the data, \(L[\{\bx_i,\by_i\},\bphi]\), but writing that every time is clumsy, so Prince leaves it out.)</p>
+
+<h4>Step 3 · training</h4>
+<p><dfn data-g="udl2-training">Training</dfn> (also called learning or fitting) means finding the parameters that make the loss as small as possible:</p>
+<div class="mathblock" data-sheet="Training as minimisation"><div class="eqlabel">Equation 2.3 · training</div>\[\hat\bphi=\argmin_{\bphi}\Big[L[\bphi]\Big]\]<p class="say">Read: "phi-hat is the arg-min over phi of L of phi": the best parameters are whichever \(\bphi\) gives the smallest loss.</p></div>
+<div class="worked"><div class="wt">Worked example · <b>argmin versus min</b></div>
+<div class="given">Let \(g[\phi]=(\phi-3)^2+1\). Find \(\min_\phi g[\phi]\) and \(\argmin_\phi g[\phi]\).</div>
+<ol class="steps">
+<li><div>\((\phi-3)^2\) is never negative, and it is zero only when \(\phi=3\).</div></li>
+<li><div>So the smallest value of \(g\) is \(0+1=\mathbf{1}\). That is the <b>min</b>.</div></li>
+<li><div>The place where that smallest value happens is \(\phi=\mathbf{3}\). That is the <b>argmin</b>.<span class="why">Training wants the argmin: we keep the parameters, not the loss value.</span></div></li>
+</ol><div class="result">\(\min g=1,\quad \argmin g=3\)</div></div>
+
+<h4>Step 4 · testing</h4>
+<p>A model that fits the training data is not yet a model that works. We must check it on <dfn data-g="udl2-test-data">test data</dfn>: separate examples it never saw during training. Only if it does well there does it <i>generalise</i>, and only then is it ready to deploy. ISLP calls this comparing "training MSE" and "test MSE".</p>
+
+<div class="callout analogy"><p><b>Like calibrating an instrument.</b> A sensor's reading \(y\) depends on a physical quantity \(x\) through a law with two unknown constants (gain and offset). You apply known inputs (the training set), adjust the constants until the readings match (training, by minimising a mismatch), and then check the calibration with inputs you did not use while adjusting (testing). Supervised learning is calibration of a very flexible instrument.</p></div>
+
+<h3 id="udl2-line">2.2.1 The 1-D linear regression model</h3>
+<p>Now everything becomes concrete. One input \(x\), one output \(y\), and the simplest interesting family: straight lines.</p>
+<div class="mathblock" data-sheet="1-D linear regression (Prince)"><div class="eqlabel">Equation 2.4 · 1-D linear regression</div>\[y=\mathrm{f}[x,\bphi]=\phi_0+\phi_1x\]<p class="say">Read: "y equals phi-zero plus phi-one times x". \(\phi_0\) is the <b>y-intercept</b> (the height where the line crosses \(x=0\)); \(\phi_1\) is the <b>slope</b> (how much \(y\) rises when \(x\) goes up by 1).</p></div>
+<p><b>Tiny example.</b> With \(\phi_0=1.0,\ \phi_1=-0.4\) and input \(x=2\): \(y=1.0+(-0.4)(2)=1.0-0.8=0.2\). That is the dark grey line in figure 2.1, which indeed ends at height 0.2 on the right edge.</p>
+<figure class="book small" data-fig="udl-2.1"><figcaption>Three members of the "straight line" family. <b>Check one with your finger:</b> the orange line has \(\phi_0=0\) (it starts at the origin) and \(\phi_1=1\) (it rises one unit per unit of \(x\)), so at \(x=2\) it is at 2. The cyan line, \(\phi_0=1.2,\ \phi_1=-0.1\), is almost flat. Same equation, different parameters, different lines.</figcaption></figure>
+<p>This model has two parameters, \(\bphi=[\phi_0,\phi_1]\). Prince writes them as a list in square brackets; think of it as a vector with two entries.</p>
+
+<h3 id="udl2-loss">2.2.2 The least squares loss</h3>
+<p>Here is the training set of figure 2.2a: \(I=12\) points. These are the values in Prince's companion notebook 2.1; you will check in code that they reproduce the losses printed in figure 2.2 exactly.</p>
+<div class="tw"><table class="t"><thead><tr><th>\(i\)</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th></tr></thead><tbody>
+<tr><th>\(x_i\)</th><td class="n">0.03</td><td class="n">0.19</td><td class="n">0.34</td><td class="n">0.46</td><td class="n">0.78</td><td class="n">0.81</td><td class="n">1.08</td><td class="n">1.18</td><td class="n">1.39</td><td class="n">1.60</td><td class="n">1.65</td><td class="n">1.90</td></tr>
+<tr><th>\(y_i\)</th><td class="n">0.67</td><td class="n">0.85</td><td class="n">1.05</td><td class="n">1.00</td><td class="n">1.40</td><td class="n">1.50</td><td class="n">1.30</td><td class="n">1.54</td><td class="n">1.55</td><td class="n">1.68</td><td class="n">1.73</td><td class="n">1.60</td></tr></tbody></table></div>
+<figure class="book" data-fig="udl-2.2"><figcaption>(a) The twelve training points. (b–d) Three candidate lines, with the <b>errors</b> drawn as orange dashed lines: each dash is the vertical gap between the line's height \(\mathrm{f}[x_i,\bphi]\) and the data point \(y_i\). <b>Look at the lengths of the dashes:</b> long in (b) and (c), short in (d). The loss turns "how long are the dashes?" into one number: 7.07, 10.28 and 0.20.</figcaption></figure>
+<p>How do we turn twelve gaps into one number? Prince squares each gap and adds them up:</p>
+<div class="mathblock" data-sheet="Least squares loss (Prince)"><div class="eqlabel">Equation 2.5 · least squares loss</div>\[\begin{aligned}L[\bphi]&=\sum_{i=1}^{I}\big(\mathrm{f}[x_i,\bphi]-y_i\big)^2\\&=\sum_{i=1}^{I}\big(\phi_0+\phi_1x_i-y_i\big)^2\end{aligned}\]<p class="say">Read: "L of phi is the sum, over all I training points, of prediction minus truth, squared". For each point: predict, subtract the true value, square. Then add the twelve squares.</p></div>
+<p>Why square? Two reasons you can see now. First, squaring makes every term positive, so a point above the line and a point below it cannot cancel each other out. Second, squaring punishes big errors much more than small ones: an error of 2 costs 4, an error of 0.5 costs only 0.25. Prince promises a deeper reason in Chapter 5: least squares is what you get when you assume the noise is Gaussian. (This is exactly the residual sum of squares, RSS, that ISLP minimises in <a href="#isl3-1">simple linear regression</a>.)</p>
+<p>The individual gaps \(\mathrm{f}[x_i,\bphi]-y_i\) are called <dfn data-g="udl2-residual">residuals</dfn> or errors. The sum \(L\) is also called the <i>training error</i> or <i>cost</i>.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>the loss of the cyan line in figure 2.2b, by hand</b></div>
+<div class="given">\(\phi_0=0.4,\ \phi_1=0.2\). Compute \(L[\bphi]\) for the twelve points in the table.</div>
+<ol class="steps">
+<li><div>Predict for each point: \(\mathrm{f}[x_i,\bphi]=0.4+0.2x_i\). Point 1: \(0.4+0.2\times0.03=\mathbf{0.406}\). Point 12: \(0.4+0.2\times1.90=\mathbf{0.780}\).</div></li>
+<li><div>Subtract the truth to get each residual. Point 1: \(0.406-0.67=\mathbf{-0.264}\). Point 12: \(0.780-1.60=\mathbf{-0.820}\). All twelve residuals:
+\[-0.264,\ -0.412,\ -0.582,\ -0.508,\ -0.844,\ -0.938,\ -0.684,\ -0.904,\ -0.872,\ -0.960,\ -1.000,\ -0.820\]<span class="why">All negative: the cyan line lies below every point, exactly as the picture shows.</span></div></li>
+<li><div>Square each one: \(0.0697,\ 0.1697,\ 0.3387,\ 0.2581,\ 0.7123,\ 0.8798,\ 0.4679,\ 0.8172,\ 0.7604,\ 0.9216,\ 1.0000,\ 0.6724\).</div></li>
+<li><div>Add them: \(0.0697+0.1697+\dots+0.6724=\mathbf{7.068}\).</div></li>
+</ol><div class="result">\(L[0.4,\ 0.2]=7.07\), exactly the value printed in figure 2.2b.</div></div>
+
+<h4>All twelve predictions in one matrix multiplication</h4>
+<p>Writing "for each point, predict" twelve times is tedious. Linear algebra (<a href="#m-linalg">Vectors &amp; matrices</a>) packs it into one line. Put a column of ones next to the inputs; this is called the <b>design matrix</b> \(\bX\). Then every prediction is a row of \(\bX\) times the parameter vector:</p>
+<div class="worked"><div class="wt">Worked example · <b>predictions and residuals as matrices (first four points)</b></div>
+<div class="given">\(\bphi=\begin{pmatrix}0.4\\0.2\end{pmatrix}\), points 1–4: \(x=0.03,0.19,0.34,0.46\); \(y=0.67,0.85,1.05,1.00\).</div>
+<ol class="steps">
+<li><div>Multiply each row by the column vector: first entry times \(\phi_0\), plus second entry times \(\phi_1\).
+\[\bX\bphi=\begin{pmatrix}1&amp;0.03\\1&amp;0.19\\1&amp;0.34\\1&amp;0.46\end{pmatrix}\begin{pmatrix}0.4\\0.2\end{pmatrix}\]\[=\begin{pmatrix}1(0.4)+0.03(0.2)\\1(0.4)+0.19(0.2)\\1(0.4)+0.34(0.2)\\1(0.4)+0.46(0.2)\end{pmatrix}\]\[=\begin{pmatrix}0.406\\0.438\\0.468\\0.492\end{pmatrix}\]<span class="why">The column of ones is there so that \(\phi_0\) gets added to every prediction.</span></div></li>
+<li><div>Subtract the targets to get the residual vector \(\mathbf{r}=\bX\bphi-\by\):
+\[\mathbf{r}=\begin{pmatrix}0.406\\0.438\\0.468\\0.492\end{pmatrix}-\begin{pmatrix}0.67\\0.85\\1.05\\1.00\end{pmatrix}\]\[=\begin{pmatrix}-0.264\\-0.412\\-0.582\\-0.508\end{pmatrix}\]</div></li>
+<li><div>The sum of squares is the vector times itself, \(\mathbf{r}^T\mathbf{r}\) ("r-transpose r"):
+\[\begin{aligned}\mathbf{r}^T\mathbf{r}&=(-0.264)^2+(-0.412)^2\\&\quad+(-0.582)^2+(-0.508)^2\\&=0.0697+0.1697\\&\quad+0.3387+0.2581\\&=0.8362\end{aligned}\]</div></li>
+</ol><div class="result">For these four points the loss contribution is \(0.836\); with all twelve rows the same recipe gives \(L=7.068\).</div></div>
+<div class="mathblock" data-sheet="Least squares loss in matrix form"><div class="eqlabel">The same loss, written with matrices</div>\[L[\bphi]=(\bX\bphi-\by)^T(\bX\bphi-\by)\]<p class="say">Read: "residual vector, transposed, times residual vector": the sum of the squared residuals.</p></div>
+
+<p>Let's reproduce all three of Prince's losses in code. First, the data. This setup cell rebuilds everything the lesson needs, so you can start here any time:</p>
+<div class="py" id="c-udl2-01" data-mode="setup"><pre class="src">
+import numpy as np
+import matplotlib.pyplot as plt
+# Prince's training data (figure 2.2a, notebook 2.1)
+x = np.array([0.03, 0.19, 0.34, 0.46, 0.78, 0.81, 1.08, 1.18, 1.39, 1.60, 1.65, 1.90])
+y = np.array([0.67, 0.85, 1.05, 1.00, 1.40, 1.50, 1.30, 1.54, 1.55, 1.68, 1.73, 1.60])
+
+def f(x, phi0, phi1):
+    """The 1-D linear regression model, equation 2.4."""
+    return phi0 + phi1 * x
+
+def loss(phi0, phi1):
+    """Least squares loss, equation 2.5."""
+    return np.sum((f(x, phi0, phi1) - y) ** 2)
+
+print("I =", len(x), "training pairs")
+</pre><div class="pynote"><b>New Python:</b> <code>def f(x, phi0, phi1):</code> makes a function, and the text in triple quotes is a <i>docstring</i>: a note saying what the function does. Because <code>x</code> is a NumPy array, <code>phi0 + phi1 * x</code> computes all twelve predictions at once (you met this "maths on whole arrays" in <a href="#np2">NumPy II</a>).</div></div>
+
+<div class="predict" data-correct="3"><p>Figure 2.2 shows three lines: (b) \(\bphi=[0.4,0.2]\), (c) \(\bphi=[1.6,-0.8]\), (d) \(\bphi=[0.82,0.52]\). Which has the smallest loss, and roughly how big is it?</p><ol class="opts"><li>(b), because its slope is small</li><li>(c), because it passes through the middle of the points</li><li>(d), with a loss well below 1</li></ol><div class="why">(d) follows the trend of the points, so all twelve residuals are small (about ±0.1 to 0.2). Squares of numbers like 0.13 are about 0.017, and twelve of them add to about 0.2. Line (c) crosses the cloud but slopes the wrong way, so most points are far from it: crossing the middle is not the same as being close to every point.</div></div>
+<div class="py" id="c-udl2-02"><pre class="src">
+lines = {"(b) cyan": (0.4, 0.2), "(c) grey": (1.6, -0.8), "(d) green": (0.82, 0.52)}
+for name, (p0, p1) in lines.items():
+    r = f(x, p0, p1) - y          # the twelve residuals
+    print(f"{name:10s} L = {loss(p0, p1):6.3f}   biggest gap = {np.abs(r).max():.3f}")
+</pre><div class="pynote"><b>Read the output:</b> 7.068, 10.280 and 0.201, matching the figure. <b>New Python:</b> the dictionary <code>lines</code> maps names to pairs; <code>.items()</code> walks over (name, pair); <code>(p0, p1)</code> unpacks each pair into two variables. Inside an f-string, <code>:6.3f</code> means "3 decimals, 6 characters wide".</div></div>
+
+<h4>The loss is a function of the parameters: a surface</h4>
+<p>Here is the key change of viewpoint. Up to now the data varied and the line was fixed. Now freeze the data and let the <i>parameters</i> vary. Every choice of \((\phi_0,\phi_1)\) gives one number \(L\). Two inputs, one output: that is a surface over the \((\phi_0,\phi_1)\) plane, like a landscape. Good lines are low ground; bad lines are hills.</p>
+<figure class="book" data-fig="udl-2.3"><figcaption>(a) The loss \(L[\bphi]\) for every intercept \(\phi_0\in[0,2]\) and slope \(\phi_1\in[-1,1]\), drawn as a bowl-shaped surface. (b) The same surface seen from directly above as a heat map: bright means high loss, grey ellipses are <b>contours</b> (lines of equal loss, like height contours on a map). <b>Find the three dots:</b> they are the three lines of figure 2.2, and the dark green one sits at the bottom of the bowl. Careful: in (b) the slope axis runs from \(-1\) at the top to \(+1\) at the bottom.</figcaption></figure>
+
+<div class="py" id="c-udl2-03"><pre class="src">
+# Evaluate the loss on a grid of (phi0, phi1) values, like figure 2.3b
+p0s = np.linspace(0, 2, 101)
+p1s = np.linspace(-1, 1, 101)
+P0, P1 = np.meshgrid(p0s, p1s)               # two 101x101 grids
+Lgrid = np.array([[loss(a, b) for a in p0s] for b in p1s])
+i, j = np.unravel_index(Lgrid.argmin(), Lgrid.shape)
+print("lowest grid point: phi0 =", round(p0s[j], 2), " phi1 =", round(p1s[i], 2), " L =", round(Lgrid[i, j], 4))
+fig, ax = plt.subplots(figsize=(5, 4.2))
+ax.contourf(P0, P1, np.log(Lgrid), levels=30, cmap="copper")
+ax.contour(P0, P1, Lgrid, levels=[0.3, 0.6, 1, 2, 4, 8, 16, 32], colors="w", linewidths=0.6)
+ax.plot([0.4, 1.6, 0.82], [0.2, -0.8, 0.52], "o", color="c")
+ax.invert_yaxis(); ax.set_xlabel("intercept phi0"); ax.set_ylabel("slope phi1")
+plt.show()
+</pre><div class="pynote"><b>Read the output:</b> brute force over 10,201 grid points finds the lowest at \(\phi_0=0.82,\ \phi_1=0.52\), Prince's green line. <b>New Python:</b> <code>np.meshgrid</code> builds coordinate grids; the nested list comprehension computes one loss per grid point; <code>argmin()</code> finds the position of the smallest entry and <code>np.unravel_index</code> turns it into a (row, column) pair. We colour by \(\log L\) so the valley floor is visible, and <code>invert_yaxis()</code> makes the picture match the book.</div></div>
+
+<div class="widget" data-w="udl2-fit" data-title="Drag the line, watch the loss surface"><div class="wn">Start from Prince's cyan line (b). Increase \(\phi_1\) slowly: the red residuals shrink, the loss falls and the dot on the right moves towards the green ring, the bottom of the valley (the contour ellipses are lines of equal loss; the colour gets stronger as the loss grows). Now press "Step downhill" a few times and watch the dot walk down the slope, as in figure 2.4. You can also click or drag on the heat map to choose \(\bphi\). The valley is a <i>tilted</i> ellipse: raising the slope can be partly compensated by lowering the intercept. (Here the slope axis points upwards; Prince draws it upside down.)</div></div>
+
+<div class="callout ece"><p><b>You have seen this bowl before.</b> Least squares is the mathematics of the <b>Wiener filter</b> and the <b>LMS adaptive equaliser</b>. The mean-squared error is a quadratic function of the filter taps, so its surface is a bowl (an elliptic paraboloid); the optimum is where the gradient is zero (the Wiener–Hopf, or normal, equations); and LMS walks downhill on that bowl one step at a time. The tilt of the ellipses comes from correlation between the two "inputs" \(1\) and \(x\), just as correlated taps tilt the MSE surface. The step-size limit (too big and it diverges) is the same too; Prince returns to it in Chapter 6.</p></div>
+
+<h3 id="udl2-argmin">Training means finding the bottom of the bowl</h3>
+<p>Putting the loss into the training equation 2.3 gives the full statement of the problem:</p>
+<div class="mathblock"><div class="eqlabel">Equation 2.6 · least squares training</div>\[\begin{aligned}\hat\bphi&=\argmin_{\bphi}\Big[\sum_{i=1}^{I}\big(\mathrm{f}[x_i,\bphi]-y_i\big)^2\Big]\\&=\argmin_{\bphi}\Big[\sum_{i=1}^{I}\big(\phi_0+\phi_1x_i-y_i\big)^2\Big]\end{aligned}\]<p class="say">Read: "the best phi is the phi that makes the sum of squared errors smallest".</p></div>
+<p>With only two parameters we <i>can</i> do it by brute force, as the grid cell did. With a million parameters (a small modern network), a grid with just 10 values per parameter would need \(10^{1{,}000{,}000}\) loss evaluations. We need something smarter.</p>
+
+<h3 id="udl2-training">2.2.3 Training: walking downhill</h3>
+<p>The method that scales is the one a hiker uses in fog. You cannot see the whole valley, but you can feel which way the ground slopes under your feet. So you</p>
+<ol><li>start somewhere (random parameters),</li><li>measure the slope of the loss surface where you stand: the <dfn data-g="udl2-gradient">gradient</dfn>,</li><li>take a small step in the steepest downhill direction,</li><li>repeat until the ground is flat (the gradient is zero).</li></ol>
+<p>This is <dfn data-g="udl2-gd">gradient descent</dfn>. It needs the gradient: the two partial derivatives \(\partial L/\partial\phi_0\) ("partial L by partial phi-zero") and \(\partial L/\partial\phi_1\). If partial derivatives are new, they are taught in <a href="#m-calc">Derivatives &amp; gradients</a>; Problem 2.1 below derives these two step by step. The results are:</p>
+<div class="mathblock" data-sheet="Gradient of the line's least squares loss"><div class="eqlabel">Gradient of the least squares loss (Problem 2.1)</div>\[\frac{\partial L}{\partial\phi_0}=\sum_{i=1}^{I}2(\phi_0+\phi_1x_i-y_i)\]\[\frac{\partial L}{\partial\phi_1}=\sum_{i=1}^{I}2x_i(\phi_0+\phi_1x_i-y_i)\]<p class="say">Read: "the slope of L in the phi-zero direction is twice the sum of the residuals; in the phi-one direction it is twice the sum of each residual times its x".</p></div>
+<p><b>Tiny example.</b> At the cyan line \((0.4,\,0.2)\) the residuals were all negative and add up to \(-8.788\), so \(\partial L/\partial\phi_0=2\times(-8.788)=-17.58\). Negative means "increasing \(\phi_0\) lowers the loss": raise the line. That makes sense, because the line is below every point.</p>
+<p>The step rule is: new parameters = old parameters minus (step size × gradient). With step size \(\alpha\) (alpha, also called the <i>learning rate</i>):</p>
+<div class="mathblock" data-sheet="Gradient descent step"><div class="eqlabel">One gradient descent step</div>\[\begin{pmatrix}\phi_0\\\phi_1\end{pmatrix}\leftarrow\begin{pmatrix}\phi_0\\\phi_1\end{pmatrix}-\alpha\begin{pmatrix}\partial L/\partial\phi_0\\\partial L/\partial\phi_1\end{pmatrix}\]<p class="say">Read: "replace phi by phi minus alpha times the gradient". The arrow \(\leftarrow\) means "overwrite with".</p></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>one downhill step from the cyan line</b></div>
+<div class="given">Start at \(\bphi=(0.4,\ 0.2)\) with step size \(\alpha=0.02\). From the residuals above: \(\sum_i r_i=-8.788\) and \(\sum_i x_ir_i=-9.697\).</div>
+<ol class="steps">
+<li><div>Gradient: \(\partial L/\partial\phi_0=2\times(-8.788)=\mathbf{-17.576}\) and \(\partial L/\partial\phi_1=2\times(-9.697)=\mathbf{-19.395}\).</div></li>
+<li><div>Scale by \(\alpha\) and subtract, entry by entry:
+\[\begin{pmatrix}0.4\\0.2\end{pmatrix}-0.02\begin{pmatrix}-17.576\\-19.395\end{pmatrix}=\begin{pmatrix}0.4\\0.2\end{pmatrix}-\begin{pmatrix}-0.352\\-0.388\end{pmatrix}=\begin{pmatrix}0.752\\0.588\end{pmatrix}\]<span class="why">Subtracting a negative gradient moves both parameters up: the line rises and steepens.</span></div></li>
+<li><div>New loss: \(L[0.752,\ 0.588]\approx\mathbf{0.220}\), down from 7.068 in one step.</div></li>
+</ol><div class="result">After one step: \(\bphi=(0.752,\ 0.588)\) and \(L\approx0.22\).</div></div>
+
+<figure class="book" data-fig="udl-2.4"><figcaption>(a) Gradient descent on the loss heat map: start at position 0, step downhill (perpendicular to the contours) to 1, recompute the direction, step to 2, and so on to the bottom (4). (b) The line belonging to each position. <b>Follow the numbers in both panels together:</b> as the dot goes down the valley, the line swings up into the cloud of points.</figcaption></figure>
+
+<div class="py" id="c-udl2-04"><pre class="src">
+def grad(phi0, phi1):
+    r = phi0 + phi1 * x - y                      # residuals
+    return np.array([2 * r.sum(), 2 * (x * r).sum()])
+
+phi = np.array([0.12, 0.10])                     # start near position 0 of figure 2.4
+alpha = 0.02
+for step in range(8):
+    print(f"step {step}: phi = ({phi[0]:.3f}, {phi[1]:.3f})   L = {loss(*phi):.4f}")
+    phi = phi - alpha * grad(*phi)
+</pre><div class="pynote"><b>Read the output:</b> the first step is a giant leap (the gradient is large far from the minimum), then progress slows as the ground flattens. <b>New Python:</b> <code>loss(*phi)</code> "unpacks" the two-element array into two arguments; it means the same as <code>loss(phi[0], phi[1])</code>. <b>Try:</b> change <code>alpha</code> to <code>0.05</code> and run again. The loss explodes: each step overshoots the valley and lands higher up the far side.</div></div>
+
+<div class="callout pitfall"><p><b>Gradient descent is not needed for a straight line.</b> Prince's footnote: for linear regression you can solve for \(\hat\bphi\) exactly with algebra (Problem 2.2). We use the iterative method because it is the only method that works for neural networks, where there is no formula and far too many parameters to search a grid. Chapters 6 and 7 are about doing it well.</p></div>
+
+<h3 id="udl2-testing">2.2.4 Testing, underfitting and overfitting</h3>
+<p>After training, the question is: how well will the model do in the real world? We answer it by computing the loss on <b>separate test data</b>. How well the model generalises depends on two things:</p>
+<ul><li><b>The data.</b> Is the training set representative and complete? A Prius model trained only on cars from Chennai may fail on cars from Delhi.</li>
+<li><b>How expressive the model is.</b> A model that is too simple cannot capture the true relationship: <dfn data-g="udl2-underfitting">underfitting</dfn>. A model that is too flexible can describe quirks of this particular training sample that are not real: <dfn data-g="udl2-overfitting">overfitting</dfn>.</li></ul>
+<p>Our twelve points bend: they rise quickly, then level off. A straight line slightly underfits. A wildly flexible curve would overfit. We have no separate test set, so let's make one: hold out four of the twelve points (numbers 3, 6, 9 and 11), train on the other eight, and test on the four.</p>
+<div class="predict" data-correct="2"><p>We train a straight line and a degree-7 polynomial on the 8 training points and test on the other 4. Which will be true?</p><ol class="opts"><li>The polynomial wins on both training and test loss</li><li>The polynomial wins on training loss, but loses badly on test loss</li><li>The line wins on both</li></ol><div class="why">A degree-7 polynomial has 8 coefficients: just enough to pass through all 8 training points exactly, so its training loss is essentially 0. Between the training points it wiggles to hit every one, so it misses the test points by much more than the line does. That is overfitting in one picture.</div></div>
+<div class="py" id="c-udl2-05"><pre class="src">
+test = np.array([2, 5, 8, 10])                   # positions of the held-out points (Python counts from 0)
+train = np.setdiff1d(np.arange(12), test)        # the other 8
+for deg in [1, 7]:
+    coef = np.polyfit(x[train], y[train], deg)   # least squares fit of a polynomial
+    L_tr = np.sum((np.polyval(coef, x[train]) - y[train]) ** 2)
+    L_te = np.sum((np.polyval(coef, x[test]) - y[test]) ** 2)
+    print(f"degree {deg}: training loss {L_tr:9.5f}   test loss {L_te:9.4f}")
+xs = np.linspace(0, 2, 300)
+plt.plot(x[train], y[train], "o", label="train"); plt.plot(x[test], y[test], "s", label="test")
+for deg in [1, 7]:
+    plt.plot(xs, np.polyval(np.polyfit(x[train], y[train], deg), xs), label=f"degree {deg}")
+plt.ylim(0, 2.5); plt.legend(); plt.show()
+</pre><div class="pynote"><b>Read the output:</b> the line has a small training loss and a similar small test loss: it generalises. The degree-7 polynomial has a training loss of zero (it threads every training point) and a test loss about eight times larger than the line's. <b>New Python:</b> <code>np.setdiff1d(a, b)</code> keeps the entries of <code>a</code> that are not in <code>b</code>; <code>np.polyfit(x, y, deg)</code> fits a polynomial by least squares; <code>np.polyval</code> evaluates it at new inputs.</div></div>
+
+<div class="widget" data-w="udl2-capacity" data-title="Model capacity: from underfitting to overfitting"><div class="wn">Degree 0 is a flat line: it underfits, so both losses are high. Move to degree 1 or 2: both losses are low. Now climb to 6 and 7: the training loss (circles) heads to zero while the test loss (squares, red gaps) grows. More parameters is not automatically better; what matters is the loss on data the model has not seen.</div></div>
+
+<div class="callout exam"><p><b>Interview classic:</b> "Your training loss is tiny but your validation loss is large. What is happening and what do you do?" Answer: overfitting. Get more data, use a simpler model or regularisation (Prince Chapter 9), stop training earlier, or use data augmentation. The opposite pattern (both losses high) is underfitting: use a more expressive model, or train longer.</p></div>
+
+<h3 id="udl2-summary">2.3 Summary, and the road ahead</h3>
+<div class="tw"><table class="t"><thead><tr><th>Idea</th><th>Prince's words</th><th>For the line</th><th>ISLP's words</th></tr></thead><tbody>
+<tr><td>Model</td><td>\(\by=\mathrm{f}[\bx,\bphi]\), a family of functions</td><td>\(y=\phi_0+\phi_1x\)</td><td>\(Y=f(X)+\epsilon\), estimate \(\hat f\)</td></tr>
+<tr><td>Parameters</td><td>\(\bphi\)</td><td>\(\phi_0,\ \phi_1\)</td><td>\(\beta_0,\ \beta_1\)</td></tr>
+<tr><td>Loss</td><td>\(L[\bphi]\), least squares</td><td>\(\sum_i(\phi_0+\phi_1x_i-y_i)^2\)</td><td>RSS</td></tr>
+<tr><td>Training</td><td>\(\hat\bphi=\argmin L[\bphi]\)</td><td>walk downhill, or closed form</td><td>fitting; least squares estimates</td></tr>
+<tr><td>Testing</td><td>loss on separate test data</td><td>held-out points</td><td>test MSE</td></tr></tbody></table></div>
+<p>The rest of Prince's first part fills in each row. Chapter 3 replaces the line with a <a href="#udl3">shallow neural network</a>, a model "only slightly more complex" but able to describe almost any relationship. Chapter 4 makes it <a href="#udl4">deep</a>. Chapter 5 explains where the least squares loss comes from. Chapters 6 and 7 are about training, Chapter 8 measures performance, and Chapter 9 fights overfitting.</p>
+
+<h4>Notes from the end of the chapter</h4>
+<p><b>Loss versus cost.</b> In most of the book, and in practice, "loss function" and "cost function" mean the same thing. Strictly, the <i>loss</i> is the term for one data point, \((\mathrm{f}[x_i,\bphi]-y_i)^2\), and the <i>cost</i> is the whole quantity being minimised, the sum, which may also contain extra terms not tied to any data point (regularisation, Chapter 9). An <dfn data-g="udl2-objective">objective function</dfn> is anything we maximise or minimise.</p>
+<p><b>Discriminative versus generative.</b> Our model predicts the output from the measurement, \(y=\mathrm{f}[x,\bphi]\): a <dfn data-g="udl2-discriminative">discriminative model</dfn>. The alternative is a <dfn data-g="udl2-generative">generative model</dfn> \(x=\mathrm{g}[y,\bphi]\), which describes how the measurement is produced from the quantity of interest. To predict, you must then invert it, \(y=\mathrm{g}^{-1}[x,\bphi]\), which can be hard. The advantage is that you can build in knowledge of how the data were made. Prince's example: to find the 3-D position and orientation \(y\) of a car in an image \(x\), you could build car shape, 3-D geometry and light transport into \(\mathrm{g}\). In practice, discriminative models trained on lots of data usually win. Problem 2.3 asks whether the two approaches give the same line.</p>
+<div class="callout ece"><p><b>Generative means a forward model of the channel.</b> In communications you usually <i>know</i> the forward model: received signal = channel × transmitted symbol + noise, \(x=\mathrm{g}[y]\). Detection then inverts it (maximum-likelihood detection, zero-forcing equalisation). That is the generative route. A neural receiver trained end to end to map received samples straight to bits is the discriminative route.</p></div>
+
+<h3 id="udl2-notebook">Notebook 2.1 · supervised learning, as exercises</h3>
+<p>Prince's notebook 2.1 asks you to code the model and the loss, draw the loss surface and find good parameters. Here are the same tasks as exercises that check themselves. The checks bring their own copy of the data, so each exercise works on its own.</p>
+
+<div class="ex" id="x-udl2-01" data-title="the least squares loss"><div class="task"><p>Write <code>ls_loss(phi0, phi1, x, y)</code> that returns the least squares loss \(\sum_i(\phi_0+\phi_1x_i-y_i)^2\) for NumPy arrays <code>x</code> and <code>y</code>. Example: with <code>x = np.array([1., 2.])</code> and <code>y = np.array([1., 3.])</code>, <code>ls_loss(0, 1, x, y)</code> gives \(0^2+(-1)^2=1\).</p></div>
+<pre class="src">
+def ls_loss(phi0, phi1, x, y):
+    ...   # predictions, residuals, squares, sum
+</pre>
+<pre class="check">
+import numpy as np
+_x = np.array([1., 2.]); _y = np.array([1., 3.])
+assert ls_loss(0, 1, _x, _y) is not None, "your function returns None: did you forget return?"
+assert abs(ls_loss(0, 1, _x, _y) - 1.0) &lt; 1e-12, f"expected 1.0, got {ls_loss(0, 1, _x, _y)}"
+_xb = np.array([0.03,0.19,0.34,0.46,0.78,0.81,1.08,1.18,1.39,1.60,1.65,1.90])
+_yb = np.array([0.67,0.85,1.05,1.0,1.40,1.5,1.3,1.54,1.55,1.68,1.73,1.6])
+for (_a, _b, _L) in [(0.4, 0.2, 7.067864), (1.6, -0.8, 10.279524), (0.82, 0.52, 0.20066784)]:
+    assert abs(ls_loss(_a, _b, _xb, _yb) - _L) &lt; 1e-6, f"phi=({_a},{_b}): expected {_L}, got {ls_loss(_a, _b, _xb, _yb)}"
+</pre>
+<div class="hint"><p>First compute all the residuals as one array: <code>r = phi0 + phi1 * x - y</code>.</p></div>
+<div class="hint"><p>Then <code>return np.sum(r ** 2)</code>.</p></div>
+<pre class="solution">
+def ls_loss(phi0, phi1, x, y):
+    r = phi0 + phi1 * x - y
+    return np.sum(r ** 2)
+</pre><div class="explain"><p>Two lines carry the whole of equation 2.5: the array expression computes all \(I\) residuals at once, and <code>np.sum(r ** 2)</code> squares and adds them. The checks include Prince's three printed losses.</p></div></div>
+
+<div class="ex" id="x-udl2-02" data-title="the gradient, checked numerically"><div class="task"><p>Write <code>ls_grad(phi0, phi1, x, y)</code> returning a NumPy array <code>[dL/dphi0, dL/dphi1]</code> using the formulas of Problem 2.1. The check compares your answer with a <i>finite difference</i>, \(\partial L/\partial\phi_0\approx(L[\phi_0+h,\phi_1]-L[\phi_0-h,\phi_1])/2h\) for a tiny \(h\).</p></div>
+<pre class="src">
+def ls_grad(phi0, phi1, x, y):
+    r = phi0 + phi1 * x - y
+    ...   # return np.array([..., ...])
+</pre>
+<pre class="check">
+import numpy as np
+_rng = np.random.default_rng(0)
+_x = _rng.uniform(0, 2, 9); _y = _rng.uniform(0, 2, 9)
+_L = lambda a, b: np.sum((a + b * _x - _y) ** 2)
+for (_a, _b) in [(0.4, 0.2), (1.6, -0.8), (-1.0, 3.0)]:
+    _g = ls_grad(_a, _b, _x, _y)
+    assert _g is not None, "your function returns None: did you forget return?"
+    _g = np.asarray(_g, dtype=float)
+    assert _g.shape == (2,), f"return two numbers in an array, got shape {_g.shape}"
+    _h = 1e-6
+    _num = np.array([(_L(_a + _h, _b) - _L(_a - _h, _b)) / (2 * _h), (_L(_a, _b + _h) - _L(_a, _b - _h)) / (2 * _h)])
+    assert np.allclose(_g, _num, atol=1e-4), f"at phi=({_a},{_b}) expected about {_num}, got {_g}"
+</pre>
+<div class="hint"><p>\(\partial L/\partial\phi_0=\sum_i2r_i\) and \(\partial L/\partial\phi_1=\sum_i2x_ir_i\), where \(r_i\) is the residual.</p></div>
+<pre class="solution">
+def ls_grad(phi0, phi1, x, y):
+    r = phi0 + phi1 * x - y
+    return np.array([2 * np.sum(r), 2 * np.sum(x * r)])
+</pre><div class="explain"><p>The finite-difference check is how professionals test gradient code ("gradient checking"). You will use it again in Chapter 7 and in the projects.</p></div></div>
+
+<div class="ex" id="x-udl2-03" data-title="the closed-form best line"><div class="task"><p>Write <code>fit_line(x, y)</code> returning <code>(phi0_hat, phi1_hat)</code> using the closed-form answer of Problem 2.2: \(\hat\phi_1=\dfrac{I\sum x_iy_i-\sum x_i\sum y_i}{I\sum x_i^2-(\sum x_i)^2}\) and \(\hat\phi_0=\bar y-\hat\phi_1\bar x\). For Prince's data it should give about \((0.826,\ 0.522)\).</p></div>
+<pre class="src">
+def fit_line(x, y):
+    I = len(x)
+    ...
+</pre>
+<pre class="check">
+import numpy as np
+_rng = np.random.default_rng(3)
+for _t in range(3):
+    _x = _rng.normal(size=15); _y = 2 - 0.7 * _x + _rng.normal(size=15)
+    _r = fit_line(_x, _y)
+    assert _r is not None, "return a pair (phi0_hat, phi1_hat)"
+    _ref = np.polyfit(_x, _y, 1)          # [slope, intercept]
+    assert np.allclose([_r[0], _r[1]], [_ref[1], _ref[0]], atol=1e-9), f"expected {(_ref[1], _ref[0])}, got {_r}"
+_xb = np.array([0.03,0.19,0.34,0.46,0.78,0.81,1.08,1.18,1.39,1.60,1.65,1.90])
+_yb = np.array([0.67,0.85,1.05,1.0,1.40,1.5,1.3,1.54,1.55,1.68,1.73,1.6])
+assert np.allclose(fit_line(_xb, _yb), (0.82595, 0.52223), atol=1e-4), "Prince's data should give (0.826, 0.522)"
+</pre>
+<div class="hint"><p>Compute the four sums with <code>np.sum</code>: of <code>x</code>, <code>y</code>, <code>x * y</code> and <code>x ** 2</code>.</p></div>
+<div class="hint"><p><code>phi1 = (I*Sxy - Sx*Sy) / (I*Sxx - Sx**2)</code>, then <code>phi0 = y.mean() - phi1 * x.mean()</code>.</p></div>
+<pre class="solution">
+def fit_line(x, y):
+    I = len(x)
+    Sx, Sy, Sxy, Sxx = np.sum(x), np.sum(y), np.sum(x * y), np.sum(x ** 2)
+    phi1 = (I * Sxy - Sx * Sy) / (I * Sxx - Sx ** 2)
+    phi0 = np.mean(y) - phi1 * np.mean(x)
+    return phi0, phi1
+</pre><div class="explain"><p>The check compares against <code>np.polyfit(x, y, 1)</code>, which lists coefficients highest power first: <code>[slope, intercept]</code>.</p></div></div>
+
+<div class="ex" id="x-udl2-04" data-title="gradient descent from scratch"><div class="task"><p>Write <code>descend(x, y, phi_start, alpha, n_steps)</code> that runs <code>n_steps</code> of gradient descent from <code>phi_start</code> (a pair) and returns the final parameters as a NumPy array of length 2. With Prince's data, <code>phi_start=(0.12, 0.10)</code>, <code>alpha=0.02</code> and 400 steps, it should land on the closed-form answer.</p></div>
+<pre class="src">
+def descend(x, y, phi_start, alpha, n_steps):
+    phi = np.array(phi_start, dtype=float)
+    for _ in range(n_steps):
+        ...   # residuals, gradient, update phi
+    return phi
+</pre>
+<pre class="check">
+import numpy as np
+_xb = np.array([0.03,0.19,0.34,0.46,0.78,0.81,1.08,1.18,1.39,1.60,1.65,1.90])
+_yb = np.array([0.67,0.85,1.05,1.0,1.40,1.5,1.3,1.54,1.55,1.68,1.73,1.6])
+_p = descend(_xb, _yb, (0.12, 0.10), 0.02, 400)
+assert np.allclose(_p, [0.82595, 0.52223], atol=1e-3), f"expected about [0.826, 0.522], got {_p}"
+_one = descend(_xb, _yb, (0.4, 0.2), 0.02, 1)
+assert np.allclose(_one, [0.75152, 0.58790], atol=1e-4), f"one step from (0.4, 0.2) should give about [0.7515, 0.5879], got {_one}"
+assert np.allclose(descend(_xb, _yb, (0.4, 0.2), 0.02, 0), [0.4, 0.2]), "zero steps should return the start"
+</pre>
+<div class="hint"><p>Inside the loop: <code>r = phi[0] + phi[1] * x - y</code>, then build the gradient array as in the previous exercise.</p></div>
+<div class="hint"><p>Update with <code>phi = phi - alpha * g</code>.</p></div>
+<pre class="solution">
+def descend(x, y, phi_start, alpha, n_steps):
+    phi = np.array(phi_start, dtype=float)
+    for _ in range(n_steps):
+        r = phi[0] + phi[1] * x - y
+        g = np.array([2 * np.sum(r), 2 * np.sum(x * r)])
+        phi = phi - alpha * g
+    return phi
+</pre><div class="explain"><p>This is the whole training loop of deep learning in miniature: predict, compute the gradient of the loss, step. In Month 3 PyTorch will compute <code>g</code> for you automatically, but the loop keeps exactly this shape.</p></div></div>
+
+<h3 id="udl2-problems">Problems 2.1–2.3, solved</h3>
+
+<div class="prob" id="p-udl2-01" data-src="Prince Problem 2.1" data-title="The gradient of the least squares loss">
+<div class="stmt"><p>To walk "downhill" on the loss function (equation 2.5), we measure its gradient with respect to the parameters \(\phi_0\) and \(\phi_1\). Calculate expressions for the slopes \(\partial L/\partial\phi_0\) and \(\partial L/\partial\phi_1\).</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>The derivative of a sum is the sum of the derivatives. For one term \((\phi_0+\phi_1x_i-y_i)^2\), use the chain rule: the derivative of \(u^2\) is \(2u\), times the derivative of \(u\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div>\[\frac{\partial L}{\partial\phi_0}=2\sum_{i=1}^{I}(\phi_0+\phi_1x_i-y_i)\]\[\frac{\partial L}{\partial\phi_1}=2\sum_{i=1}^{I}x_i(\phi_0+\phi_1x_i-y_i)\]</div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div>Name the inside of one term: \(u_i=\phi_0+\phi_1x_i-y_i\) (the \(i\)-th residual). Then \(L=\sum_iu_i^2\).</div></li>
+<li><div>Differentiate the sum term by term: \(\dfrac{\partial L}{\partial\phi_0}=\sum_i\dfrac{\partial (u_i^2)}{\partial\phi_0}\).</div></li>
+<li><div>Chain rule: \(\dfrac{\partial(u_i^2)}{\partial\phi_0}=2u_i\cdot\dfrac{\partial u_i}{\partial\phi_0}\). In \(u_i=\phi_0+\phi_1x_i-y_i\) only the first term contains \(\phi_0\), with coefficient 1, so \(\partial u_i/\partial\phi_0=1\).<span class="why">A partial derivative treats every other symbol (\(\phi_1\), \(x_i\), \(y_i\)) as a constant.</span></div></li>
+<li><div>Hence \(\dfrac{\partial L}{\partial\phi_0}=\sum_i2u_i=2\sum_i(\phi_0+\phi_1x_i-y_i)\).</div></li>
+<li><div>Same for \(\phi_1\): in \(u_i\) the only term with \(\phi_1\) is \(\phi_1x_i\), so \(\partial u_i/\partial\phi_1=x_i\) and \(\dfrac{\partial L}{\partial\phi_1}=\sum_i2u_ix_i=2\sum_ix_i(\phi_0+\phi_1x_i-y_i)\).</div></li>
+<li><div><b>In matrix form</b> (with the design matrix \(\bX\) from the lesson): \(\dfrac{\partial L}{\partial\bphi}=2\bX^T(\bX\bphi-\by)\). The first row of \(\bX^T\) is all ones (giving \(\sum r_i\)); the second row is the \(x_i\) (giving \(\sum x_ir_i\)).</div></li>
+<li><div><b>Numerical check</b> at the cyan line \((0.4,\,0.2)\): \(-17.576\) and \(-19.395\), as in the worked example. The code compares the formula with finite differences.</div></li></ol>
+<div class="py" id="c-udl2-06"><pre class="src">
+def grad_formula(p0, p1):
+    r = p0 + p1 * x - y
+    return 2 * r.sum(), 2 * (x * r).sum()
+h = 1e-6
+num0 = (loss(0.4 + h, 0.2) - loss(0.4 - h, 0.2)) / (2 * h)
+num1 = (loss(0.4, 0.2 + h) - loss(0.4, 0.2 - h)) / (2 * h)
+print("formula          :", np.round(grad_formula(0.4, 0.2), 4))
+print("finite difference:", np.round([num0, num1], 4))
+</pre></div>
+<p><b>Interpretation:</b> \(\partial L/\partial\phi_0\) is twice the total residual. If the line is on average below the data (residuals negative), the gradient is negative and descent raises the intercept. \(\partial L/\partial\phi_1\) weights each residual by its \(x\): residuals far to the right matter most for the slope, which is why tilting the line is what fixes errors at large \(x\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Forgetting the factor \(x_i\) from the chain rule in \(\partial L/\partial\phi_1\). Dropping the factor 2 (harmless for locating the minimum, but wrong as a gradient). Writing the residual as \((y_i-\phi_0-\phi_1x_i)\) and then losing a minus sign: with that order \(\partial u_i/\partial\phi_0=-1\), and the two minus signs must cancel to give the same answer.</p></div></details></div>
+
+<div class="prob" id="p-udl2-02" data-src="Prince Problem 2.2" data-title="The closed-form minimum">
+<div class="stmt"><p>Show that we can find the minimum of the loss function in closed form by setting the expression for the derivatives from Problem 2.1 to zero and solving for \(\phi_0\) and \(\phi_1\). Note that this works for linear regression but not for more complex models; this is why we use iterative model fitting methods like gradient descent (figure 2.4).</p></div>
+<p>Then compute \(\hat\phi_1\) for Prince's twelve points and type it below.</p><div class="ansin" data-answer="0.5222" data-tol="0.001" data-unit=""></div>
+<details class="hintd"><summary>Hint</summary><div><p>Setting both derivatives to zero gives two linear equations in two unknowns (the "normal equations"). Solve the first for \(\phi_0\) and substitute into the second.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div>\[\hat\phi_1=\frac{I\sum_ix_iy_i-\sum_ix_i\sum_iy_i}{I\sum_ix_i^2-\big(\sum_ix_i\big)^2}\]\[\hat\phi_1=\frac{\sum_i(x_i-\bar x)(y_i-\bar y)}{\sum_i(x_i-\bar x)^2}\ \text{(same thing)}\]\[\hat\phi_0=\bar y-\hat\phi_1\bar x\]<p>For Prince's data: \(\hat\phi_0=0.8260,\ \hat\phi_1=0.5222\), with loss \(L=0.1999\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div>Set \(\partial L/\partial\phi_0=0\) and divide by 2: \(\sum_i(\phi_0+\phi_1x_i-y_i)=0\). Split the sum: \(I\phi_0+\phi_1\sum_ix_i-\sum_iy_i=0\).<span class="why">\(\phi_0\) does not depend on \(i\), so adding it \(I\) times gives \(I\phi_0\).</span></div></li>
+<li><div>Set \(\partial L/\partial\phi_1=0\) and divide by 2: \(\phi_0\sum_ix_i+\phi_1\sum_ix_i^2-\sum_ix_iy_i=0\).</div></li>
+<li><div>Write \(S_x=\sum x_i,\ S_y=\sum y_i,\ S_{xx}=\sum x_i^2,\ S_{xy}=\sum x_iy_i\). The two <b>normal equations</b> as one matrix equation:
+\[\begin{pmatrix}I&amp;S_x\\S_x&amp;S_{xx}\end{pmatrix}\begin{pmatrix}\phi_0\\\phi_1\end{pmatrix}=\begin{pmatrix}S_y\\S_{xy}\end{pmatrix}\]<span class="why">This matrix is \(\bX^T\bX\) and the right-hand side is \(\bX^T\by\): setting \(2\bX^T(\bX\bphi-\by)=\mathbf{0}\) gives \(\bX^T\bX\bphi=\bX^T\by\).</span></div></li>
+<li><div>From the first equation: \(\phi_0=(S_y-\phi_1S_x)/I=\bar y-\phi_1\bar x\).</div></li>
+<li><div>Substitute into the second: \((\bar y-\phi_1\bar x)S_x+\phi_1S_{xx}=S_{xy}\). Collect the \(\phi_1\) terms: \(\phi_1(S_{xx}-\bar xS_x)=S_{xy}-\bar yS_x\). Multiply top and bottom by \(I\) (using \(I\bar x=S_x\) and \(I\bar y=S_y\)):
+\[\hat\phi_1=\frac{IS_{xy}-S_xS_y}{IS_{xx}-S_x^2}.\]</div></li>
+<li><div><b>The numbers.</b> \(I=12,\ S_x=11.41,\ S_y=15.87,\ S_{xx}=15.0121,\ S_{xy}=17.2638\). The normal equations are
+\[\begin{pmatrix}12&amp;11.41\\11.41&amp;15.0121\end{pmatrix}\begin{pmatrix}\phi_0\\\phi_1\end{pmatrix}\]\[=\begin{pmatrix}15.87\\17.2638\end{pmatrix}\]</div></li>
+<li><div>Solve with the 2×2 inverse, \(\begin{pmatrix}a&amp;b\\c&amp;d\end{pmatrix}^{-1}=\dfrac{1}{ad-bc}\begin{pmatrix}d&amp;-b\\-c&amp;a\end{pmatrix}\). Determinant: \(12\times15.0121-11.41^2=180.1452-130.1881=\mathbf{49.9571}\).
+\[\hat\bphi=\frac{1}{49.9571}\begin{pmatrix}15.0121&amp;-11.41\\-11.41&amp;12\end{pmatrix}\]\[\qquad\times\begin{pmatrix}15.87\\17.2638\end{pmatrix}\]
+Multiply row by column (top row: \(15.0121\times15.87-11.41\times17.2638\); bottom row: \(-11.41\times15.87+12\times17.2638\)):
+\[=\frac{1}{49.9571}\begin{pmatrix}238.2420-196.9800\\-181.0767+207.1656\end{pmatrix}\]\[=\frac{1}{49.9571}\begin{pmatrix}41.2620\\26.0889\end{pmatrix}\]</div></li>
+<li><div>Divide: \(\hat\phi_0=41.2620/49.9571=\mathbf{0.8260}\) and \(\hat\phi_1=26.0889/49.9571=\mathbf{0.5222}\). Check with the other formula: \(\bar x=0.95083,\ \bar y=1.3225\), so \(\bar y-\hat\phi_1\bar x=1.3225-0.4966=0.8260\). Same.</div></li>
+<li><div><b>Is it a minimum?</b> The matrix of second derivatives is \(2\begin{pmatrix}I&amp;S_x\\S_x&amp;S_{xx}\end{pmatrix}\). Its top-left entry \(2I\) is positive and its determinant \(4(IS_{xx}-S_x^2)=4I\sum(x_i-\bar x)^2\) is positive whenever the \(x_i\) are not all equal, so the bowl curves upwards in every direction: a single minimum.</div></li>
+<li><div><b>Why it fails for networks.</b> Here each derivative is <i>linear</i> in \(\phi_0,\phi_1\), so "set the gradient to zero" is a linear system with a formula. In a neural network the parameters sit inside ReLUs and multiply each other, so "gradient = 0" is a set of nonlinear equations with many solutions and no formula. We must walk downhill instead.</div></li></ol>
+<div class="py" id="c-udl2-07"><pre class="src">
+I = len(x)
+Sx, Sy, Sxx, Sxy = x.sum(), y.sum(), (x**2).sum(), (x*y).sum()
+phi1_hat = (I*Sxy - Sx*Sy) / (I*Sxx - Sx**2)
+phi0_hat = y.mean() - phi1_hat * x.mean()
+print("closed form :", round(phi0_hat, 4), round(phi1_hat, 4), " loss", round(loss(phi0_hat, phi1_hat), 4))
+A = np.array([[I, Sx], [Sx, Sxx]]); b = np.array([Sy, Sxy])
+print("solve normal equations:", np.round(np.linalg.solve(A, b), 4))
+print("np.polyfit  :", np.round(np.polyfit(x, y, 1)[::-1], 4))
+</pre></div>
+<p>All three methods agree: \((0.8260,\ 0.5222)\) with loss \(0.1999\), which Prince rounds to the line \((0.82,\ 0.52)\) with \(L=0.20\) in figure 2.2d. (<code>[::-1]</code> reverses the array, because <code>polyfit</code> lists the slope first.)</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Dividing by \(S_{xx}-S_x^2\) (forgetting the factor \(I\)). Treating \(\sum x_i^2\) and \((\sum x_i)^2\) as the same thing: here they are 15.01 and 130.19. Forgetting to check that the stationary point is a minimum.</p></div></details></div>
+
+<div class="prob" id="p-udl2-03" data-src="Prince Problem 2.3*" data-title="Linear regression as a generative model">
+<div class="stmt"><p>Consider reformulating linear regression as a generative model, so we have \(x=\mathrm{g}[y,\bphi]=\phi_0+\phi_1y\). What is the new loss function? Find an expression for the inverse function \(y=\mathrm{g}^{-1}[x,\bphi]\) that we would use to perform inference. Will this model make the same predictions as the discriminative version for a given training dataset \(\{x_i,y_i\}\)? One way to establish this is to write code that fits a line to three data points using both methods and see if the result is the same.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>The generative loss measures errors in \(x\) (horizontal gaps); the discriminative loss measures errors in \(y\) (vertical gaps). Must they give the same line?</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Loss: \(L[\bphi]=\sum_i(\phi_0+\phi_1y_i-x_i)^2\). Inverse: \(y=(x-\phi_0)/\phi_1\). In general the predictions are <b>different</b>; the two agree only when the points lie exactly on a line (correlation \(\pm1\)). For the points \((0,0),(1,2),(2,1)\) the discriminative line is \(y=0.5+0.5x\), but the inverted generative model gives \(y=-1+2x\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Loss.</b> The model now predicts \(x\) from \(y\), so the mismatch is measured in \(x\): \(L[\bphi]=\sum_{i=1}^{I}(\mathrm{g}[y_i,\bphi]-x_i)^2=\sum_i(\phi_0+\phi_1y_i-x_i)^2\). Geometrically, it adds up squared <i>horizontal</i> distances from the points to the line.</div></li>
+<li><div><b>Inverse.</b> Solve \(x=\phi_0+\phi_1y\) for \(y\): subtract \(\phi_0\), then divide by \(\phi_1\) (we need \(\phi_1\ne0\)): \(y=\mathrm{g}^{-1}[x,\bphi]=\dfrac{x-\phi_0}{\phi_1}\). As an ordinary line this has intercept \(-\phi_0/\phi_1\) and slope \(1/\phi_1\).</div></li>
+<li><div><b>Compare the slopes.</b> Problem 2.2 with the roles of \(x\) and \(y\) swapped gives \(\hat\phi^{\,g}_1=\dfrac{\sum(x_i-\bar x)(y_i-\bar y)}{\sum(y_i-\bar y)^2}\), so the implied slope of \(y\) on \(x\) is \(1/\hat\phi^{\,g}_1=\dfrac{\sum(y_i-\bar y)^2}{\sum(x_i-\bar x)(y_i-\bar y)}\). The discriminative slope is \(\dfrac{\sum(x_i-\bar x)(y_i-\bar y)}{\sum(x_i-\bar x)^2}\). Divide the first by the second:
+\[\frac{\text{discrim. slope}}{\text{generative slope}}\]\[=\frac{\big(\sum(x_i-\bar x)(y_i-\bar y)\big)^2}{\sum(x_i-\bar x)^2\,\sum(y_i-\bar y)^2}=r^2,\]
+the squared correlation coefficient. So the two agree only if \(r^2=1\): all points exactly on a line.</div></li>
+<li><div><b>Three points</b> \((0,0),(1,2),(2,1)\). Means: \(\bar x=1,\ \bar y=1\). Deviations: \(x\): \(-1,0,1\); \(y\): \(-1,1,0\). Sums: \(\sum dx\,dy=(-1)(-1)+0(1)+1(0)=1\), \(\sum dx^2=2\), \(\sum dy^2=2\).</div></li>
+<li><div>Discriminative: slope \(1/2=0.5\), intercept \(1-0.5\times1=0.5\), so \(y=0.5+0.5x\).</div></li>
+<li><div>Generative: \(\hat\phi_1=1/2\), \(\hat\phi_0=\bar x-0.5\bar y=0.5\), so \(x=0.5+0.5y\). Inverted: \(y=(x-0.5)/0.5=-1+2x\).</div></li>
+<li><div>At \(x=2\) the first predicts \(1.5\) and the second \(3\). Different. Both lines pass through the centre \((\bar x,\bar y)=(1,1)\); the discriminative one is flatter by the factor \(r^2=1/4\). This flattening is "regression towards the mean".</div></li></ol>
+<div class="py" id="c-udl2-08"><pre class="src">
+xs3 = np.array([0., 1., 2.]); ys3 = np.array([0., 2., 1.])
+d1, d0 = np.polyfit(xs3, ys3, 1)          # discriminative: y = d0 + d1 x
+g1, g0 = np.polyfit(ys3, xs3, 1)          # generative:     x = g0 + g1 y
+print(f"discriminative     : y = {d0:.3f} + {d1:.3f} x")
+print(f"generative inverted: y = {-g0/g1:.3f} + {1/g1:.3f} x")
+r = np.corrcoef(xs3, ys3)[0, 1]
+print("ratio of slopes", round(d1 / (1/g1), 4), "  r^2 =", round(r**2, 4))
+</pre></div>
+<p>The code confirms both lines, and that the ratio of the slopes equals \(r^2=0.25\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Assuming "the best line is the best line" whichever way you measure the error. The loss decides what "best" means, and vertical and horizontal gaps are different losses. Also: forgetting that \(\mathrm{g}^{-1}\) exists only if \(\phi_1\neq0\).</p></div></details></div>
+
+<h3 id="udl2-quiz">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In \(y=\mathrm{f}[x,\bphi]\), what do the square brackets tell you?</p><ol class="opts"><li>That \(x\) and \(\bphi\) are multiplied</li><li>That \(x\) and \(\bphi\) are the inputs of the function \(\mathrm{f}\)</li><li>That the result is rounded down</li><li>That \(\bphi\) is a matrix</li></ol><div class="why">Prince reserves square brackets for function arguments so they are never confused with round brackets used for grouping. Nothing is multiplied, rounded, or assumed to be a matrix.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Which statement about the loss \(L[\bphi]\) is correct?</p><ol class="opts"><li>It is a function of the input \(x\)</li><li>It is large when the model fits well</li><li>With the data fixed, it is a function of the parameters only</li><li>It is the same thing as the prediction</li></ol><div class="why">The data are fixed during training, so the loss varies only with the parameters; that is why we can draw it as a surface over \((\phi_0,\phi_1)\). A small loss means a good fit. It is one number summarising all the predictions, not a prediction.</div></div>
+<div class="q" data-type="num" data-answer="0.5" data-tol="0.001"><p class="stem">Two training points \((x,y)=(0,1)\) and \((1,1)\), line \(\phi_0=0.5,\ \phi_1=0\). What is the least squares loss?</p><div class="why">Predictions 0.5 and 0.5; residuals \(-0.5\) and \(-0.5\); squares \(0.25+0.25=0.5\).</div></div>
+<div class="q" data-type="num" data-answer="-2" data-tol="0.001"><p class="stem">For the same two points and line, what is \(\partial L/\partial\phi_0\)?</p><div class="why">\(2\sum r_i=2(-0.5-0.5)=-2\). Negative: raising \(\phi_0\) reduces the loss.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">What does \(\argmin_{\bphi}L[\bphi]\) return?</p><ol class="opts"><li>The parameter values at which \(L\) is smallest</li><li>The smallest value of \(L\)</li><li>The gradient of \(L\)</li><li>The number of steps gradient descent takes</li></ol><div class="why">"arg" means "argument": the input that achieves the minimum. The smallest value itself is \(\min L\). The gradient and the number of steps are about how we search, not what we find.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">A model has almost zero training loss and a large test loss. This is…</p><ol class="opts"><li>underfitting</li><li>a bug in the loss function</li><li>a sign the model is too simple</li><li>overfitting</li></ol><div class="why">It describes the training data, quirks included, too well and fails to generalise. Underfitting (a model that is too simple) shows up as a high training loss too. Nothing here points to a bug.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Why does deep learning use gradient descent even though linear regression has a closed-form solution?</p><ol class="opts"><li>Gradient descent finds a lower loss than the closed form</li><li>For neural networks, "gradient = 0" gives nonlinear equations with no formula, and grids are impossible with many parameters</li><li>The closed form is only approximate</li></ol><div class="why">For the line, the closed form is exact, and gradient descent can at best match it. Networks have no closed form, so iteration is the only option.</div></div>
+<div class="q" data-type="open"><p class="stem">In your own words: what is the difference between a model and its parameters? Use the Prius example.</p><div class="model">The model is the form of the equation: a whole family of possible price rules, for example "price is a linear function of age and mileage". The parameters are the particular numbers in it (rupees per year of age, rupees per km, base price). We choose the model beforehand; training chooses the parameters from data.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">Prince's general supervised model</div><div class="b">\(\by=\mathrm{f}[\bx,\bphi]\): input \(\bx\), parameters \(\bphi\), output \(\by\).</div></div>
+<div class="fc"><div class="f">What is inference?</div><div class="b">Computing the prediction \(\by\) from an input \(\bx\) by running it through the model.</div></div>
+<div class="fc"><div class="f">Least squares loss for the 1-D line</div><div class="b">\(L[\bphi]=\sum_{i=1}^I(\phi_0+\phi_1x_i-y_i)^2\)</div></div>
+<div class="fc"><div class="f">Training, as an equation</div><div class="b">\(\hat\bphi=\argmin_{\bphi}L[\bphi]\)</div></div>
+<div class="fc"><div class="f">\(\partial L/\partial\phi_0\) and \(\partial L/\partial\phi_1\) for the line</div><div class="b">\(2\sum_i r_i\) and \(2\sum_i x_ir_i\), with residual \(r_i=\phi_0+\phi_1x_i-y_i\).</div></div>
+<div class="fc"><div class="f">Normal equations for the line (matrix form)</div><div class="b">\(\bX^T\bX\bphi=\bX^T\by\), i.e. \(\begin{pmatrix}I&amp;\sum x_i\\\sum x_i&amp;\sum x_i^2\end{pmatrix}\bphi=\begin{pmatrix}\sum y_i\\\sum x_iy_i\end{pmatrix}\).</div></div>
+<div class="fc"><div class="f">Closed-form slope of the least squares line</div><div class="b">\(\hat\phi_1=\dfrac{I\sum x_iy_i-\sum x_i\sum y_i}{I\sum x_i^2-(\sum x_i)^2}\), and \(\hat\phi_0=\bar y-\hat\phi_1\bar x\).</div></div>
+<div class="fc"><div class="f">One gradient descent step</div><div class="b">\(\bphi\leftarrow\bphi-\alpha\,\partial L/\partial\bphi\), with step size (learning rate) \(\alpha\).</div></div>
+<div class="fc"><div class="f">Underfitting vs overfitting</div><div class="b">Underfitting: model too simple, high training and test loss. Overfitting: fits training quirks, low training loss, high test loss.</div></div>
+<div class="fc"><div class="f">Discriminative vs generative model</div><div class="b">Discriminative: \(y=\mathrm{f}[x,\bphi]\) predicts the output directly. Generative: \(x=\mathrm{g}[y,\bphi]\) must be inverted to predict.</div></div>
+<div class="fc"><div class="f">Loss vs cost (strict meaning)</div><div class="b">Loss: the term for one data point. Cost: the whole quantity minimised (sum of losses plus any extra terms).</div></div>
+<div class="fc"><div class="f">Shape of the least squares loss surface for a line</div><div class="b">A bowl (quadratic) with tilted elliptical contours and a single minimum.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can read \(y=\mathrm{f}[x,\bphi]\), \(L[\bphi]\) and \(\hat\bphi=\argmin L[\bphi]\) aloud and explain each.</label>
+<label><input type="checkbox"> I can compute a least squares loss by hand for a few points, and write it as \((\bX\bphi-\by)^T(\bX\bphi-\by)\).</label>
+<label><input type="checkbox"> I can explain why the loss is a surface over the parameters, and what its minimum means.</label>
+<label><input type="checkbox"> I can derive \(\partial L/\partial\phi_0\), \(\partial L/\partial\phi_1\) and the closed-form line.</label>
+<label><input type="checkbox"> I can write a gradient descent loop for the line in NumPy.</label>
+<label><input type="checkbox"> I can explain testing, underfitting and overfitting with an example.</label>
+<label><input type="checkbox"> I can explain why a generative fit of a line differs from the discriminative fit.</label>
+</div>
+</section>
