@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CMOS Inverter Guide</title>
+<link rel="stylesheet" href="../tools/node_modules/katex/dist/katex.min.css">
+<script src="../tools/node_modules/katex/dist/katex.min.js"></script>
+<script src="../tools/node_modules/katex/dist/contrib/auto-render.min.js"></script>
+<style>
+  @page { size: A4; margin: 38mm 17mm 16mm 17mm; }
+  :root {
+    --ink: #1d1d1b; --muted: #5d5c58; --line: #e2e0da;
+    --blue: #2a78d6; --orange: #eb6834; --aqua: #1baf7a; --violet: #6250d6; --red: #d43d3c;
+    --blue-bg: #eef4fc; --orange-bg: #fdf1ec; --aqua-bg: #ecf8f2; --violet-bg: #f1effc; --red-bg: #fcefee; --grey-bg: #f6f5f2;
+  }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Bitstream Charter', 'Charter', Georgia, serif; font-size: 10.6pt; line-height: 1.55; color: var(--ink); background: #fff; margin: 0; }
+  h1, h2, h3, h4, .tag, figcaption, .box-title, th { font-family: 'Inter', sans-serif; }
+  h1 { font-size: 23pt; line-height: 1.15; margin: 0 0 4mm; letter-spacing: -0.01em; }
+  h2 { font-size: 15pt; margin: 9mm 0 3mm; padding-bottom: 1.5mm; border-bottom: 1.5px solid var(--ink); break-after: avoid; }
+  h3 { font-size: 11.6pt; margin: 6mm 0 2mm; break-after: avoid; }
+  h4 { font-size: 10.4pt; margin: 4mm 0 1mm; break-after: avoid; color: var(--muted); }
+  p { margin: 0 0 2.6mm; }
+  .part { break-before: page; }
+  .part-head { margin-bottom: 4mm; }
+  .part-head .tag { font-size: 9pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); }
+  .part-head h1 { margin-top: 1mm; }
+  .part-head .sub { font-family: 'Inter', sans-serif; color: var(--muted); font-size: 10pt; }
+  figure { margin: 4mm auto 5mm; text-align: center; break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figcaption { font-size: 8.8pt; color: var(--muted); margin-top: 1.5mm; line-height: 1.4; text-align: left; padding: 0 4mm; }
+  figcaption b { color: var(--ink); }
+  .row { display: flex; gap: 6mm; align-items: center; justify-content: center; break-inside: avoid; }
+  .row > figure { margin: 3mm 0; flex: 1; }
+  .box { border-radius: 2.5mm; padding: 3mm 4.5mm; margin: 4mm 0; break-inside: avoid; }
+  .box-title { font-size: 8.6pt; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1.2mm; }
+  .box p:last-child { margin-bottom: 0; }
+  .key { background: var(--blue-bg); border-left: 4px solid var(--blue); }
+  .key .box-title { color: var(--blue); }
+  .try { background: var(--orange-bg); border-left: 4px solid var(--orange); }
+  .try .box-title { color: #b84a1c; }
+  .why { background: var(--aqua-bg); border-left: 4px solid var(--aqua); }
+  .why .box-title { color: #12835a; }
+  .mem { background: var(--violet-bg); border-left: 4px solid var(--violet); }
+  .mem .box-title { color: var(--violet); }
+  .warn { background: var(--red-bg); border-left: 4px solid var(--red); }
+  .warn .box-title { color: var(--red); }
+  .step { display: grid; grid-template-columns: 7mm 1fr; gap: 0 2mm; margin: 2.2mm 0; break-inside: avoid; }
+  .step .n { font-family: 'Inter', sans-serif; font-weight: 700; color: #fff; background: var(--ink); border-radius: 50%; width: 5.6mm; height: 5.6mm; font-size: 8pt; display: flex; align-items: center; justify-content: center; margin-top: 0.6mm; }
+  .step .note { font-family: 'Inter', sans-serif; font-size: 8.6pt; color: var(--muted); }
+  .boxed { display: inline-block; border: 1.6px solid var(--ink); border-radius: 1.5mm; padding: 1mm 4mm; background: #fff; }
+  .center { text-align: center; }
+  .katex-display { margin: 2mm 0; }
+  .katex { font-size: 1.06em; }
+  table { border-collapse: collapse; width: 100%; margin: 3mm 0 4mm; font-size: 9.6pt; break-inside: avoid; }
+  th { font-size: 8.4pt; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; color: var(--muted); border-bottom: 1.4px solid var(--ink); padding: 1.5mm 2mm; }
+  td { border-bottom: 1px solid var(--line); padding: 1.6mm 2mm; vertical-align: top; }
+  .n-c { color: var(--blue); font-weight: 600; } .p-c { color: var(--orange); font-weight: 600; }
+  .q { break-inside: avoid; margin: 3.2mm 0; }
+  .q .qn { font-family: 'Inter', sans-serif; font-weight: 700; color: #b84a1c; margin-right: 1.5mm; }
+  .src { font-family: 'Inter', sans-serif; font-size: 8.2pt; color: var(--muted); }
+  .sol { break-inside: avoid; margin: 0 0 4mm; padding-bottom: 3mm; border-bottom: 1px dashed var(--line); }
+  .sol .qn { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--ink); }
+  .ans { font-family: 'Inter', sans-serif; font-weight: 700; color: #12835a; }
+  .cover { height: 230mm; display: flex; flex-direction: column; justify-content: center; }
+  .cover h1 { font-size: 32pt; }
+  .cover .lede { font-size: 12.5pt; color: var(--muted); max-width: 150mm; }
+  .toc { margin-top: 10mm; font-family: 'Inter', sans-serif; font-size: 10pt; }
+  .toc div { display: flex; gap: 4mm; padding: 2.2mm 0; border-bottom: 1px solid var(--line); }
+  .toc .k { width: 26mm; font-weight: 700; color: var(--blue); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm 6mm; }
+  .card { border: 1px solid var(--line); border-radius: 2mm; padding: 2.5mm 3.5mm; break-inside: avoid; font-size: 9.8pt; }
+  .card .cq { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 9pt; margin-bottom: 1mm; }
+  .small { font-size: 9.2pt; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1mm; }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ COVER -->
+<section class="cover">
+  <div class="tag" style="font-family:Inter;font-weight:700;letter-spacing:.08em;color:var(--blue);font-size:10pt">ANALOG LAB · LECTURES 23 – 25</div>
+  <h1>The CMOS Inverter<br>from VTC to delay</h1>
+  <p class="lede">Every derivation from your notes worked line by line, the closed forms worth memorising, and questions for you to solve before you read the answers.</p>
+  <div class="toc">
+    <div><span class="k">Part 0</span><span>Prerequisites: square law with signs, the critical voltages, the maths you need</span></div>
+    <div><span class="k">Part 1 · L23</span><span>The VTC: regions A–E, and deriving $V_{IL}$ and $V_{IH}$</span></div>
+    <div><span class="k">Part 2 · L24</span><span>$V_{th}$, $k_R$, sizing, the symmetric inverter, noise margins, layout</span></div>
+    <div><span class="k">Part 3 · L25</span><span>Load capacitance, delay definitions, average-current and state-equation methods</span></div>
+    <div><span class="k">Part 4</span><span>Formula sheet, memory tricks, flashcards, exam playbook</span></div>
+  </div>
+  <div class="box why" style="margin-top:10mm">
+    <div class="box-title">How to use this guide</div>
+    <p>Orange <b>Your turn</b> boxes are questions: cover the page below them and solve first. Full solutions are at the end of each part. Blue boxes hold the results to memorise. The strip at the top of every page carries the MOSFET equations, so you never need to flip back for them.</p>
+  </div>
+</section>
+
+<!-- ================================================================ PART 0 -->
+<section class="part">
+  <div class="part-head"><div class="tag">Part 0</div><h1>Prerequisites</h1><div class="sub">Everything Lectures 23–25 assume you already know</div></div>
+
+  <h2>0.1 The square law, with signs</h2>
+  <p>Kang &amp; Leblebici notation, which your notes use: $V_{T0,n} > 0$, $V_{T0,p} < 0$, and the strength of a transistor is $k = \mu C_{ox}\,W/L$. The PMOS uses <b>the same formulas as the NMOS</b>. Its voltages are just all negative.</p>
+
+  <table>
+    <tr><th>Region</th><th class="n-c">NMOS (all positive)</th><th class="p-c">PMOS (all negative)</th></tr>
+    <tr><td>Cut-off</td><td>$V_{GS} \lt V_{T0,n}$, $I_D = 0$</td><td>$V_{GS} \gt V_{T0,p}$, $I_D = 0$</td></tr>
+    <tr><td>Linear</td><td>$V_{DS} \lt V_{GS}-V_{T0,n}$</td><td>$V_{DS} \gt V_{GS}-V_{T0,p}$</td></tr>
+    <tr><td></td><td colspan="2" class="center">$I_D = \dfrac{k}{2}\left[2(V_{GS}-V_{T0})V_{DS} - V_{DS}^2\right]$</td></tr>
+    <tr><td>Saturation</td><td>$V_{DS} \ge V_{GS}-V_{T0,n}$</td><td>$V_{DS} \le V_{GS}-V_{T0,p}$</td></tr>
+    <tr><td></td><td colspan="2" class="center">$I_D = \dfrac{k}{2}(V_{GS}-V_{T0})^2$</td></tr>
+  </table>
+
+  <figure><img src="figs/p_idvds.svg" style="width:168mm">
+    <figcaption><b>Fig. 0.1</b> Left: NMOS $I_D$–$V_{DS}$ curves. The dashed red parabola $V_{DS} = V_{GS}-V_{T0,n}$ separates linear (left) from saturation (flat, right). Right: the PMOS is the mirror image, and turns on for negative $V_{GS}$.</figcaption></figure>
+
+  <div class="warn box"><div class="box-title">The PMOS inequality flip</div>
+  <p>For the PMOS, every "$\ge$" of the NMOS becomes "$\le$", because the voltages are negative. If that feels slippery, work in magnitudes: PMOS is saturated when $|V_{DS}| \ge |V_{GS}| - |V_{T0,p}|$, exactly like the NMOS.</p></div>
+
+  <h2>0.2 Critical voltages and noise margins</h2>
+  <p>The <b>voltage transfer characteristic</b> (VTC) plots $V_{out}$ against $V_{in}$. Five numbers describe it:</p>
+  <ul>
+    <li>$V_{OH}$ and $V_{OL}$: the output high and low levels.</li>
+    <li>$V_{IL}$ and $V_{IH}$: the two inputs where the slope is $dV_{out}/dV_{in} = -1$.</li>
+    <li>$V_{th}$: the switching threshold, where $V_{out} = V_{in}$.</li>
+  </ul>
+
+  <div class="row">
+    <figure style="flex:1.35"><img src="figs/p_vtc_generic.svg" style="width:100%"></figure>
+    <figure style="flex:1"><img src="figs/p_nm_bars.svg" style="width:88%"></figure>
+  </div>
+  <figure style="margin-top:0"><figcaption><b>Fig. 0.2</b> Left: a VTC with its five critical voltages. Right: noise margins. A driver outputs at least $V_{OH}$ for a 1. The receiver reads anything above $V_{IH}$ as 1. The gap between them is how much noise a 1 can tolerate.</figcaption></figure>
+
+  <div class="key box"><div class="box-title">Memorise</div>
+  <p class="center">$NM_L = V_{IL} - V_{OL}\qquad\qquad NM_H = V_{OH} - V_{IH}$</p></div>
+
+  <div class="why box"><div class="box-title">Why the slope is −1 at the edges</div>
+  <p>A small noise $\Delta$ on the input appears at the output as $|dV_{out}/dV_{in}|\cdot\Delta$. Where $|$slope$| \lt 1$, the noise shrinks. Where $|$slope$| \gt 1$, it grows. $V_{IL}$ and $V_{IH}$ mark where one regime turns into the other.</p></div>
+
+  <h2>0.3 The two pieces of maths you need</h2>
+  <h3>(a) Implicit differentiation (Lecture 23)</h3>
+  <p>In the VTC, $V_{out}$ is a function of $V_{in}$. So when you differentiate a current equation with respect to $V_{in}$, every $V_{out}$ term picks up a factor $dV_{out}/dV_{in}$ (the chain rule):</p>
+  $$\frac{d}{dV_{in}}(V_{out}-V_{DD})^2 = 2(V_{out}-V_{DD})\frac{dV_{out}}{dV_{in}},\qquad \frac{d}{dV_{in}}\Big[(V_{in}-a)V_{out}\Big] = V_{out} + (V_{in}-a)\frac{dV_{out}}{dV_{in}}$$
+  <p>Then you substitute $dV_{out}/dV_{in} = -1$.</p>
+  <h3>(b) Two integrals (Lecture 25)</h3>
+  $$\int dV = V \qquad\text{and}\qquad \int\frac{dV}{V(a-V)} = \frac{1}{a}\ln\frac{V}{a-V}\quad\left(\text{since } \frac{1}{V(a-V)} = \frac{1}{a}\left[\frac{1}{V}+\frac{1}{a-V}\right]\right)$$
+
+  <div class="try box"><div class="box-title">Your turn · Part 0 (solutions just below)</div>
+  <div class="q"><span class="qn">0.1</span>An NMOS has $V_{T0,n}=0.6$ V and $k_n = 200\,\mu$A/V². It is biased at $V_{GS} = 1.5$ V and $V_{DS} = 0.5$ V. Which region is it in, and what is $I_D$?</div>
+  <div class="q"><span class="qn">0.2</span>In an inverter with $V_{DD} = 3.3$ V, the PMOS has $V_{T0,p} = -0.7$ V and $k_p = 80\,\mu$A/V². Take $V_{in} = 1.0$ V and $V_{out} = 2.9$ V. Find $V_{GS,p}$ and $V_{DS,p}$, the region, and $|I_D|$.</div>
+  <div class="q"><span class="qn">0.3</span>Differentiate $2(V_{in}-V_{DD}-V_{T0,p})(V_{out}-V_{DD})$ with respect to $V_{in}$.</div>
+  <div class="q"><span class="qn">0.4</span>Take $V_{OH} = 3.3$, $V_{OL} = 0.2$, $V_{IL} = 1.2$ and $V_{IH} = 1.9$ V. Find both noise margins. Which logic level is better protected?</div>
+  </div>
+
+  <h3>Solutions · Part 0</h3>
+  <div class="sol"><span class="qn">0.1</span> Its overdrive is $V_{GS}-V_{T0,n} = 0.9$ V. Since $V_{DS} = 0.5 \lt 0.9$, it is in the <b>linear</b> region:
+  $I_D = 100\,\mu\,[2(0.9)(0.5) - 0.25] = 100\,\mu\times0.65 =$ <span class="ans">65 µA</span>.</div>
+  <div class="sol"><span class="qn">0.2</span> $V_{GS,p} = 1.0 - 3.3 = -2.3$ V and $V_{DS,p} = 2.9 - 3.3 = -0.4$ V, so $V_{GS,p}-V_{T0,p} = -1.6$ V. Since $-0.4 \gt -1.6$, it is <b>linear</b>:
+  $I_D = 40\,\mu\,[2(-1.6)(-0.4) - 0.16] = 40\,\mu\times1.12 =$ <span class="ans">44.8 µA</span>.</div>
+  <div class="sol"><span class="qn">0.3</span> Use the product rule: $2\left[(V_{in}-V_{DD}-V_{T0,p})\dfrac{dV_{out}}{dV_{in}} + (V_{out}-V_{DD})\right]$. This is the middle term of the lecture's step after eq. ①.</div>
+  <div class="sol"><span class="qn">0.4</span> <span class="ans">$NM_L = 1.2-0.2 = 1.0$ V</span> and <span class="ans">$NM_H = 3.3-1.9 = 1.4$ V</span>. The logic 1 is better protected.</div>
+</section>
+
+<!-- ================================================================ PART 1 -->
+<section class="part">
+  <div class="part-head"><div class="tag">Part 1 · Lecture 23</div><h1>The CMOS inverter VTC</h1><div class="sub">Two complementary switches, five regions, and the slope −1 derivations</div></div>
+
+  <h2>1.1 The circuit</h2>
+  <figure><img src="figs/sch_inverter.svg" style="width:150mm">
+    <figcaption><b>Fig. 1.1</b> The CMOS inverter: the NMOS $M_1$ pulls down and the PMOS $M_2$ pulls up. Both gates share $V_{in}$, and both drains form $V_{out}$. Right: the lecture's model, two non-ideal switches (each a switch plus its on-resistance) that are never both on in steady state.</figcaption></figure>
+  <p>Reading the terminal voltages off the figure is the first step of every CMOS question. Each one translates a transistor condition into a condition on $V_{in}$ and $V_{out}$:</p>
+  $$V_{GS,n} = V_{in},\quad V_{DS,n} = V_{out},\qquad V_{GS,p} = V_{in}-V_{DD} = -(V_{DD}-V_{in}),\quad V_{DS,p} = V_{out}-V_{DD} = -(V_{DD}-V_{out})$$
+
+  <h2>1.2 The two saturation boundaries</h2>
+  <div class="step"><div class="n">1</div><div><b>NMOS saturated</b> needs $V_{GS,n} \ge V_{T0,n}$, i.e. $V_{in} \ge V_{T0,n}$. It also needs $V_{DS,n} \ge V_{GS,n} - V_{T0,n}$:
+  $$\boxed{V_{out} \ge V_{in} - V_{T0,n}}\quad\text{(NMOS sat. above this line)}$$</div></div>
+  <div class="step"><div class="n">2</div><div><b>PMOS saturated</b> needs $V_{GS,p} \le V_{T0,p}$, i.e. $V_{in} - V_{DD} \le V_{T0,p}$, i.e. $V_{in} \le V_{DD} + V_{T0,p}$. It also needs $V_{DS,p} \le V_{GS,p} - V_{T0,p}$:
+  $$V_{out} - \cancel{V_{DD}} \le V_{in} - \cancel{V_{DD}} - V_{T0,p}\;\Rightarrow\;\boxed{V_{out} \le V_{in} - V_{T0,p}}\quad\text{(PMOS sat. below this line)}$$</div></div>
+  <p>Both boundaries are straight lines of slope 1. The NMOS line crosses the axis at $V_{in} = V_{T0,n}$. The PMOS line sits $|V_{T0,p}|$ higher. Draw them on the $(V_{in}, V_{out})$ plane and the VTC passes through every region:</p>
+
+  <figure><img src="figs/p_regionmap.svg" style="width:158mm">
+    <figcaption><b>Fig. 1.2</b> The lecture's hatched map, computed exactly ($V_{DD}=5$ V, $V_{T0,n}=1$ V, $V_{T0,p}=-1$ V, $k_R=1$). Blue vertical hatching: NMOS saturated. Orange horizontal hatching: PMOS saturated. Where they cross, both are saturated, and the VTC drops vertically through C.</figcaption></figure>
+
+  <h2>1.3 The five regions</h2>
+  <figure><img src="figs/p_vtc_current.svg" style="width:142mm">
+    <figcaption><b>Fig. 1.3</b> Top: the VTC coloured by region. Bottom: the current through both transistors. It is zero at both ends, so a CMOS inverter draws no static power, and it peaks at $V_{th}$.</figcaption></figure>
+  <table>
+    <tr><th>Point</th><th>Input range</th><th class="n-c">NMOS</th><th class="p-c">PMOS</th><th>What you get</th></tr>
+    <tr><td><b>A</b></td><td>$V_{in} \lt V_{T0,n}$</td><td>cut-off</td><td>linear</td><td>$V_{OH} = V_{DD}$ (no current, so no drop across the PMOS)</td></tr>
+    <tr><td><b>B</b></td><td>$V_{T0,n} \le V_{in} \lt V_{th}$</td><td>saturation</td><td>linear</td><td>$V_{IL}$ lies here</td></tr>
+    <tr><td><b>C</b></td><td>$V_{in} = V_{th}$</td><td>saturation</td><td>saturation</td><td>$V_{th}$ (Lecture 24)</td></tr>
+    <tr><td><b>D</b></td><td>$V_{th} \lt V_{in} \le V_{DD}+V_{T0,p}$</td><td>linear</td><td>saturation</td><td>$V_{IH}$ lies here</td></tr>
+    <tr><td><b>E</b></td><td>$V_{in} \gt V_{DD}+V_{T0,p}$</td><td>linear</td><td>cut-off</td><td>$V_{OL} = 0$</td></tr>
+  </table>
+  <div class="mem box"><div class="box-title">Memory trick</div>
+  <p>Walk from left to right: the transistor that is <b>turning on</b> is saturated, and the one that is <b>holding the output</b> near its rail is linear. In B, the NMOS is just waking up (saturated) while the PMOS still holds $V_{out}$ near $V_{DD}$ (linear). D is the mirror image.</p></div>
+
+  <h2>1.4 Deriving $V_{IL}$ (point B: NMOS sat., PMOS linear)</h2>
+  <div class="step"><div class="n">1</div><div><b>Equate the currents</b>, $I_{D,n} = I_{D,p}$. Use the saturation formula for the NMOS and the linear formula for the PMOS, then divide by $k_p/2$ with $k_R = k_n/k_p$:
+  $$k_R(V_{in}-V_{T0,n})^2 = 2\underbrace{(V_{in}-V_{DD}-V_{T0,p})}_{V_{GS,p}-V_{T0,p}}\underbrace{(V_{out}-V_{DD})}_{V_{DS,p}} - (V_{out}-V_{DD})^2 \qquad ①$$</div></div>
+  <div class="step"><div class="n">2</div><div><b>Differentiate with respect to $V_{in}$</b> (the chain rule from §0.3) and cancel the common 2:
+  $$k_R(V_{in}-V_{T0,n}) = (V_{in}-V_{DD}-V_{T0,p})\frac{dV_{out}}{dV_{in}} + (V_{out}-V_{DD}) - (V_{out}-V_{DD})\frac{dV_{out}}{dV_{in}}$$</div></div>
+  <div class="step"><div class="n">3</div><div><b>Set $V_{in} = V_{IL}$ and $dV_{out}/dV_{in} = -1$:</b>
+  $$k_R(V_{IL}-V_{T0,n}) = -V_{IL}+V_{DD}+V_{T0,p} + V_{out}-V_{DD} + V_{out}-V_{DD}$$</div></div>
+  <div class="step"><div class="n">4</div><div><b>Collect the $V_{IL}$ terms</b> on the left, $(1+k_R)V_{IL}$, and divide:
+  <div class="center"><span class="boxed">$\displaystyle V_{IL} = \frac{2V_{out} + V_{T0,p} - V_{DD} + k_RV_{T0,n}}{1+k_R}\qquad ②$</span></div></div></div>
+  <div class="step"><div class="n">5</div><div><b>Solve ① and ② together.</b> Rearrange ② for $V_{out}$, substitute it into ①, and you get a quadratic in $V_{IL}$. Keep the root that lies between $V_{T0,n}$ and $V_{th}$.
+  $$V_{out}\big|_{V_{IL}} = \tfrac12\left[(1+k_R)V_{IL} + V_{DD} - V_{T0,p} - k_RV_{T0,n}\right]$$</div></div>
+
+  <h2>1.5 Deriving $V_{IH}$ (point D: NMOS linear, PMOS sat.)</h2>
+  <div class="step"><div class="n">1</div><div><b>Equate the currents</b> with the roles swapped:
+  $$k_R\left[2(V_{in}-V_{T0,n})V_{out} - V_{out}^2\right] = (V_{in}-V_{DD}-V_{T0,p})^2 \qquad ③$$</div></div>
+  <div class="step"><div class="n">2</div><div><b>Differentiate</b> and cancel the 2s:
+  $$k_R\left[(V_{in}-V_{T0,n})\frac{dV_{out}}{dV_{in}} + V_{out} - V_{out}\frac{dV_{out}}{dV_{in}}\right] = V_{in}-V_{DD}-V_{T0,p}$$</div></div>
+  <div class="step"><div class="n">3</div><div><b>Set $V_{in} = V_{IH}$ and slope $=-1$:</b> $\;k_R\left[-V_{IH}+V_{T0,n}+2V_{out}\right] = V_{IH}-V_{DD}-V_{T0,p}$</div></div>
+  <div class="step"><div class="n">4</div><div><b>Collect the terms:</b> $k_R(2V_{out}+V_{T0,n}) + V_{DD}+V_{T0,p} = V_{IH}(1+k_R)$, so
+  <div class="center"><span class="boxed">$\displaystyle V_{IH} = \frac{V_{DD} + V_{T0,p} + k_R(2V_{out}+V_{T0,n})}{1+k_R}\qquad ④$</span></div></div></div>
+  <div class="step"><div class="n">5</div><div><b>Solve ③ and ④ together</b> for $V_{IH}$ and $V_{out}\big|_{V_{IH}}$.</div></div>
+
+  <div class="key box"><div class="box-title">Worked example 23.1 · the lecture method, start to finish</div>
+  <p>Take $V_{DD} = 5$ V, $V_{T0,n} = 1$ V, $V_{T0,p} = -1$ V, $k_n = 200$ and $k_p = 100\;\mu$A/V², so $k_R = 2$.</p>
+  <p><b>$V_{IL}$.</b> From ②, $V_{out} = \tfrac12[3V_{IL} + 5 + 1 - 2] = 1.5V_{IL}+2$, so $V_{out}-5 = 1.5V_{IL}-3$. Substitute into ① and write $x = V_{IL}$:</p>
+  $$2(x-1)^2 = 2(x-4)(1.5x-3) - (1.5x-3)^2 = (1.5x-3)(0.5x-5)$$
+  $$2x^2-4x+2 = 0.75x^2 - 9x + 15\;\Rightarrow\;1.25x^2 + 5x - 13 = 0$$
+  $$x = \frac{-5+\sqrt{90}}{2.5} = \mathbf{1.795\ V},\qquad V_{out} = 1.5x+2 = 4.692\text{ V}$$
+  <p><b>$V_{IH}$.</b> From ④, $V_{IH} = (6+4V_{out})/3$, so $V_{out} = 0.75V_{IH} - 1.5$. Substitute into ③:</p>
+  $$2\left[2(x-1)(0.75x-1.5) - (0.75x-1.5)^2\right] = (x-4)^2 \;\Rightarrow\; 0.875x^2 + 3.5x - 14.5 = 0\;\Rightarrow\; x = \mathbf{2.536\ V}$$
+  <p>The margins are $NM_L = V_{IL} = 1.795$ V and $NM_H = 5 - 2.536 = 2.464$ V. The stronger NMOS pulls both $V_{IL}$ and $V_{IH}$ to the left.</p></div>
+
+  <div class="mem box"><div class="box-title">Shortcut worth knowing (it checks your quadratic)</div>
+  <p>Eliminating $V_{out}$ by hand gives $V_{IL}$, $V_{IH}$ and $V_{th}$ all in <b>one shape</b>:</p>
+  $$V_x = \frac{V_{T0,n} + \rho\,(V_{DD}+V_{T0,p})}{1+\rho},\qquad \rho_{th} = \frac{1}{\sqrt{k_R}},\quad \rho_{IL} = \frac{2\sqrt{k_R(k_R+3)}-k_R}{k_R(k_R+4)},\quad \rho_{IH} = \frac{1+2\sqrt{1+3k_R}}{3k_R}$$
+  <p>Here $\rho$ measures how far you have moved from $V_{T0,n}$ toward $V_{DD}+V_{T0,p}$. With $k_R=1$ you get $\rho = 1,\ 3/5,\ 5/3$, which gives the symmetric results of Lecture 24. For $k_R = 2$: $\rho_{IL} = 0.6180$ and $V_{IL} = (1+0.618\times4)/1.618 = 1.795$ V ✓. In an exam, show the lecture method. Use the shortcut to check your answer.</p></div>
+
+  <div class="try box"><div class="box-title">Your turn · Part 1</div>
+  <div class="q"><span class="qn">1.1</span>Take $V_{DD} = 3.3$ V, $V_{T0,n} = 0.6$ V, $V_{T0,p} = -0.7$ V, $k_n = 200\,\mu$A/V² and $k_p = 80\,\mu$A/V². Find $V_{OH}$, $V_{OL}$, $V_{IL}$, $V_{IH}$ and both noise margins. <span class="src">Inverter tutorial Q3, as listed in your Lec 18–22 guide</span></div>
+  <div class="q"><span class="qn">1.2</span>For the inverter of 1.1, name the region of each transistor at $V_{in} = 0.4$, 1.0, 2.0 and 3.0 V. You are told $V_{out} = 3.3$, 3.170, 0.052 and 0 V respectively. Check each answer against the boundary lines of §1.2.</div>
+  <div class="q"><span class="qn">1.3</span>Explain without equations why $V_{OH} = V_{DD}$ <i>exactly</i> in a CMOS inverter, while a resistive-load inverter has $V_{OL} \gt 0$.</div>
+  <div class="q"><span class="qn">1.4</span><span class="src">Razavi §3.3.4, Eq. (3.48), Table 2.1 data.</span> Bias an inverter at its trip point and it becomes an amplifier ("CS stage with active load"). Take $V_{DD} = 3$ V, $V_{THN} = 0.7$ V, $|V_{THP}| = 0.8$ V, $\mu_nC_{ox} = 134.3$ and $\mu_pC_{ox} = 38.4\;\mu$A/V², $\lambda_n = 0.1$ and $\lambda_p = 0.2$ V⁻¹, and $(W/L)_n = 10/0.5$. (a) Choose $(W/L)_p$ so that $V_{th} = 1.5$ V. (b) Using $A_v = -(g_{m1}+g_{m2})(r_{O1}\parallel r_{O2})$, find the small-signal gain at $V_{th}$.</div>
+  </div>
+  <figure><img src="figs/sch_amp.svg" style="width:130mm">
+    <figcaption><b>Fig. 1.4</b> For Q1.4: near $V_{th}$ both devices are saturated and in parallel for small signals. Their transconductances add, and so do their output conductances (Razavi Fig. 3.20).</figcaption></figure>
+
+  <h3>Solutions · Part 1</h3>
+  <div class="sol"><span class="qn">1.1</span> $V_{OH} = 3.3$ V and $V_{OL} = 0$ V. $k_R = 2.5$.
+  <b>$V_{IL}$:</b> ② gives $V_{out} = \tfrac12[3.5V_{IL} + 3.3 + 0.7 - 1.5] = 1.75V_{IL} + 1.25$. Substituting into ① gives a quadratic with root <span class="ans">$V_{IL} = 1.065$ V</span> ($V_{out} = 3.113$ V).
+  <b>$V_{IH}$:</b> ④ gives $V_{out} = (3.5V_{IH} - 2.6 - 1.5)/5 = 0.7V_{IH} - 0.82$. Substituting into ③ gives <span class="ans">$V_{IH} = 1.553$ V</span> ($V_{out} = 0.267$ V).
+  <span class="ans">$NM_L = 1.065$ V and $NM_H = 1.747$ V.</span> The shortcut check: $\rho_{IL} = 0.4266$ gives $V_{IL} = (0.6+0.4266\times2.6)/1.4266 = 1.065$ ✓.</div>
+  <div class="sol"><span class="qn">1.2</span> At 0.4 V the NMOS is off and the PMOS is linear (point A). At 1.0 V: is $3.170 \ge 1.0-0.6$? Yes, so the NMOS is <b>saturated</b>. Is $3.170 \le 1.0+0.7 = 1.7$? No, so the PMOS is <b>linear</b> (region B). At 2.0 V: is $0.052 \ge 1.4$? No, so the NMOS is linear. Is $0.052 \le 2.7$? Yes, so the PMOS is saturated (region D). At 3.0 V: $3.0 \gt 3.3-0.7 = 2.6$, so the PMOS is off and the NMOS is linear (point E).</div>
+  <div class="sol"><span class="qn">1.3</span> At $V_{in} = 0$ the NMOS is off, so no current can flow anywhere. A linear PMOS carrying zero current has zero $V_{DS}$, so $V_{out} = V_{DD}$. In the resistive inverter at $V_{in} = V_{OH}$, the NMOS is on and current flows through $R_L$. The output settles where the NMOS current equals $(V_{DD}-V_{out})/R_L$, which is above 0.</div>
+  <div class="sol"><span class="qn">1.4</span> (a) From Lecture 24's inverse formula, $k_R = \left(\dfrac{3-0.8-1.5}{1.5-0.7}\right)^2 = 0.7656$. Then $k_n = 134.3\,\mu\times20 = 2.686$ mA/V² and $k_p = k_n/k_R = 3.508$ mA/V², so <span class="ans">$(W/L)_p = 3.508\,\text{m}/38.4\,\mu = 91.4\approx 45.7/0.5$</span>.
+  (b) $I_D = \tfrac{k_n}{2}(0.8)^2 = 0.860$ mA, $g_{m1} = k_n(0.8) = 2.149$ mS and $g_{m2} = k_p(0.7) = 2.456$ mS. $r_{O1} = 1/(0.1\,I_D) = 11.63$ kΩ and $r_{O2} = 5.82$ kΩ, so their parallel combination is 3.88 kΩ. <span class="ans">$A_v = -(4.605\text{ mS})(3.88\text{ kΩ}) \approx -17.9$</span>. This finite gain is why the real VTC at C is steep but not vertical. With $\lambda = 0$, the gain would be infinite.</div>
+</section>
+
+<!-- ================================================================ PART 2 -->
+<section class="part">
+  <div class="part-head"><div class="tag">Part 2 · Lecture 24</div><h1>Switching threshold, sizing and the symmetric inverter</h1><div class="sub">One square root gives $V_{th}$. Run it backwards to size the transistors.</div></div>
+
+  <h2>2.1 Deriving $V_{th}$ (point C: both saturated)</h2>
+  <div class="step"><div class="n">1</div><div><b>Equate the currents</b>, both saturated:
+  $$\frac{k_n}{2}(V_{GS,n}-V_{T0,n})^2 = \frac{k_p}{2}(V_{GS,p}-V_{T0,p})^2 \;\Rightarrow\; k_R(V_{in}-V_{T0,n})^2 = (V_{in}-V_{DD}-V_{T0,p})^2$$</div></div>
+  <div class="step"><div class="n">2</div><div><b>Put $V_{in} = V_{th}$ and take square roots:</b> $\sqrt{k_R}\,(V_{th}-V_{T0,n}) = \pm(V_{th}-V_{DD}-V_{T0,p})$.
+  <p class="step note" style="display:block;margin:1mm 0 0">Which sign? The left side is positive (the NMOS is on). Inside the bracket, $V_{th}-V_{DD}-V_{T0,p} = V_{GS,p}-V_{T0,p} \lt 0$ (the PMOS is on). So take the <b>minus</b> sign: $\sqrt{k_R}(V_{th}-V_{T0,n}) = V_{DD}+V_{T0,p}-V_{th}$.</p></div></div>
+  <div class="step"><div class="n">3</div><div><b>Collect the $V_{th}$ terms:</b> $V_{th}(1+\sqrt{k_R}) = V_{DD}+V_{T0,p}+\sqrt{k_R}V_{T0,n}$. Divide top and bottom by $\sqrt{k_R}$:
+  <div class="center"><span class="boxed">$\displaystyle V_{th} = \frac{V_{T0,n} + \sqrt{1/k_R}\,(V_{DD}+V_{T0,p})}{1+\sqrt{1/k_R}}$</span></div></div></div>
+
+  <figure><img src="figs/p_kr_family.svg" style="width:128mm">
+    <figcaption><b>Fig. 2.1</b> VTCs for five values of $k_R$ ($V_{DD}=5$ V, $V_T=\pm1$ V). The dots mark $V_{th}$. A stronger NMOS ($k_R \gt 1$) wins the tug-of-war earlier, so the curve shifts left. This matches the lecture sketch: $k_R \gt 1$ left, $k_R = 1$ middle, $k_R \lt 1$ right.</figcaption></figure>
+
+  <div class="why box"><div class="box-title">Read the formula as a weighted average</div>
+  <p>$V_{th}$ always lies between $V_{T0,n}$ (where the NMOS starts to turn on) and $V_{DD}+V_{T0,p}$ (where the PMOS turns off). The weight on the PMOS end is $\sqrt{1/k_R}$. As $k_R\to\infty$, $V_{th}\to V_{T0,n}$. As $k_R\to 0$, $V_{th}\to V_{DD}+V_{T0,p}$.</p></div>
+
+  <h2>2.2 Design: run it backwards</h2>
+  <p>Go back to step 2 and solve for $k_R$ instead:</p>
+  $$\sqrt{k_R} = \frac{V_{DD}+V_{T0,p}-V_{th}}{V_{th}-V_{T0,n}}\qquad\xrightarrow{\;V_{th}=V_{DD}/2\;}\qquad \boxed{k_R = \left(\frac{0.5V_{DD}+V_{T0,p}}{0.5V_{DD}-V_{T0,n}}\right)^2}$$
+  <p>If $V_{T0,n} = |V_{T0,p}|$, the bracket is 1, so <b>$k_R = 1$</b>. Now expand $k_R$. With equal $t_{ox}$, $C_{ox} = \varepsilon_{ox}/t_{ox}$ cancels:</p>
+  $$\frac{k_n}{k_p} = \frac{\mu_nC_{ox}(W/L)_n}{\mu_pC_{ox}(W/L)_p} = 1\;\Rightarrow\;\frac{(W/L)_n}{(W/L)_p} = \frac{\mu_p}{\mu_n} = \frac{230}{580}\;\Rightarrow\;\boxed{(W/L)_p \approx 2.5\,(W/L)_n}$$
+
+  <div class="key box"><div class="box-title">Symmetric inverter</div>
+  <p class="center">$V_{T0,n} = |V_{T0,p}|$ and $k_R = 1$ give $V_{th} = V_{DD}/2$, and the PMOS is about 2.5× wider to make up for its lower hole mobility.</p></div>
+
+  <h2>2.3 The symmetric inverter's $V_{IL}$ and $V_{IH}$</h2>
+  <p>Put $k_R = 1$ and $V_{T0,p} = -V_{T0,n} = -V_T$ into ②. The thresholds cancel:</p>
+  $$V_{IL} = \frac{2V_{out} - V_T - V_{DD} + V_T}{2} = V_{out} - 0.5V_{DD}\quad\Rightarrow\quad V_{out}-V_{DD} = V_{IL}-0.5V_{DD}$$
+  <p>The lecture then writes "substitute into ①" and jumps straight to the answer. Here is the algebra in between. Write $x = V_{IL}$:</p>
+  <div class="step"><div class="n">1</div><div>① becomes $(x-V_T)^2 = 2(x-V_{DD}+V_T)(x-\tfrac{V_{DD}}{2}) - (x-\tfrac{V_{DD}}{2})^2$.</div></div>
+  <div class="step"><div class="n">2</div><div>Expand both sides. The $x^2$ terms cancel:
+  $$x^2 - 2V_Tx + V_T^2 = x^2 - 2V_{DD}x + 2V_Tx + \tfrac34V_{DD}^2 - V_TV_{DD}$$</div></div>
+  <div class="step"><div class="n">3</div><div>Collect: $x(2V_{DD}-4V_T) = \tfrac34V_{DD}^2 - V_TV_{DD} - V_T^2 = \tfrac14(3V_{DD}+2V_T)(V_{DD}-2V_T)$.</div></div>
+  <div class="step"><div class="n">4</div><div>Cancel $(V_{DD}-2V_T)$: <span class="boxed">$V_{IL} = \tfrac18(3V_{DD}+2V_T)$</span>. The same steps on ③ and ④ give $V_{IH} = 0.5V_{DD}+V_{out}$ and <span class="boxed">$V_{IH} = \tfrac18(5V_{DD}-2V_T)$</span>.</div></div>
+
+  <div class="row">
+    <figure style="flex:1.1"><img src="figs/p_sym.svg" style="width:100%"></figure>
+    <div style="flex:1">
+      <div class="key box"><div class="box-title">Symmetric results</div>
+      $$V_{IL} = \frac{3V_{DD}+2V_T}{8}$$
+      $$V_{IH} = \frac{5V_{DD}-2V_T}{8}$$
+      $$V_{IL}+V_{IH} = V_{DD}$$
+      $$NM_L = NM_H = V_{IL}$$</div>
+      <div class="mem box"><div class="box-title">Remember "3 + 5 = 8"</div><p>Low gets 3, high gets 5, both over 8. The $\pm2V_T$ signs make the pair add to $V_{DD}$.</p></div>
+    </div>
+  </div>
+  <figure style="margin-top:0"><figcaption><b>Fig. 2.2</b> A symmetric inverter ($V_{DD}=2.5$ V, $V_T = 0.6$ V). The VTC is point-symmetric about $(V_{DD}/2, V_{DD}/2)$, so the two noise margins are equal. That is the reason to build it this way.</figcaption></figure>
+  <p>Why the margins are equal: $NM_L = V_{IL} - 0$, and $NM_H = V_{DD} - V_{IH} = V_{DD} - (V_{DD}-V_{IL}) = V_{IL}$.</p>
+
+  <h2>2.4 Layout</h2>
+  <div class="row">
+    <figure style="flex:1.2"><img src="figs/p_layout.svg" style="width:100%"></figure>
+    <div style="flex:0.8" class="small">
+      <p>One vertical poly line is the common gate ($V_{in}$). Where it crosses the p⁺ region (inside the n-well) it forms the PMOS. Where it crosses the n⁺ region it forms the NMOS.</p>
+      <p>The sources contact the $V_{DD}$ and GND rails. A metal strap joins the two drains to form $V_{out}$.</p>
+      <p>The p⁺ region is drawn about 2.5× wider. That is §2.2's sizing made visible.</p>
+    </div>
+  </div>
+  <figure style="margin-top:0"><figcaption><b>Fig. 2.3</b> CMOS inverter layout, top view (after the lecture's sketch).</figcaption></figure>
+
+  <div class="try box"><div class="box-title">Your turn · Part 2</div>
+  <div class="q"><span class="qn">2.1</span><span class="src">Inverter tutorial Q4 (2023-24) = 2024-25 Tutorial 5 Q2.</span> Take $V_{DD} = 3.3$ V. NMOS: $V_{T0,n} = 0.6$ V, $\mu_nC_{ox} = 60\,\mu$A/V², $(W/L)_n = 8$. PMOS: $V_{T0,p} = -0.7$ V, $\mu_pC_{ox} = 25\,\mu$A/V², $(W/L)_p = 12$. Find $V_{th}$ and the noise margins.</div>
+  <div class="q"><span class="qn">2.2</span><span class="src">Compre 2024-25 Q4(b).</span> An inverter is sized for equal rise and fall delays: $V_{DD} = 2.5$ V, $V_{Tn} = -V_{Tp} = 0.6$ V, $k_n' = 3k_p' = 120\,\mu$A/V². Find the noise margins. <i>(Part 3 explains why equal delays mean $k_n = k_p$.)</i></div>
+  <div class="q"><span class="qn">2.3</span>Take $V_{DD} = 3.3$ V, $V_{T0,n} = 0.6$ V, $V_{T0,p} = -0.7$ V and $\mu_n/\mu_p = 580/230$, with equal $t_{ox}$. Find $(W/L)_p/(W/L)_n$ for $V_{th} = V_{DD}/2$.</div>
+  <div class="q"><span class="qn">2.4</span>A symmetric 5 V inverter ($V_T = 1$ V) is redesigned with $k_R = 4$. Find the new $V_{th}$. Do the margins become equal, or does one grow at the other's expense?</div>
+  <div class="q"><span class="qn">2.5</span>Prove $V_{IL}+V_{IH} = V_{DD}$ for the symmetric inverter <i>without</i> the closed forms. Use the 180° symmetry of the VTC.</div>
+  </div>
+
+  <h3>Solutions · Part 2</h3>
+  <div class="sol"><span class="qn">2.1</span> $k_n = 480$ and $k_p = 300\;\mu$A/V², so $k_R = 1.6$ and $\sqrt{1/k_R} = 0.7906$.
+  <span class="ans">$V_{th} = \dfrac{0.6 + 0.7906\times2.6}{1.7906} = 1.483$ V</span>.
+  For $V_{IL}$, ② gives $V_{out} = \tfrac12(2.6V_{IL} + 3.04)$. Substituting into ① gives <span class="ans">$V_{IL} = 1.199$ V $= NM_L$</span>.
+  For $V_{IH}$: <span class="ans">$V_{IH} = 1.696$ V, so $NM_H = 1.604$ V</span>.
+  <span class="src">The printed key gives 1.48, 1.16, 1.69 and 1.61 V. A brute-force sweep of the VTC confirms 1.199 V for $V_{IL}$, so the key's 1.16 is slightly off. Both were accepted.</span></div>
+  <div class="sol"><span class="qn">2.2</span> Equal delays need equal strengths, so $(W/L)_p = 3(W/L)_n$, giving $k_R = 1$ with matched thresholds: the inverter is symmetric.
+  $V_{IL} = (7.5+1.2)/8 = 1.0875$ V and $V_{IH} = (12.5-1.2)/8 = 1.4125$ V. <span class="ans">$NM_L = NM_H = 1.0875$ V</span> and $V_{th} = 1.25$ V.</div>
+  <div class="sol"><span class="qn">2.3</span> $k_R = \left(\dfrac{1.65-0.7}{1.65-0.6}\right)^2 = (0.9048)^2 = 0.8186$.
+  Then $\dfrac{(W/L)_p}{(W/L)_n} = \dfrac{\mu_n}{\mu_p\,k_R} = \dfrac{2.522}{0.8186} =$ <span class="ans">3.08</span>. The larger $|V_{T0,p}|$ weakens the PMOS, so it must be made even wider than 2.5×.</div>
+  <div class="sol"><span class="qn">2.4</span> <span class="ans">$V_{th} = \dfrac{1 + 0.5\times4}{1.5} = 2.0$ V</span>. The shortcut gives $V_{IL} = 1.512$ V and $V_{IH} = 2.219$ V, so <span class="ans">$NM_L = 1.51$ V and $NM_H = 2.78$ V</span>. They are no longer equal: $NM_H$ grows while $NM_L$ shrinks from 1.75 V. The symmetric design maximises the <i>worse</i> of the two margins.</div>
+  <div class="sol"><span class="qn">2.5</span> In the symmetric case the PMOS is the NMOS with every voltage measured from the other rail. So if $(V_{in}, V_{out})$ lies on the VTC, so does $(V_{DD}-V_{in}, V_{DD}-V_{out})$. That map sends a slope of −1 to a slope of −1, so it carries the point $V_{IL}$ to the point $V_{IH}$. Therefore $V_{IH} = V_{DD}-V_{IL}$.</div>
+</section>
+
+<!-- ================================================================ PART 3 -->
+<section class="part">
+  <div class="part-head"><div class="tag">Part 3 · Lecture 25</div><h1>Switching characteristics and delay</h1><div class="sub">The output is a capacitor. The transistors are the currents that charge and discharge it.</div></div>
+
+  <h2>3.1 Where the load capacitance comes from</h2>
+  <figure><img src="figs/sch_caps.svg" style="width:166mm">
+    <figcaption><b>Fig. 3.1</b> The lecture's picture: the parasitics of an inverter driving a second inverter. Every capacitor with one plate on $V_{out}$ counts toward the load. $C_{gs}$ sits between the gate and a fixed rail, so it loads the <i>input</i>, not the output.</figcaption></figure>
+  <div class="key box"><div class="box-title">Lumped load</div>
+  <p class="center">$C_{load} = C_{gd,p} + C_{gd,n} + C_{db,p} + C_{db,n} + C_{int} + C_g$</p>
+  <p class="small">$C_{gd}$ is gate–drain overlap. $C_{db}$ is the drain–bulk junction. $C_{int}$ is the wire. $C_g$ is the next stage's gate capacitance: $C_g \approx C_{ox}\left[(WL)_n + (WL)_p\right]$.</p></div>
+
+  <div class="row">
+    <figure style="flex:1.15"><img src="figs/p_overlap.svg" style="width:100%"><figcaption><b>Fig. 3.2</b> The source and drain diffuse a distance $L_D$ under the gate. That overlap is $C_{gd}$ and $C_{gs}$ (the lecture's $L_D$ sketch).</figcaption></figure>
+    <figure style="flex:1"><img src="figs/p_capvgs.svg" style="width:100%"><figcaption><b>Fig. 3.3</b> Razavi's bias dependence. In saturation, the channel connects to the source, so $C_{GD}$ is overlap only.</figcaption></figure>
+  </div>
+  <p><b>From Razavi §2.4.2:</b> $C_{gd} = WC_{ov}\;(= C_{ox}WL_D)$. The junction capacitance is $C_{db} = C_j\cdot(\text{drain area}) + C_{jsw}\cdot(\text{drain perimeter})$. A folded layout (Razavi Ex. 2.10) halves the drain area and so shrinks $C_{db}$.</p>
+
+  <h2>3.2 The lumped model</h2>
+  <div class="row">
+    <figure style="flex:1"><img src="figs/sch_load.svg" style="width:96%"></figure>
+    <div style="flex:1.1">
+      <p>All the physics collapses to one node equation (KCL at $V_{out}$):</p>
+      $$i_C = i_{D,p} - i_{D,n} = C_{load}\frac{dV_{out}}{dt}$$
+      <p><b>Falling output</b> ($V_{in}$ steps high): the PMOS turns off, so $i_C = -i_{D,n}$ and the NMOS discharges $C_{load}$.</p>
+      <p><b>Rising output</b> ($V_{in}$ steps low): the NMOS turns off, so the PMOS charges $C_{load}$.</p>
+    </div>
+  </div>
+  <figure style="margin-top:0"><figcaption><b>Fig. 3.4</b> Everything on the output node lumped into $C_{load}$.</figcaption></figure>
+
+  <h2>3.3 Definitions</h2>
+  <figure><img src="figs/p_timing.svg" style="width:160mm">
+    <figcaption><b>Fig. 3.5</b> Delays are measured between the 50 % points of input and output. Rise and fall times are measured on the output alone, between 10 % and 90 %.</figcaption></figure>
+  <table>
+    <tr><th>Quantity</th><th>Definition</th></tr>
+    <tr><td>$V_{50\%}$</td><td>$V_{OL} + \tfrac12(V_{OH}-V_{OL}) = \dfrac{V_{OH}+V_{OL}}{2}$</td></tr>
+    <tr><td>$\tau_{PHL}$ (output high→low)</td><td>$t_2 - t_1$</td></tr>
+    <tr><td>$\tau_{PLH}$ (output low→high)</td><td>$t_4 - t_3$</td></tr>
+    <tr><td>$\tau_P$ (average)</td><td>$\dfrac{\tau_{PHL}+\tau_{PLH}}{2}$</td></tr>
+    <tr><td>rise time / fall time</td><td>$t_{90\%}-t_{10\%}$ (output L→H) / $t_{10\%}-t_{90\%}$ (output H→L)</td></tr>
+  </table>
+
+  <h2>3.4 Method 1: average current</h2>
+  <p>Pretend the capacitor current is constant at its average value. Then $i = C\,dV/dt$ becomes $\tau = C\,\Delta V/I_{avg}$:</p>
+  $$\tau_{PHL} = \frac{C_{load}\,\Delta V_{HL}}{I_{avg,HL}},\qquad \Delta V_{HL} = V_{OH}-V_{50\%} = \frac{V_{OH}-V_{OL}}{2}$$
+  $$I_{avg,HL} = \tfrac12\left[i_C(V_{in}=V_{OH},\,V_{out}=V_{OH}) + i_C(V_{in}=V_{OH},\,V_{out}=V_{50\%})\right]$$
+  <p>Likewise $\tau_{PLH} = C_{load}\Delta V_{LH}/I_{avg,LH}$, with $\Delta V_{LH} = V_{50\%}-V_{OL}$, and the current averaged at $V_{out} = V_{OL}$ and $V_{out} = V_{50\%}$ (with $V_{in} = V_{OL}$).</p>
+  <div class="warn box"><div class="box-title">Pick the right region for each endpoint</div>
+  <p>Consider the falling output. At its start ($V_{out} = V_{OH}$), $V_{DS,n} = V_{OH} \ge V_{OH}-V_{T0,n}$, so the NMOS is <b>saturated</b>. At $V_{50\%}$, normally $V_{50\%} \lt V_{OH}-V_{T0,n}$, so it is <b>linear</b>. Using the saturation formula at both ends is the most common mistake.</p></div>
+
+  <figure><img src="figs/p_iavg.svg" style="width:122mm">
+    <figcaption><b>Fig. 3.6</b> The NMOS current during the fall. The method replaces the real curve (shaded) by the mean of its two end values.</figcaption></figure>
+
+  <h2>3.5 Method 2: state equations (exact integration)</h2>
+  <p>Step the input from $V_{OL}$ to $V_{OH}$ at $t_1$. As $V_{out}$ falls, the NMOS passes through <b>two regions</b>, so the integral splits in two:</p>
+  <figure><img src="figs/p_discharge.svg" style="width:158mm">
+    <figcaption><b>Fig. 3.7</b> The exact $V_{out}(t)$ (Worked example 25.2's numbers). From $t_1$ to $t_1'$ the NMOS is saturated and the discharge is a straight line (constant current). From $t_1'$ to $t_2$ it is linear and the discharge curves.</figcaption></figure>
+
+  <h3>Segment 1: saturated, $V_{OH} \to V_{OH}-V_{T0,n}$ (in the lecture)</h3>
+  <p>The NMOS stays saturated while $V_{out} \ge V_{in}-V_{T0,n} = V_{OH}-V_{T0,n}$. Its current is the constant $\tfrac{k_n}{2}(V_{OH}-V_{T0,n})^2$:</p>
+  $$dt = -\frac{C_{load}\,dV_{out}}{i_{D,n}}\;\Rightarrow\; \int_{t_1}^{t_1'}dt = \frac{-C_{load}}{\frac{k_n}{2}(V_{OH}-V_{T0,n})^2}\int_{V_{OH}}^{V_{OH}-V_{T0,n}}dV_{out}\;\Rightarrow\;\boxed{t_1'-t_1 = \frac{2C_{load}V_{T0,n}}{k_n(V_{OH}-V_{T0,n})^2}}$$
+
+  <h3>Segment 2: linear, $V_{OH}-V_{T0,n} \to V_{50\%}$ (completing the lecture)</h3>
+  <p>Now $i_{D,n} = \tfrac{k_n}{2}\left[2(V_{OH}-V_{T0,n})V_{out}-V_{out}^2\right]$. Write $a = 2(V_{OH}-V_{T0,n})$, so the bracket is $V_{out}(a-V_{out})$:</p>
+  $$t_2 - t_1' = -\frac{2C_{load}}{k_n}\int_{V_{OH}-V_{T0,n}}^{V_{50\%}}\frac{dV_{out}}{V_{out}(a-V_{out})} = \frac{2C_{load}}{k_n\,a}\left[\ln\frac{V}{a-V}\right]_{V_{50\%}}^{V_{OH}-V_{T0,n}}$$
+  <p>At the upper limit $V = a/2$, so $\ln\frac{V}{a-V} = \ln 1 = 0$. That leaves</p>
+  $$t_2 - t_1' = \frac{C_{load}}{k_n(V_{OH}-V_{T0,n})}\ln\!\left(\frac{2(V_{OH}-V_{T0,n})}{V_{50\%}}-1\right)$$
+  <div class="key box"><div class="box-title">Memorise: exact step-input delays</div>
+  $$\tau_{PHL} = \frac{C_{load}}{k_n(V_{OH}-V_{T0,n})}\left[\frac{2V_{T0,n}}{V_{OH}-V_{T0,n}} + \ln\!\left(\frac{4(V_{OH}-V_{T0,n})}{V_{OH}+V_{OL}}-1\right)\right]$$
+  $$\tau_{PLH} = \frac{C_{load}}{k_p(V_{OH}-V_{OL}-|V_{T0,p}|)}\left[\frac{2|V_{T0,p}|}{V_{OH}-V_{OL}-|V_{T0,p}|} + \ln\!\left(\frac{4(V_{OH}-V_{OL}-|V_{T0,p}|)}{V_{OH}-V_{OL}}-1\right)\right]$$
+  <p class="small">For CMOS ($V_{OH}=V_{DD}$, $V_{OL}=0$), both have the form $\dfrac{C}{k\,(V_{DD}-|V_T|)}\Big[\tfrac{2|V_T|}{V_{DD}-|V_T|} + \ln\!\big(\tfrac{4(V_{DD}-|V_T|)}{V_{DD}}-1\big)\Big]$. The PLH formula is the PHL one with $n\to p$ and voltages measured down from $V_{DD}$.</p></div>
+
+  <div class="key box"><div class="box-title">Worked example 25.2</div>
+  <p>Take $V_{DD} = 3.3$ V, $C_{load} = 0.3$ pF, $k_n = 200$ and $k_p = 80\;\mu$A/V², $V_{T0,n} = 0.6$ V, $V_{T0,p} = -0.7$ V.</p>
+  <p><b>Average current, HL.</b> At $V_{out}=3.3$ (sat.): $100\,\mu(2.7)^2 = 729\;\mu$A. At $V_{out}=1.65$ (lin.): $100\,\mu[2(2.7)(1.65)-1.65^2] = 619\;\mu$A. The average is $674\;\mu$A, so $\tau_{PHL} = 0.3\text{p}\times1.65/674\,\mu = \mathbf{0.734}$ ns.</p>
+  <p><b>Exact, HL.</b> $\dfrac{0.3\text{p}}{200\mu\times2.7} = 0.556$ ns, times $\left[\tfrac{1.2}{2.7} + \ln\!\big(\tfrac{10.8}{3.3}-1\big)\right] = 0.444+0.821$, gives $\tau_{PHL} = 0.247 + 0.456 = \mathbf{0.703}$ ns.</p>
+  <p><b>Exact, LH.</b> $\dfrac{0.3\text{p}}{80\mu\times2.6}\left[\tfrac{1.4}{2.6}+\ln\!\big(\tfrac{10.4}{3.3}-1\big)\right] = 1.442\times(0.538+0.766)$, so $\tau_{PLH} = \mathbf{1.88}$ ns (the average-current method gives 1.96 ns). Then $\tau_P = 1.29$ ns.</p>
+  <p class="small">The average-current method overestimates by about 4 %. That is good enough for most questions, but use whichever method the question names.</p></div>
+
+  <h2>3.6 What the formulas tell a designer</h2>
+  <p>Both delays have the form $\tau \propto \dfrac{C_{load}}{k\,(V_{DD}-|V_T|)}$. Razavi's one-line estimate (§17.1) is $T_d \approx C V_{DD}/I$. To go faster:</p>
+  <ul>
+    <li><b>Reduce $C_{load}$:</b> shorter wires, smaller fan-out, folded drains.</li>
+    <li><b>Increase $k$:</b> make $W/L$ larger. But wider devices add their own $C_{db}$ and load the previous stage more, so the gain is limited.</li>
+    <li><b>Increase $V_{DD}$:</b> faster, but power $\propto CV_{DD}^2f$ rises.</li>
+  </ul>
+  <p><b>Equal rise and fall</b> need $k_p = k_n$ (with matched thresholds). That is the same $(W/L)_p \approx 2.5(W/L)_n$ as Lecture 24's symmetric inverter, which is why Compre Q4 said "sized for equal delays" and meant "symmetric".</p>
+  <div class="row">
+    <figure style="flex:1.1"><img src="figs/p_sizing.svg" style="width:100%"></figure>
+    <div style="flex:0.9" class="small"><p>The plot drives an identical next stage, so a wider PMOS also adds load capacitance. $\tau_{PLH}$ falls as the PMOS widens, but $\tau_{PHL}$ rises (more capacitance, same NMOS).</p><p>The delays are equal at $\beta \approx 2.7$. The <i>average</i> is smallest a little earlier, at $\beta\approx2.3$ (black dot). Equal edges and minimum average delay are slightly different goals.</p></div>
+  </div>
+  <figure style="margin-top:0"><figcaption><b>Fig. 3.8</b> Delay against PMOS/NMOS sizing, with self-loading (illustrative values).</figcaption></figure>
+
+  <div class="try box"><div class="box-title">Your turn · Part 3</div>
+  <div class="q"><span class="qn">3.1</span>Take $C_{ox} = 3.8$ fF/µm², $L_D = 0.08$ µm, $L = 0.5$ µm, $W_n = 1$ µm and $W_p = 2.5$ µm. Also $C_{db,n} = 2$ fF, $C_{db,p} = 4$ fF and $C_{int} = 5$ fF. The inverter drives an identical inverter. Find $C_{load}$. Which term dominates?</div>
+  <div class="q"><span class="qn">3.2</span>Derive segment 2 of §3.5 yourself, starting from $C\,dV_{out}/dt = -i_{D,n}$ in the linear region. Check that you reach the ln term.</div>
+  <div class="q"><span class="qn">3.3</span>In Worked example 25.2, what $(W/L)_p$ multiplier makes $\tau_{PLH} = \tau_{PHL}$? Assume $C_{load}$ does not change.</div>
+  <div class="q"><span class="qn">3.4</span><span class="src">Razavi Problem 2.11(b), with numbers added.</span> An NMOS ($W/L = 50/0.5$, $\mu_nC_{ox} = 134.3\,\mu$A/V², $V_{TH} = 0.7$ V, $\lambda=\gamma=0$) has its source grounded and its drain on node $X$. $C_1 = 1$ pF runs from $X$ to ground and starts at 1 V. At $t=0$ the gate steps from 0 to 3 V. Sketch $V_X(t)$ and find when $V_X = 0.5$ V.</div>
+  <div class="q"><span class="qn">3.5</span><span class="src">Razavi Problem 2.11(a), with numbers added.</span> Same device, but now $V_{DD}$ is on the drain and $C_1$ (initially 1 V) is on the source. The gate steps from 0 to 3 V. Sketch $V_X(t)$, give its final value, and find when $V_X = 2.0$ V.</div>
+  <div class="q"><span class="qn">3.6</span><span class="src">Razavi §15.2.</span> A ring of 5 inverters, each with $\tau_P = 50$ ps, oscillates. What is its frequency?</div>
+  </div>
+  <figure><img src="figs/sch_razavi211.svg" style="width:140mm"><figcaption><b>Fig. 3.9</b> Razavi Fig. 2.53(a) and (b), redrawn for Q3.4 and Q3.5.</figcaption></figure>
+
+  <h3>Solutions · Part 3</h3>
+  <div class="sol"><span class="qn">3.1</span> $C_{gd,n} = 3.8\times1\times0.08 = 0.30$ fF and $C_{gd,p} = 3.8\times2.5\times0.08 = 0.76$ fF. $C_g = 3.8\times(1+2.5)\times0.5 = 6.65$ fF. <span class="ans">$C_{load} = 0.30+0.76+2+4+5+6.65 = 18.7$ fF</span>. The next stage's gate dominates, closely followed by the wire. <span class="src">Some texts double $C_{gd}$ for the Miller effect: both ends of it swing in opposite directions. The lecture counts it once.</span></div>
+  <div class="sol"><span class="qn">3.2</span> See §3.5. The keys are the partial fractions $\frac{1}{V(a-V)} = \frac1a\left(\frac1V+\frac1{a-V}\right)$, and noticing the upper limit is $a/2$, which kills one log.</div>
+  <div class="sol"><span class="qn">3.3</span> Equate the exact formulas: $\tau_{PLH} \propto 1/k_p$, so scale $k_p$ by $1.882/0.703 =$ <span class="ans">2.68</span>, i.e. $(W/L)_p$ about 2.7× its current value. (That is larger than $k_n/k_p = 2.5$ because $|V_{T0,p}| \gt V_{T0,n}$.)</div>
+  <div class="sol"><span class="qn">3.4</span> $V_{GS} = 3$ V and $V_{DS} \le 1 \lt 2.3$ V, so the device is <b>linear the whole time</b>. $V_X$ falls toward 0 like a slightly bent exponential (Fig. 3.10b). This is segment 2 alone:
+  $$t = \frac{C}{k_n V_{ov}}\ln\frac{V_0\,(2V_{ov}-V)}{V\,(2V_{ov}-V_0)},\quad k_n = 13.43\text{ mA/V}^2,\; V_{ov}=2.3\text{ V}$$
+  $\dfrac{C}{k_nV_{ov}} = 32.4$ ps and $\ln\dfrac{1\times4.1}{0.5\times3.6} = 0.823$, so <span class="ans">$t \approx 26.6$ ps</span>.</div>
+  <div class="sol"><span class="qn">3.5</span> $V_{DS} = 3-V_X \ge V_{GS}-V_{TH} = 3-V_X-0.7$ always holds, so the device is <b>saturated</b> throughout. It is a source follower charging $C_1$: $C\,dV_X/dt = \tfrac{k_n}{2}(2.3-V_X)^2$. $V_X$ rises toward <span class="ans">$V_{in}-V_{TH} = 2.3$ V</span> but never quite reaches it, because the current dies as $V_{GS}\to V_{TH}$.
+  Integrating, $\dfrac{1}{2.3-V}\Big|_1^{V} = \dfrac{k_nt}{2C}$, so $t = \dfrac{2C}{k_n}\left(\dfrac{1}{0.3}-\dfrac{1}{1.3}\right) =$ <span class="ans">0.38 ns</span>. (With $\gamma \gt 0$, the final value is lower, because $V_{TH}$ rises with $V_{SB}$.)</div>
+  <figure><img src="figs/p_razavi211.svg" style="width:150mm"><figcaption><b>Fig. 3.10</b> The answers to Q3.5 (a) and Q3.4 (b), with time normalised to $C_1/k_n$.</figcaption></figure>
+  <div class="sol"><span class="qn">3.6</span> An edge must travel round the loop twice for one period, through $N$ inverters each time: $T = 2N\tau_P = 500$ ps, so <span class="ans">$f = 2$ GHz</span>. (The number of stages must be odd, or the ring latches instead of oscillating.)</div>
+</section>
+
+<!-- ================================================================ PART 4 -->
+<section class="part">
+  <div class="part-head"><div class="tag">Part 4</div><h1>Formula sheet and revision</h1><div class="sub">Everything from Lectures 23–25 that you should be able to write from memory</div></div>
+
+  <table>
+    <tr><th style="width:30%">Result</th><th>Formula</th><th style="width:22%">Conditions</th></tr>
+    <tr><td>Boundary lines</td><td>$V_{out} = V_{in}-V_{T0,n}$ ;  $V_{out} = V_{in}-V_{T0,p}$</td><td>NMOS sat. above ; PMOS sat. below</td></tr>
+    <tr><td>$V_{OH}$, $V_{OL}$</td><td>$V_{DD}$, 0</td><td>always (CMOS)</td></tr>
+    <tr><td>$V_{IL}$ (with ①)</td><td>$\dfrac{2V_{out}+V_{T0,p}-V_{DD}+k_RV_{T0,n}}{1+k_R}$</td><td>n sat., p lin., slope −1</td></tr>
+    <tr><td>$V_{IH}$ (with ③)</td><td>$\dfrac{V_{DD}+V_{T0,p}+k_R(2V_{out}+V_{T0,n})}{1+k_R}$</td><td>n lin., p sat., slope −1</td></tr>
+    <tr><td>$V_{th}$</td><td>$\dfrac{V_{T0,n}+\sqrt{1/k_R}(V_{DD}+V_{T0,p})}{1+\sqrt{1/k_R}}$</td><td>both sat.</td></tr>
+    <tr><td>$k_R$ for a target $V_{th}$</td><td>$\left(\dfrac{V_{DD}+V_{T0,p}-V_{th}}{V_{th}-V_{T0,n}}\right)^2$</td><td></td></tr>
+    <tr><td>Symmetric sizing</td><td>$(W/L)_p = \dfrac{\mu_n}{\mu_p}(W/L)_n \approx 2.5\,(W/L)_n$</td><td>$V_{T0,n}=|V_{T0,p}|$, $k_R=1$</td></tr>
+    <tr><td>Symmetric $V_{IL}$, $V_{IH}$</td><td>$\tfrac18(3V_{DD}+2V_T)$, $\tfrac18(5V_{DD}-2V_T)$ ; $NM_L=NM_H=V_{IL}$</td><td>$k_R = 1$</td></tr>
+    <tr><td>Noise margins</td><td>$NM_L = V_{IL}-V_{OL}$, $NM_H = V_{OH}-V_{IH}$</td><td></td></tr>
+    <tr><td>Load</td><td>$C_{gd,p}+C_{gd,n}+C_{db,p}+C_{db,n}+C_{int}+C_g$</td><td>$C_{gd}=C_{ox}WL_D$</td></tr>
+    <tr><td>$V_{50\%}$ and delays</td><td>$\tfrac12(V_{OH}+V_{OL})$ ; $\tau_P = \tfrac12(\tau_{PHL}+\tau_{PLH})$</td><td>50 % to 50 %</td></tr>
+    <tr><td>Average-current</td><td>$\tau = C_{load}\Delta V/I_{avg}$, $\Delta V = \tfrac12(V_{OH}-V_{OL})$</td><td>average of the 2 endpoints</td></tr>
+    <tr><td>Saturated segment</td><td>$t_1'-t_1 = \dfrac{2C_{load}V_{T0,n}}{k_n(V_{OH}-V_{T0,n})^2}$</td><td>$V_{OH}\to V_{OH}-V_{T0,n}$</td></tr>
+    <tr><td>Exact $\tau_{PHL}$</td><td>$\dfrac{C_{load}}{k_n(V_{OH}-V_{T0,n})}\left[\dfrac{2V_{T0,n}}{V_{OH}-V_{T0,n}}+\ln\!\left(\dfrac{4(V_{OH}-V_{T0,n})}{V_{OH}+V_{OL}}-1\right)\right]$</td><td>step input</td></tr>
+    <tr><td>Exact $\tau_{PLH}$</td><td>same, with $n\to p$ and $V_{OH}-V_{T0,n}\to V_{OH}-V_{OL}-|V_{T0,p}|$, $V_{OH}+V_{OL}\to V_{OH}-V_{OL}$</td><td>step input</td></tr>
+  </table>
+
+  <h2>Memory tricks</h2>
+  <div class="grid2">
+    <div class="mem box"><div class="box-title">Regions A–E</div><p>"Off-Lin, Sat-Lin, Sat-Sat, Lin-Sat, Lin-Off", NMOS first. The middle three spell a palindrome around C.</p></div>
+    <div class="mem box"><div class="box-title">V_IL vs V_IH formulas</div><p>Both have $1+k_R$ below and $2V_{out}$ on top. In $V_{IL}$, $k_R$ multiplies only $V_{T0,n}$. In $V_{IH}$, it multiplies $(2V_{out}+V_{T0,n})$, because the NMOS now sets the output.</p></div>
+    <div class="mem box"><div class="box-title">V_th as a tug-of-war</div><p>It sits between $V_{T0,n}$ and $V_{DD}+V_{T0,p}$. The stronger side pulls $V_{th}$ toward its own threshold.</p></div>
+    <div class="mem box"><div class="box-title">Delay</div><p>"$C$ over $kV$, times [sat. bit + log bit]." The sat. bit is $2V_T/(V_{DD}-V_T)$. The log bit is $\ln(4\cdot\text{overdrive}/V_{DD}-1)$.</p></div>
+  </div>
+
+  <h2>Flashcards (cover the right half)</h2>
+  <div class="grid2">
+    <div class="card"><div class="cq">Point B: which device is saturated?</div>The NMOS (the PMOS is linear).</div>
+    <div class="card"><div class="cq">Why is $V_{OL}$ exactly 0?</div>The PMOS is off, so there is no current, so the linear NMOS has $V_{DS}=0$.</div>
+    <div class="card"><div class="cq">Which sign after the square root for $V_{th}$?</div>Minus: $V_{GS,p}-V_{T0,p} \lt 0$.</div>
+    <div class="card"><div class="cq">$k_R \gt 1$ moves the VTC…</div>Left (lower $V_{th}$).</div>
+    <div class="card"><div class="cq">$(W/L)_p$ for a symmetric inverter?</div>$\mu_n/\mu_p \approx 580/230 \approx 2.5$ times $(W/L)_n$.</div>
+    <div class="card"><div class="cq">$V_{IL}+V_{IH}$ (symmetric)?</div>$V_{DD}$.</div>
+    <div class="card"><div class="cq">Is $C_{gs}$ part of $C_{load}$?</div>No. It loads the input node.</div>
+    <div class="card"><div class="cq">NMOS region at $V_{out}=V_{50\%}$ during the fall?</div>Linear (if $V_{50\%} \lt V_{OH}-V_{T0,n}$).</div>
+    <div class="card"><div class="cq">$t_1'-t_1$?</div>$2C_{load}V_{T0,n}/[k_n(V_{OH}-V_{T0,n})^2]$</div>
+    <div class="card"><div class="cq">Ring of N inverters: period?</div>$2N\tau_P$ (N odd).</div>
+  </div>
+
+  <h2>Exam playbook</h2>
+  <ol>
+    <li><b>Any CMOS VTC question:</b> compute $k_n = \mu_nC_{ox}(W/L)_n$, $k_p$ and $k_R$ first. Write the four terminal voltages, then $V_{th}$ from the boxed formula.</li>
+    <li><b>$V_{IL}$ / $V_{IH}$:</b> write ① or ③, differentiate, set the slope to −1, solve for $V_{out}$ in terms of $V_{IL}$ (or $V_{IH}$), substitute, and solve the quadratic. Check the answer with the $\rho$ shortcut. If the inverter is symmetric, use the $3/8$ and $5/8$ forms directly.</li>
+    <li><b>Design for $V_{th}$:</b> $k_R = \left(\frac{V_{DD}+V_{T0,p}-V_{th}}{V_{th}-V_{T0,n}}\right)^2$, then convert to $W/L$ using the mobility ratio. "Equal rise/fall" means symmetric.</li>
+    <li><b>Delay:</b> write $C_{load}$, decide each transistor's region at both endpoints, then use average current or the exact formula, whichever the question asks for. Always state $V_{50\%}$.</li>
+  </ol>
+</section>
+
+<script>
+  renderMathInElement(document.body, { delimiters: [ {left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false} ], throwOnError: false, trust: true });
+  window.__done = true;
+</script>
+</body>
+</html>
