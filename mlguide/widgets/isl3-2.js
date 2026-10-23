@@ -66,20 +66,20 @@ G.widget("isl3-2-confound", function (body) {
   G.slider(ctr, { label: "correlation of newspaper with radio", min: 0, max: 0.95, step: 0.05, value: st.rho, fmt: function (v) { return (+v).toFixed(2); }, onChange: function (v) { st.rho = v; draw(); } });
   G.button(ctr, "New random markets", function () { st.seed++; draw(); });
   var ro = G.el("div", "readout"); body.appendChild(ro);
-  var pl = G.plot(body, { w: 680, h: 320, x: [0, 120], y: [0, 30], xlabel: "newspaper budget (simulated)", ylabel: "sales", label: "sales against newspaper with simple and multiple regression slopes" });
+  var pl = G.plot(body, { w: 680, h: 320, x: [0, 60], y: [0, 30], xlabel: "newspaper budget (simulated)", ylabel: "sales", label: "sales against newspaper with simple and multiple regression slopes" });
   function draw() {
-    var rng = G.rng(st.seed), n = 200, ra = [], nw = [], sa = [], X = [], i;
+    var rng = G.rng(st.seed), n = 400, ra = [], nw = [], sa = [], X = [], i;
     for (i = 0; i < n; i++) {
       var z1 = G.randn(rng), z2 = G.randn(rng);
-      var r = 25 + 14.5 * z1, w = Math.abs(30 + 20 * (st.rho * z1 + Math.sqrt(1 - st.rho * st.rho) * z2));
-      ra.push(r); nw.push(w); sa.push(9 + 0.2 * r + 0 * w + 2 * G.randn(rng)); X.push([1, r, w]);
+      var r = 25 + 14.5 * z1, w = Math.abs(25 + 10 * (st.rho * z1 + Math.sqrt(1 - st.rho * st.rho) * z2));
+      ra.push(r); nw.push(w); sa.push(9 + 0.2 * r + 0 * w + 1.5 * G.randn(rng)); X.push([1, r, w]);
     }
     var S = isl31Sums(nw, sa), bm = isl32ols(X, sa), C = isl31Sums(ra, nw);
     var corr = C.cxy / Math.sqrt(C.cxx * (C.Syy - n * C.yb * C.yb));
     pl.clear();
     for (i = 0; i < n; i++) pl.dot(nw[i], sa[i], { r: 2.6, fill: "var(--ink2)", opacity: 0.6 });
-    pl.line([[0, S.b0], [120, S.b0 + 120 * S.b1]], { stroke: "var(--bad)", "stroke-width": 2.6 });
-    pl.line([[0, S.yb - S.xb * bm[2]], [120, S.yb + (120 - S.xb) * bm[2]]], { stroke: "var(--accent)", "stroke-width": 2.6, "stroke-dasharray": "7 5" });
+    pl.line([[0, S.b0], [60, S.b0 + 60 * S.b1]], { stroke: "var(--bad)", "stroke-width": 2.6 });
+    pl.line([[0, S.yb - S.xb * bm[2]], [60, S.yb + (60 - S.xb) * bm[2]]], { stroke: "var(--accent)", "stroke-width": 2.6, "stroke-dasharray": "7 5" });
     ro.innerHTML = "<div>true effect of newspaper<b>0</b></div><div>actual correlation(radio, newspaper)<b>" + G.fmt(corr, 2) + "</b></div><div>simple regression slope (red)<b>" + G.fmt(S.b1, 4) + "</b></div><div>multiple regression slope, radio held fixed (blue dashed)<b>" + G.fmt(bm[2], 4) + "</b></div>";
   }
   draw();

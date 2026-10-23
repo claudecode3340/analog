@@ -273,7 +273,7 @@ inter = list(terms) + [('horsepower', 'weight'), ('displacement', 'cylinders'), 
 res9e = sm.OLS(y, MS(inter).fit_transform(Auto)).fit()
 print(summarize(res9e).iloc[-3:])
 print(f"R^2 = {res9e.rsquared:.3f} (was {res9.rsquared:.3f})")
-</pre><div class="pynote"><b>Read the output:</b> <b>horsepower:weight</b> (p ≈ 0) and <b>acceleration:year</b> (p ≈ 0) are significant; displacement:cylinders (p = 0.48) is not. \(R^2\) rises from 0.82 to about 0.86. A positive horsepower:weight coefficient means the mpg penalty for extra horsepower is smaller in heavier cars. <code>.iloc[-3:]</code> shows the last three rows (the interactions). Remember the hierarchical principle: the main effects stay in.</div></div>
+</pre><div class="pynote"><b>Read the output:</b> <b>horsepower:weight</b> (p ≈ 0) and <b>acceleration:year</b> (p ≈ 0) are significant; displacement:cylinders (p = 0.48) is not. \(R^2\) rises from 0.821 to 0.875. A positive horsepower:weight coefficient means the mpg penalty for extra horsepower is smaller in heavier cars. <code>.iloc[-3:]</code> shows the last three rows (the interactions). Remember the hierarchical principle: the main effects stay in.</div></div>
 <p><b>(f)</b> Transformations.</p>
 <div class="py" id="c-isl3-ex-13"><pre class="src">
 A2 = Auto.copy()
