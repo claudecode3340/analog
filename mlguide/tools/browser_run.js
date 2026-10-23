@@ -17,7 +17,7 @@ const path = require('path');
       await p.evaluate(id => { const c = document.getElementById(id); c.scrollIntoView(); const o = c.querySelector('.out'); if (o) o.dataset.prev = '1'; }, id);
       const btn = isEx ? '.cbtn.check' : '.cbtn.run';
       if (isEx) await p.evaluate(id => { const c = document.getElementById(id); const tas = c.querySelectorAll('textarea'); const sol = c.querySelector('.solwrap textarea'); tas[0].value = sol.value; tas[0].dispatchEvent(new Event('input')); }, id);
-      await (await p.$(`#${id} ${btn}`)).click();
+      await p.evaluate(([id, btn]) => { const c = document.getElementById(id); c.dataset.gated = '0'; c.querySelector(btn).click(); }, [id, btn]);
       try {
         await p.waitForFunction(([id, btn]) => { const b = document.querySelector('#' + id + ' ' + btn); return b && !b.disabled; }, [id, btn], { timeout: 300000, polling: 300 });
       } catch (e) { console.log(`[${lid}] TIMEOUT ${id}`); bad++; continue; }
