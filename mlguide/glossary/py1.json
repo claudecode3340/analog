@@ -1,0 +1,16 @@
+{
+"py-program": {"term": "program", "def": "A list of instructions Python carries out one line at a time, top to bottom.", "at": "py1"},
+"py-operator": {"term": "operator", "def": "A symbol that combines values: <code>+ - * / // % **</code>, comparisons such as <code>==</code> and <code>&lt;</code>.", "at": "py1"},
+"py-variable": {"term": "variable", "def": "A name tied to a value so you can use it later, created with <code>=</code> (read \"gets\").", "at": "py1"},
+"py-assignment": {"term": "assignment", "def": "<code>name = value</code>: work out the right side, then tie the name on the left to it. It never copies.", "at": "py1"},
+"py-type": {"term": "type", "def": "The kind of a value, which decides what you can do with it: <code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>list</code>… Check with <code>type(x)</code>.", "at": "py1"},
+"py-method": {"term": "method", "def": "A function that belongs to a value, called with a dot: <code>name.upper()</code>, <code>marks.append(70)</code>.", "at": "py1"},
+"py-fstring": {"term": "f-string", "def": "Text with <code>f</code> before the quote; values in <code>{…}</code> are put in, optionally formatted, e.g. <code>f\"{x:.2f}\"</code>.", "at": "py1"},
+"py-list": {"term": "list", "def": "An ordered, changeable collection of values in square brackets: <code>[62, 75, 81]</code>.", "at": "py1"},
+"py-index": {"term": "index", "def": "The position of an item, counted from 0; negative indices count from the end (<code>xs[-1]</code> is the last).", "at": "py1"},
+"py-slice": {"term": "slice", "def": "<code>xs[start:stop:step]</code>: the items from start up to but not including stop; it has stop − start items when step is 1.", "at": "py1"},
+"py-loop": {"term": "for loop", "def": "Repeats an indented block once for each item: <code>for m in marks:</code>.", "at": "py1"},
+"py-function": {"term": "function", "def": "A named machine defined with <code>def</code>: arguments go in, <code>return</code> hands a value back (or <code>None</code> without a return).", "at": "py1"},
+"py-module": {"term": "module", "def": "A file of ready-made Python tools that you <code>import</code>, e.g. <code>math</code>, <code>statistics</code>, <code>numpy</code>.", "at": "py1"},
+"py-traceback": {"term": "traceback", "def": "Python's error report. Read the last line (error type and reason) first, then the line number.", "at": "py1"}
+}

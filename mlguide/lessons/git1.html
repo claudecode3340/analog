@@ -1,0 +1,448 @@
+<section class="lesson" id="git1" data-book="Tools · Git">
+<style>
+#git1 pre.term{background:var(--code-bg);color:var(--code-ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:6px 0 12px;font:400 14px/1.55 var(--mono);white-space:pre;overflow-x:auto;max-width:100%}
+#git1 pre.term.see{background:var(--panel);color:var(--ink2);border-style:dashed}
+#git1 .tl{font:700 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:12px 0 2px!important}
+#git1 .flags{margin:6px 0 10px;padding-left:20px;font-size:16px}
+#git1 .flags li{margin:3px 0}
+#git1 svg.fig text{font-family:var(--body)}
+#git1 code.lc{white-space:normal;overflow-wrap:anywhere}
+#git1 svg.git1-narrow{display:none}
+@media (max-width:640px){#git1 svg.git1-wide{display:none}#git1 svg.git1-narrow{display:block}}
+</style>
+<p class="lede">Git keeps a save point of your project every time you ask it to, so you can always see what changed, go back, and try ideas without fear. GitHub keeps a copy online, which is also where employers will look at your work. In this lesson you put your course folder under Git, connect it to GitHub, and learn the handful of commands you'll use every day for the rest of your career.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#s0-setup">Set up your Mac</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>explain what version control is, and the difference between Git and GitHub;</li>
+<li>describe the path a change takes: working folder → staging area → commit → GitHub;</li>
+<li>set up Git once (<code>git config</code>), start a repository (<code>git init</code>) and keep junk out of it with <code>.gitignore</code>;</li>
+<li>use the daily loop <code>git status</code>, <code>git add</code>, <code>git commit</code>, and inspect history with <code>git log</code> and <code>git diff</code>;</li>
+<li>create a GitHub account and repository, connect with <code>gh</code> or a personal access token, and <code>git push</code>;</li>
+<li>copy a repository with <code>git clone</code>, try an idea on a branch, and set up a project as a portfolio piece with a good README.</li></ul></div>
+
+<h3 id="git1-why">What version control is, and why you want it</h3>
+<p>Have you ever had files called <code>report_final.docx</code>, <code>report_final2.docx</code>, <code>report_final_REALLY.docx</code>? That is version control done by hand, badly. <dfn data-g="git-vc">Version control</dfn> is software that does it properly: it remembers every saved version of every file in a project, who changed what and why, and lets you jump back to any of them.</p>
+<p>Think of a video game with <b>save points</b>. Before the difficult level, you save. If it goes wrong, you reload. Git gives you unlimited save points for your code, each with a note saying what you did. In ML this matters even more than in ordinary programming:</p>
+<ul>
+<li><b>Experiments.</b> You'll change a model, the test error gets worse, and you'll want the exact code from yesterday's better run. With Git that's one command.</li>
+<li><b>Fearless trying.</b> On a <i>branch</i> you can try a wild idea without touching the working version.</li>
+<li><b>Backup and sharing.</b> Pushing to GitHub copies everything off your Mac.</li>
+<li><b>Your portfolio.</b> Recruiters for ML roles read GitHub profiles. A tidy repository per project, with a clear README and an honest history of commits, shows how you work better than any CV line.</li>
+</ul>
+<div class="callout key"><p><b>Git versus GitHub.</b> <dfn data-g="git-git">Git</dfn> is a program on your Mac that keeps the history of a folder. It works entirely offline. <dfn data-g="git-github">GitHub</dfn> is a website (owned by Microsoft) that stores copies of Git repositories online so you can back them up, share them and collaborate. Git is the camera; GitHub is the online photo album.</p></div>
+
+<h3 id="git1-areas">The four places a change lives</h3>
+<p>This is the one picture to understand. Every change you make travels through up to four places, moved along by one command each:</p>
+<figure>
+<svg class="fig git1-wide" viewBox="0 0 720 270" style="max-width:760px" role="img" aria-label="Diagram: working folder, git add, staging area, git commit, local repository, git push, GitHub; git clone and git pull bring changes back.">
+<defs><marker id="git1-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--ink2)"/></marker></defs>
+<rect x="8" y="40" width="150" height="120" rx="12" style="fill:var(--tool-soft);stroke:var(--tool);stroke-width:1.6"/>
+<text x="83" y="72" text-anchor="middle" style="fill:var(--ink);font-size:16px;font-weight:700">Working</text>
+<text x="83" y="92" text-anchor="middle" style="fill:var(--ink);font-size:16px;font-weight:700">folder</text>
+<text x="83" y="118" text-anchor="middle" style="fill:var(--ink2);font-size:12.5px">the files you edit</text>
+<text x="83" y="136" text-anchor="middle" style="fill:var(--ink2);font-size:12.5px">in VS Code</text>
+<rect x="194" y="40" width="150" height="120" rx="12" style="fill:var(--math-soft);stroke:var(--math);stroke-width:1.6"/>
+<text x="269" y="72" text-anchor="middle" style="fill:var(--ink);font-size:16px;font-weight:700">Staging</text>
+<text x="269" y="92" text-anchor="middle" style="fill:var(--ink);font-size:16px;font-weight:700">area</text>
+<text x="269" y="118" text-anchor="middle" style="fill:var(--ink2);font-size:12.5px">changes chosen for</text>
+<text x="269" y="136" text-anchor="middle" style="fill:var(--ink2);font-size:12.5px">the next save point</text>
+<rect x="380" y="40" width="150" height="120" rx="12" style="fill:var(--isl-soft);stroke:var(--isl);stroke-width:1.6"/>
+<text x="455" y="72" text-anchor="middle" style="fill:var(--ink);font-size:16px;font-weight:700">Local</text>
+<text x="455" y="92" text-anchor="middle" style="fill:var(--ink);font-size:16px;font-weight:700">repository</text>
+<text x="455" y="118" text-anchor="middle" style="fill:var(--ink2);font-size:12.5px">all commits, in the</text>
+<text x="455" y="136" text-anchor="middle" style="fill:var(--ink2);font-size:12.5px">hidden .git folder</text>
+<rect x="566" y="40" width="146" height="120" rx="12" style="fill:var(--udl-soft);stroke:var(--udl);stroke-width:1.6"/>
+<text x="639" y="82" text-anchor="middle" style="fill:var(--ink);font-size:16px;font-weight:700">GitHub</text>
+<text x="639" y="108" text-anchor="middle" style="fill:var(--ink2);font-size:12.5px">the remote copy</text>
+<text x="639" y="126" text-anchor="middle" style="fill:var(--ink2);font-size:12.5px">("origin")</text>
+<line x1="158" y1="100" x2="190" y2="100" style="stroke:var(--ink2);stroke-width:1.8" marker-end="url(#git1-arr)"/>
+<line x1="344" y1="100" x2="376" y2="100" style="stroke:var(--ink2);stroke-width:1.8" marker-end="url(#git1-arr)"/>
+<line x1="530" y1="100" x2="562" y2="100" style="stroke:var(--ink2);stroke-width:1.8" marker-end="url(#git1-arr)"/>
+<text x="176" y="28" text-anchor="middle" style="fill:var(--math);font:700 13px var(--mono)">git add</text>
+<text x="360" y="28" text-anchor="middle" style="fill:var(--isl);font:700 13px var(--mono)">git commit</text>
+<text x="548" y="28" text-anchor="middle" style="fill:var(--udl);font:700 13px var(--mono)">git push</text>
+<path d="M639 162 C639 232 83 232 83 166" style="fill:none;stroke:var(--muted);stroke-width:1.6;stroke-dasharray:6 5" marker-end="url(#git1-arr)"/>
+<text x="360" y="252" text-anchor="middle" style="fill:var(--muted);font:600 13px var(--mono)">git clone (first time) · git pull (later)</text>
+</svg>
+<svg class="fig git1-narrow" viewBox="0 0 360 470" role="img" aria-label="The same diagram, stacked vertically: working folder, git add, staging area, git commit, local repository, git push, GitHub.">
+<defs><marker id="git1-arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--ink2)"/></marker></defs>
+<rect x="10" y="10" width="270" height="74" rx="12" style="fill:var(--tool-soft);stroke:var(--tool);stroke-width:1.6"/>
+<text x="145" y="41" text-anchor="middle" style="fill:var(--ink);font-size:18px;font-weight:700">Working folder</text>
+<text x="145" y="65" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">the files you edit in VS Code</text>
+<line x1="145" y1="86" x2="145" y2="124" style="stroke:var(--ink2);stroke-width:1.8" marker-end="url(#git1-arr2)"/>
+<text x="158" y="111" style="fill:var(--math);font:700 15px var(--mono)">git add</text>
+<rect x="10" y="130" width="270" height="74" rx="12" style="fill:var(--math-soft);stroke:var(--math);stroke-width:1.6"/>
+<text x="145" y="161" text-anchor="middle" style="fill:var(--ink);font-size:18px;font-weight:700">Staging area</text>
+<text x="145" y="185" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">changes chosen for the next save point</text>
+<line x1="145" y1="206" x2="145" y2="244" style="stroke:var(--ink2);stroke-width:1.8" marker-end="url(#git1-arr2)"/>
+<text x="158" y="231" style="fill:var(--isl);font:700 15px var(--mono)">git commit</text>
+<rect x="10" y="250" width="270" height="74" rx="12" style="fill:var(--isl-soft);stroke:var(--isl);stroke-width:1.6"/>
+<text x="145" y="281" text-anchor="middle" style="fill:var(--ink);font-size:18px;font-weight:700">Local repository</text>
+<text x="145" y="305" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">all commits, in the hidden .git folder</text>
+<line x1="145" y1="326" x2="145" y2="364" style="stroke:var(--ink2);stroke-width:1.8" marker-end="url(#git1-arr2)"/>
+<text x="158" y="351" style="fill:var(--udl);font:700 15px var(--mono)">git push</text>
+<rect x="10" y="370" width="270" height="74" rx="12" style="fill:var(--udl-soft);stroke:var(--udl);stroke-width:1.6"/>
+<text x="145" y="401" text-anchor="middle" style="fill:var(--ink);font-size:18px;font-weight:700">GitHub</text>
+<text x="145" y="425" text-anchor="middle" style="fill:var(--ink2);font-size:13.5px">the remote copy ("origin")</text>
+<path d="M282 412 C350 412 350 47 286 47" style="fill:none;stroke:var(--muted);stroke-width:1.6;stroke-dasharray:6 5" marker-end="url(#git1-arr2)"/>
+<text x="345" y="230" text-anchor="middle" transform="rotate(-90 345 230)" style="fill:var(--muted);font:600 12.5px var(--mono)">git clone · git pull</text>
+</svg>
+<figcaption>A change starts in your <b>working folder</b> when you save a file. <code>git add</code> puts it in the <dfn data-g="git-staging">staging area</dfn>, a waiting room for the next save point. <code>git commit</code> takes everything in the staging area and records it as one save point, a <dfn data-g="git-commit">commit</dfn>, in the <b>local repository</b> (the hidden <code>.git</code> folder). <code>git push</code> sends your new commits to <b>GitHub</b>. Going the other way, <code>git clone</code> copies a whole repository from GitHub and <code>git pull</code> fetches new commits.</figcaption>
+</figure>
+<p>Why a separate staging area, instead of saving everything at once? Because it lets you choose. Say you fixed a bug in <code>knn.py</code> and also scribbled half-finished notes in <code>notes.txt</code>. You can add only <code>knn.py</code> and commit it as "Fix distance formula", a clean save point that contains exactly one idea.</p>
+
+<div class="widget" data-w="git1-flow" data-title="Watch a change travel through Git"><div class="wn">Start by pressing <b>git add .</b>, then <b>git commit</b>, then <b>git push</b>: both files travel all the way to GitHub, and the dark box shows the real <code>git status</code> message at each moment. Then press <b>Edit knn.py</b>: it turns red ("modified") in the working folder. Press <b>git commit</b> straight away: nothing happens, because nothing is staged. Add it, commit, and notice the status line "Your branch is ahead of 'origin/main' by 1 commit" until you push. Finally make <b>New notes.txt</b> and see how Git treats an untracked file.</div></div>
+
+<h3 id="git1-setup">Step 1 · Check Git and introduce yourself</h3>
+<p>Git came with the Xcode Command Line Tools you installed in <a href="#s0-setup">Set up your Mac</a>. Open Terminal and check:</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">git --version</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">git version 2.39.5 (Apple Git-154)</pre>
+<p>Any version from 2.28 onward is fine. If you get a pop-up asking to install developer tools, accept it and wait, then try again.</p></div>
+
+<p>Every commit records who made it, so tell Git your name and email once. Use the <b>same email</b> you will use for GitHub, so your commits are linked to your profile. These settings are stored in a file in your home folder, <code>~/.gitconfig</code>, and apply to every project.</p>
+<div class="callout mac"><p class="tl">Type these four lines (with your own name and email)</p>
+<pre class="term">git config --global user.name "Asha Rao"
+git config --global user.email "asha.rao@example.com"
+git config --global init.defaultBranch main
+git config --global core.editor "nano"</pre>
+<ul class="flags">
+<li><code>git config</code> reads or changes Git's settings; <code>--global</code> means "for all my projects on this Mac".</li>
+<li><code>user.name</code> and <code>user.email</code> are written into every commit you make. The quotes keep a name with a space together.</li>
+<li><code>init.defaultBranch main</code>: name the main line of history <code>main</code>, as GitHub does (older Git used <code>master</code>).</li>
+<li><code>core.editor "nano"</code>: if Git ever needs you to type a longer message, it opens <b>nano</b>, a simple text editor that shows its keys at the bottom (<kbd class="k">Ctrl</kbd> + <kbd class="k">O</kbd> then <kbd class="k">Return</kbd> saves, <kbd class="k">Ctrl</kbd> + <kbd class="k">X</kbd> exits). Without this, Git opens <b>vim</b>, which baffles newcomers (to escape vim: press <kbd class="k">Esc</kbd>, type <code>:wq</code>, press <kbd class="k">Return</kbd>).</li></ul>
+<p>These commands print nothing when they work. Check with:</p>
+<pre class="term">git config --global --list</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">user.name=Asha Rao
+user.email=asha.rao@example.com
+init.defaultbranch=main
+core.editor=nano</pre></div>
+
+<h3 id="git1-init">Step 2 · Turn your course folder into a repository</h3>
+<p>A <dfn data-g="git-repo">repository</dfn> (or "repo") is a folder whose history Git keeps. You make one with <code>git init</code>, inside the folder:</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">cd ~/ml-course
+git init</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">Initialized empty Git repository in /Users/you/ml-course/.git/</pre>
+<p>Git made a hidden folder, <code>.git</code>, where it will keep every save point. You never edit it by hand. (Delete <code>.git</code> and the history is gone, but your files stay.) The prompt doesn't change, but VS Code will now show Git information in its sidebar.</p></div>
+
+<p>The most useful command in Git asks "what's going on?":</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">git status</pre>
+<p class="tl">What you should see (your list may differ)</p>
+<pre class="term see">On branch main
+
+No commits yet
+
+Untracked files:
+  (use "git add &lt;file&gt;..." to include in what will be committed)
+	.venv/
+	Advertising.csv
+	Auto.csv
+	notebooks/
+	test.ipynb
+
+nothing added to commit but untracked files present (use "git add" to track)</pre>
+<p><b>Untracked</b> means "files Git can see but isn't keeping history for yet". Look at that list: <code>.venv/</code> is in it. That folder holds thousands of library files, rebuildable in two minutes with uv. It must <i>never</i> go into Git. The CSV data files don't belong either: they're not your work, they can be re-downloaded, and real datasets are often far too big for Git.</p></div>
+
+<h3 id="git1-ignore">Step 3 · Keep junk out with .gitignore</h3>
+<p>A file called <dfn data-g="git-ignore"><code>.gitignore</code></dfn> lists names and patterns Git should pretend don't exist. In VS Code (with <code>~/ml-course</code> open), choose <b>File → New File…</b>, name it <code>.gitignore</code> (with the leading dot), and type:</p>
+<pre class="term"># the virtual environment: rebuild it with uv, never commit it
+.venv/
+# Python's and Jupyter's automatic files
+__pycache__/
+.ipynb_checkpoints/
+# data files: re-downloadable, often large
+*.csv
+*.zip
+# macOS folder settings
+.DS_Store</pre>
+<ul class="flags">
+<li>Lines starting with <code>#</code> are comments.</li>
+<li>A name ending in <code>/</code> means a folder and everything in it.</li>
+<li><code>*</code> means "any characters", so <code>*.csv</code> matches every file ending in <code>.csv</code>. (This pattern is called a <i>glob</i>; it's the same <code>*</code> that made zsh say "no matches found" in the setup lesson.)</li>
+<li><code>.DS_Store</code> is a hidden file Finder creates in every folder you open. Every Mac user's repos should ignore it.</li></ul>
+<p>Save it (<kbd class="k">⌘</kbd> + <kbd class="k">S</kbd>) and run <code>git status</code> again:</p>
+<div class="callout mac"><p class="tl">What you should see now</p>
+<pre class="term see">On branch main
+
+No commits yet
+
+Untracked files:
+  (use "git add &lt;file&gt;..." to include in what will be committed)
+	.gitignore
+	notebooks/
+	test.ipynb
+
+nothing added to commit but untracked files present (use "git add" to track)</pre>
+<p>The environment and the data have vanished from the list. Only your own work is left, plus <code>.gitignore</code> itself, which <i>should</i> be committed so the rules travel with the project.</p></div>
+
+<div class="callout pitfall"><p><b>Never commit secrets.</b> Passwords, API keys and tokens must never go into a repository, even a private one: once something is in a commit, it stays in the history even if you delete the file later, and bots scan GitHub for leaked keys within minutes. Keep secrets in a file listed in <code>.gitignore</code> (commonly <code>.env</code>).</p></div>
+
+<h3 id="git1-commit">Step 4 · Your first commit</h3>
+<p>Making a save point is two commands: choose what goes in (<code>git add</code>), then record it with a message (<code>git commit</code>).</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">git add .
+git status</pre>
+<ul class="flags"><li><code>git add .</code> stages <b>everything</b> in the current folder that has changed and isn't ignored (the dot means "this folder", as in the setup lesson). To stage one file, name it: <code>git add test.ipynb</code>.</li></ul>
+<p class="tl">What you should see</p>
+<pre class="term see">On branch main
+
+No commits yet
+
+Changes to be committed:
+  (use "git rm --cached &lt;file&gt;..." to unstage)
+	new file:   .gitignore
+	new file:   notebooks/np1.ipynb
+	new file:   notebooks/py1.ipynb
+	…
+	new file:   test.ipynb</pre>
+<p>"Changes to be committed" is the staging area. In Terminal these lines are green; untracked and modified files are red.</p></div>
+
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">git commit -m "Set up course folder with notebooks"</pre>
+<ul class="flags"><li><code>-m</code> means "the <b>m</b>essage follows", in quotes. Without <code>-m</code>, Git opens nano for you to write one.</li></ul>
+<p class="tl">What you should see</p>
+<pre class="term see">[main (root-commit) 3f2a1c4] Set up course folder with notebooks
+ 24 files changed, 6081 insertions(+)
+ create mode 100644 .gitignore
+ create mode 100644 notebooks/py1.ipynb
+ …</pre>
+<p><code>main</code> is the branch; <code>root-commit</code> means "the very first one"; <code>3f2a1c4</code> is the commit's short <b>ID</b> (yours will be different). "Insertions" counts lines added. Run <code>git status</code> again: <code class="lc">nothing to commit, working tree clean</code>. Everything is saved.</p></div>
+
+<div class="callout ece"><p><b>A commit ID is a checksum.</b> The full ID is a 40-hex-digit SHA-1 hash of the commit's contents, its message, its author and its parent commit. Like a CRC on a data frame, flip one bit anywhere and the hash changes completely, so Git can detect corruption, and because each commit includes its parent's hash, the history forms a tamper-evident chain. The 7-character short form is enough to name a commit in practice.</p></div>
+
+<h4>Good commit messages</h4>
+<p>Write the message as a short instruction that completes the sentence "This commit will …": <code>Add KNN classifier</code>, <code class="lc">Fix off-by-one error in slicing</code>, <code>Plot test error against k</code>. Keep it under about 60 characters. Avoid <code>update</code>, <code>stuff</code>, <code>asdf</code>: in three weeks you'll be scanning the history for "where did the test error drop?", and only good messages will tell you. Commit small and often: one idea per commit.</p>
+
+<h3 id="git1-log">Step 5 · The daily loop, history and differences</h3>
+<p>Now make a real change. In VS Code create <code>README.md</code> in <code>~/ml-course</code> containing these three lines (<code>#</code> at the start of a line makes a heading in Markdown, the formatting language GitHub uses for READMEs):</p>
+<pre class="term"># ML course
+
+My work for ML Foundations, months 1–3.</pre>
+<p>Then commit it. This is the loop you will repeat every day:</p>
+<div class="callout mac"><p class="tl">The daily loop</p>
+<pre class="term">git status
+git add README.md
+git commit -m "Add README"</pre></div>
+<p>Now change the README: replace the last line with two new lines, and save.</p>
+<pre class="term"># ML course
+
+My work for ML Foundations, months 1–3, on a MacBook Air.
+Started: October 2026.</pre>
+<p>Before adding, ask Git exactly what changed:</p>
+<div class="callout mac"><p class="tl">Type this</p>
+<pre class="term">git diff</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">diff --git a/README.md b/README.md
+index 5d1c2e3..8a9b0f1 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,4 @@
+ # ML course
+
+-My work for ML Foundations, months 1–3.
++My work for ML Foundations, months 1–3, on a MacBook Air.
++Started: October 2026.</pre>
+<p>Read it line by line. <code>---</code> is the old version, <code>+++</code> the new. <code>@@ -1,3 +1,4 @@</code> says "the old file's lines 1 to 3 became the new file's lines 1 to 4". Then a line starting with a <b>space</b> is unchanged, <b>-</b> was removed (red in Terminal), <b>+</b> was added (green). Changing a line shows up as one removal plus one addition. If the diff is long, Git shows it a page at a time: press <kbd class="k">Space</kbd> for more and <kbd class="k">q</kbd> to quit.</p></div>
+<p><code>git diff</code> shows changes you haven't staged yet. After <code>git add</code>, use <code>git diff --staged</code> to see what you're about to commit. Commit this change with <code class="lc">git commit -am "Describe my setup in README"</code>: the extra <code>-a</code> means "add every already-tracked file that changed, then commit", a shortcut that never picks up brand-new files.</p>
+
+<div class="callout mac"><p class="tl">See the history</p>
+<pre class="term">git log --oneline</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">a91e07d (HEAD -&gt; main) Describe my setup in README
+6b2d4f8 Add README
+3f2a1c4 Set up course folder with notebooks</pre>
+<p>Newest first, one line per commit: short ID and message. <code>HEAD -&gt; main</code> marks where you are now. Plain <code>git log</code> shows more detail (author, date, full ID); press <kbd class="k">q</kbd> to leave it.</p></div>
+
+<h4>Undoing things (gently)</h4>
+<div class="tw"><table class="t"><thead><tr><th>You want to…</th><th>Command</th><th>Careful?</th></tr></thead><tbody>
+<tr><td>throw away unsaved-to-Git edits to a file, back to the last commit</td><td><code>git restore knn.py</code></td><td>Yes: those edits are gone for good</td></tr>
+<tr><td>take a file out of the staging area (keep your edits)</td><td><code class="lc">git restore --staged knn.py</code></td><td>Safe</td></tr>
+<tr><td>look at the project as it was at an old commit</td><td><code class="lc">git switch --detach 3f2a1c4</code>, then <code>git switch main</code> to come back</td><td>Safe (read-only visit)</td></tr>
+<tr><td>see one old version of a file</td><td><code>git show 6b2d4f8:README.md</code></td><td>Safe</td></tr>
+<tr><td>fix the message of the last commit (not yet pushed)</td><td><code class="lc">git commit --amend -m "Better message"</code></td><td>Only before pushing</td></tr>
+</tbody></table></div>
+
+<h3 id="git1-github">Step 6 · Put it on GitHub</h3>
+<h4>Create your account</h4>
+<ol>
+<li>Go to <b>github.com</b> and click <b>Sign up</b>. Use the email you gave to <code>git config</code>.</li>
+<li>Choose your <b>username</b> carefully: it will appear in every link you put on your CV (<code>github.com/asharao</code>). Your real name, or close to it, is best. Avoid nicknames you'd be embarrassed by in an interview.</li>
+<li>Verify your email, and set up <b>two-factor authentication</b> (GitHub requires it for anyone who pushes code). An authenticator app on your phone is the simplest option.</li>
+<li>Add a profile photo and one line about yourself ("ECE undergraduate learning ML and computer vision"). You'll polish the profile as projects arrive.</li>
+</ol>
+<h4>Create an empty repository</h4>
+<p>Top right, click <b>+</b> → <b>New repository</b>. Name it <code>ml-course</code>. Choose <b>Private</b> for this one (it's your study folder; your portfolio projects will be public). <b>Don't</b> tick "Add a README", ".gitignore" or "license": your local repository already has history, and GitHub's starter files would conflict with it. Click <b>Create repository</b>. GitHub shows a page with commands; you'll use the ones below.</p>
+
+<h4>Connect your Mac to GitHub: two ways</h4>
+<p>GitHub must be sure that pushes really come from you. Your GitHub password <b>doesn't work</b> in Terminal (that was switched off in 2021). Choose one of these:</p>
+<p><b>Way A (recommended): the GitHub CLI, <code>gh</code>.</b> A small official program that logs you in through the browser and sets everything up. Download the macOS installer from <b>cli.github.com</b> and run it (or, if you have Homebrew, <code>brew install gh</code>). Then:</p>
+<div class="callout mac"><p class="tl">Type this, and answer the questions</p>
+<pre class="term">gh auth login</pre>
+<p class="tl">What you should see (choose with the arrow keys and Return)</p>
+<pre class="term see">? Where do you use GitHub? GitHub.com
+? What is your preferred protocol for Git operations on this host? HTTPS
+? Authenticate Git with your GitHub credentials? Yes
+? How would you like to authenticate GitHub CLI? Login with a web browser
+
+! First copy your one-time code: 1A2B-3C4D
+Press Enter to open github.com in your browser...
+✓ Authentication complete.
+- gh config set -h github.com git_protocol https
+✓ Configured git protocol
+✓ Logged in as asharao</pre>
+<p>The browser asks you to paste the 8-character code and approve. After this, <code>git push</code> just works. Bonus: <code>gh repo create</code> can make GitHub repositories without visiting the website.</p></div>
+
+<p><b>Way B: HTTPS with a personal access token.</b> A <dfn data-g="git-pat">personal access token</dfn> (PAT) is a long password-like string that you generate on GitHub and use instead of your password. On GitHub: your photo (top right) → <b>Settings</b> → <b>Developer settings</b> (bottom of the left menu) → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>. Give it a name ("MacBook"), an expiry (90 days), choose <b>Only select repositories</b> → <code>ml-course</code> (later, "All repositories"), and under <b>Repository permissions</b> set <b>Contents</b> to <b>Read and write</b>. Generate it and <b>copy it immediately</b>: GitHub shows it only once. The first time <code>git push</code> asks for a password, paste the token. macOS stores it in your Keychain, so you won't be asked again until it expires.</p>
+
+<h4>Link and push</h4>
+<div class="callout mac"><p class="tl">Type this (with your username)</p>
+<pre class="term">git remote add origin https://github.com/asharao/ml-course.git
+git push -u origin main</pre>
+<ul class="flags">
+<li><code>git remote add origin URL</code>: remember this GitHub address under the short name <dfn data-g="git-remote"><code>origin</code></dfn> (the standard name for "the main online copy"). Copy the URL from your repository's page.</li>
+<li><code>git push origin main</code>: send the commits of branch <code>main</code> to <code>origin</code>.</li>
+<li><code>-u</code> ("upstream"): also remember that local <code>main</code> goes with <code>origin/main</code>, so next time plain <code>git push</code> is enough.</li></ul>
+<p class="tl">What you should see</p>
+<pre class="term see">Enumerating objects: 31, done.
+Counting objects: 100% (31/31), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (29/29), done.
+Writing objects: 100% (31/31), 412.70 KiB | 6.10 MiB/s, done.
+Total 31 (delta 3), reused 0 (delta 0), pack-reused 0
+To https://github.com/asharao/ml-course.git
+ * [new branch]      main -&gt; main
+branch 'main' set up to track 'origin/main'.</pre>
+<p>Refresh the repository page on GitHub: your files, your README shown below them, and "3 commits" are there. From now on, after committing: <code>git push</code>.</p></div>
+
+<div class="callout pitfall"><p><b>"rejected … fetch first"</b> when pushing means GitHub has commits you don't have (for instance, you edited the README on the website, or ticked "Add a README" when creating the repo). Run <code>git pull</code> to bring them down and combine them with yours, then push again.</p></div>
+
+<h3 id="git1-clone">Step 7 · Clone and pull</h3>
+<p><dfn data-g="git-clone"><code>git clone URL</code></dfn> copies a whole repository, with all its history, into a new folder. It's how you'll get the code that accompanies papers and courses, and how you'd set up your own project on a second computer.</p>
+<div class="callout mac"><p class="tl">Try it (this makes a new folder, ~/ISLP_labs)</p>
+<pre class="term">cd ~
+git clone https://github.com/intro-stat-learning/ISLP_labs.git
+cd ISLP_labs
+git log --oneline | head -5</pre>
+<p class="tl">What you should see</p>
+<pre class="term see">Cloning into 'ISLP_labs'...
+remote: Enumerating objects: …, done.
+Receiving objects: 100% (…), done.
+Resolving deltas: 100% (…), done.</pre>
+<p>…followed by the five most recent commits of the official ISLP labs repository: the book's Python labs as notebooks. (<code>| head -5</code> pipes the log into <code>head</code>, which keeps only the first 5 lines.) If anyone updates a repository you cloned, <code>git pull</code> inside it fetches and merges their new commits.</p></div>
+
+<h3 id="git1-branch">Step 8 · Branches: try an idea safely</h3>
+<p>A <dfn data-g="git-branch">branch</dfn> is a separate line of commits. <code>main</code> is the one you've been using. Make a new branch when you want to try something that might not work: if it fails, you delete the branch and <code>main</code> never knew; if it works, you <b>merge</b> it into <code>main</code>.</p>
+<div class="callout mac"><p class="tl">Type this (in ~/ml-course)</p>
+<pre class="term">git switch -c try-notes
+#   ...edit README.md in VS Code: add a line "Goal: build a KNN classifier from scratch."
+git commit -am "Add learning goal to README"
+git switch main
+#   ...look at README.md in VS Code: the new line is gone (it lives on try-notes)
+git merge try-notes
+git branch -d try-notes</pre>
+<ul class="flags">
+<li><code>git switch -c try-notes</code>: <b>c</b>reate a branch called <code>try-notes</code> and switch to it. (Older guides write <code>git checkout -b try-notes</code>; it does the same.)</li>
+<li><code>git switch main</code>: go back to main. Git rewrites the files in your folder to match that branch, which is why the line seems to vanish. It isn't lost.</li>
+<li><code>git merge try-notes</code>: bring the branch's commits into main.</li>
+<li><code>git branch -d try-notes</code>: <b>d</b>elete the branch label, now that its work is in main. <code>git branch</code> on its own lists branches, with a <code>*</code> on the current one.</li></ul>
+<p class="tl">What you should see after the merge</p>
+<pre class="term see">Updating a91e07d..c4e8b20
+Fast-forward
+ README.md | 1 +
+ 1 file changed, 1 insertion(+)</pre>
+<p><b>Fast-forward</b> means main hadn't moved since you branched, so Git just slid main forward to the branch's newest commit. If both had new commits touching the same lines, Git would stop and ask you to resolve a <b>merge conflict</b>; you'll meet those when you work with others, and VS Code shows them with buttons to pick a side.</p></div>
+<p>Commit or stash your work before switching branches: Git refuses to switch if it would overwrite unsaved changes, and tells you so.</p>
+
+<h3 id="git1-portfolio">How this becomes your portfolio</h3>
+<p>From the first project of this course onward, give every project <b>its own public repository</b> (for example <code>knn-from-scratch</code>, <code>islp-linear-regression</code>, <code>mnist-mlp-pytorch</code>). Your <code>ml-course</code> folder stays your private notebook. A good project repository has:</p>
+<ul>
+<li>a <b>README</b> that a recruiter can read in one minute (template below);</li>
+<li>clean code in <code>.py</code> files plus a notebook that shows results, with every cell run top to bottom;</li>
+<li>a <code>requirements.txt</code> listing the libraries, so anyone can rebuild your environment. Make it with <code class="lc">uv pip freeze &gt; requirements.txt</code> (the <code>&gt;</code> sends the output into a file instead of the screen);</li>
+<li>a <code>.gitignore</code> (no <code>.venv</code>, no large data, no secrets) and instructions to download the data instead;</li>
+<li>a history of small, well-named commits: it shows how you think.</li>
+</ul>
+<p>A README template (Markdown) you can copy into each project:</p>
+<pre class="term"># KNN classifier from scratch
+
+Classifies 2-D points with k-nearest neighbours, written in plain Python
+and checked against scikit-learn's KNeighborsClassifier.
+
+## Results
+![Decision boundary for k = 1 and k = 15](figures/boundary.png)
+Test error is lowest at k = 7 (12.5%); k = 1 overfits (21%).
+
+## How to run
+    uv venv --python 3.12 &amp;&amp; source .venv/bin/activate
+    uv pip install -r requirements.txt
+    python knn.py
+
+## What I learned
+- Small k gives a jagged boundary (low bias, high variance) ...</pre>
+<p>On your GitHub profile, <b>pin</b> your best six repositories (Profile → Customize your pins). That is the first thing a reviewer sees.</p>
+
+<div class="callout exam"><p><b>In interviews</b> you will be asked about your GitHub projects: "walk me through this repo", "why did you choose k = 7?", "how would you make it faster?". Every project should be one you can explain line by line. Git questions themselves are usually practical: the difference between <code>git add</code> and <code>git commit</code>; what <code>git pull</code> does (fetch, then merge); how you'd undo a change; what a merge conflict is.</p></div>
+
+<div class="callout mac"><div class="ct">Notebooks in Git</div><p>A <code>.ipynb</code> file stores outputs (including images) as well as code, so diffs are long and noisy. Two habits help: before committing, <b>restart the kernel and run all cells</b> so the saved outputs are clean and in order; and keep reusable code in <code>.py</code> files, which diff nicely. VS Code's Source Control panel (the branching icon in the left bar) also shows notebook diffs cell by cell, and can stage and commit with buttons if you prefer that to Terminal.</p></div>
+
+<h3 id="git1-recap">Recap: the commands on one card</h3>
+<div class="tw"><table class="t"><thead><tr><th>When</th><th>Command</th><th>What it does</th></tr></thead><tbody>
+<tr><td>once per Mac</td><td><code class="lc">git config --global user.name "…"</code> (and <code>user.email</code>)</td><td>who you are, written into every commit</td></tr>
+<tr><td>once per project</td><td><code>git init</code>, then a <code>.gitignore</code></td><td>start keeping history; ignore junk</td></tr>
+<tr><td>once per project</td><td><code>git remote add origin URL</code>, <code>git push -u origin main</code></td><td>link to GitHub and send the first commits</td></tr>
+<tr><td>all the time</td><td><code>git status</code></td><td>what changed, what's staged</td></tr>
+<tr><td>all the time</td><td><code>git diff</code> / <code>git diff --staged</code></td><td>the exact lines changed</td></tr>
+<tr><td>all the time</td><td><code>git add FILE</code> or <code>git add .</code></td><td>stage changes for the next commit</td></tr>
+<tr><td>all the time</td><td><code>git commit -m "message"</code></td><td>record a save point</td></tr>
+<tr><td>after committing</td><td><code>git push</code></td><td>send commits to GitHub</td></tr>
+<tr><td>to look back</td><td><code>git log --oneline</code></td><td>the list of save points</td></tr>
+<tr><td>to get code</td><td><code>git clone URL</code>, <code>git pull</code></td><td>copy a repository; fetch new commits</td></tr>
+<tr><td>to try ideas</td><td><code>git switch -c NAME</code>, <code>git switch main</code>, <code>git merge NAME</code></td><td>branch, go back, combine</td></tr>
+</tbody></table></div>
+
+<h3 id="git1-practice">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">You edited <code>knn.py</code> and saved it in VS Code. Which command puts that change into the next commit?</p><ol class="opts"><li><code>git commit</code></li><li><code>git add knn.py</code></li><li><code>git push</code></li><li><code>git status</code></li></ol><div class="why">Saving a file changes only the working folder. <code>git add</code> moves the change to the staging area; <i>then</i> <code>git commit</code> records it, and <code>git push</code> sends commits to GitHub. <code>git status</code> only reports.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">Which line in <code>.gitignore</code> stops all CSV files being committed?</p><ol class="opts"><li><code>csv</code></li><li><code>.csv/</code></li><li><code>ignore *.csv</code></li><li><code>*.csv</code></li></ol><div class="why"><code>*</code> matches any characters, so <code>*.csv</code> matches every name ending in .csv. <code>.csv/</code> would mean a folder called ".csv"; <code>csv</code> only a file or folder named exactly "csv".</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">What is the difference between Git and GitHub?</p><ol class="opts"><li>Git keeps history on your computer; GitHub is a website that stores copies of Git repositories online</li><li>They are two names for the same program</li><li>GitHub is the newer version of Git</li><li>Git is for code, GitHub is for data</li></ol><div class="why">Git works entirely offline on your Mac. GitHub hosts repositories online for backup, sharing and collaboration (GitLab and Bitbucket are alternatives).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem"><code>git status</code> says "Your branch is ahead of 'origin/main' by 2 commits". What should you do to update GitHub?</p><ol class="opts"><li><code>git pull</code></li><li><code>git add .</code></li><li><code>git push</code></li><li><code>git commit</code></li></ol><div class="why">"Ahead" means you have 2 commits that GitHub doesn't. Pushing sends them. Pulling goes the other way.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In a <code>git diff</code>, a line starting with <code>-</code> means…</p><ol class="opts"><li>a line that was added</li><li>a line that was removed (or the old version of a changed line)</li><li>a comment</li><li>an error</li></ol><div class="why"><code>-</code> lines are from the old version, <code>+</code> lines from the new; a changed line appears as one of each. Lines starting with a space are unchanged context.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">Why should <code>.venv/</code> be in <code>.gitignore</code>?</p><ol class="opts"><li>Git can't read it</li><li>It contains your passwords</li><li>GitHub forbids Python files</li><li>It's thousands of rebuildable library files, specific to your Mac; the project should list its libraries (requirements.txt) instead</li></ol><div class="why">The environment can be recreated in minutes with uv from a list of requirements, and its files are big, numerous and machine-specific. Committing it bloats the repository and breaks on other computers.</div></div>
+<div class="q" data-type="num" data-answer="3" data-tol="0"><p class="stem">A diff header reads <code>@@ -1,3 +1,4 @@</code>. How many lines did that part of the <b>old</b> file have?</p><div class="why"><code>-1,3</code>: the old version, starting at line 1, 3 lines long. <code>+1,4</code>: the new version, starting at line 1, 4 lines long.</div></div>
+<div class="q" data-type="open"><p class="stem">Describe what you'd put in the README of a portfolio project, and why each part is there.</p><div class="model">A one-sentence description of what the project does (so a reader knows in seconds); the main result, ideally with a figure and a number (it shows you measured something); how to run it, including installing requirements (so anyone can reproduce it); and what you learned or what you'd do next (it shows judgement). Plus where the data comes from, since it isn't committed.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">The four places a change lives in Git, in order</div><div class="b">Working folder → staging area → local repository (commits) → GitHub (remote).</div></div>
+<div class="fc"><div class="f">Commands that move a change between the four places</div><div class="b"><code>git add</code> → <code>git commit</code> → <code>git push</code> (and <code>git clone</code>/<code>git pull</code> bring changes back).</div></div>
+<div class="fc"><div class="f">Start a repository in the current folder</div><div class="b"><code>git init</code> (creates the hidden <code>.git</code> folder)</div></div>
+<div class="fc"><div class="f">See what has changed and what's staged</div><div class="b"><code>git status</code></div></div>
+<div class="fc"><div class="f">See the exact lines changed (unstaged / staged)</div><div class="b"><code>git diff</code> / <code>git diff --staged</code></div></div>
+<div class="fc"><div class="f">Record a save point with a message</div><div class="b"><code class="lc">git commit -m "Add KNN classifier"</code></div></div>
+<div class="fc"><div class="f">Compact history of commits</div><div class="b"><code>git log --oneline</code></div></div>
+<div class="fc"><div class="f">What goes in a Python ML project's <code>.gitignore</code>?</div><div class="b"><code>.venv/</code>, <code>__pycache__/</code>, <code>.ipynb_checkpoints/</code>, data files such as <code>*.csv</code>, <code>.DS_Store</code>, secrets such as <code>.env</code>.</div></div>
+<div class="fc"><div class="f">Link a local repo to GitHub and push the first time</div><div class="b"><code>git remote add origin URL</code> then <code>git push -u origin main</code></div></div>
+<div class="fc"><div class="f">Why doesn't your GitHub password work for <code>git push</code>?</div><div class="b">GitHub requires a token or <code>gh auth login</code> for Git over HTTPS; account passwords were switched off for Git in 2021.</div></div>
+<div class="fc"><div class="f">Create a branch and switch to it; go back to main</div><div class="b"><code>git switch -c NAME</code>; <code>git switch main</code></div></div>
+<div class="fc"><div class="f">Throw away uncommitted edits to a file</div><div class="b"><code>git restore FILE</code> (the edits are lost for good)</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> <span><code>git config --global --list</code> shows my name, email, <code>init.defaultbranch=main</code> and <code>core.editor=nano</code>.</span></label>
+<label><input type="checkbox"> <span><code>~/ml-course</code> is a repository with a <code>.gitignore</code> that hides <code>.venv/</code> and the data.</span></label>
+<label><input type="checkbox"> <span>I made at least three commits with clear messages, and can read <code>git log --oneline</code>.</span></label>
+<label><input type="checkbox"> <span>I can read a <code>git diff</code>: which lines were removed, which added.</span></label>
+<label><input type="checkbox"> <span>I have a GitHub account with two-factor authentication and a professional username.</span></label>
+<label><input type="checkbox"> <span>I pushed <code>ml-course</code> to a private GitHub repository and can see my commits there.</span></label>
+<label><input type="checkbox"> <span>I cloned the ISLP labs repository.</span></label>
+<label><input type="checkbox"> <span>I made a branch, committed on it, switched back and merged it.</span></label>
+<label><input type="checkbox"> <span>I know what a portfolio repository needs: README, requirements, .gitignore, small commits.</span></label>
+</div>
+</section>

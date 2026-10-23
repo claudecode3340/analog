@@ -1,0 +1,789 @@
+<section class="lesson" id="np1" data-book="ISLP §2.3.3–2.3.6, pp. 42–54">
+<p class="lede">Every dataset in machine learning ends up as a grid of numbers, and every model is arithmetic on those grids. NumPy is the Python library that stores such grids compactly and does maths on a whole grid in one line, at C speed. Every later lesson, every ISLP lab and every PyTorch tensor builds directly on what you learn here.</p>
+<div class="uses"><b>You'll use</b> <a href="#py1">Python I</a> (lists, indexing from 0) · <a href="#py2">Python II</a> (loops, functions)</div>
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>explain why an array is faster and more convenient than a list for numbers, and time the difference yourself;</li>
+<li>create arrays (from lists, <code>zeros</code>, <code>ones</code>, <code>arange</code>, <code>linspace</code>, <code>eye</code>, <code>full</code>) and read their <code>dtype</code>, <code>shape</code>, <code>ndim</code> and <code>size</code>;</li>
+<li>pick out any element, row, column, block or pattern of a 1-D or 2-D array with integer indices, slices, lists and boolean masks, and say the shape of the result before you run it;</li>
+<li>do arithmetic on whole arrays, and reduce them with <code>sum</code>, <code>mean</code>, <code>std</code>, <code>min</code>, <code>max</code>, <code>argmax</code> along a chosen <code>axis</code>;</li>
+<li>reshape, transpose, flatten and stack arrays, and avoid the copy-versus-view trap that ISLP warns about.</li></ul></div>
+
+<div class="callout book"><blockquote>In numpy, an array is a generic term for a multidimensional set of numbers.</blockquote><cite>ISLP p. 42</cite></div>
+
+<p>This lesson covers everything in the NumPy parts of the ISLP Chapter 2 lab (sections 2.3.3, 2.3.5 and 2.3.6), and more. When you reach <a href="#isl2-lab">the lab lesson</a>, every line will already be familiar. The next lesson, <a href="#np2">NumPy II</a>, adds broadcasting, random numbers and linear algebra.</p>
+
+<!-- ============================================================ -->
+<h3 id="np1-why">1. Why not just use lists?</h3>
+<p>You already know Python lists. A list can hold numbers, so why do we need anything else? Let us try the most natural thing you would want to do with two lists of numbers: add them, element by element. This is exactly the experiment ISLP runs at the start of its lab.</p>
+
+<div class="predict" data-correct="3"><p>Two lists, <code>x = [3, 4, 5]</code> and <code>y = [4, 9, 7]</code>. What does <code>x + y</code> give?</p><ol class="opts"><li><code>[7, 13, 12]</code></li><li>An error</li><li><code>[3, 4, 5, 4, 9, 7]</code></li></ol>
+<div class="why">For lists, <code>+</code> means <b>join together</b> (concatenate), just as <code>"hello" + "world"</code> joins two strings. Python lists can hold anything (numbers, text, other lists), so Python cannot assume you want arithmetic. The tempting answer <code>[7, 13, 12]</code> is what a mathematician means by adding two vectors, and it is what NumPy will give us.</div></div>
+<div class="py" id="c-np1-01"><pre class="src">
+x = [3, 4, 5]
+y = [4, 9, 7]
+x + y
+</pre><div class="pynote"><b>Read the output:</b> six numbers, the second list glued after the first. To add element by element with lists you would need a loop: <code>[a + b for a, b in zip(x, y)]</code>. That works, but it is wordy and, as you will see in a moment, slow.</div></div>
+
+<h4>Importing NumPy</h4>
+<p>NumPy is not part of plain Python. It is a <dfn data-g="np1-package">package</dfn>: a bundle of extra code that someone else wrote, which you switch on with <code>import</code>. Everybody in the world writes it the same way:</p>
+<div class="py" id="c-np1-02" data-mode="setup"><pre class="src">
+import numpy as np    # load NumPy and give it the short nickname np
+
+x = np.array([3, 4, 5])
+y = np.array([4, 9, 7])
+x + y
+</pre><div class="pynote"><b>Read the output:</b> <code>array([ 7, 13, 12])</code>. Now <code>+</code> adds element by element: 3+4, 4+9, 5+7. The words <code>as np</code> mean “from now on, call this package <code>np</code>”, so <code>np.array</code> means “the function <code>array</code> that lives inside NumPy”. If you forget the <code>import</code> line you get a <code>NameError</code> saying that <code>np</code> is not defined.</div></div>
+
+<div class="callout ece"><p><b>You already think in arrays.</b> In DSP a signal is a sequence of samples \(x[n]\), and you write \(y[n]=2x[n]+1\) to mean “do this for every \(n\)”. You never write a loop on paper. A NumPy array is exactly a sampled signal held in memory, and <code>y = 2*x + 1</code> is exactly that equation. Working on a whole array at once is called <dfn data-g="np1-vectorise">vectorisation</dfn>; it is the software version of processing a whole buffer of samples at once instead of handling one sample per interrupt.</p></div>
+
+<h4>How much faster? Time it yourself</h4>
+<p>Under the hood a list stores <i>pointers</i> to separate Python number objects scattered around memory, and the loop runs in slow, general-purpose Python. An array stores the raw numbers side by side in one block of memory, all of the same type, and the loop over them runs inside NumPy's compiled C code. Let us measure it. The standard module <code>timeit</code> is a stopwatch for code: <code style="white-space:normal">timeit.repeat(f, number=1, repeat=5)</code> runs the function <code>f</code> five times and returns the five durations in seconds. We keep the shortest, because the slower runs were only disturbed by other programs on your computer.</p>
+
+<div class="predict" data-correct="2"><p>We compute \(2v+1\) for a million numbers, once with a Python loop and once with NumPy. Roughly how many times faster will NumPy be?</p><ol class="opts"><li>About the same speed</li><li>Around 10 to 100 times faster</li><li>A million times faster</li></ol>
+<div class="why">Typically 10 to 100 times, depending on the machine (the in-browser Python differs again). Not a million: NumPy still has to touch every number once. What it removes is the overhead Python pays for each element: looking up types, creating a new number object, running the interpreter loop.</div></div>
+<div class="py" id="c-np1-03"><pre class="src">
+import timeit
+
+n = 1_000_000                 # underscores just make big numbers readable
+data_list = list(range(n))
+data_arr = np.arange(n)       # the array 0, 1, 2, ..., n-1 (explained below)
+
+def with_list():
+    return [2 * v + 1 for v in data_list]    # one element at a time
+
+def with_numpy():
+    return 2 * data_arr + 1                  # the whole array at once
+
+# run each 5 times and keep the fastest run (the least disturbed by other programs)
+t_list = min(timeit.repeat(with_list, number=1, repeat=5))
+t_arr = min(timeit.repeat(with_numpy, number=1, repeat=5))
+print(f"list loop : {t_list*1000:7.1f} ms")
+print(f"NumPy     : {t_arr*1000:7.1f} ms")
+print(f"speed-up  : about {t_list / t_arr:.0f}x")
+print("same answers?", with_list()[:5], with_numpy()[:5])
+</pre><div class="pynote"><b>Read the output:</b> the exact times change on every run, but NumPy wins by a large factor (around 20× here; it varies by machine and is different again in the browser). In ML you will process millions of numbers thousands of times, so this factor is the difference between a model training in a minute and in an hour. Run the cell twice: the timings wobble, the conclusion does not.</div></div>
+
+<div class="callout key"><p><b>The rule for the rest of this guide:</b> if you are about to write a <code>for</code> loop over the numbers in an array, stop and ask “can NumPy do this on the whole array at once?” Almost always it can, and the result is shorter, clearer and faster.</p></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-make">2. Making an array and asking it about itself</h3>
+<p><code>np.array(...)</code> turns a list (or a list of lists) into an array. Every array carries four facts about itself, called <dfn data-g="np1-attribute">attributes</dfn>, which you read with a dot and <b>no brackets</b>:</p>
+<div class="symbols"><div class="row h"><span>Attribute</span><span>Meaning</span><span>For <code>[[1,2,3],[4,5,6]]</code></span></div>
+<div class="row"><span class="s">.dtype</span><span>the data type of every element: <code>int64</code> (whole numbers stored in 64 bits), <code>float64</code> (decimals), <code>bool</code> (True/False)</span><span class="eg">int64</span></div>
+<div class="row"><span class="s">.shape</span><span>how many elements along each direction, as a tuple: (rows, columns)</span><span class="eg">(2, 3)</span></div>
+<div class="row"><span class="s">.ndim</span><span>number of dimensions (directions): 1 for a vector, 2 for a matrix</span><span class="eg">2</span></div>
+<div class="row"><span class="s">.size</span><span>total number of elements (the product of the shape)</span><span class="eg">6</span></div></div>
+
+<div class="py" id="c-np1-04"><pre class="src">
+M = np.array([[1, 2, 3],
+              [4, 5, 6]])     # a list of rows becomes a 2-D array
+print(M)
+print("dtype:", M.dtype)
+print("shape:", M.shape)
+print("ndim: ", M.ndim)
+print("size: ", M.size)
+</pre><div class="pynote"><b>Read the output:</b> <code>print(M)</code> shows the numbers as a grid, row by row. Shape <code>(2, 3)</code> is read “two by three”: 2 rows, 3 columns, always rows first. Size is \(2\times3=6\).</div></div>
+
+<div class="callout"><div class="ct">New in this lesson · tuples</div><p>The shape <code>(2, 3)</code> is written with round brackets. That is a <dfn data-g="np1-tuple">tuple</dfn>: a sequence like a list, but it cannot be changed after it is made. You index it like a list: <code>M.shape[0]</code> is the number of rows (2) and <code>M.shape[1]</code> the number of columns (3). A tuple with one element needs a trailing comma: <code>(5,)</code>. You will see <code>(5,)</code> as the shape of every 1-D array of length 5. ISLP shows that a tuple refuses changes:</p></div>
+<div class="py" id="c-np1-05" data-mode="expect-error" data-error="TypeError"><pre class="src">
+my_tuple = (3, 4, 5)
+my_tuple[0] = 2      # not allowed: tuples are read-only
+</pre><div class="pynote">This error is on purpose. Tuples are used for things that should not change by accident, like the shape of an array. A list would accept <code>my_list[0] = 2</code> happily.</div></div>
+
+<h4>The dtype: every element has the same type</h4>
+<p>A list may mix numbers and text. An array may not: NumPy picks one type for all elements, the simplest one that can hold everything you gave it. All whole numbers give <code>int64</code>. A single decimal anywhere makes the whole array <code>float64</code>, because a float can hold an integer but not the other way round. This promotion is called <dfn data-g="np1-upcast">upcasting</dfn>.</p>
+
+<div class="predict" data-correct="2"><p>What is <code style="white-space:normal">np.array([[1, 2], [3.0, 4]]).dtype</code>? (Look closely at the 3.)</p><ol class="opts"><li><code>int64</code>, because most of the numbers are whole</li><li><code>float64</code></li><li>It raises an error because the types are mixed</li></ol>
+<div class="why"><code>3.0</code> is a float. One float is enough: NumPy upcasts the whole array to <code>float64</code>, and prints the numbers with a dot (<code>1.</code>, <code>2.</code>…). This is ISLP's In[13]. No error, because a float can represent 1, 2 and 4 exactly.</div></div>
+<div class="py" id="c-np1-06"><pre class="src">
+a = np.array([[1, 2], [3.0, 4]])
+print(a.dtype)
+print(a)
+b = np.array([[1, 2], [3, 4]], float)      # ask for floats (ISLP In[15])
+print(b.dtype)
+c = np.array([1, 2, 3], dtype=np.float32)  # half the memory of float64
+print(c.dtype, c.itemsize, "bytes per element")
+</pre><div class="pynote"><b>Read the output:</b> the dots in <code>[[1. 2.] [3. 4.]]</code> are NumPy's way of saying “these are floats”. <code>itemsize</code> is bytes per element: <code>float32</code> uses 4, <code>float64</code> uses 8. Deep learning (PyTorch's default) uses <code>float32</code> to halve memory; classical statistics uses <code>float64</code>.</div></div>
+
+<h4>Attributes versus methods</h4>
+<p>Some things you ask an array are <i>facts</i> it already knows (attributes, no brackets: <code>x.shape</code>). Others are <i>jobs</i> it does for you (<dfn data-g="np1-method">methods</dfn>, with brackets: <code>x.sum()</code>). A method is just a function attached to the object, so <code>x.sum()</code> and <code>np.sum(x)</code> do the same thing. ISLP uses both styles.</p>
+
+<div class="py" id="c-np1-07"><pre class="src">
+x = np.array([1, 2, 3, 4])
+print(x.sum(), np.sum(x))      # the method and the function agree
+x.sum()                         # shown as the cell's last value
+</pre><div class="pynote"><b>Read the output:</b> <code>print</code> shows <code>10 10</code>, but the bare last line shows <code>np.int64(10)</code>. This is NumPy 2 being honest about the type: it is the number 10, stored as a NumPy 64-bit integer. You can use it exactly like 10. (ISLP was printed with an older NumPy that just showed <code>10</code>.)</div></div>
+
+<div class="callout pitfall"><p><b>Brackets matter.</b> <code>x.shape()</code> fails with a <code>TypeError</code> (“'tuple' object is not callable”), because <code>shape</code> is a fact, not a job. And <code>x.sum</code> without brackets does not add anything: it shows you the method itself. When in doubt: attributes are nouns (<code>shape</code>, <code>dtype</code>, <code>T</code>), methods are verbs (<code>sum</code>, <code>reshape</code>, <code>copy</code>).</p></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-2d">3. One dimension, two dimensions: vectors and matrices</h3>
+<p>A <b>1-D array</b> is a row of numbers with one index: a vector, a signal, one column of a dataset. A <b>2-D array</b> is a grid with two indices: a matrix, a greyscale image, a whole dataset with one row per observation and one column per variable. The first index always picks the <b>row</b>, the second the <b>column</b>, and both count from 0.</p>
+<p>Here is ISLP's 4 × 4 example matrix, <code style="white-space:normal">A = np.arange(16).reshape((4, 4))</code>, with its row numbers down the left and column numbers along the top. The highlighted cell is <code>A[1, 2]</code>: row 1 (the <i>second</i> row), column 2 (the <i>third</i> column).</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(5,auto)"><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px"></span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">0</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">1</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">2</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">3</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">0</span><span>0</span><span>1</span><span>2</span><span>3</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">1</span><span>4</span><span>5</span><span class="h1">6</span><span>7</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">2</span><span>8</span><span>9</span><span>10</span><span>11</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">3</span><span>12</span><span>13</span><span>14</span><span>15</span></span><span class="lab">A[1, 2] → 6</span></span></div>
+
+<div class="mathblock" data-sheet="Array element: maths vs NumPy"><div class="eqlabel">Element of a matrix, maths versus NumPy</div>
+\[a_{ij}\ \text{(maths, counting from 1)} \;=\; \texttt{A[i-1, j-1]}\ \text{(NumPy, counting from 0)}\]
+<p class="say">Read: “a sub i j”, the entry in row \(i\), column \(j\). Books count from 1, NumPy counts from 0, so the book's \(a_{23}\) (row 2, column 3) is <code>A[1, 2]</code>, which is 6 here.</p></div>
+
+<p>The words <b>axis 0</b> and <b>axis 1</b> name the two directions. Axis 0 runs <i>down</i> the rows (its length is the number of rows, <code>A.shape[0]</code>); axis 1 runs <i>across</i> the columns (<code>A.shape[1]</code>). Keep this picture; it is the key to section 10 on reductions.</p>
+<div class="callout intuition"><p><b>A dataset is a matrix.</b> In ISLP, the data matrix \(\bX\) (read “bold X”) has \(n\) rows, one per observation (a car, a patient, a day), and \(p\) columns, one per variable (horsepower, weight…). Its shape is <code>(n, p)</code>. Row <code>X[i]</code> is everything we know about observation \(i\); column <code>X[:, j]</code> is variable \(j\) for everybody.</p></div>
+
+<h4>Three different “vectors”</h4>
+<p>Shapes <code>(3,)</code>, <code>(1, 3)</code> and <code>(3, 1)</code> all hold three numbers, but they are different objects. <code>(3,)</code> is a plain 1-D array with no notion of row or column. <code>(1, 3)</code> is a 2-D array with one row (a <i>row vector</i>); <code>(3, 1)</code> is a 2-D array with one column (a <i>column vector</i>). This distinction will matter a lot for broadcasting in <a href="#np2">NumPy II</a>.</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>7</span><span>8</span><span>9</span></span><span class="lab">shape (3,)</span></span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>7</span><span>8</span><span>9</span></span><span class="lab">shape (1, 3)</span></span><span><span class="mgrid" style="grid-template-columns:repeat(1,auto)"><span>7</span><span>8</span><span>9</span></span><span class="lab">shape (3, 1)</span></span></div>
+<div class="py" id="c-np1-08"><pre class="src">
+v = np.array([7, 8, 9])
+r = np.array([[7, 8, 9]])        # one row: note the double brackets
+c = np.array([[7], [8], [9]])    # three rows of one element each
+print(v.shape, r.shape, c.shape)
+print(v.ndim, r.ndim, c.ndim)
+</pre><div class="pynote"><b>Read the output:</b> the number of square brackets at the start tells you <code>ndim</code>: one bracket for 1-D, two for 2-D.</div></div>
+
+<h4>More than two dimensions</h4>
+<p>Arrays can have any number of axes. A colour photo is a 3-D array of shape <code>(height, width, 3)</code>: for every pixel, three numbers (red, green, blue). A batch of 32 such photos is 4-D, <code>(32, height, width, 3)</code>. Everything in this lesson works the same way with more axes; we stay in 1-D and 2-D because those are what ISLP uses.</p>
+<div class="py" id="c-np1-09"><pre class="src">
+img = np.zeros((4, 6, 3))     # a tiny 4x6 colour image, all black
+print(img.shape, img.ndim, img.size)
+img[0, 0] = [1.0, 0.0, 0.0]   # make the top-left pixel pure red
+print(img[0, 0])
+</pre><div class="pynote"><b>Read the output:</b> 4 × 6 × 3 = 72 numbers. <code>img[0, 0]</code> gives the three colour values of the top-left pixel, now red = 1, green = 0, blue = 0.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-create">4. Making arrays without typing every number</h3>
+<p>You rarely type arrays by hand. These functions build them for you. The argument that gives a shape is a tuple, so <code>np.zeros((2, 3))</code> has <b>two</b> pairs of round brackets: the function's and the tuple's.</p>
+<div class="tw"><table class="t"><thead><tr><th>Call</th><th>What you get</th><th>Typical use</th></tr></thead><tbody>
+<tr><td><code>np.zeros((2, 3))</code></td><td>2 × 3 array of <code>0.</code> (floats)</td><td>a place to fill in results</td></tr>
+<tr><td><code>np.ones(4)</code></td><td><code>[1. 1. 1. 1.]</code></td><td>the column of 1s for an intercept</td></tr>
+<tr><td><code>np.full((2, 2), 7)</code></td><td>2 × 2 array of 7s</td><td>constant arrays</td></tr>
+<tr><td><code>np.eye(3)</code></td><td>3 × 3 identity matrix (1s on the diagonal)</td><td>linear algebra</td></tr>
+<tr><td><code>np.arange(0, 10, 2)</code></td><td><code>[0 2 4 6 8]</code>: start, stop (<b>excluded</b>), step</td><td>integer sequences, indices</td></tr>
+<tr><td><code>np.linspace(0, 1, 5)</code></td><td><code>[0. 0.25 0.5 0.75 1.]</code>: start, stop (<b>included</b>), how many</td><td>a grid of x-values for plotting a curve</td></tr>
+<tr><td><code>np.zeros_like(x)</code>, <code>np.ones_like(x)</code></td><td>same shape and dtype as <code>x</code></td><td>results that match an input</td></tr>
+</tbody></table></div>
+
+<div class="predict" data-correct="1"><p>ISLP runs <code>np.linspace(0, 10, 11)</code> and <code>np.arange(0, 10)</code>. Which statement is right?</p><ol class="opts"><li>linspace gives 0, 1, …, 10 (eleven floats); arange gives 0, 1, …, 9 (ten integers)</li><li>Both give 0 to 10</li><li>Both give 0 to 9</li></ol>
+<div class="why"><code>linspace(a, b, n)</code> gives exactly <code>n</code> evenly spaced points <b>including both ends</b>, so 11 points from 0 to 10, spacing 1. <code>arange(a, b)</code> follows Python's slice rule: start at <code>a</code>, stop <b>before</b> <code>b</code>. Same rule as <code>range(0, 10)</code> from Python II.</div></div>
+<div class="py" id="c-np1-10"><pre class="src">
+seq1 = np.linspace(0, 10, 11)
+seq2 = np.arange(0, 10)
+print(seq1)
+print(seq2)
+print(np.zeros((2, 3)))
+print(np.eye(3))
+print(np.full((2, 2), 7))
+print(np.arange(5, 0, -1))       # counting down: the stop, 0, is excluded
+</pre><div class="pynote"><b>Read the output:</b> the floats from <code>linspace</code>, <code>zeros</code> and <code>eye</code> print with dots; <code>arange</code> and <code>full</code> with whole numbers give integers. The last line counts down 5, 4, 3, 2, 1 and stops before 0.</div></div>
+
+<div class="callout ece"><p><b>A time axis.</b> To sample one second of a signal at \(f_s = 8\) Hz you want \(t = 0, \tfrac18, \tfrac28, \dots, \tfrac78\): eight samples, and <i>not</i> \(t=1\) (that is the first sample of the next second). Two equivalent ways: <code>np.arange(8) / 8</code> or <code style="white-space:normal">np.linspace(0, 1, 8, endpoint=False)</code>. Plain <code>np.linspace(0, 1, 8)</code> would include 1 and space the points by \(1/7\): a classic off-by-one.</p></div>
+<div class="py" id="c-np1-11"><pre class="src">
+fs = 8                                   # sampling frequency in Hz
+t = np.arange(fs) / fs                   # 0, 1/8, ..., 7/8 seconds
+x = np.sin(2 * np.pi * 1 * t)            # one cycle of a 1 Hz sine
+print(t)
+print(np.round(x, 3))                    # round to 3 decimals for reading
+</pre><div class="pynote"><b>Read the output:</b> <code>np.sin</code> worked on all eight times at once. <code>np.round(x, 3)</code> only tidies the display. The values go 0, 0.707, 1, 0.707, 0, −0.707, −1, −0.707: one full cycle.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-index1d">5. Indexing and slicing a 1-D array</h3>
+<p>Indexing a 1-D array works exactly like a list. <code>x[0]</code> is the first element, <code>x[-1]</code> the last, <code>x[-2]</code> the second to last. A <dfn data-g="np1-slice">slice</dfn> <code>x[start:stop:step]</code> takes elements from <code>start</code> up to but <b>not including</b> <code>stop</code>, jumping <code>step</code> at a time. Any of the three can be left out: start defaults to the beginning, stop to the end, step to 1.</p>
+<p>Take <code>x = np.arange(10, 20)</code>, the numbers 10 to 19. The faint top row of each picture shows the position (index), the boxes show the values; the highlighted cells are what the slice picks.</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(10,auto)"><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">0</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">1</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">2</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">3</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">4</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">5</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">6</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">7</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">8</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">9</span><span>10</span><span>11</span><span class="h1">12</span><span class="h1">13</span><span class="h1">14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span></span><span class="lab">x[2:5] → [12 13 14]</span></span></div>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(10,auto)"><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">0</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">1</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">2</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">3</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">4</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">5</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">6</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">7</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">8</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">9</span><span class="h1">10</span><span>11</span><span>12</span><span class="h1">13</span><span>14</span><span>15</span><span class="h1">16</span><span>17</span><span>18</span><span class="h1">19</span></span><span class="lab">x[::3] → [10 13 16 19]</span></span></div>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(10,auto)"><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">0</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">1</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">2</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">3</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">4</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">5</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">6</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">7</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">8</span><span style="background:transparent;color:var(--faint);font-size:12px;min-width:22px">9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span class="h1">17</span><span class="h1">18</span><span class="h1">19</span></span><span class="lab">x[-3:] → [17 18 19]</span></span></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>reading a slice with a negative step</b></div>
+<div class="given">\(x\) = <code>np.arange(10, 20)</code>. What is <code>x[7:2:-2]</code>?</div>
+<ol class="steps">
+<li><div>Start at index <b>7</b>: value <span class="hlc">17</span>.<span class="why">The start is always included.</span></div></li>
+<li><div>The step is <b>−2</b>, so move left by 2: index 5, value <span class="hlc">15</span>.</div></li>
+<li><div>Left by 2 again: index 3, value <span class="hlc">13</span>.</div></li>
+<li><div>Next would be index 1. But we must stop <b>before</b> reaching index 2 (the stop), and 1 is already past it, so we stop.<span class="why">With a negative step, “before the stop” means “still to the right of it”.</span></div></li>
+</ol>
+<div class="result"><code>x[7:2:-2]</code> → <code>array([17, 15, 13])</code></div></div>
+<p>The single most useful negative step is <code>x[::-1]</code>: start at the end, go left one at a time, all the way. It reverses the array (time reversal, \(x[-n]\), in DSP language).</p>
+
+<div class="predict" data-correct="3"><p>With <code>x = np.arange(10, 20)</code>, what does <code>x[-4:-1]</code> give?</p><ol class="opts"><li><code>[16 17 18 19]</code></li><li><code>[19 18 17]</code></li><li><code>[16 17 18]</code></li></ol>
+<div class="why">−4 means “4 from the end”, which is index 6 (value 16). −1 is index 9 (value 19), and the stop is <b>excluded</b>, so we get indices 6, 7, 8: values 16, 17, 18. Option 1 forgot that the stop is excluded; option 2 went backwards, which only happens with a negative step.</div></div>
+<div class="py" id="c-np1-12"><pre class="src">
+x = np.arange(10, 20)
+print(x[0], x[-1])        # first and last
+print(x[2:5])             # positions 2, 3, 4
+print(x[::3])             # every third element
+print(x[-4:-1])
+print(x[7:2:-2])
+print(x[::-1])            # reversed
+</pre><div class="pynote"><b>Read the output:</b> each line matches a picture or the worked example above. Change <code>x[::3]</code> to <code>x[1::3]</code> and predict the result before running (13 is no longer there; 11, 14, 17 are).</div></div>
+
+<div class="callout"><div class="ct">Why is the stop excluded?</div><p>ISLP asks this too (p. 51, with <code>"hello world"[3:6]</code> giving <code>'lo '</code>). Excluding the stop makes lengths easy: <code>x[a:b]</code> has exactly <code>b - a</code> elements, <code>x[:k]</code> is the first <code>k</code> elements and <code>x[k:]</code> is everything else, with no overlap and no gap. Inside square brackets, <code>3:6</code> is shorthand for the object <code>slice(3, 6)</code>.</p></div>
+
+<p>You can also <b>assign</b> to an index or a slice, and the array changes in place:</p>
+<div class="py" id="c-np1-13"><pre class="src">
+x = np.arange(10, 20)
+x[0] = 99            # change one element
+x[-3:] = 0           # one number fills the whole slice
+print(x)
+x[1:4] = [-1, -2, -3]   # or give exactly as many values as the slice has
+print(x)
+</pre><div class="pynote"><b>Read the output:</b> first <code style="white-space:normal">[99 11 12 13 14 15 16  0  0  0]</code>, then positions 1–3 replaced by −1, −2, −3. Giving the wrong number of values (say two values for a slice of three) raises a <code>ValueError</code>.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-index2d">6. Indexing and slicing a 2-D array</h3>
+<p>For a 2-D array you put two indices inside one pair of brackets, separated by a comma: <code>A[rows, columns]</code>. Each part can be a single integer or a slice. A lone colon <code>:</code> means “all of them”. Here are the patterns you will use every day, on ISLP's 4 × 4 matrix <code>A</code>:</p>
+
+<div class="tw"><table class="t"><thead><tr><th>Code</th><th>Picks</th><th>Picture</th><th>Result shape</th></tr></thead><tbody>
+<tr><td><code>A[1, :]</code> (or <code>A[1]</code>)</td><td>row 1, every column</td><td><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span>0</span><span>1</span><span>2</span><span>3</span><span class="h1">4</span><span class="h1">5</span><span class="h1">6</span><span class="h1">7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span></span></td><td class="n">(4,)</td></tr>
+<tr><td><code>A[:, 2]</code></td><td>every row, column 2</td><td><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span>0</span><span>1</span><span class="h1">2</span><span>3</span><span>4</span><span>5</span><span class="h1">6</span><span>7</span><span>8</span><span>9</span><span class="h1">10</span><span>11</span><span>12</span><span>13</span><span class="h1">14</span><span>15</span></span></td><td class="n">(4,)</td></tr>
+<tr><td><code>A[0:2, 1:3]</code></td><td>rows 0–1, columns 1–2: a block</td><td><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span>0</span><span class="h1">1</span><span class="h1">2</span><span>3</span><span>4</span><span class="h1">5</span><span class="h1">6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span></span></td><td class="n">(2, 2)</td></tr>
+<tr><td><code>A[1:4:2, 0:3:2]</code></td><td>rows 1 and 3, columns 0 and 2 (ISLP In[65])</td><td><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span>0</span><span>1</span><span>2</span><span>3</span><span class="h1">4</span><span>5</span><span class="h1">6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span class="h1">12</span><span>13</span><span class="h1">14</span><span>15</span></span></td><td class="n">(2, 2)</td></tr>
+<tr><td><code>A[::-1, -1]</code></td><td>last column, read bottom to top: 15, 11, 7, 3</td><td><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span>0</span><span>1</span><span>2</span><span class="h1">3</span><span>4</span><span>5</span><span>6</span><span class="h1">7</span><span>8</span><span>9</span><span>10</span><span class="h1">11</span><span>12</span><span>13</span><span>14</span><span class="h1">15</span></span></td><td class="n">(4,)</td></tr>
+</tbody></table></div>
+
+<div class="callout key"><p><b>The shape rule.</b> Each <b>integer</b> index removes that axis from the result; each <b>slice</b> keeps it (possibly shorter). So <code>A[1, :]</code> (integer, slice) is 1-D of shape <code>(4,)</code>, but <code>A[1:2, :]</code> (slice, slice) is 2-D of shape <code>(1, 4)</code>: the same four numbers, kept as a one-row matrix.</p></div>
+
+<div class="predict" data-correct="2"><p>What is <code>A[1:3, 2:]</code> for ISLP's <code style="white-space:normal">A = np.arange(16).reshape(4, 4)</code>?</p><ol class="opts"><li><code>[[6, 7], [10, 11], [14, 15]]</code></li><li><code>[[6, 7], [10, 11]]</code></li><li><code>[[5, 6], [9, 10]]</code></li></ol>
+<div class="why">Rows 1:3 are rows 1 and 2 (3 is excluded). Columns <code>2:</code> are columns 2 and 3 (to the end). Row 1 is <code>4 5 6 7</code>, so columns 2–3 give <code>6 7</code>; row 2 gives <code>10 11</code>. Option 1 included row 3; option 3 started at column 1.</div></div>
+<div class="py" id="c-np1-14"><pre class="src">
+A = np.arange(16).reshape((4, 4))   # ISLP In[56]
+print(A)
+print("A[1, 2] =", A[1, 2])
+print("A[1, :] =", A[1, :], " shape", A[1, :].shape)
+print("A[1:2, :] =", A[1:2, :], " shape", A[1:2, :].shape)
+print("A[:, 2] =", A[:, 2])
+print("A[1:3, 2:] =\n", A[1:3, 2:])
+print("A[1:4:2, 0:3:2] =\n", A[1:4:2, 0:3:2])
+</pre><div class="pynote"><b>Read the output:</b> notice that a column, <code>A[:, 2]</code>, prints <i>sideways</i> as <code>[ 2  6 10 14]</code>. It is 1-D, and a 1-D array has no “up–down”, so NumPy prints it in a line. If you want it as a real column, use <code>A[:, 2:3]</code> (shape <code>(4, 1)</code>).</div></div>
+
+<p>Now explore on a larger 5 × 6 array. Type any slice (or a single number) into the row and column boxes, click a preset, or <b>drag across the grid</b> to select a rectangle. The cells NumPy picks light up, the expression is written for you, and the result appears with its shape.</p>
+<div class="widget" data-w="np1-slicer" data-title="Slicing explorer: A = np.arange(30).reshape(5, 6)"><div class="wn">Try rows <code>1:4</code> with columns <code>::2</code>; then rows <code>::-1</code> (reversed); then a single number for the rows, and watch the result shape lose an axis. Can you find a slice that picks the four corners? (Answer: rows <code>::4</code>, columns <code>::5</code>.)</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-fancy">7. Fancy indexing: picking with lists</h3>
+<p>Slices pick evenly spaced elements. To pick an arbitrary set, pass a <b>list of indices</b>. This is called <dfn data-g="np1-fancy">fancy indexing</dfn> (or integer-array indexing). ISLP uses it straight away:</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span>0</span><span>1</span><span>2</span><span>3</span><span class="h1">4</span><span class="h1">5</span><span class="h1">6</span><span class="h1">7</span><span>8</span><span>9</span><span>10</span><span>11</span><span class="h1">12</span><span class="h1">13</span><span class="h1">14</span><span class="h1">15</span></span><span class="lab">A[[1, 3]]: rows 1 and 3</span></span><span><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span class="h1">0</span><span>1</span><span class="h1">2</span><span>3</span><span class="h1">4</span><span>5</span><span class="h1">6</span><span>7</span><span class="h1">8</span><span>9</span><span class="h1">10</span><span>11</span><span class="h1">12</span><span>13</span><span class="h1">14</span><span>15</span></span><span class="lab">A[:, [0, 2]]: columns 0 and 2</span></span></div>
+<p>But be careful when you give a list for <i>both</i> rows and columns. NumPy does <b>not</b> make a submatrix; it pairs the lists up, element by element, and picks single cells: <code>A[[1, 3], [0, 2]]</code> means “cell (1, 0) and cell (3, 2)”.</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span>0</span><span>1</span><span>2</span><span>3</span><span class="h1">4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span class="h2">14</span><span>15</span></span><span class="lab">A[[1, 3], [0, 2]] → [4, 14]</span></span></div>
+
+<div class="predict" data-correct="1"><p>What does <code>A[[1, 3], [0, 2]]</code> return?</p><ol class="opts"><li><code>array([ 4, 14])</code></li><li><code>array([[ 4,  6], [12, 14]])</code></li><li>An error</li></ol>
+<div class="why">The two lists are zipped into pairs (1, 0) and (3, 2), giving <code>A[1, 0] = 4</code> and <code>A[3, 2] = 14</code>. ISLP says “Oops — what happened?” at exactly this point (In[60]). The 2 × 2 block in option 2 is what you probably wanted; the next cell shows three ways to get it.</div></div>
+<div class="py" id="c-np1-15"><pre class="src">
+print(A[[1, 3]])              # rows 1 and 3
+print(A[:, [0, 2]])           # columns 0 and 2
+print(A[[1, 3], [0, 2]])      # PAIRS: A[1,0] and A[3,2]
+# three ways to get the 2x2 submatrix of rows 1,3 and columns 0,2:
+print(A[[1, 3]][:, [0, 2]])   # rows first, then columns of the result
+print(A[np.ix_([1, 3], [0, 2])])   # np.ix_ builds a "mesh" of rows x columns
+print(A[1:4:2, 0:3:2])        # slices, when the pattern is regular
+</pre><div class="pynote"><b>Read the output:</b> the third line is the 1-D pair result <code>[ 4 14]</code>; the last three all print the same block <code>[[ 4  6] [12 14]]</code>. <code>np.ix_</code> is the clearest when the rows and columns you want are not evenly spaced.</div></div>
+<p>Because the lists are paired, they must have the same length. ISLP shows the error you get otherwise:</p>
+<div class="py" id="c-np1-16" data-mode="expect-error" data-error="IndexError"><pre class="src">
+A[[1, 3], [0, 2, 3]]     # 2 row indices but 3 column indices: cannot pair them
+</pre><div class="pynote">The fix, if you wanted the submatrix of rows 1, 3 and columns 0, 2, 3: <code>A[np.ix_([1, 3], [0, 2, 3])]</code>.</div></div>
+<p>Fancy indexing can also repeat and reorder: <code>x[[2, 0, 0]]</code> picks element 2, then element 0 twice. This is how you will shuffle a dataset and draw bootstrap samples in later chapters.</p>
+
+<!-- ============================================================ -->
+<h3 id="np1-bool">8. Boolean masks: picking by a condition</h3>
+<p>Comparisons work elementwise too. <code>x &gt; 0</code> does not give one True or False; it gives an array of them, one per element. Such an array of <code>True</code>/<code>False</code> is called a <dfn data-g="np1-mask">boolean mask</dfn>. Put a mask inside the brackets and you get exactly the elements where the mask is <code>True</code>.</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(7,auto)"><span>3</span><span>-1</span><span>4</span><span>-1</span><span>5</span><span>-9</span><span>2</span></span><span class="lab">x</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(7,auto)"><span class="h4">T</span><span>F</span><span class="h4">T</span><span>F</span><span class="h4">T</span><span>F</span><span class="h4">T</span></span><span class="lab">x &gt; 0  (T = True, F = False)</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span class="h4">3</span><span class="h4">4</span><span class="h4">5</span><span class="h4">2</span></span><span class="lab">x[x &gt; 0]</span></span></div>
+<div class="py" id="c-np1-17"><pre class="src">
+x = np.array([3, -1, 4, -1, 5, -9, 2])
+mask = x &gt; 0
+print(mask)
+print(x[mask])          # keep only the positive values
+print(x[x &gt; 0])        # the same, in one line
+print(mask.sum(), "positives out of", x.size)   # True counts as 1
+print(mask.mean())      # so the mean is the FRACTION that are True
+</pre><div class="pynote"><b>Read the output:</b> <code>mask.sum()</code> counts the Trues (True is 1, False is 0), and <code>mask.mean()</code> is the fraction of Trues, here 4/7 ≈ 0.571. You will use this trick constantly: “what fraction of predictions were correct?” is <code>(y_pred == y_true).mean()</code>.</div></div>
+
+<h4>Combining conditions: &amp;, |, ~ and brackets</h4>
+<p>To combine masks, use <code>&amp;</code> (and), <code>|</code> (or), <code>~</code> (not). Python's words <code>and</code>/<code>or</code>/<code>not</code> do <b>not</b> work on arrays. Each condition must be in its own round brackets, because <code>&amp;</code> binds more tightly than <code>&gt;</code>.</p>
+<div class="py" id="c-np1-18"><pre class="src">
+x = np.array([3, -1, 4, -1, 5, -9, 2])
+print(x[(x &gt; 0) &amp; (x &lt; 5)])     # strictly between 0 and 5
+print(x[(x &lt; -5) | (x &gt; 4)])    # very negative OR big
+print(x[~(x &gt; 0)])              # NOT positive
+print(np.any(x &lt; -5), np.all(x != 0))   # is any element &lt; -5? are all non-zero?
+</pre><div class="pynote"><b>Read the output:</b> <code>[3 4 2]</code>, then <code>[ 5 -9]</code>, then <code>[-1 -1 -9]</code>, then <code>True True</code>. <code>np.any</code> asks “is at least one True?”, <code>np.all</code> asks “are all True?”.</div></div>
+<div class="py" id="c-np1-19" data-mode="expect-error" data-error="ValueError"><pre class="src">
+x[(x &gt; 0) and (x &lt; 5)]   # 'and' wants ONE True/False, but gets 7 of them
+</pre><div class="pynote">“The truth value of an array with more than one element is ambiguous”: Python's <code>and</code> asks “is this whole array True?”, which has no clear answer. Use <code>&amp;</code>. Forgetting the brackets, <code>x &gt; 0 &amp; x &lt; 5</code>, gives the same error, because Python reads it as <code>x &gt; (0 &amp; x) &lt; 5</code>.</div></div>
+
+<h4>Changing values with a mask</h4>
+<p>A mask on the left of <code>=</code> changes only the selected elements. Setting negatives to zero is exactly the ReLU function of deep learning, and half-wave rectification in electronics:</p>
+<div class="py" id="c-np1-20"><pre class="src">
+z = np.array([3., -1., 4., -1., 5., -9., 2.])
+z[z &lt; 0] = 0          # rectify: every negative becomes 0 (changes z itself)
+print(z)
+print(np.where(x &gt; 0, x, 0))     # np.where(condition, if_true, if_false): a NEW array
+</pre><div class="pynote"><b>Read the output:</b> both lines show the rectified signal. The difference: the first changed <code>z</code> in place, while <code>np.where</code> built a new array and left <code>x</code> untouched.</div></div>
+
+<h4>Booleans versus 0/1 integers: not the same index</h4>
+<p>ISLP (In[66]–[70]) makes an important point. A boolean array and an integer array of 0s and 1s are <i>equal</i> according to <code>==</code>, but they index <i>differently</i>: booleans say “keep / don't keep” for each row, integers are row <i>numbers</i>.</p>
+<div class="py" id="c-np1-21"><pre class="src">
+keep_rows = np.zeros(A.shape[0], bool)   # [False False False False]
+keep_rows[[1, 3]] = True                 # [False True False True]
+print(keep_rows)
+print(np.all(keep_rows == np.array([0, 1, 0, 1])))   # equal as values...
+print(A[np.array([0, 1, 0, 1])])   # ...but integers mean rows 0, 1, 0, 1
+print(A[keep_rows])                # booleans mean rows 1 and 3
+keep_cols = np.zeros(A.shape[1], bool); keep_cols[[0, 2, 3]] = True
+print(A[np.ix_(keep_rows, keep_cols)])   # np.ix_ also accepts boolean masks
+</pre><div class="pynote"><b>Read the output:</b> the integer version returns four rows (row 0 twice, row 1 twice); the boolean version returns two rows. The last line is ISLP's In[71]: rows 1, 3 and columns 0, 2, 3.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-arith">9. Arithmetic on whole arrays</h3>
+<p>Every arithmetic operator works element by element when both arrays have the same shape, and a single number (a <dfn data-g="np1-scalar">scalar</dfn>) is applied to every element:</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>2</span><span>3</span><span>4</span></span><span class="lab">A</span></span><span class="op">+</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>10</span><span>20</span><span>30</span><span>40</span></span><span class="lab">B</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h1">11</span><span class="h1">22</span><span class="h1">33</span><span class="h1">44</span></span><span class="lab">A + B</span></span></div>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>2</span><span>3</span><span>4</span></span><span class="lab">A</span></span><span class="op">*</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>10</span><span>20</span><span>30</span><span>40</span></span><span class="lab">B</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h2">10</span><span class="h2">40</span><span class="h2">90</span><span class="h2">160</span></span><span class="lab">A * B (elementwise!)</span></span></div>
+
+<div class="worked"><div class="wt">Worked example · <b>every number of an elementwise formula</b></div>
+<div class="given">\(x\) = <code>[1, 2, 3]</code>. Compute <code>y = 3 * x**2 - 2 * x + 1</code>.</div>
+<ol class="steps">
+<li><div><code>x**2</code> squares each element: \([1^2, 2^2, 3^2] = [1, 4, 9]\).<span class="why"><code>**</code> is “to the power of” in Python.</span></div></li>
+<li><div><code>3 * x**2</code>: \([3, 12, 27]\).</div></li>
+<li><div><code>2 * x</code>: \([2, 4, 6]\).</div></li>
+<li><div>Subtract and add 1, position by position: \([3-2+1,\ 12-4+1,\ 27-6+1] = [2, 9, 22]\).</div></li>
+</ol>
+<div class="result"><code>y = array([ 2,  9, 22])</code>: three evaluations of the polynomial, one line of code</div></div>
+<div class="py" id="c-np1-22"><pre class="src">
+x = np.array([1, 2, 3])
+print(3 * x**2 - 2 * x + 1)
+y = np.array([1, 2, 3, 4, 5, 6])
+print(np.sqrt(y))          # ISLP In[25]: square root of every element
+print(y**2, y**0.5)        # powers; **0.5 is also a square root
+print(np.exp(np.array([0., 1.])), np.log(np.array([1., np.e])))
+print(np.abs(np.array([-2, 3])), 7 / np.array([2, 4]), 7 // np.array([2, 4]))
+</pre><div class="pynote"><b>Read the output:</b> the first line confirms the worked example. Functions like <code>np.sqrt</code>, <code>np.exp</code>, <code>np.log</code> (natural log), <code>np.abs</code>, <code>np.sin</code> are called <i>universal functions</i>: they apply to every element. <code>np.exp(1)</code> is \(e\approx2.718\) and <code>np.log(np.e)</code> is 1. <code>/</code> always gives floats (3.5, 1.75); <code>//</code> is whole-number division (3, 1).</div></div>
+
+<div class="callout pitfall"><p><b><code>*</code> is not matrix multiplication.</b> For arrays, <code>A * B</code> multiplies matching elements. The matrix product from linear algebra (rows times columns) is <code>A @ B</code>, which you will meet in <a href="#np2">NumPy II</a>. Mixing them up gives wrong answers <i>without</i> any error when the shapes happen to be square.</p></div>
+
+<h4>When the maths goes wrong: inf and nan</h4>
+<p>NumPy does not stop when you divide by zero. It prints a warning and gives <code>inf</code> (infinity) or <code>nan</code> (“not a number”, for things like 0/0). <code>nan</code> is also how missing data is stored, as you will see in <a href="#pd1">pandas</a>. Any arithmetic with <code>nan</code> gives <code>nan</code>, and <code>nan == nan</code> is <code>False</code>, so test for it with <code>np.isnan</code>.</p>
+<div class="py" id="c-np1-23"><pre class="src">
+with np.errstate(divide="ignore", invalid="ignore"):   # silence the warnings for this demo
+    r = np.array([1., 0., -1.]) / np.array([0., 0., 0.])
+print(r)
+print(np.isnan(r))
+v = np.array([1., np.nan, 3.])
+print(v.sum(), np.nansum(v), np.nanmean(v))   # nan spreads; the nan- versions skip it
+</pre><div class="pynote"><b>Read the output:</b> 1/0 is <code>inf</code>, 0/0 is <code>nan</code>, −1/0 is <code>-inf</code>. One missing value turns the ordinary sum into <code>nan</code>; <code>np.nansum</code> gives 4 and <code>np.nanmean</code> gives 2 by ignoring it.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-reduce">10. Reductions, and what “axis” really means</h3>
+<p>A <dfn data-g="np1-reduction">reduction</dfn> boils many numbers down to fewer: a sum, a mean, a maximum. With no extra argument it uses every element. With <code>axis=</code> it works along one direction only.</p>
+<div class="tw"><table class="t"><thead><tr><th>Method</th><th>Gives</th><th>For <code>[2, 9, 4, 7]</code></th></tr></thead><tbody>
+<tr><td><code>.sum()</code>, <code>.mean()</code></td><td>total, average</td><td class="n">22, 5.5</td></tr>
+<tr><td><code>.min()</code>, <code>.max()</code></td><td>smallest, largest value</td><td class="n">2, 9</td></tr>
+<tr><td><code>.argmin()</code>, <code>.argmax()</code></td><td>the <b>index</b> of the smallest / largest</td><td class="n">0, 1</td></tr>
+<tr><td><code>.var()</code>, <code>.std()</code></td><td>variance, standard deviation (dividing by \(n\))</td><td class="n">7.25, 2.693</td></tr>
+<tr><td><code>.cumsum()</code></td><td>running total (not a reduction: same length)</td><td class="n">[2 11 15 22]</td></tr>
+</tbody></table></div>
+
+<div class="mathblock" data-sheet="Variance and standard deviation (NumPy default)"><div class="eqlabel">What <code>np.var</code> and <code>np.std</code> compute</div>
+\[\texttt{var}(x)=\frac{1}{n}\sum_{i=1}^{n}(x_i-\bar x)^2,\qquad \texttt{std}(x)=\sqrt{\texttt{var}(x)}\]
+<p class="say">Read: the variance is the average squared distance of each value from the mean \(\bar x\) (“x-bar”); the standard deviation is its square root, so it is back in the data's units. For \([2,9,4,7]\): \(\bar x=5.5\); the distances are \(-3.5, 3.5, -1.5, 1.5\); their squares \(12.25, 12.25, 2.25, 2.25\) add to 29, and \(29/4=7.25\). So var = 7.25 and std = \(\sqrt{7.25}\approx 2.693\).</p></div>
+<div class="py" id="c-np1-24"><pre class="src">
+v = np.array([2, 9, 4, 7])
+print(v.mean(), ((v - v.mean())**2).mean(), v.var(), v.std())
+print(v.var(ddof=1))     # divide by n-1 instead of n (the "sample" variance)
+</pre><div class="pynote"><b>Read the output:</b> the formula typed out by hand, <code>v.var()</code> and the square of <code>v.std()</code> agree: 7.25 and 2.693. By default NumPy divides by \(n\); ISLP points this out (p. 47) and mentions <code>ddof=1</code>, which divides by \(n-1\) and gives \(29/3\approx9.667\). pandas uses \(n-1\) by default, so the two libraries disagree unless you say which one you want.</div></div>
+
+<h4>The axis argument, in pictures</h4>
+<p><code>axis=0</code> means “go <b>down</b> axis 0”, the row direction: NumPy combines all the rows, so the rows disappear and you get <b>one answer per column</b>. <code>axis=1</code> means “go <b>across</b> axis 1”: the columns disappear and you get <b>one answer per row</b>. A simple way to remember: <i>the axis you name is the axis that disappears.</i></p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span class="h1">1</span><span class="h2">2</span><span class="h3">3</span><span class="h4">4</span><span class="h1">5</span><span class="h2">6</span><span class="h3">7</span><span class="h4">8</span><span class="h1">9</span><span class="h2">10</span><span class="h3">11</span><span class="h4">12</span></span><span class="lab">B, coloured by column</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span class="h1">15</span><span class="h2">18</span><span class="h3">21</span><span class="h4">24</span></span><span class="lab">B.sum(axis=0): shape (4,)</span></span></div>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span class="h1">1</span><span class="h1">2</span><span class="h1">3</span><span class="h1">4</span><span class="h2">5</span><span class="h2">6</span><span class="h2">7</span><span class="h2">8</span><span class="h4">9</span><span class="h4">10</span><span class="h4">11</span><span class="h4">12</span></span><span class="lab">B, coloured by row</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(1,auto)"><span class="h1">10</span><span class="h2">26</span><span class="h4">42</span></span><span class="lab">B.sum(axis=1): shape (3,)</span></span></div>
+<p>(The three row sums are drawn as a column so you can see which row each came from; NumPy returns them as a 1-D array <code>[10 26 42]</code>.)</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>column means and row sums by hand</b></div>
+<div class="given">\(B=\begin{pmatrix}1&2&3&4\\5&6&7&8\\9&10&11&12\end{pmatrix}\), shape (3, 4). Find <code>B.mean(axis=0)</code> and <code>B.sum(axis=1)</code>.</div>
+<ol class="steps">
+<li><div><code>axis=0</code>: the rows disappear. Work down each column: column 0 is \(1, 5, 9\), mean \(15/3=\mathbf{5}\).<span class="why">One answer per column, so the result has 4 numbers.</span></div></li>
+<li><div>Columns 1, 2, 3: \((2+6+10)/3=\mathbf 6\), \((3+7+11)/3=\mathbf 7\), \((4+8+12)/3=\mathbf 8\).</div></li>
+<li><div><code>axis=1</code>: the columns disappear. Work across each row: \(1+2+3+4=\mathbf{10}\), \(5+6+7+8=\mathbf{26}\), \(9+10+11+12=\mathbf{42}\).<span class="why">One answer per row, so 3 numbers.</span></div></li>
+</ol>
+<div class="result"><code>B.mean(axis=0)</code> → <code>[5. 6. 7. 8.]</code> (shape (4,)) · <code>B.sum(axis=1)</code> → <code>[10 26 42]</code> (shape (3,))</div></div>
+
+<div class="predict" data-correct="3"><p>A data matrix <code>X</code> has shape <code>(10, 3)</code>: 10 observations, 3 variables. What is the shape of <code>X.mean(axis=0)</code>?</p><ol class="opts"><li><code>(10,)</code></li><li><code>(10, 3)</code></li><li><code>(3,)</code></li></ol>
+<div class="why">Axis 0 (the 10 rows) disappears, leaving one mean per variable: shape <code>(3,)</code>. This is ISLP's In[37], the column means of a random 10 × 3 matrix. If you wanted one mean per observation you would use <code>axis=1</code>, giving <code>(10,)</code>.</div></div>
+<div class="py" id="c-np1-25"><pre class="src">
+B = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])
+print(B.sum(), B.sum(axis=0), B.sum(axis=1))
+print(B.mean(axis=0), B.mean(0))   # ISLP: X.mean(axis=0) and X.mean(0) are the same
+print(B.max(axis=1), B.argmax(axis=1))   # biggest in each row, and WHERE it is
+X = np.arange(30).reshape(10, 3)
+print(X.mean(axis=0).shape)
+</pre><div class="pynote"><b>Read the output:</b> total 78; column sums <code>[15 18 21 24]</code>; row sums <code>[10 26 42]</code>; the worked-example means; the row maxima 4, 8, 12, all in column 3; and the shape <code>(3,)</code> from the prediction.</div></div>
+<div class="widget" data-w="np1-axis" data-title="Reductions along an axis"><div class="wn">Pick a reduction and an axis. Cells with the same colour are combined into one answer of the same colour. Switch between axis 0 and axis 1 and say, before you look, how many numbers come out.</div></div>
+
+<div class="callout pitfall"><p><b><code>argmax</code> on a whole 2-D array</b> (no axis) returns a position in the <i>flattened</i> array, read row by row. For <code>B</code> above, <code>B.argmax()</code> is 11, not (2, 3). To turn it back into a (row, column) pair use <code style="white-space:normal">np.unravel_index(B.argmax(), B.shape)</code>.</p></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-shape">11. Changing shape: reshape, transpose, flatten, stack</h3>
+<h4>reshape and row-major order</h4>
+<p><code>x.reshape((2, 3))</code> gives the same numbers arranged in a new shape. NumPy reads the elements in order and fills the new shape <b>row by row</b>: the first row first, then the second. This is called <dfn data-g="np1-rowmajor">row-major order</dfn> (ISLP p. 44). The total size must stay the same: 6 elements can be (2, 3), (3, 2), (6, 1) or (1, 6), never (4, 2).</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(6,auto)"><span class="h1">1</span><span class="h1">2</span><span class="h1">3</span><span class="h2">4</span><span class="h2">5</span><span class="h2">6</span></span><span class="lab">x, shape (6,)</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h1">1</span><span class="h1">2</span><span class="h1">3</span><span class="h2">4</span><span class="h2">5</span><span class="h2">6</span></span><span class="lab">x.reshape((2, 3))</span></span></div>
+<p>One dimension may be given as <code>-1</code>, meaning “work it out for me”: <code>x.reshape(-1, 1)</code> turns any 1-D array into a column, and <code>x.reshape(2, -1)</code> makes 2 rows of whatever length fits. scikit-learn often asks for a 2-D input, and <code>x.reshape(-1, 1)</code> is the standard way to turn one feature into the matrix it wants.</p>
+<div class="widget" data-w="np1-reshape" data-title="Reshape and transpose: watch the order"><div class="wn">The 12 numbers keep their colours (light for small, dark for large). Pick a shape: they always fill row by row. Then switch on <code>.T</code> and see rows become columns: the colours now run down the columns.</div></div>
+
+<h4>Transpose: rows become columns</h4>
+<p><code>A.T</code> (an attribute, no brackets) is the <dfn data-g="np1-transpose">transpose</dfn>: element <code>[i, j]</code> moves to <code>[j, i]</code>, so a (2, 3) array becomes (3, 2). In maths this is written \(\mathbf{A}\T\) (“A transpose”). Here is ISLP's <code>x_reshape</code> (after the change you will meet in section 12) and its transpose, In[24]:</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h1">5</span><span class="h1">2</span><span class="h1">3</span><span class="h2">4</span><span class="h2">5</span><span class="h2">6</span></span><span class="lab">x_reshape, (2, 3)</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h1">5</span><span class="h2">4</span><span class="h1">2</span><span class="h2">5</span><span class="h1">3</span><span class="h2">6</span></span><span class="lab">x_reshape.T, (3, 2)</span></span></div>
+<div class="py" id="c-np1-26"><pre class="src">
+x = np.array([1, 2, 3, 4, 5, 6])
+x_reshape = x.reshape((2, 3))       # ISLP In[19]
+print(x_reshape)
+print(x_reshape.T, x_reshape.T.shape)
+print(x.reshape(-1, 1).shape, x.reshape(2, -1).shape)
+print(x_reshape.flatten())          # back to 1-D, row by row
+</pre><div class="pynote"><b>Read the output:</b> the transpose's first column is the original first row. <code>reshape(-1, 1)</code> gives <code>(6, 1)</code>, <code>reshape(2, -1)</code> gives <code>(2, 3)</code>. <code>flatten</code> reads row by row and returns <code>[1 2 3 4 5 6]</code>.</div></div>
+<p>A transpose of a 1-D array does nothing (<code>v.T</code> is still shape <code>(3,)</code>), because a 1-D array has only one axis to “swap”. To get a column you must reshape.</p>
+
+<h4>Stacking arrays together</h4>
+<p>To join arrays you pass them <b>as a list</b> (one argument) to a stacking function:</p>
+<div class="tw"><table class="t"><thead><tr><th>Function</th><th>Joins</th><th><code>a = [1, 2, 3]</code>, <code>b = [4, 5, 6]</code> gives</th></tr></thead><tbody>
+<tr><td><code>np.concatenate([a, b])</code></td><td>end to end along an existing axis (default 0)</td><td><code>[1 2 3 4 5 6]</code>, shape (6,)</td></tr>
+<tr><td><code>np.vstack([a, b])</code></td><td>on top of each other (as rows)</td><td><code>[[1 2 3] [4 5 6]]</code>, shape (2, 3)</td></tr>
+<tr><td><code>np.hstack([a, b])</code></td><td>side by side (for 1-D: same as concatenate)</td><td><code>[1 2 3 4 5 6]</code>, shape (6,)</td></tr>
+<tr><td><code>np.column_stack([a, b])</code></td><td>each 1-D array becomes a <b>column</b></td><td><code>[[1 4] [2 5] [3 6]]</code>, shape (3, 2)</td></tr>
+</tbody></table></div>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h1">1</span><span class="h1">2</span><span class="h1">3</span></span><span class="lab">a</span></span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h2">4</span><span class="h2">5</span><span class="h2">6</span></span><span class="lab">b</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h1">1</span><span class="h1">2</span><span class="h1">3</span><span class="h2">4</span><span class="h2">5</span><span class="h2">6</span></span><span class="lab">np.vstack([a, b])</span></span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h1">1</span><span class="h2">4</span><span class="h1">2</span><span class="h2">5</span><span class="h1">3</span><span class="h2">6</span></span><span class="lab">np.column_stack([a, b])</span></span></div>
+
+<div class="predict" data-correct="2"><p>You have a 1-D array <code>x</code> of 5 horsepower values. What does <code style="white-space:normal">np.column_stack([np.ones(5), x])</code> produce?</p><ol class="opts"><li>A 1-D array of 10 numbers</li><li>A (5, 2) matrix: a column of 1s, then the column of x</li><li>A (2, 5) matrix</li></ol>
+<div class="why"><code>column_stack</code> makes each input a column, so 5 rows and 2 columns. This exact matrix, with a first column of ones, is the <b>design matrix</b> of simple linear regression that you will build in ISLP Chapter 3 (the column of ones carries the intercept). Option 3 is what <code>vstack</code> would give.</div></div>
+<div class="py" id="c-np1-27"><pre class="src">
+x = np.array([130., 165., 150., 150., 140.])     # horsepower of the first 5 Auto cars
+X = np.column_stack([np.ones(5), x])
+print(X, X.shape)
+a, b = np.array([1, 2, 3]), np.array([4, 5, 6])
+print(np.vstack([a, b]))
+print(np.concatenate([a, b]), np.hstack([a, b]))
+M1, M2 = np.zeros((2, 2)), np.ones((2, 2))
+print(np.concatenate([M1, M2], axis=1))   # 2-D: axis=1 joins side by side
+</pre><div class="pynote"><b>Read the output:</b> the design matrix has 1s in its first column and the horsepowers in its second; the last array is a 2 × 4 block of zeros followed by ones. Change <code>axis=1</code> to <code>axis=0</code>: you get a 4 × 2 array, stacked top to bottom.</div></div>
+<div class="callout pitfall"><p><b>Forgetting the list brackets.</b> <code>np.vstack(a, b)</code> fails: the function wants <i>one</i> argument, a list of arrays. Write <code>np.vstack([a, b])</code>.</p></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-views">12. The copy-versus-view trap</h3>
+<p>ISLP (p. 44) shows something that surprises everybody the first time. Change one element of <code>x_reshape</code> and the original <code>x</code> changes too:</p>
+<div class="predict" data-correct="2"><p><code style="white-space:normal">x = np.array([1, 2, 3, 4, 5, 6])</code>, <code>x_reshape = x.reshape((2, 3))</code>, then <code>x_reshape[0, 0] = 5</code>. What is <code>x</code> now?</p><ol class="opts"><li><code>[1 2 3 4 5 6]</code>: we changed <code>x_reshape</code>, not <code>x</code></li><li><code>[5 2 3 4 5 6]</code></li><li>An error: you cannot change a reshaped array</li></ol>
+<div class="why"><code>reshape</code> did not copy the numbers. It made a new <i>view</i>: a new way of looking at the <b>same memory</b>. Writing through the view writes into that memory, so <code>x</code> sees the change. ISLP: “the two objects occupy the same space in memory”.</div></div>
+<div class="py" id="c-np1-28"><pre class="src">
+x = np.array([1, 2, 3, 4, 5, 6])
+x_reshape = x.reshape((2, 3))
+x_reshape[0, 0] = 5
+print("x_reshape:\n", x_reshape)
+print("x:", x)          # changed too!
+print(np.shares_memory(x, x_reshape))
+</pre><div class="pynote"><b>Read the output:</b> <code>x</code> now starts with 5, and <code>np.shares_memory</code> confirms <code>True</code>: one block of memory, two shapes.</div></div>
+<p>A <dfn data-g="np1-view">view</dfn> is an array that borrows another array's memory. NumPy makes views whenever it can, because copying millions of numbers is slow. The rule:</p>
+<div class="tw"><table class="t"><thead><tr><th>Operation</th><th>Gives</th></tr></thead><tbody>
+<tr><td>basic slices <code>x[2:5]</code>, <code>A[:, 1]</code>, <code>A[::2]</code>; <code>reshape</code>; <code>.T</code></td><td><b>view</b> (shares memory)</td></tr>
+<tr><td>fancy indexing <code>x[[1, 3]]</code>; boolean masks <code>x[x &gt; 0]</code>; arithmetic <code>x + 1</code>; <code>flatten</code>; <code>.copy()</code></td><td><b>copy</b> (new memory)</td></tr>
+</tbody></table></div>
+<div class="py" id="c-np1-29"><pre class="src">
+signal = np.arange(10)
+first_half = signal[:5]          # a VIEW
+first_half[:] = 0                # zero it... and the original changes
+print(signal)
+
+signal = np.arange(10)
+safe = signal[:5].copy()         # an independent COPY
+safe[:] = 0
+print(signal)                    # untouched
+picked = signal[[0, 1, 2]]       # fancy indexing always copies
+picked[0] = 99
+print(signal[0])
+</pre><div class="pynote"><b>Read the output:</b> the first print shows five zeros at the front of <code>signal</code>; the second shows <code>signal</code> intact; the last prints 0, because <code>picked</code> was a copy and changing it did nothing to <code>signal</code>.</div></div>
+<div class="callout pitfall"><p><b>The bug this causes.</b> You write a function that “cleans” a slice of your data, and discover later that it silently changed the original dataset too. When you want to modify something without touching the source, call <code>.copy()</code> first. The same issue appears in pandas (see <a href="#pd1">pandas</a>).</p></div>
+<div class="callout exam"><p><b>Interview question:</b> “What is the difference between a view and a copy in NumPy, and which operations return which?” Answer with the table above, plus the reason: views avoid copying memory, so slicing a huge array is instant.</p></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-ex">13. Exercises</h3>
+<p>Each exercise is checked automatically. Write NumPy code without Python loops unless the task says otherwise. Hints open one at a time.</p>
+
+<div class="ex" id="x-np1-01" data-title="build and inspect"><div class="task"><p>Write <code>make_table()</code> that returns a 3 × 4 array of <b>floats</b> holding 1, 2, …, 12 filled row by row (so the first row is 1, 2, 3, 4).</p></div>
+<pre class="src">
+def make_table():
+    return np.arange(1, 13)    # fix me: wrong shape and dtype
+</pre>
+<pre class="check">
+T = make_table()
+assert isinstance(T, np.ndarray), "return a NumPy array"
+assert T.shape == (3, 4), f"shape should be (3, 4), got {T.shape}"
+assert T.dtype == np.float64, f"dtype should be float64, got {T.dtype}"
+assert np.array_equal(T[0], [1, 2, 3, 4]) and T[2, 3] == 12, f"values should be 1..12 row by row, got\n{T}"
+</pre>
+<div class="hint"><p>Start from <code>np.arange(1, 13)</code>, then <code>.reshape(...)</code>. For floats, either use <code>np.arange(1., 13.)</code> or call <code>.astype(float)</code>.</p></div>
+<div class="hint"><p><code style="white-space:normal">np.arange(1, 13, dtype=float).reshape(3, 4)</code></p></div>
+<pre class="solution">
+def make_table():
+    return np.arange(1, 13, dtype=float).reshape(3, 4)
+</pre><div class="explain"><p><code>arange</code> gives 12 numbers; <code>reshape(3, 4)</code> fills 3 rows of 4 in row-major order. Asking for <code>dtype=float</code> (or writing <code>1.</code>) gives <code>float64</code>.</p></div></div>
+
+<div class="ex" id="x-np1-02" data-title="column and row pickers"><div class="task"><p>Write <code>column(A, j)</code> returning column <code>j</code> of a 2-D array as a 1-D array, and <code>last_row(A)</code> returning the last row. For ISLP's <code>A</code>, <code>column(A, 2)</code> is <code>[2, 6, 10, 14]</code> and <code>last_row(A)</code> is <code>[12, 13, 14, 15]</code>.</p></div>
+<pre class="src">
+def column(A, j):
+    return A[j]        # this picks a ROW, not a column
+
+def last_row(A):
+    ...
+</pre>
+<pre class="check">
+A_ = np.arange(16).reshape(4, 4)
+B_ = np.arange(15).reshape(3, 5)
+assert np.array_equal(column(A_, 2), [2, 6, 10, 14]), f"column(A, 2) should be [2 6 10 14], got {column(A_, 2)}"
+assert np.array_equal(column(B_, 4), [4, 9, 14]), f"column(B, 4) for a 3x5 B should be [4 9 14], got {column(B_, 4)}"
+assert column(B_, 0).shape == (3,), "the column should be 1-D"
+assert np.array_equal(last_row(A_), [12, 13, 14, 15]), f"last_row(A) should be [12 13 14 15], got {last_row(A_)}"
+assert np.array_equal(last_row(B_), [10, 11, 12, 13, 14]), "last_row should work for any number of rows"
+</pre>
+<div class="hint"><p>A column needs “all rows” first: <code>A[:, j]</code>.</p></div>
+<div class="hint"><p>Negative indices count from the end: <code>A[-1]</code>.</p></div>
+<pre class="solution">
+def column(A, j):
+    return A[:, j]
+
+def last_row(A):
+    return A[-1]
+</pre><div class="explain"><p>The first index is always rows. <code>A[:, j]</code> keeps all rows of column <code>j</code>; the integer <code>j</code> removes the column axis so the result is 1-D. <code>A[-1]</code> is shorthand for <code>A[-1, :]</code>.</p></div></div>
+
+<div class="ex" id="x-np1-03" data-title="every other sample, backwards"><div class="task"><p>A signal <code>x</code> is a 1-D array. Write <code>decimate_reverse(x)</code> that keeps every second sample starting from the <b>last</b> one, in reverse order. For <code>x = np.arange(7)</code> it returns <code>[6, 4, 2, 0]</code>; for <code>np.arange(6)</code> it returns <code>[5, 3, 1]</code>. One slice, no loop.</p></div>
+<pre class="src">
+def decimate_reverse(x):
+    return x[::2]
+</pre>
+<pre class="check">
+assert np.array_equal(decimate_reverse(np.arange(7)), [6, 4, 2, 0]), f"for arange(7) expected [6 4 2 0], got {decimate_reverse(np.arange(7))}"
+assert np.array_equal(decimate_reverse(np.arange(6)), [5, 3, 1]), f"for arange(6) expected [5 3 1], got {decimate_reverse(np.arange(6))}"
+assert np.array_equal(decimate_reverse(np.array([9.])), [9.]), "a single sample should come back unchanged"
+</pre>
+<div class="hint"><p>A negative step walks backwards; with no start given it starts from the end.</p></div>
+<pre class="solution">
+def decimate_reverse(x):
+    return x[::-2]
+</pre><div class="explain"><p>With step −2 and no start or stop, the slice starts at the last element and walks left two at a time to the beginning.</p></div></div>
+
+<div class="ex" id="x-np1-04" data-title="sum of the border"><div class="task"><p>Write <code>border_sum(A)</code> returning the sum of the elements on the outer border of a 2-D array (first and last rows, first and last columns, each element counted once). For ISLP's 4 × 4 <code>A</code> the answer is 90. Assume at least 2 rows and 2 columns.</p></div>
+<pre class="src">
+def border_sum(A):
+    return A[0].sum() + A[-1].sum() + A[:, 0].sum() + A[:, -1].sum()   # counts corners twice
+</pre>
+<pre class="check">
+A_ = np.arange(16).reshape(4, 4)
+assert border_sum(A_) == 90, f"for np.arange(16).reshape(4,4) expected 90, got {border_sum(A_)}"
+assert border_sum(np.ones((2, 2))) == 4, f"a 2x2 matrix is all border: expected 4, got {border_sum(np.ones((2, 2)))}"
+assert border_sum(np.ones((3, 5))) == 12, f"a 3x5 matrix of ones has 12 border cells, got {border_sum(np.ones((3, 5)))}"
+</pre>
+<div class="hint"><p>Easiest idea: everything minus the inside. The inside is all rows except the first and last, and all columns except the first and last.</p></div>
+<div class="hint"><p>The inside is <code>A[1:-1, 1:-1]</code>.</p></div>
+<pre class="solution">
+def border_sum(A):
+    return A.sum() - A[1:-1, 1:-1].sum()
+</pre><div class="explain"><p><code>A[1:-1, 1:-1]</code> drops the first and last row and column. For a 2 × 2 array it is empty and its sum is 0, so the formula still works. For the 4 × 4 example: total 120, inside \(5+6+9+10=30\), border 90.</p></div></div>
+
+<div class="ex" id="x-np1-05" data-title="ReLU without side effects"><div class="task"><p>Write <code>relu(x)</code> returning a <b>new</b> array where negatives are replaced by 0. The input must not change. <code>relu(np.array([-2., 0., 3.]))</code> gives <code>[0., 0., 3.]</code>.</p></div>
+<pre class="src">
+def relu(x):
+    x[x &lt; 0] = 0      # works, but it changes the caller's array!
+    return x
+</pre>
+<pre class="check">
+inp = np.array([-2., 0., 3., -0.5])
+out = relu(inp)
+assert np.array_equal(out, [0., 0., 3., 0.]), f"expected [0 0 3 0], got {out}"
+assert np.array_equal(inp, [-2., 0., 3., -0.5]), f"the input was modified: it is now {inp}"
+M = np.array([[1., -1.], [-3., 4.]])
+assert np.array_equal(relu(M), [[1., 0.], [0., 4.]]), "should work on 2-D arrays too"
+</pre>
+<div class="hint"><p>Make a copy first, then change the copy. Or use <code>np.where</code>, which builds a new array.</p></div>
+<div class="hint"><p><code>np.maximum(x, 0)</code> compares every element with 0 and keeps the larger: also a new array.</p></div>
+<pre class="solution">
+def relu(x):
+    return np.maximum(x, 0)
+</pre><div class="explain"><p><code>np.maximum</code> is elementwise and returns a new array, so the input is untouched. The equivalent three lines <code>y = x.copy()</code>, <code>y[y &lt; 0] = 0</code>, <code>return y</code> work too.</p></div></div>
+
+<div class="ex" id="x-np1-06" data-title="count in a range"><div class="task"><p>Write <code>count_between(x, lo, hi)</code> returning how many elements satisfy <code>lo &lt;= value &lt; hi</code>. For <code style="white-space:normal">x = np.array([1, 5, 7, 10, 12])</code>, <code>count_between(x, 5, 10)</code> is 2.</p></div>
+<pre class="src">
+def count_between(x, lo, hi):
+    return len(x)
+</pre>
+<pre class="check">
+x_ = np.array([1, 5, 7, 10, 12])
+assert count_between(x_, 5, 10) == 2, f"expected 2 (5 and 7), got {count_between(x_, 5, 10)}"
+assert count_between(x_, 0, 100) == 5, "all five are in [0, 100)"
+assert count_between(x_, 13, 20) == 0, "none are in [13, 20)"
+assert count_between(np.linspace(0, 1, 11), 0.25, 0.75) == 5, "0.3, 0.4, 0.5, 0.6, 0.7"
+</pre>
+<div class="hint"><p>Build a mask with two conditions joined by <code>&amp;</code>, each in brackets.</p></div>
+<div class="hint"><p><code>((x &gt;= lo) &amp; (x &lt; hi)).sum()</code></p></div>
+<pre class="solution">
+def count_between(x, lo, hi):
+    return int(((x &gt;= lo) &amp; (x &lt; hi)).sum())
+</pre><div class="explain"><p>The mask is True exactly where both conditions hold; summing a boolean array counts the Trues. <code>int(...)</code> turns the NumPy integer into a plain Python one (optional).</p></div></div>
+
+<div class="ex" id="x-np1-07" data-title="min-max scaling"><div class="task"><p>Write <code>minmax(x)</code> that rescales a 1-D array so its smallest value becomes 0 and its largest becomes 1: \((x-\min x)/(\max x-\min x)\). <code style="white-space:normal">minmax(np.array([2., 4., 10.]))</code> gives <code>[0., 0.25, 1.]</code>.</p></div>
+<pre class="src">
+def minmax(x):
+    return x / x.max()
+</pre>
+<pre class="check">
+r = minmax(np.array([2., 4., 10.]))
+assert np.allclose(r, [0., 0.25, 1.]), f"expected [0 0.25 1], got {r}"
+r2 = minmax(np.array([-5., 5., 0.]))
+assert np.allclose(r2, [0., 1., 0.5]), f"expected [0 1 0.5] for [-5 5 0], got {r2}"
+</pre>
+<div class="hint"><p>Subtract the minimum first; then the largest value is <code>x.max() - x.min()</code>.</p></div>
+<pre class="solution">
+def minmax(x):
+    return (x - x.min()) / (x.max() - x.min())
+</pre><div class="explain"><p>After subtracting the minimum, values run from 0 to the range \(\max-\min\); dividing by the range maps them into [0, 1]. The checks use <code>np.allclose</code>: it compares floats with a tiny tolerance, because floating-point arithmetic is rarely exact.</p></div></div>
+
+<div class="ex" id="x-np1-08" data-title="best column per row"><div class="task"><p>Rows are students, columns are their marks in 4 subjects. Write <code>best_subject(M)</code> returning, for each student, the <b>index</b> of the subject with the highest mark, and <code>subject_means(M)</code> returning the mean mark of each subject.</p></div>
+<pre class="src">
+def best_subject(M):
+    return M.argmax()
+
+def subject_means(M):
+    return M.mean()
+</pre>
+<pre class="check">
+M_ = np.array([[60, 75, 81, 70], [90, 40, 55, 65], [50, 52, 49, 99]])
+assert np.array_equal(best_subject(M_), [2, 0, 3]), f"expected [2 0 3], got {best_subject(M_)}"
+assert np.allclose(subject_means(M_), [200/3, 167/3, 185/3, 234/3]), f"expected one mean per subject (4 numbers), got {subject_means(M_)}"
+</pre>
+<div class="hint"><p>One answer per student (row) means the columns must disappear. One answer per subject means the rows must disappear.</p></div>
+<div class="hint"><p><code>M.argmax(axis=1)</code> and <code>M.mean(axis=0)</code>.</p></div>
+<pre class="solution">
+def best_subject(M):
+    return M.argmax(axis=1)
+
+def subject_means(M):
+    return M.mean(axis=0)
+</pre><div class="explain"><p>The axis you name disappears. <code>axis=1</code> collapses across columns, leaving one result per row; <code>axis=0</code> collapses down rows, leaving one per column.</p></div></div>
+
+<div class="ex" id="x-np1-09" data-title="checkerboard"><div class="task"><p>Write <code>checker(n)</code> returning an n × n integer array with 0 in the top-left corner and alternating 0/1 along every row and column, like a chessboard. <code>checker(3)</code> is <code>[[0,1,0],[1,0,1],[0,1,0]]</code>. Use slices with steps.</p></div>
+<pre class="src">
+def checker(n):
+    Z = np.zeros((n, n), dtype=int)
+    Z[::2, 1::2] = 1     # half done: even rows, odd columns
+    return Z
+</pre>
+<pre class="check">
+assert np.array_equal(checker(3), [[0, 1, 0], [1, 0, 1], [0, 1, 0]]), f"checker(3) wrong:\n{checker(3)}"
+c8 = checker(8)
+assert c8.shape == (8, 8) and c8.sum() == 32, "an 8x8 board has 32 ones"
+assert all(c8[i, j] == (i + j) % 2 for i in range(8) for j in range(8)), "each cell should be (row + column) % 2"
+</pre>
+<div class="hint"><p>A cell is 1 when row + column is odd. That happens for (even row, odd column) and for (odd row, even column).</p></div>
+<div class="hint"><p>Add <code>Z[1::2, ::2] = 1</code>.</p></div>
+<pre class="solution">
+def checker(n):
+    Z = np.zeros((n, n), dtype=int)
+    Z[::2, 1::2] = 1
+    Z[1::2, ::2] = 1
+    return Z
+</pre><div class="explain"><p>Assigning a scalar to a stepped 2-D slice sets a whole lattice of cells in one line. Two lattices together make the board.</p></div></div>
+
+<div class="ex" id="x-np1-10" data-title="design matrix"><div class="task"><p>Write <code>design(x)</code> that takes a 1-D array of \(n\) predictor values and returns the \(n\times 2\) design matrix whose first column is all ones and second column is <code>x</code> (floats). For <code>x = [1, 2, 3]</code>: <code>[[1, 1], [1, 2], [1, 3]]</code>.</p></div>
+<pre class="src">
+def design(x):
+    return np.vstack([np.ones(len(x)), x])
+</pre>
+<pre class="check">
+D = design(np.array([1, 2, 3]))
+assert D.shape == (3, 2), f"shape should be (3, 2), got {D.shape}"
+assert np.allclose(D, [[1, 1], [1, 2], [1, 3]]), f"got\n{D}"
+D2 = design(np.linspace(0, 1, 5))
+assert D2.shape == (5, 2) and np.all(D2[:, 0] == 1) and np.allclose(D2[:, 1], np.linspace(0, 1, 5)), "first column ones, second column x"
+</pre>
+<div class="hint"><p><code>vstack</code> stacks as rows, giving shape (2, n). You want each array as a column.</p></div>
+<div class="hint"><p><code style="white-space:normal">np.column_stack([np.ones(len(x)), x])</code>, or take the transpose of the vstack.</p></div>
+<pre class="solution">
+def design(x):
+    return np.column_stack([np.ones(len(x)), x])
+</pre><div class="explain"><p><code>column_stack</code> turns each 1-D input into a column. The ones are floats, so the whole matrix is upcast to float. You will build exactly this matrix by hand in <a href="#proj1">Project 1</a>.</p></div></div>
+
+<div class="ex" id="x-np1-11" data-title="first difference of a signal"><div class="task"><p>In DSP the first difference is \(d[n]=x[n+1]-x[n]\). Write <code>diff(x)</code> returning it for a 1-D array, using two slices (no loop, and don't call <code>np.diff</code>). For <code>[1, 4, 9, 16]</code> it gives <code>[3, 5, 7]</code>.</p></div>
+<pre class="src">
+def diff(x):
+    out = []
+    for n in range(len(x)):        # a loop, and off by one
+        out.append(x[n + 1] - x[n])
+    return np.array(out)
+</pre>
+<pre class="check">
+assert np.array_equal(diff(np.array([1, 4, 9, 16])), [3, 5, 7]), f"expected [3 5 7], got {diff(np.array([1, 4, 9, 16]))}"
+xs = np.random.default_rng(0).normal(size=50)
+assert np.allclose(diff(xs), np.diff(xs)), "should match np.diff on random data"
+assert diff(np.array([5.])).size == 0, "one sample has no differences: return an empty array"
+</pre>
+<div class="hint"><p>Line up two shifted copies: <code>x[1:]</code> is \(x[n+1]\), and <code>x[:-1]</code> is \(x[n]\). They have the same length.</p></div>
+<pre class="solution">
+def diff(x):
+    return x[1:] - x[:-1]
+</pre><div class="explain"><p>Two views of the same signal, offset by one sample, subtracted elementwise. This “shifted slices” trick is how you vectorise anything of the form \(f(x[n], x[n+1])\).</p></div></div>
+
+<div class="ex" id="x-np1-12" data-title="RMS and peak of a signal"><div class="task"><p>Write <code>rms(x)</code> returning the root-mean-square \(\sqrt{\tfrac1n\sum x_n^2}\) of a 1-D array, and <code>peak_index(x)</code> returning the index of the sample with the largest <b>absolute</b> value. For a full cycle of a unit sine sampled at 8 points, RMS is \(1/\sqrt2\approx0.7071\).</p></div>
+<pre class="src">
+def rms(x):
+    return np.sqrt(x.mean())
+
+def peak_index(x):
+    return x.argmax()
+</pre>
+<pre class="check">
+s = np.sin(2 * np.pi * np.arange(8) / 8)
+assert abs(rms(s) - 2**-0.5) &lt; 1e-9, f"RMS of a sampled unit sine should be 0.7071, got {rms(s)}"
+assert abs(rms(np.array([3., -4.])) - np.sqrt(12.5)) &lt; 1e-12, "rms([3,-4]) = sqrt((9+16)/2)"
+assert peak_index(np.array([1., -7., 5.])) == 1, f"the biggest magnitude is -7 at index 1, got {peak_index(np.array([1., -7., 5.]))}"
+</pre>
+<div class="hint"><p>Square first, then mean, then square root: read the name backwards (root of the mean of the squares).</p></div>
+<div class="hint"><p><code>np.abs(x).argmax()</code> for the peak.</p></div>
+<pre class="solution">
+def rms(x):
+    return np.sqrt(np.mean(x**2))
+
+def peak_index(x):
+    return np.abs(x).argmax()
+</pre><div class="explain"><p><code>x**2</code> squares each sample, <code>np.mean</code> averages them, <code>np.sqrt</code> takes the root. For the peak, the absolute value turns −7 into 7 before searching.</p></div></div>
+
+<!-- ============================================================ -->
+<h3 id="np1-quiz">14. Quiz</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">What is <code>a + b</code> for <code>a = np.array([1, 2, 3])</code> and <code>b = np.array([10, 20, 30])</code>?</p><ol class="opts"><li><code>[1, 2, 3, 10, 20, 30]</code></li><li><code>array([11, 22, 33])</code></li><li><code>66</code></li></ol><div class="why">Arrays add element by element. Option 1 is what lists do (concatenation). Option 3 would be <code>(a + b).sum()</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem"><code>A</code> has shape (5, 6). What is the shape of <code>A[2:4, :]</code>?</p><ol class="opts"><li>(2,)</li><li>(6,)</li><li>(2, 6)</li><li>(3, 6)</li></ol><div class="why">Two slices keep both axes. Rows 2:4 are rows 2 and 3 (two rows), all 6 columns. (3, 6) forgets that the stop is excluded; (6,) would be <code>A[2, :]</code>, an integer index.</div></div>
+<div class="q" data-type="num" data-answer="6" data-tol="0"><p class="stem">For ISLP's <code style="white-space:normal">A = np.arange(16).reshape(4, 4)</code>, what is <code>A[1, 2]</code>?</p><div class="why">Row 1 is <code>4 5 6 7</code>; column 2 of it is 6. In general here <code>A[i, j] = 4*i + j</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">What does <code>A[[0, 2], [1, 3]]</code> return for the same <code>A</code>?</p><ol class="opts"><li><code>array([ 1, 11])</code></li><li>the 2 × 2 block <code>[[1, 3], [9, 11]]</code></li><li>an IndexError</li></ol><div class="why">Two index lists are paired: cells (0, 1) = 1 and (2, 3) = 11. For the block you need <code>A[np.ix_([0, 2], [1, 3])]</code>. No error because both lists have length 2.</div></div>
+<div class="q" data-type="num" data-answer="4" data-tol="0"><p class="stem"><code>X</code> has shape (100, 4). How many numbers does <code>X.std(axis=0)</code> return?</p><div class="why">Axis 0 (the 100 rows) disappears; one standard deviation per column: 4 numbers.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Which line correctly keeps the values of <code>x</code> that are between 1 and 5 (exclusive)?</p><ol class="opts"><li><code>x[x &gt; 1 and x &lt; 5]</code></li><li><code>x[(x &gt; 1) &amp; (x &lt; 5)]</code></li><li><code>x[x &gt; 1 &amp; x &lt; 5]</code></li></ol><div class="why"><code>and</code> needs a single True/False and raises a ValueError on arrays. Without brackets, <code>&amp;</code> is applied first, to <code>1 &amp; x</code>, which is not what you meant. Option 2 is the only correct one.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem"><code>y = x[2:6]</code>, then <code>y[0] = -1</code>. Which statement is true?</p><ol class="opts"><li><code>x</code> is unchanged because <code>y</code> is a copy</li><li>Python raises an error</li><li><code>x[2]</code> is now −1, because a basic slice is a view</li></ol><div class="why">Basic slices share memory with the original. Use <code>x[2:6].copy()</code> to get an independent array.</div></div>
+<div class="q" data-type="num" data-answer="0.5" data-tol="0.001"><p class="stem">What is <code style="white-space:normal">(np.array([3, -1, 4, -2]) &gt; 0).mean()</code>?</p><div class="why">The mask is <code>[True, False, True, False]</code>; True counts as 1, so the mean is 2/4 = 0.5, the fraction of positive values.</div></div>
+<div class="q" data-type="open"><p class="stem">Explain to a friend, in two or three sentences, what <code>axis=0</code> means in <code>X.mean(axis=0)</code>, and how you remember it.</p><div class="model">Axis 0 is the row direction (down the matrix). Taking the mean along axis 0 combines all the rows, so that axis disappears and you get one mean per column. The rule I use: the axis you name is the one that disappears; for a data matrix with observations in rows, axis=0 gives one summary per variable.</div></div>
+</div>
+
+<h3 id="np1-cards">15. Flashcards</h3>
+<div class="cards">
+<div class="fc"><div class="f">What does <code>[1, 2] + [3, 4]</code> give for lists, and for NumPy arrays?</div><div class="b">Lists: <code>[1, 2, 3, 4]</code> (concatenation). Arrays: <code>[4, 6]</code> (elementwise).</div></div>
+<div class="fc"><div class="f">The four basic attributes of an array?</div><div class="b"><code>dtype</code> (element type), <code>shape</code> (tuple of lengths), <code>ndim</code> (number of axes), <code>size</code> (total elements).</div></div>
+<div class="fc"><div class="f"><code>np.arange(a, b)</code> vs <code>np.linspace(a, b, n)</code>?</div><div class="b">arange: step 1 from a, <b>stop b excluded</b>. linspace: exactly n points, <b>both ends included</b>.</div></div>
+<div class="fc"><div class="f">Shape of <code>A[1, :]</code> vs <code>A[1:2, :]</code> for A of shape (4, 4)?</div><div class="b">(4,) vs (1, 4). An integer index removes the axis; a slice keeps it.</div></div>
+<div class="fc"><div class="f">What does <code>A[[1, 3], [0, 2]]</code> select?</div><div class="b">The <b>pairs</b> (1, 0) and (3, 2): two single cells. For the submatrix use <code>A[np.ix_([1, 3], [0, 2])]</code>.</div></div>
+<div class="fc"><div class="f">How do you combine two conditions on arrays?</div><div class="b"><code>(x &gt; a) &amp; (x &lt; b)</code>; or <code>|</code>; not <code>~</code>. Brackets around each condition. Never <code>and</code>/<code>or</code>.</div></div>
+<div class="fc"><div class="f">What does <code>axis=0</code> do in <code>X.sum(axis=0)</code>?</div><div class="b">Sums down the rows; axis 0 disappears; one result per <b>column</b>.</div></div>
+<div class="fc"><div class="f">Default divisor of <code>np.var</code>?</div><div class="b">\(n\). Use <code>ddof=1</code> for \(n-1\). pandas defaults to \(n-1\).</div></div>
+<div class="fc"><div class="f">What is row-major order?</div><div class="b">Elements are laid out (and reshaped) row by row: the last index changes fastest.</div></div>
+<div class="fc"><div class="f"><code>np.vstack([a, b])</code> vs <code>np.column_stack([a, b])</code> for two 1-D arrays of length n?</div><div class="b">vstack: shape (2, n), arrays as rows. column_stack: shape (n, 2), arrays as columns.</div></div>
+<div class="fc"><div class="f">Which indexing operations give a view, which a copy?</div><div class="b">View: basic slices, reshape, .T. Copy: fancy (list) indexing, boolean masks, arithmetic, <code>.copy()</code>.</div></div>
+<div class="fc"><div class="f">Fraction of elements of <code>x</code> that are positive, in one expression?</div><div class="b"><code>(x &gt; 0).mean()</code>: True counts as 1.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> <span>I can explain why <code>x + y</code> differs for lists and arrays, and I timed a loop against a vectorised version.</span></label>
+<label><input type="checkbox"> <span>I can create arrays with <code>array</code>, <code>zeros</code>, <code>ones</code>, <code>full</code>, <code>eye</code>, <code>arange</code> and <code>linspace</code>, and read their dtype, shape, ndim and size.</span></label>
+<label><input type="checkbox"> <span>I can predict the values and the shape of any slice like <code>A[1:4:2, ::-1]</code>.</span></label>
+<label><input type="checkbox"> <span>I can use list indexing, <code>np.ix_</code> and boolean masks, and I know why <code>A[[1,3],[0,2]]</code> is not a submatrix.</span></label>
+<label><input type="checkbox"> <span>I can compute sums, means, standard deviations and argmax along an axis and say how many numbers come out.</span></label>
+<label><input type="checkbox"> <span>I can reshape, transpose and stack arrays, and build a design matrix with a column of ones.</span></label>
+<label><input type="checkbox"> <span>I know which operations make views and when to call <code>.copy()</code>.</span></label>
+</div>
+</section>

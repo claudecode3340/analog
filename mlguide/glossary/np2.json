@@ -1,0 +1,52 @@
+{
+ "np2-broadcasting": {
+  "term": "broadcasting",
+  "def": "NumPy's rule for combining arrays of different shapes: align shapes on the right; sizes must be equal or 1; size-1 axes are virtually stretched.",
+  "at": "np2"
+ },
+ "np2-standardise": {
+  "term": "standardise",
+  "def": "Subtract each column's mean and divide by its standard deviation, so every column has mean 0 and standard deviation 1 (z-scores).",
+  "at": "np2"
+ },
+ "np2-prng": {
+  "term": "pseudo-random number generator",
+  "def": "A deterministic formula whose output looks random; the same starting state (seed) always gives the same sequence.",
+  "at": "np2"
+ },
+ "np2-seed": {
+  "term": "seed",
+  "def": "The integer that sets a random generator's starting state; fixing it makes random results reproducible.",
+  "at": "np2"
+ },
+ "np2-generator": {
+  "term": "Generator",
+  "def": "The object returned by <code>np.random.default_rng(seed)</code>; draw numbers with its methods such as <code>normal</code>, <code>uniform</code>, <code>choice</code>, <code>permutation</code>.",
+  "at": "np2"
+ },
+ "np2-kwarg": {
+  "term": "keyword argument",
+  "def": "A function argument given by name, e.g. <code>scale=5</code>; can be given in any order. Arguments matched by position are positional.",
+  "at": "np2"
+ },
+ "np2-lstsq": {
+  "term": "least squares",
+  "def": "Choosing coefficients that minimise the sum of squared errors; solution \\(\\hat\\bbeta=(\\bX\\T\\bX)^{-1}\\bX\\T\\by\\); NumPy <code>np.linalg.lstsq</code>.",
+  "at": "np2"
+ },
+ "np2-dot": {
+  "term": "dot product",
+  "def": "\\(\\mathbf a\\cdot\\mathbf b=\\sum_i a_ib_i\\): multiply matching entries and add. NumPy <code>a @ b</code>.",
+  "at": "np2"
+ },
+ "np2-matmul": {
+  "term": "matrix product",
+  "def": "\\((\\mathbf{AB})_{ij}\\) = row \\(i\\) of A dotted with column \\(j\\) of B; shapes \\((m\\times k)(k\\times n)\\to(m\\times n)\\). NumPy <code>A @ B</code>.",
+  "at": "np2"
+ },
+ "np2-norm": {
+  "term": "norm",
+  "def": "The length of a vector: L2 \\(\\sqrt{\\sum x_i^2}\\), L1 \\(\\sum|x_i|\\). NumPy <code>np.linalg.norm</code>.",
+  "at": "np2"
+ }
+}

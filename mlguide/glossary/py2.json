@@ -1,0 +1,14 @@
+{
+"py-dict": {"term": "dictionary (dict)", "def": "A collection of <code>key: value</code> pairs, looked up by key: <code>car[\"mpg\"]</code>. Keys are unique.", "at": "py2"},
+"py-set": {"term": "set", "def": "An unordered collection with no duplicates: <code>set([3, 1, 3])</code> is <code>{1, 3}</code>.", "at": "py2"},
+"py-tuple": {"term": "tuple", "def": "A fixed, unchangeable group of values in round brackets, e.g. a point <code>(3, 4)</code> or an array shape.", "at": "py2"},
+"py-unpack": {"term": "unpacking", "def": "Catching the parts of a tuple or list in several names at once: <code>x, y = (3, 4)</code>.", "at": "py2"},
+"py-while": {"term": "while loop", "def": "Repeats a block as long as a condition is true; something inside must eventually make it false.", "at": "py2"},
+"py-enumerate": {"term": "enumerate", "def": "<code>enumerate(xs)</code> gives <code>(index, item)</code> pairs for a loop.", "at": "py2"},
+"py-zip": {"term": "zip", "def": "<code>zip(a, b)</code> pairs items position by position, stopping at the shorter input.", "at": "py2"},
+"py-comprehension": {"term": "comprehension", "def": "A one-line way to build a list or dict: <code>[x ** 2 for x in xs if x &gt; 0]</code>.", "at": "py2"},
+"py-scope": {"term": "scope", "def": "Where a name exists. Names assigned inside a function are local to it and vanish when it returns.", "at": "py2"},
+"py-lambda": {"term": "lambda", "def": "A one-line nameless function, e.g. <code>lambda p: p[1]</code>; often used as a <code>key=</code> for sorting.", "at": "py2"},
+"py-class": {"term": "class", "def": "A blueprint for objects that bundle data (attributes, set in <code>__init__</code> on <code>self</code>) with functions (methods).", "at": "py2"},
+"py-knn": {"term": "k-nearest neighbours (KNN)", "def": "Classify a new point by the majority class of the \\(k\\) closest training points (or average their values, for regression).", "at": "py2"}
+}

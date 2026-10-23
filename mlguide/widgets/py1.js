@@ -6,13 +6,13 @@ G.widget("py1-slice", function (body, args) {
   var name = args.name || "marks";
   var n = vals.length;
   var mode = args.mode || "slice";
-  var st = { i: 2, start: 1, stop: 4, step: 1, s0: false, s1: false, s2: false };
+  var st = { i: 2, start: 1, stop: 4, step: 1, s0: false, s1: false, s2: true };
   if (args.start != null) st.start = args.start; if (args.stop != null) st.stop = args.stop;
 
   var top = G.el("div"); top.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"; body.appendChild(top);
   G.seg(top, [["index", "One item: " + name + "[i]"], ["slice", "A slice: " + name + "[start:stop:step]"]], mode, function (m) { mode = m; layout(); draw(); });
   var expr = G.el("div"); expr.style.cssText = "font:600 18px/1.4 var(--mono);margin:8px 0 2px;color:var(--ink);overflow-wrap:anywhere"; body.appendChild(expr);
-  var W = 720, H = 170, bw = Math.min(84, (W - 40) / n), x0 = (W - bw * n) / 2, by = 58, bh = 52;
+  var narrow = (body.clientWidth || 700) < 520, W = narrow ? 400 : 720, H = 170, bw = Math.min(84, (W - 16) / n), x0 = (W - bw * n) / 2, by = 58, bh = 52;
   var svg = G.svg("svg", { viewBox: "0 0 " + W + " " + H, class: "wsvg", role: "img", "aria-label": "list boxes with positive and negative positions" }, body);
   var ctl = G.el("div"); ctl.style.cssText = "display:grid;gap:4px;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));margin-top:6px"; body.appendChild(ctl);
   var info = G.el("div", "readout"); body.appendChild(info);
@@ -77,7 +77,7 @@ G.widget("py1-slice", function (body, args) {
     vals.forEach(function (v, k) {
       var x = x0 + k * bw, on = sel.indexOf(k);
       G.svg("rect", { x: x + 3, y: by, width: bw - 6, height: bh, rx: 8, style: on >= 0 ? "fill:var(--accent-soft);stroke:var(--accent);stroke-width:2.5" : "fill:var(--surface);stroke:var(--line2);stroke-width:1.2" }, svg);
-      t(x + bw / 2, by + 33, String(v), { style: "fill:var(--ink);font-size:20px;font-weight:" + (on >= 0 ? 700 : 400) });
+      t(x + bw / 2, by + 33, String(v), { style: "fill:var(--ink);font-size:" + (narrow ? 19 : 20) + "px;font-weight:" + (on >= 0 ? 700 : 400) });
       t(x + bw / 2, by - 12, String(k), { style: "fill:var(--tool);font:600 14px var(--mono)" });
       t(x + bw / 2, by + bh + 22, String(k - n), { style: "fill:var(--math);font:600 14px var(--mono)" });
       if (on >= 0 && sel.length > 1) {

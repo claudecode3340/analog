@@ -1,0 +1,768 @@
+<section class="lesson" id="py2" data-book="Python foundations">
+<style>#py2 code.lc{white-space:normal;overflow-wrap:anywhere}</style>
+<p class="lede">Python I gave you numbers, text, lists, loops and functions. This lesson adds the tools that real ML code is built from: dictionaries for looking things up by name, tuples for returning several results, the looping helpers <code>zip</code> and <code>enumerate</code>, one-line comprehensions, sorting with a key, a first class with methods, and reading data from a file. It ends with you writing a complete k-nearest-neighbours classifier in plain Python, the very method ISLP uses to introduce classification.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#py1">Python I</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>store and look up values by name with a dictionary, and count things with one;</li>
+<li>use sets to find unique values, and tuples to group values and return several results;</li>
+<li>repeat until a condition is met with <code>while</code>, and walk lists with <code>enumerate</code> and <code>zip</code>;</li>
+<li>write list and dictionary comprehensions;</li>
+<li>write clear functions: docstrings, keyword arguments, several return values, and you know what "scope" means;</li>
+<li>sort with <code>sorted(..., key=...)</code> and a <code>lambda</code>;</li>
+<li>write a small class with <code>__init__</code> and methods, in the fit/predict style of scikit-learn;</li>
+<li>read and write a text file with <code>with open(...)</code>;</li>
+<li>compute an MSE and a k-nearest-neighbours prediction from scratch, and check them against scikit-learn.</li></ul></div>
+
+<h3 id="py2-dicts">1 · Dictionaries: look things up by name</h3>
+<p>A list finds things by <i>position</i>: <code>marks[2]</code>. Often you want to find things by <i>name</i> instead: "the horsepower of this car", "the learning rate of this model". A <dfn data-g="py-dict">dictionary</dfn> (type <code>dict</code>) stores <b>key: value</b> pairs, like a real dictionary stores word: meaning. You write it with curly braces:</p>
+<div class="py" id="c-py2-01"><pre class="src">
+# the first car in ISLP's Auto data set
+car = {"name": "chevrolet chevelle malibu", "mpg": 18.0, "cylinders": 8, "horsepower": 130}
+print(car["mpg"])            # look up by key, with square brackets
+print(car["name"].title())
+car["weight"] = 3504         # add a new key: value pair
+car["mpg"] = 18.5            # change the value of an existing key
+print(car)
+print(len(car), "horsepower" in car, "price" in car)
+</pre><div class="pynote"><b>Read the output:</b> <code>18.0</code>; then the name in Title Case; then the whole dictionary, now with <code>'weight': 3504</code> added at the end and mpg changed to 18.5 (assigning to a key that exists replaces its value; to a new key, adds it). <code>len</code> counts the pairs (5). <code>in</code> checks the <b>keys</b>: <code>"horsepower" in car</code> is <code>True</code>, <code>"price" in car</code> is <code>False</code>.</div></div>
+
+<div class="symbols"><div class="row h"><span>Write</span><span>Meaning</span><span>Example</span></div>
+<div class="row"><span class="s"><code>d[key]</code></span><span>the value stored under <code>key</code>; KeyError if missing</span><span class="eg"><code>car["mpg"]</code> → 18.5</span></div>
+<div class="row"><span class="s"><code>d.get(key, default)</code></span><span>the value, or <code>default</code> if the key is missing (no error)</span><span class="eg"><code>car.get("price", 0)</code> → 0</span></div>
+<div class="row"><span class="s"><code>d[key] = v</code></span><span>add or replace a pair</span><span class="eg"><code>car["year"] = 70</code></span></div>
+<div class="row"><span class="s"><code>key in d</code></span><span>is this key present?</span><span class="eg"><code>"mpg" in car</code> → True</span></div>
+<div class="row"><span class="s"><code>d.keys()</code>, <code>d.values()</code>, <code>d.items()</code></span><span>all keys; all values; all (key, value) pairs</span><span class="eg"><code>for k, v in car.items():</code></span></div>
+</div>
+
+<p>Keys must be unique (one meaning per word), and are usually strings or numbers. Values can be anything, including lists and other dictionaries. Asking for a key that isn't there is an error:</p>
+<div class="py" id="c-py2-02" data-mode="expect-error" data-error="KeyError"><pre class="src">
+print(car["Horsepower"])     # capital H: a different key!
+</pre><div class="pynote"><b>Read the error:</b> <code>KeyError: 'Horsepower'</code>. Keys are matched exactly, including capitals. You'll see this error constantly with pandas, where column names are dictionary-like keys. Fix: <code>car["horsepower"]</code>, or <code class="lc">car.get("Horsepower", "not found")</code> if a missing key is expected.</div></div>
+
+<h4>Looping over a dictionary</h4>
+<div class="py" id="c-py2-03"><pre class="src">
+settings = {"learning_rate": 0.01, "epochs": 20, "batch_size": 32}
+for key, value in settings.items():
+    print(f"{key:&gt;14} = {value}")
+</pre><div class="pynote"><b>Read the output:</b> one line per pair, the keys right-aligned in 14 characters so the <code>=</code> signs line up. <code>.items()</code> gives each pair as two values, which the loop catches in two names, <code>key</code> and <code>value</code> (this "catching two at once" is <b>unpacking</b>, explained in section 3). Dictionaries keep the order in which you inserted the keys.</div></div>
+
+<h4 id="py2-count">The counting pattern</h4>
+<p>One of the most useful patterns in data work: count how often each value appears. Start with an empty dictionary <code>{}</code>; for each item, add 1 to its count, starting it at 0 the first time you see it:</p>
+<div class="worked"><div class="wt">Worked example · <b>counting class labels by hand</b></div>
+<div class="given">Labels: <code class="lc">["cat", "dog", "cat", "bird", "cat", "dog"]</code>. Track the dictionary <code>counts</code> after each item.</div>
+<div class="tw"><table class="t"><thead><tr><th>item</th><th>seen before?</th><th><code>counts</code> afterwards</th></tr></thead><tbody>
+<tr><td>cat</td><td>no: start at 0, add 1</td><td><code>{'cat': 1}</code></td></tr>
+<tr><td>dog</td><td>no</td><td><code>{'cat': 1, 'dog': 1}</code></td></tr>
+<tr><td>cat</td><td>yes: 1 + 1</td><td><code>{'cat': 2, 'dog': 1}</code></td></tr>
+<tr><td>bird</td><td>no</td><td><code class="lc">{'cat': 2, 'dog': 1, 'bird': 1}</code></td></tr>
+<tr><td>cat</td><td>yes: 2 + 1</td><td><code class="lc">{'cat': 3, 'dog': 1, 'bird': 1}</code></td></tr>
+<tr><td>dog</td><td>yes: 1 + 1</td><td><code class="lc">{'cat': 3, 'dog': 2, 'bird': 1}</code></td></tr>
+</tbody></table></div>
+<div class="result"><code class="lc">{'cat': 3, 'dog': 2, 'bird': 1}</code></div></div>
+<div class="py" id="c-py2-04"><pre class="src">
+labels = ["cat", "dog", "cat", "bird", "cat", "dog"]
+counts = {}
+for lab in labels:
+    counts[lab] = counts.get(lab, 0) + 1
+print(counts)
+print("most common:", max(counts, key=counts.get))
+</pre><div class="pynote"><b>Read the output:</b> the same dictionary as the worked example. The key line is <code>counts.get(lab, 0) + 1</code>: "the current count, or 0 if this label is new, plus one". The last line finds the key with the largest count; <code>key=counts.get</code> tells <code>max</code> to compare keys by their counts (section 7 explains <code>key=</code>). You'll use exactly this to take the majority vote in k-nearest neighbours.</div></div>
+
+<div class="ex" id="x-py2-01" data-title="count the labels"><div class="task"><p>Write <code>count_labels(labels)</code> that returns a dictionary mapping each label to how many times it appears. Example: <code class="lc">count_labels(["Up", "Down", "Up"])</code> → <code>{"Up": 2, "Down": 1}</code>. (The Smarket data in ISLP has exactly these labels: whether the stock market went Up or Down.)</p></div>
+<pre class="src">
+def count_labels(labels):
+    counts = {}
+    # your loop here
+    return counts
+</pre>
+<pre class="check">
+from collections import Counter
+assert count_labels(["Up", "Down", "Up"]) == {"Up": 2, "Down": 1}, f"got {count_labels(['Up', 'Down', 'Up'])}"
+assert count_labels([]) == {}, "no labels, empty dictionary"
+xs = list("abracadabra")
+assert count_labels(xs) == dict(Counter(xs)), f"for {xs} expected {dict(Counter(xs))}, got {count_labels(xs)}"
+</pre>
+<div class="hint"><p>Loop over <code>labels</code>; inside, update <code>counts[lab]</code> using <code>counts.get(lab, 0)</code>.</p></div>
+<div class="hint"><pre>    for lab in labels:
+        counts[lab] = counts.get(lab, 0) + 1</pre></div>
+<pre class="solution">
+def count_labels(labels):
+    counts = {}
+    for lab in labels:
+        counts[lab] = counts.get(lab, 0) + 1
+    return counts
+</pre>
+<div class="explain"><p>The check compares with Python's own <code>collections.Counter</code>, a ready-made counting dictionary. (<code>list("abracadabra")</code> splits a string into its letters.) Knowing how to write it yourself is a common interview warm-up.</p></div></div>
+
+<h3 id="py2-sets">2 · Sets: unique values</h3>
+<p>A <dfn data-g="py-set">set</dfn> is an unordered collection with <b>no duplicates</b>. Use it to find the distinct values in a column, or to ask "is this in here?" very quickly even for millions of items.</p>
+<div class="py" id="c-py2-05"><pre class="src">
+cylinders = [8, 8, 4, 6, 4, 4, 8, 3, 5, 4]
+distinct = set(cylinders)
+print(distinct, len(distinct))
+print(sorted(distinct))           # a sorted list of the distinct values
+distinct.add(12)                  # sets use add, not append
+print(4 in distinct, 7 in distinct)
+a, b = {"mpg", "weight", "year"}, {"weight", "year", "origin"}
+print(a &amp; b, a | b, a - b)       # in both; in either; in a but not b
+</pre><div class="pynote"><b>Read the output:</b> the set <code>{3, 4, 5, 6, 8}</code> with 5 distinct values (the order a set prints in isn't guaranteed, which is why we use <code>sorted</code> to get a tidy list). <code>in</code> works as for lists. The last line shows set algebra, like Venn diagrams: <code>&amp;</code> intersection, <code>|</code> union, <code>-</code> difference. These three sets may print their items in a different order on your Mac; that's normal for sets. An empty set is written <code>set()</code>, because <code>{}</code> is an empty dictionary.</div></div>
+
+<div class="ex" id="x-py2-02" data-title="distinct classes, sorted"><div class="task"><p>Write <code>classes(labels)</code> that returns a <b>sorted list</b> of the distinct labels. Example: <code class="lc">classes(["Up", "Down", "Up", "Down"])</code> → <code>["Down", "Up"]</code>. scikit-learn stores exactly this in a fitted classifier's <code>classes_</code> attribute.</p></div>
+<pre class="src">
+def classes(labels):
+    return labels
+</pre>
+<pre class="check">
+import numpy as np
+assert classes(["Up", "Down", "Up", "Down"]) == ["Down", "Up"], f"got {classes(['Up', 'Down', 'Up', 'Down'])}"
+xs = [3, 1, 3, 2, 1, 5]
+assert classes(xs) == list(np.unique(xs)), f"expected {list(np.unique(xs))}, got {classes(xs)}"
+assert classes([]) == []
+</pre>
+<div class="hint"><p>Two built-in tools: one removes duplicates, one sorts and returns a list.</p></div>
+<div class="hint"><p><code>sorted(set(labels))</code></p></div>
+<pre class="solution">
+def classes(labels):
+    return sorted(set(labels))
+</pre>
+<div class="explain"><p><code>set(labels)</code> keeps one copy of each label; <code>sorted</code> turns it back into an ordered list (strings sort alphabetically, so "Down" comes before "Up"). NumPy's <code>np.unique</code> does the same for arrays.</p></div></div>
+
+<h3 id="py2-tuples">3 · Tuples and unpacking</h3>
+<p>A <dfn data-g="py-tuple">tuple</dfn> is like a list that can't be changed: written with round brackets, <code>(3, 4)</code>. Use it for a small, fixed group of values that belong together: a point <code>(x, y)</code>, an image size <code>(height, width)</code>, or several results returned from one function. NumPy array shapes are tuples, so you'll see them every day.</p>
+<p><dfn data-g="py-unpack">Unpacking</dfn> means catching the parts of a tuple (or list) in several names at once: <code>x, y = (3, 4)</code> sets <code>x = 3</code> and <code>y = 4</code>. The number of names must match the number of parts.</p>
+<div class="py" id="c-py2-06"><pre class="src">
+point = (3.0, 4.0)
+x, y = point                       # unpacking
+print(x, y, (x ** 2 + y ** 2) ** 0.5)
+
+def lo_hi(xs):
+    """Return the smallest and largest value."""
+    return min(xs), max(xs)        # two values, returned as one tuple
+
+result = lo_hi([62, 75, 81, 70])
+print(result, type(result))
+low, high = lo_hi([62, 75, 81, 70])
+print("range:", high - low)
+
+a, b = 1, 2
+a, b = b, a                        # swap in one line
+print(a, b)
+</pre><div class="pynote"><b>Read the output:</b> <code>3.0 4.0 5.0</code> (the distance from the origin, \(\sqrt{3^2+4^2}=5\)). <code>lo_hi</code> returns <code>(62, 81)</code>, a <code>tuple</code>: writing <code>return min(xs), max(xs)</code> with a comma packs both into one tuple. Unpacking it straight into <code>low, high</code> gives a range of 19. The swap works because the right side <code>(b, a)</code> is built first, then unpacked.</div></div>
+
+<div class="py" id="c-py2-07" data-mode="expect-error" data-error="TypeError"><pre class="src">
+shape = (506, 13)       # rows, columns
+shape[0] = 500          # tuples can't be changed
+</pre><div class="pynote"><b>Read the error:</b> <code class="lc">TypeError: 'tuple' object does not support item assignment</code>. That's the point of a tuple: once made, it stays as it is. If you need to change things, use a list.</div></div>
+
+<h3 id="py2-while">4 · while loops: repeat until done</h3>
+<p>A <code>for</code> loop runs once per item; you know in advance how many times. A <dfn data-g="py-while">while loop</dfn> repeats <b>as long as a condition is true</b>, which is what you want when you don't know how many steps it will take: "keep training while the error is still too big".</p>
+<div class="py" id="c-py2-08"><pre class="src">
+error = 1.0
+steps = 0
+while error &gt; 0.01:          # check the condition before every trip
+    error = error / 2        # pretend each training step halves the error
+    steps = steps + 1
+print(f"stopped after {steps} steps, error = {error}")
+</pre><div class="pynote"><b>Read the output:</b> <code class="lc">stopped after 7 steps, error = 0.0078125</code>. Trace it: 1 → 0.5 → 0.25 → 0.125 → 0.0625 → 0.03125 → 0.015625 → 0.0078125. After 6 halvings the error (0.0156) is still above 0.01, so one more trip runs; after the 7th it's 0.0078, the condition is false, and the loop stops. Change the tolerance to <code>0.001</code> and predict the number of steps first (hint: \(2^{10}=1024\)).</div></div>
+
+<div class="callout pitfall"><p><b>The endless loop.</b> If nothing inside a <code>while</code> loop ever makes the condition false (say you forgot <code>error = error / 2</code>), it runs forever. In this page a cell is stopped after a minute; in a notebook on your Mac, press the ■ stop button (or <kbd class="k">Ctrl</kbd> + <kbd class="k">C</kbd> in Terminal). Always check: what changes on every trip, and will it eventually make the condition false?</p></div>
+
+<p>Two keywords control any loop: <code>break</code> leaves the loop at once, and <code>continue</code> skips to the next trip. Use them sparingly; they're handy for "stop when found":</p>
+<div class="py" id="c-py2-09"><pre class="src">
+losses = [0.90, 0.61, 0.45, 0.38, 0.36, 0.37, 0.41]
+for epoch in range(len(losses)):
+    if epoch &gt; 0 and losses[epoch] &gt; losses[epoch - 1]:
+        print(f"loss went up at epoch {epoch}: stop early")
+        break
+    print(f"epoch {epoch}: loss {losses[epoch]}")
+</pre><div class="pynote"><b>Read the output:</b> epochs 0 to 4 print their loss; at epoch 5 the loss (0.37) is higher than at epoch 4 (0.36), so the loop prints the warning and <code>break</code>s; epoch 6 is never reached. This is the idea behind <b>early stopping</b>, a regularisation method you'll meet in month 3.</div></div>
+
+<div class="ex" id="x-py2-03" data-title="steps to reach a tolerance"><div class="task"><p>Write <code class="lc">steps_to_tolerance(start, factor, tol)</code>: begin with <code>value = start</code> and, <b>while</b> <code>value &gt; tol</code>, multiply it by <code>factor</code> and count one step. Return the number of steps. Examples: <code class="lc">steps_to_tolerance(1.0, 0.5, 0.01)</code> → <code>7</code> (as in the cell above); <code class="lc">steps_to_tolerance(100, 0.1, 1)</code> → <code>2</code> (100 → 10 → 1, and 1 is not &gt; 1).</p></div>
+<pre class="src">
+def steps_to_tolerance(start, factor, tol):
+    value = start
+    steps = 0
+    # your while loop here
+    return steps
+</pre>
+<pre class="check">
+assert steps_to_tolerance(1.0, 0.5, 0.01) == 7, f"expected 7, got {steps_to_tolerance(1.0, 0.5, 0.01)}"
+assert steps_to_tolerance(100, 0.1, 1) == 2, f"expected 2, got {steps_to_tolerance(100, 0.1, 1)}"
+assert steps_to_tolerance(0.005, 0.5, 0.01) == 0, "already below the tolerance: zero steps"
+assert steps_to_tolerance(1.0, 0.9, 0.001) == 66, f"expected 66, got {steps_to_tolerance(1.0, 0.9, 0.001)}"
+</pre>
+<div class="hint"><p>The condition is <code>value &gt; tol</code>. Inside the loop, two lines: update <code>value</code>, add 1 to <code>steps</code>.</p></div>
+<div class="hint"><pre>    while value &gt; tol:
+        value = value * factor
+        steps = steps + 1</pre></div>
+<pre class="solution">
+def steps_to_tolerance(start, factor, tol):
+    value = start
+    steps = 0
+    while value &gt; tol:
+        value = value * factor
+        steps = steps + 1
+    return steps
+</pre>
+<div class="explain"><p>The condition is checked before each trip, so a start that is already small enough gives 0 steps. With factor 0.9 the value shrinks slowly: \(0.9^{65}\approx0.00105\) is still above 0.001, and \(0.9^{66}\approx0.00095\) is below, so 66 steps. Slow shrinking is what a small learning rate looks like.</p></div></div>
+
+<h3 id="py2-zip">5 · enumerate, zip and range, in depth</h3>
+<p>In Python I you walked two lists together with <code>for i in range(len(y))</code> and <code>y[i]</code>, <code>y_hat[i]</code>. It works, but it's clumsy and easy to get wrong. Two helpers do it better:</p>
+<ul>
+<li><dfn data-g="py-enumerate"><code>enumerate(xs)</code></dfn> gives pairs <code>(index, item)</code>: use it when you need the position <i>and</i> the item.</li>
+<li><dfn data-g="py-zip"><code>zip(a, b)</code></dfn> gives pairs <code>(a[0], b[0])</code>, <code>(a[1], b[1])</code>, …: use it to walk two (or more) lists side by side, like a zip fastener joining two rows of teeth.</li>
+</ul>
+<div class="py" id="c-py2-10"><pre class="src">
+names = ["Asha", "Ben", "Chen"]
+marks = [62, 75, 81]
+for i, name in enumerate(names):
+    print(i, name)
+for name, mark in zip(names, marks):
+    print(f"{name} scored {mark}")
+print(list(enumerate(names, start=1)))
+print(list(zip(names, marks)))
+</pre><div class="pynote"><b>Read the output:</b> <code>enumerate</code> numbers the names 0, 1, 2. <code>zip</code> pairs each name with its mark. Both give tuples, which the loop unpacks into two names. <code>start=1</code> makes enumerate count from 1, handy for printing "rank 1, 2, 3". Wrapping them in <code>list(...)</code> shows every pair at once: <code class="lc">[(1, 'Asha'), (2, 'Ben'), (3, 'Chen')]</code> and <code class="lc">[('Asha', 62), ('Ben', 75), ('Chen', 81)]</code>.</div></div>
+
+<div class="predict" data-correct="2"><p><code class="lc">list(zip([1, 2, 3], ["a", "b"]))</code> gives…</p><ol class="opts"><li>an error, because the lists have different lengths</li><li><code>[(1, 'a'), (2, 'b')]</code></li><li><code class="lc">[(1, 'a'), (2, 'b'), (3, None)]</code></li></ol><div class="why"><code>zip</code> stops as soon as the <b>shortest</b> list runs out, silently. That's convenient, but it can hide a bug: if your predictions list is accidentally shorter than your targets, zip won't complain. In real code, check <code>len(y) == len(y_hat)</code> first (or use <code>zip(a, b, strict=True)</code>, which raises an error on a length mismatch).</div></div>
+<div class="py" id="c-py2-11"><pre class="src">
+print(list(zip([1, 2, 3], ["a", "b"])))
+</pre><div class="pynote"><b>Read the output:</b> <code>[(1, 'a'), (2, 'b')]</code>: the 3 had no partner, so it was dropped.</div></div>
+
+<p><code>range</code> deserves a second look too. It doesn't store its numbers in memory; it works them out as the loop asks for them, so <code>range(1_000_000_000)</code> costs nothing until you loop over it. (Underscores inside a number are allowed for readability.) A few more of its tricks:</p>
+<div class="py" id="c-py2-22"><pre class="src">
+r = range(10, 0, -3)              # count down in steps of 3
+print(list(r), len(r))
+print(list(range(0)))             # zero numbers: a loop over it never runs
+print(list(reversed(range(5))))   # 4, 3, 2, 1, 0
+print(9 in range(0, 10, 3))       # is 9 one of 0, 3, 6, 9?
+</pre><div class="pynote"><b>Read the output:</b> <code>[10, 7, 4, 1] 4</code>: it starts at 10 and keeps subtracting 3 while it stays above the stop value 0. <code>range(0)</code> is empty, <code>[]</code>, so a loop over it runs zero times (the reason <code>for i in range(len(xs))</code> is safe on an empty list). <code>reversed</code> walks any sequence backwards. <code>in</code> works on ranges: <code>True</code>. Rule of thumb: use <code>for x in xs</code> when you need only the items, <code>enumerate</code> when you also need positions, <code>zip</code> for several lists side by side, and <code>range</code> when you need plain counting.</div></div>
+
+<p>With <code>zip</code>, the MSE loop reads almost like the formula \(\frac1n\sum (y_i-\hat y_i)^2\):</p>
+<div class="py" id="c-py2-12"><pre class="src">
+y     = [3, 5, 7]
+y_hat = [2.5, 5, 8]
+total = 0
+for yi, yhi in zip(y, y_hat):
+    total += (yi - yhi) ** 2
+print("MSE:", total / len(y))
+</pre><div class="pynote"><b>Read the output:</b> <code>MSE: 0.4166666666666667</code>, the same as in Python I, with no index bookkeeping. The names <code>yi</code> and <code>yhi</code> mirror \(y_i\) and \(\hat y_i\).</div></div>
+
+<div class="ex" id="x-py2-04" data-title="mean absolute error with zip"><div class="task"><p>The <b>mean absolute error</b> is \(\mathrm{MAE}=\frac1n\sum_i |y_i-\hat y_i|\): like MSE, but with the size of each error instead of its square, so large errors aren't punished as heavily. <code>abs(x)</code> gives the size of <code>x</code> (<code>abs(-3)</code> is 3). Write <code>mae(y, y_hat)</code> using <code>zip</code>. Example: <code class="lc">mae([3, 5, 7], [2.5, 5, 8])</code> → <code>0.5</code> (errors 0.5, 0, 1).</p></div>
+<pre class="src">
+def mae(y, y_hat):
+    total = 0
+    return total
+</pre>
+<pre class="check">
+from sklearn.metrics import mean_absolute_error
+assert abs(mae([3, 5, 7], [2.5, 5, 8]) - 0.5) &lt; 1e-12, f"expected 0.5, got {mae([3, 5, 7], [2.5, 5, 8])}"
+for y, yh in [([1, 2], [1, 2]), ([0, 0, 0], [1, -2, 3]), ([2.5, -1.0, 4.0], [3.0, -0.5, 2.0])]:
+    want = mean_absolute_error(y, yh)
+    assert abs(mae(y, yh) - want) &lt; 1e-12, f"mae({y}, {yh}) should be {want} (scikit-learn), got {mae(y, yh)}"
+</pre>
+<div class="hint"><p><code class="lc">for yi, yhi in zip(y, y_hat):</code> then add <code>abs(yi - yhi)</code> to <code>total</code>. Divide by <code>len(y)</code> at the end.</p></div>
+<div class="hint"><pre>    for yi, yhi in zip(y, y_hat):
+        total += abs(yi - yhi)
+    return total / len(y)</pre></div>
+<pre class="solution">
+def mae(y, y_hat):
+    total = 0
+    for yi, yhi in zip(y, y_hat):
+        total += abs(yi - yhi)
+    return total / len(y)
+</pre>
+<div class="explain"><p>Errors 0.5, 0 and −1 have sizes 0.5, 0, 1; their mean is 1.5 / 3 = 0.5. Compare the MSE of the same predictions, 0.417: the two measures weigh errors differently, and the choice is part of modelling. scikit-learn's <code>mean_absolute_error</code> agrees with yours.</p></div></div>
+
+<div class="ex" id="x-py2-05" data-title="where is the smallest?"><div class="task"><p>Write <code>index_of_min(xs)</code> that returns the <b>position</b> of the smallest value (the first one, if it appears more than once). Use <code>enumerate</code>. Example: <code class="lc">index_of_min([0.9, 0.4, 0.7, 0.4])</code> → <code>1</code>. This is called <i>argmin</i>, and you'll use it to pick the best model setting from a list of test errors.</p></div>
+<pre class="src">
+def index_of_min(xs):
+    best_i = 0
+    # loop with enumerate; remember the position of the smallest so far
+    return best_i
+</pre>
+<pre class="check">
+import numpy as np
+for xs in [[0.9, 0.4, 0.7, 0.4], [5], [3, 2, 1], [-1, 5, -7, 2, -7], [2.5, 2.5]]:
+    assert index_of_min(xs) == int(np.argmin(xs)), f"index_of_min({xs}) should be {int(np.argmin(xs))}, got {index_of_min(xs)}"
+</pre>
+<div class="hint"><p>Inside <code>for i, x in enumerate(xs):</code>, compare <code>x</code> with <code>xs[best_i]</code>. If it is strictly smaller, update <code>best_i = i</code>.</p></div>
+<div class="hint"><p>Use <code>&lt;</code>, not <code>&lt;=</code>, so that ties keep the first position.</p></div>
+<pre class="solution">
+def index_of_min(xs):
+    best_i = 0
+    for i, x in enumerate(xs):
+        if x &lt; xs[best_i]:
+            best_i = i
+    return best_i
+</pre>
+<div class="explain"><p>We keep the position of the best value so far and replace it only when we find something strictly smaller, so the first of two equal minimums wins, exactly like NumPy's <code>np.argmin</code>, which the check compares against.</p></div></div>
+
+<h3 id="py2-comp">6 · Comprehensions: build a list in one line</h3>
+<p>In Python I you built lists with the pattern "start empty, loop, append". It's so common that Python has a short form, the <dfn data-g="py-comprehension">list comprehension</dfn>:</p>
+<div class="mathblock"><div class="eqlabel">Read a comprehension right to left, then left</div>
+<p style="font:600 17px var(--mono);text-align:center;margin:10px 0">[ <span class="hlc">expression</span> for <span class="hlb">name</span> in <span class="hlg">list</span> if <span class="hlr">condition</span> ]</p>
+<p class="say">"For each <i>name</i> in the <i>list</i>, keep it if the <i>condition</i> holds, and collect the <i>expression</i>." The <code>if</code> part is optional. <code class="lc">[x ** 2 for x in [1, 2, 3]]</code> is <code>[1, 4, 9]</code>.</p></div>
+<div class="py" id="c-py2-13"><pre class="src">
+marks = [62, 35, 81, 40, 90]
+
+# the long way
+curved = []
+for m in marks:
+    curved.append(m + 5)
+
+# the same, as a comprehension
+curved2 = [m + 5 for m in marks]
+print(curved, curved2, curved == curved2)
+
+print([m for m in marks if m &gt;= 40])           # filter: keep passes only
+print([round(m / 100, 2) for m in marks])       # transform
+print({m: m &gt;= 40 for m in marks})             # a dictionary comprehension
+</pre><div class="pynote"><b>Read the output:</b> both ways give <code>[67, 40, 86, 45, 95]</code>, and <code>==</code> confirms the lists are equal. The filter keeps <code>[62, 81, 40, 90]</code>. The transform gives fractions. The last line uses curly braces with <code>key: value</code> to build a <b>dictionary</b> comprehension: each mark maps to whether it passes. A comprehension should fit on one readable line; if it doesn't, use a normal loop.</div></div>
+
+<div class="ex" id="x-py2-06" data-title="squares of the positives"><div class="task"><p>Using a single list comprehension, write <code>squares_of_positive(xs)</code> that returns the squares of the numbers in <code>xs</code> that are greater than 0, in their original order. Example: <code class="lc">squares_of_positive([3, -1, 0, 2])</code> → <code>[9, 4]</code>.</p></div>
+<pre class="src">
+def squares_of_positive(xs):
+    return [x for x in xs]
+</pre>
+<pre class="check">
+assert squares_of_positive([3, -1, 0, 2]) == [9, 4], f"got {squares_of_positive([3, -1, 0, 2])}"
+assert squares_of_positive([-5, -1]) == []
+assert squares_of_positive([0.5]) == [0.25]
+</pre>
+<div class="hint"><p>Change the expression to <code>x ** 2</code> and add a condition at the end.</p></div>
+<div class="hint"><p><code class="lc">[x ** 2 for x in xs if x &gt; 0]</code></p></div>
+<pre class="solution">
+def squares_of_positive(xs):
+    return [x ** 2 for x in xs if x &gt; 0]
+</pre>
+<div class="explain"><p>The <code>if x &gt; 0</code> filter runs first for each item; only the survivors (3 and 2) are squared and collected. 0 is not greater than 0, so it's dropped.</p></div></div>
+
+<div class="ex" id="x-py2-07" data-title="pass or fail, as a dictionary"><div class="task"><p>Write <code>pass_fail(marks)</code>, where <code>marks</code> is a dictionary <code>{name: mark}</code>, returning a new dictionary <code>{name: "pass"}</code> for marks of 40 or more and <code>{name: "fail"}</code> otherwise. Use a dictionary comprehension over <code>marks.items()</code>. Example: <code class="lc">pass_fail({"Asha": 62, "Ben": 35})</code> → <code class="lc">{"Asha": "pass", "Ben": "fail"}</code>.</p></div>
+<pre class="src">
+def pass_fail(marks):
+    return {}
+</pre>
+<pre class="check">
+assert pass_fail({"Asha": 62, "Ben": 35}) == {"Asha": "pass", "Ben": "fail"}, f"got {pass_fail({'Asha': 62, 'Ben': 35})}"
+assert pass_fail({"Chen": 40}) == {"Chen": "pass"}, "40 exactly is a pass"
+assert pass_fail({}) == {}
+</pre>
+<div class="hint"><p>A Python value can choose between two options in one line: <code class="lc">"pass" if m &gt;= 40 else "fail"</code>. This is called a <b>conditional expression</b>.</p></div>
+<div class="hint"><p><code class="lc">{name: ("pass" if m &gt;= 40 else "fail") for name, m in marks.items()}</code></p></div>
+<pre class="solution">
+def pass_fail(marks):
+    return {name: ("pass" if m &gt;= 40 else "fail") for name, m in marks.items()}
+</pre>
+<div class="explain"><p><code>marks.items()</code> gives <code>(name, mark)</code> pairs, unpacked into <code>name, m</code>. For each pair, the key stays the name and the value becomes "pass" or "fail". The one-line <code>A if condition else B</code> is the expression form of if/else: it <i>gives a value</i>, which is why it can sit inside a comprehension.</p></div></div>
+
+<h3 id="py2-funcs">7 · Writing functions well</h3>
+<p>Functions are how you organise every project. Five habits make them clear and safe.</p>
+
+<h4>Docstrings and keyword arguments</h4>
+<p>Start every function with a <b>docstring</b>: a sentence in triple quotes saying what it takes and what it returns. Then anyone (including you, in a month) can read <code>help(fn)</code>. When calling a function with many knobs, name them: <b>keyword arguments</b> (<code>epochs=5</code>) can be given in any order and make the call self-explaining.</p>
+<div class="py" id="c-py2-14"><pre class="src">
+def train(data, lr=0.01, epochs=10, verbose=False):
+    """Pretend to train a model on data.
+
+    lr is the learning rate, epochs the number of passes over the data.
+    Returns a short description of what was done.
+    """
+    msg = f"trained on {len(data)} samples, lr={lr}, epochs={epochs}"
+    if verbose:
+        print("training...")
+    return msg
+
+print(train([1, 2, 3]))
+print(train([1, 2, 3], epochs=5))              # skip lr, set epochs by name
+print(train([1, 2, 3], verbose=True, lr=0.1))  # any order, by name
+help(train)
+</pre><div class="pynote"><b>Read the output:</b> the first call uses every default. The second sets only <code>epochs</code>; without keywords you'd have to write <code>train(data, 0.01, 5)</code>, and a reader couldn't tell what 0.01 and 5 mean. The third gives two keywords in a different order and turns on the extra print. <code>help(train)</code> prints the function's signature and docstring. This is exactly how you'll call library functions: <code class="lc">LinearRegression(fit_intercept=False)</code>, <code class="lc">train_test_split(X, y, test_size=0.2, random_state=0)</code>.</div></div>
+
+<h4>Returning several values</h4>
+<p>Return a tuple, and unpack it at the call. Here is a function returning the mean and the standard deviation (a measure of spread, explained in the probability lesson; here, \(\sigma = \sqrt{\frac1n\sum (x_i-\bar x)^2}\), read <i>sigma</i>):</p>
+<div class="worked"><div class="wt">Worked example · <b>mean and standard deviation of 62, 75, 81, 70</b></div>
+<ol class="steps">
+<li><div>Mean: \(\bar x = 288/4 = 72\).</div></li>
+<li><div>Deviations \(x_i-\bar x\): \(-10,\ 3,\ 9,\ -2\). Squared: \(100,\ 9,\ 81,\ 4\).</div></li>
+<li><div>Mean of the squares: \((100+9+81+4)/4 = 194/4 = 48.5\).</div></li>
+<li><div>Square root: \(\sigma=\sqrt{48.5}\approx 6.964\).</div></li>
+</ol>
+<div class="result">\(\bar x = 72,\ \sigma \approx 6.964\)</div></div>
+
+<div class="ex" id="x-py2-08" data-title="mean and standard deviation"><div class="task"><p>Write <code>mean_std(xs)</code> that <b>returns two values</b>, the mean and the standard deviation \(\sqrt{\frac1n\sum_i (x_i-\bar x)^2}\). Example: <code class="lc">m, s = mean_std([62, 75, 81, 70])</code> gives <code>m = 72.0</code> and <code>s ≈ 6.964</code>. Give it a docstring.</p></div>
+<pre class="src">
+def mean_std(xs):
+    """Return the mean and the standard deviation of xs."""
+    m = sum(xs) / len(xs)
+    return m
+</pre>
+<pre class="check">
+import numpy as np
+res = mean_std([62, 75, 81, 70])
+assert isinstance(res, tuple) and len(res) == 2, f"return two values (a tuple), got {res!r}"
+m, s = res
+assert abs(m - 72) &lt; 1e-12 and abs(s - np.std([62, 75, 81, 70])) &lt; 1e-12, f"expected (72.0, 6.964...), got {res}"
+rng = np.random.default_rng(1); xs = list(rng.normal(5, 2, size=50))
+m, s = mean_std(xs)
+assert abs(m - np.mean(xs)) &lt; 1e-9 and abs(s - np.std(xs)) &lt; 1e-9, f"on random data expected ({np.mean(xs):.4f}, {np.std(xs):.4f}), got ({m:.4f}, {s:.4f})"
+assert mean_std.__doc__, "keep the docstring"
+</pre>
+<div class="hint"><p>After computing <code>m</code>, compute the mean of the squared deviations with a comprehension: <code class="lc">sum([(x - m) ** 2 for x in xs]) / len(xs)</code>. Take its square root with <code>** 0.5</code>.</p></div>
+<div class="hint"><p>End with <code>return m, s</code>.</p></div>
+<pre class="solution">
+def mean_std(xs):
+    """Return the mean and the standard deviation of xs."""
+    m = sum(xs) / len(xs)
+    var = sum([(x - m) ** 2 for x in xs]) / len(xs)
+    s = var ** 0.5
+    return m, s
+</pre>
+<div class="explain"><p>The function follows the worked example step by step. The check compares with NumPy's <code>np.std</code>, which divides by \(n\) by default, as we did. (Statistics books often divide by \(n-1\) instead, for the "sample" standard deviation; the probability lesson explains why. In NumPy that's <code>np.std(xs, ddof=1)</code>.)</p></div></div>
+
+<h4 id="py2-scope">Scope: names inside a function are private</h4>
+<p>A name created inside a function exists only inside it, while the function runs. This is called <dfn data-g="py-scope">scope</dfn>. It's a good thing: functions can't accidentally overwrite your variables.</p>
+<div class="predict" data-correct="1"><p>What does this print?</p><ol class="opts"><li><code>6 100</code></li><li><code>6 6</code></li><li><code>105 100</code></li></ol><div class="why">Inside <code>add_five</code>, <code>total = x + 5</code> creates a new, <b>local</b> <code>total</code> (6) that lives only inside the function. The outer <code>total</code> is a different label on a different box and stays 100. The function hands back 6 through <code>return</code>.</div></div>
+<div class="py" id="c-py2-15"><pre class="src">
+total = 100
+def add_five(x):
+    total = x + 5      # a NEW name, local to this function
+    return total
+print(add_five(1), total)
+</pre><div class="pynote"><b>Read the output:</b> <code>6 100</code>. Rule: pass values <b>in</b> through parameters and get them <b>out</b> through <code>return</code>. A function can <i>read</i> an outer name it doesn't assign to, but relying on that makes code hard to follow, so avoid it.</div></div>
+
+<div class="callout exam"><p><b>The mutable default trap (a classic interview question).</b> A default value is created <b>once</b>, when the <code>def</code> runs, not on every call. With a list as default, every call shares the same list:</p>
+<pre class="term" style="background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font:14px/1.55 var(--mono);overflow-x:auto">def add_mark(m, marks=[]):        # bad
+    marks.append(m)
+    return marks
+add_mark(50)   # [50]
+add_mark(60)   # [50, 60]   surprise: the list was shared</pre>
+<p>The fix is to default to <code>None</code> and make a fresh list inside: <code class="lc">def add_mark(m, marks=None):</code> then <code class="lc">if marks is None: marks = []</code>. (<code>is None</code> is the standard way to ask "is it the special value None?".)</p></div>
+
+<h4 id="py2-lambda">lambda and sorting with a key</h4>
+<p><code>sorted(xs)</code> sorts numbers by size and text alphabetically. To sort by something else, give a <b>key</b>: a function that turns each item into the value to sort by. For a quick one-off key, write a <dfn data-g="py-lambda">lambda</dfn>, a function with no name written in one line: <code>lambda p: p[1]</code> means "a function that takes <code>p</code> and returns <code>p[1]</code>".</p>
+<div class="py" id="c-py2-16"><pre class="src">
+students = [("Asha", 62), ("Ben", 75), ("Chen", 81), ("Divya", 70)]
+print(sorted(students))                                   # by the first item: name
+print(sorted(students, key=lambda p: p[1]))               # by mark, low to high
+print(sorted(students, key=lambda p: p[1], reverse=True)) # high to low
+best = max(students, key=lambda p: p[1])
+print("best:", best)
+
+square = lambda x: x * x      # same as: def square(x): return x * x
+print(square(7))
+</pre><div class="pynote"><b>Read the output:</b> sorting tuples without a key sorts by the first item (names, alphabetically). With <code>key=lambda p: p[1]</code>, each tuple is compared by its mark. <code>reverse=True</code> flips the order. <code>max</code> and <code>min</code> accept the same <code>key=</code>: the best student is <code>('Chen', 81)</code>. The last lines show that a lambda is just a short function. In k-nearest neighbours you'll sort training points by their distance to a new point with exactly this tool.</div></div>
+
+<div class="ex" id="x-py2-09" data-title="top students"><div class="task"><p>Write <code>top_students(marks, n)</code>, where <code>marks</code> is a dictionary <code>{name: mark}</code>, returning a list of the <code>n</code> names with the highest marks, best first. Example: <code class="lc">top_students({"Asha": 62, "Ben": 75, "Chen": 81}, 2)</code> → <code>["Chen", "Ben"]</code>.</p></div>
+<pre class="src">
+def top_students(marks, n):
+    ranked = sorted(marks)          # this sorts the names alphabetically: fix it
+    return ranked[:n]
+</pre>
+<pre class="check">
+d = {"Asha": 62, "Ben": 75, "Chen": 81, "Divya": 70}
+assert top_students(d, 2) == ["Chen", "Ben"], f"got {top_students(d, 2)}"
+assert top_students(d, 1) == ["Chen"]
+assert top_students(d, 10) == ["Chen", "Ben", "Divya", "Asha"], "asking for more than exist returns them all, best first"
+</pre>
+<div class="hint"><p>Sorting a dictionary sorts its keys. Give <code>sorted</code> a key that looks up each name's mark, and <code>reverse=True</code>.</p></div>
+<div class="hint"><p><code class="lc">sorted(marks, key=lambda name: marks[name], reverse=True)</code> (or <code>key=marks.get</code>)</p></div>
+<pre class="solution">
+def top_students(marks, n):
+    ranked = sorted(marks, key=lambda name: marks[name], reverse=True)
+    return ranked[:n]
+</pre>
+<div class="explain"><p>The key function turns each name into its mark, so names are ordered by marks, high to low. The slice <code>[:n]</code> keeps the first <code>n</code>, and slices never complain if <code>n</code> is larger than the list.</p></div></div>
+
+<h3 id="py2-classes">8 · A first taste of classes</h3>
+<p>So far your data (lists, numbers) and your functions have lived separately. A <dfn data-g="py-class">class</dfn> bundles them: it is a blueprint for making <b>objects</b> that carry their own data (called <b>attributes</b>) and their own functions (called <b>methods</b>). You have already used objects: a list is an object, and <code>marks.append(70)</code> calls its method. Why learn to write classes now? Because every model in scikit-learn is an object (<code>model.fit(X, y)</code>, <code>model.predict(X)</code>), and in PyTorch you will write each neural network as a class. You need to read them comfortably.</p>
+<div class="py" id="c-py2-17"><pre class="src">
+class Line:
+    """A straight line y = b0 + b1 * x."""
+
+    def __init__(self, b0, b1):
+        self.b0 = b0          # store the knobs on the object
+        self.b1 = b1
+
+    def predict(self, x):
+        return self.b0 + self.b1 * x
+
+tv_line = Line(7.0, 0.05)       # make an object (an "instance") of the class
+print(tv_line.b0, tv_line.b1)   # read its attributes
+print(tv_line.predict(100))     # call its method
+other = Line(0.0, 2.0)          # a second, independent object
+print(other.predict(100), type(other).__name__)
+</pre><div class="pynote"><b>Read the output:</b> <code>7.0 0.05</code>, then <code>12.0</code> (7 + 0.05 × 100), then <code>200.0 Line</code>. Two objects made from the same blueprint keep separate knobs.</div></div>
+
+<div class="symbols"><div class="row h"><span>Piece</span><span>What it means</span><span>In the example</span></div>
+<div class="row"><span class="s"><code>class Line:</code></span><span>starts the blueprint; class names use CapitalWords by convention</span><span class="eg"><code>Line</code>, <code>LinearRegression</code></span></div>
+<div class="row"><span class="s"><code>__init__</code></span><span>("dunder init", for the double underscores) runs automatically when you make an object; it sets up the attributes</span><span class="eg"><code>Line(7.0, 0.05)</code> calls it</span></div>
+<div class="row"><span class="s"><code>self</code></span><span>the object itself. Python passes it in as the first argument of every method, so <code>tv_line.predict(100)</code> runs <code>predict(tv_line, 100)</code></span><span class="eg"><code>self.b0</code>: "my b0"</span></div>
+<div class="row"><span class="s"><code>self.b0 = b0</code></span><span>stores a value on the object as an attribute, so other methods can use it later</span><span class="eg"><code>tv_line.b0</code> → 7.0</span></div>
+<div class="row"><span class="s">method</span><span>a function defined inside the class; its first parameter is <code>self</code></span><span class="eg"><code>predict</code></span></div>
+</div>
+
+<h4>The fit / predict pattern</h4>
+<p>scikit-learn models follow one pattern: make the object with its settings, <code>fit</code> it to data (it learns its numbers and stores them with a trailing underscore, like <code>coef_</code>), then <code>predict</code>. Here is the simplest possible model in that style, one that ignores \(x\) and always predicts the mean of the training targets. It's a genuinely useful <b>baseline</b>: any real model must beat it.</p>
+<div class="py" id="c-py2-18"><pre class="src">
+class MeanModel:
+    """Predicts the mean of the training targets, whatever the input."""
+
+    def fit(self, y):
+        self.mean_ = sum(y) / len(y)   # learned from data: trailing underscore
+        return self                    # returning self allows model.fit(y).predict(...)
+
+    def predict(self, n):
+        return [self.mean_] * n        # n copies of the mean
+
+sales = [22.1, 10.4, 9.3, 18.5, 12.9]
+model = MeanModel().fit(sales)
+print(model.mean_)
+print(model.predict(3))
+</pre><div class="pynote"><b>Read the output:</b> the mean of the five sales figures, <code>14.64</code>, then a list of three copies of it. <code>[value] * n</code> repeats a one-item list <code>n</code> times. This class has no <code>__init__</code> because it has no settings; that's allowed. When you meet <code>class Net(nn.Module):</code> in PyTorch, it will be the same idea with more methods.</div></div>
+
+<div class="ex" id="x-py2-10" data-title="a median baseline"><div class="task"><p>Complete the class <code>MedianModel</code>: <code>fit(self, y)</code> should store the <b>median</b> of <code>y</code> as <code>self.median_</code> and return <code>self</code>; <code>predict(self, n)</code> should return a list of <code>n</code> copies of it. The median is the middle value after sorting; for an even number of values, the mean of the two middle ones. Example: <code class="lc">MedianModel().fit([3, 1, 10]).predict(2)</code> → <code>[3, 3]</code>.</p></div>
+<pre class="src">
+class MedianModel:
+    def fit(self, y):
+        s = sorted(y)
+        n = len(s)
+        # store the median in self.median_ and return self
+        pass
+
+    def predict(self, n):
+        pass
+</pre>
+<pre class="check">
+import statistics
+m = MedianModel()
+assert m.fit([3, 1, 10]) is m, "fit should return self"
+assert m.median_ == 3, f"median of [3, 1, 10] is 3, got {m.median_}"
+assert m.predict(2) == [3, 3], f"got {m.predict(2)}"
+for ys in [[4, 1, 3, 2], [5], [2.5, -1.0, 7.0, 0.0, 3.0], [1, 1, 2, 9]]:
+    got = MedianModel().fit(ys).median_
+    assert abs(got - statistics.median(ys)) &lt; 1e-12, f"median of {ys} should be {statistics.median(ys)}, got {got}"
+</pre>
+<div class="hint"><p>For odd <code>n</code> the middle position is <code>n // 2</code> (for 3 items, position 1). For even <code>n</code> the two middle positions are <code>n // 2 - 1</code> and <code>n // 2</code>. Check odd or even with <code>n % 2 == 1</code>.</p></div>
+<div class="hint"><pre>        if n % 2 == 1:
+            self.median_ = s[n // 2]
+        else:
+            self.median_ = (s[n // 2 - 1] + s[n // 2]) / 2
+        return self</pre></div>
+<pre class="solution">
+class MedianModel:
+    def fit(self, y):
+        s = sorted(y)
+        n = len(s)
+        if n % 2 == 1:
+            self.median_ = s[n // 2]
+        else:
+            self.median_ = (s[n // 2 - 1] + s[n // 2]) / 2
+        return self
+
+    def predict(self, n):
+        return [self.median_] * n
+</pre>
+<div class="explain"><p>For <code>[4, 1, 3, 2]</code>: sorted is <code>[1, 2, 3, 4]</code>, <code>n = 4</code> is even, the middle positions are 1 and 2, so the median is (2 + 3) / 2 = 2.5. Notice the <code>%</code> and <code>//</code> from Python I doing real work. The median baseline minimises the mean <i>absolute</i> error, just as the mean baseline minimises the mean <i>squared</i> error.</p></div></div>
+
+<h3 id="py2-files">9 · Reading and writing files</h3>
+<p>Data lives in files. Before pandas does it for you, see how Python reads a file line by line. <code>open(filename, mode)</code> opens a file: mode <code>"w"</code> to <b>w</b>rite (this replaces the file if it exists), <code>"r"</code> to <b>r</b>ead (the default), <code>"a"</code> to <b>a</b>ppend. The <code>with</code> statement closes the file automatically when the indented block ends, even if an error happens, so always use it.</p>
+<div class="py" id="c-py2-19"><pre class="src">
+# write a small CSV file
+with open("py2_marks.csv", "w") as f:
+    f.write("name,mark\n")              # \n means "new line"
+    f.write("Asha,62\nBen,75\nChen,81\nDivya,70\n")
+
+# read it back, line by line
+with open("py2_marks.csv") as f:
+    lines = f.readlines()
+print(lines)
+
+names, marks = [], []
+for line in lines[1:]:                  # skip the header line
+    name, mark = line.strip().split(",")
+    names.append(name)
+    marks.append(float(mark))
+print(names, marks, sum(marks) / len(marks))
+</pre><div class="pynote"><b>Read the output:</b> <code>readlines()</code> gives a list of strings, one per line, each still ending in <code>'\n'</code> (the invisible new-line character). For each data line we <code>strip</code> the <code>\n</code>, <code>split</code> at the comma, unpack into two names, and convert the mark to a number. The mean is 72.0. The file was created in the current folder; on your Mac you'd see <code>py2_marks.csv</code> appear in <code>~/ml-course</code>. One line of pandas, <code class="lc">pd.read_csv("py2_marks.csv")</code>, does all of this.</div></div>
+
+<div class="ex" id="x-py2-11" data-title="read a column from a CSV"><div class="task"><p>Write <code>read_column(filename, col)</code> that reads a CSV file with a header line and returns the values in column number <code>col</code> (counting from 0) as a list of <b>floats</b>. Example: for <code>py2_marks.csv</code> above, <code class="lc">read_column("py2_marks.csv", 1)</code> → <code>[62.0, 75.0, 81.0, 70.0]</code>.</p></div>
+<pre class="src">
+def read_column(filename, col):
+    values = []
+    with open(filename) as f:
+        lines = f.readlines()
+    # loop over the data lines (not the header) and collect column col
+    return values
+</pre>
+<pre class="check">
+assert read_column("py2_marks.csv", 1) == [62.0, 75.0, 81.0, 70.0], f"got {read_column('py2_marks.csv', 1)}"
+with open("py2_check.csv", "w") as f:
+    f.write("TV,radio,sales\n230.1,37.8,22.1\n44.5,39.3,10.4\n17.2,45.9,9.3\n")
+assert read_column("py2_check.csv", 2) == [22.1, 10.4, 9.3], f"got {read_column('py2_check.csv', 2)}"
+assert read_column("py2_check.csv", 0) == [230.1, 44.5, 17.2]
+</pre>
+<div class="hint"><p><code>for line in lines[1:]:</code> then <code class="lc">parts = line.strip().split(",")</code>, then append <code>float(parts[col])</code>.</p></div>
+<div class="hint"><pre>    for line in lines[1:]:
+        parts = line.strip().split(",")
+        values.append(float(parts[col]))</pre></div>
+<pre class="solution">
+def read_column(filename, col):
+    values = []
+    with open(filename) as f:
+        lines = f.readlines()
+    for line in lines[1:]:
+        parts = line.strip().split(",")
+        values.append(float(parts[col]))
+    return values
+</pre>
+<div class="explain"><p><code>lines[1:]</code> skips the header. Each line becomes a list of strings, we pick position <code>col</code>, and convert it. The check also writes a second file with the first rows of ISLP's Advertising data and reads its columns, to make sure your function works for any file and any column.</p></div></div>
+
+<h3 id="py2-project">10 · Mini-project: k-nearest neighbours from scratch</h3>
+<p>You have already computed the mean squared error of predictions against targets stored in lists (section 5). Now you have every tool needed to build a real machine-learning method in about fifteen lines. The <dfn data-g="py-knn">k-nearest neighbours</dfn> (KNN) classifier, which ISLP introduces in section 2.2.3, predicts the class of a new point like this:</p>
+<ol>
+<li>measure the distance from the new point to every training point;</li>
+<li>take the <b>k</b> closest ones (its "neighbours");</li>
+<li>let them vote: predict the class that most of them have.</li>
+</ol>
+<p>No equations to fit, no training step: the training data <i>is</i> the model. The only knob is \(k\).</p>
+
+<p>Distance here is the ordinary straight-line (Euclidean) distance. For two points \(\mathbf a=(a_1,a_2)\) and \(\mathbf b=(b_1,b_2)\):</p>
+<div class="mathblock" data-sheet="Euclidean distance (2-D)"><div class="eqlabel">Euclidean distance</div>
+\[d(\mathbf a,\mathbf b)=\sqrt{(a_1-b_1)^2+(a_2-b_2)^2}\]
+<p class="say">Read: "the distance between a and b is the square root of (a-one minus b-one) squared plus (a-two minus b-two) squared". It's Pythagoras. Example: from \((4, 4.5)\) to \((4.5, 6)\): \(\sqrt{0.5^2+1.5^2}=\sqrt{0.25+2.25}=\sqrt{2.5}\approx1.581\).</p></div>
+
+<h4>The data</h4>
+<p>Twelve training points, each with two measurements \((x_1, x_2)\) and a class, "blue" or "orange" (the colours ISLP uses in its KNN figures). The new point to classify is \((4, 4.5)\).</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>classify (4, 4.5) with k = 1, 3, 5 and 7</b></div>
+<div class="given">Blue: (1, 2), (2, 1), (2.5, 3), (3, 1.5), (4, 3.5), (1.5, 4.5). Orange: (6, 6.5), (7, 5), (5.5, 8), (8, 7), (6.5, 3.5), (4.5, 6). New point \(\mathbf q=(4, 4.5)\).</div>
+<ol class="steps">
+<li><div>Distances to the seven closest points, nearest first:
+<div class="tw"><table class="t"><thead><tr><th>rank</th><th>point</th><th>\(\Delta x_1,\ \Delta x_2\)</th><th>distance</th><th>class</th></tr></thead><tbody>
+<tr><td class="n">1</td><td>(4, 3.5)</td><td>0, 1</td><td class="n">\(\sqrt{1}=1.000\)</td><td>blue</td></tr>
+<tr><td class="n">2</td><td>(4.5, 6)</td><td>0.5, 1.5</td><td class="n">\(\sqrt{2.5}=1.581\)</td><td>orange</td></tr>
+<tr><td class="n">3</td><td>(2.5, 3)</td><td>1.5, 1.5</td><td class="n">\(\sqrt{4.5}=2.121\)</td><td>blue</td></tr>
+<tr><td class="n">4</td><td>(1.5, 4.5)</td><td>2.5, 0</td><td class="n">\(\sqrt{6.25}=2.500\)</td><td>blue</td></tr>
+<tr><td class="n">5</td><td>(6.5, 3.5)</td><td>2.5, 1</td><td class="n">\(\sqrt{7.25}=2.693\)</td><td>orange</td></tr>
+<tr><td class="n">6</td><td>(6, 6.5)</td><td>2, 2</td><td class="n">\(\sqrt{8}=2.828\)</td><td>orange</td></tr>
+<tr><td class="n">7</td><td>(7, 5)</td><td>3, 0.5</td><td class="n">\(\sqrt{9.25}=3.041\)</td><td>orange</td></tr>
+</tbody></table></div><span class="why">The remaining five points are all farther than 3.1.</span></div></li>
+<li><div>\(k=1\): the single nearest point is blue → predict <b>blue</b>.</div></li>
+<li><div>\(k=3\): blue, orange, blue → 2 : 1 → <b>blue</b>.</div></li>
+<li><div>\(k=5\): blue, orange, blue, blue, orange → 3 : 2 → <b>blue</b>.</div></li>
+<li><div>\(k=7\): add two more oranges → blue 3 : orange 4 → <b>orange</b>!<span class="why">With a large k, far-away points get a vote too. The choice of k changes the answer: this is the flexibility trade-off of ISLP chapter 2.</span></div></li>
+</ol>
+<div class="result">k = 1, 3, 5 → blue; k = 7 → orange</div></div>
+
+<div class="widget" data-w="py2-knn" data-title="k-nearest neighbours: drag the new point"><div class="wn">The ring is the new point; its outline shows the current prediction. Lines join it to its k nearest neighbours, and the dashed circle reaches the k-th one. Check the worked example: move k from 1 to 7 and watch the prediction flip to orange at k = 7. Then drag the point (or click anywhere) to see where blue turns into orange. Finally choose <b>Colour the whole map</b>: every spot is coloured by the class KNN would predict there. With k = 1 the boundary is jagged and hugs every point; with k = 11 it is smooth. ISLP's Figure 2.16 shows the same effect on a bigger data set.</div></div>
+
+<p>Now the code. First, the pieces, each one a tool from this lesson:</p>
+<div class="py" id="c-py2-20"><pre class="src">
+train = [(1.0, 2.0, "blue"), (2.0, 1.0, "blue"), (2.5, 3.0, "blue"), (3.0, 1.5, "blue"),
+         (4.0, 3.5, "blue"), (1.5, 4.5, "blue"), (6.0, 6.5, "orange"), (7.0, 5.0, "orange"),
+         (5.5, 8.0, "orange"), (8.0, 7.0, "orange"), (6.5, 3.5, "orange"), (4.5, 6.0, "orange")]
+q = (4.0, 4.5)
+
+def distance(a, b):
+    """Euclidean distance between two 2-D points (only the first two numbers are used)."""
+    return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
+
+# 1. every training point with its distance to q, as (distance, label) tuples
+pairs = [(distance(q, p), p[2]) for p in train]
+# 2. sort by distance (the first item of each tuple)
+pairs = sorted(pairs, key=lambda t: t[0])
+for d, lab in pairs[:5]:
+    print(f"{d:.3f}  {lab}")
+</pre><div class="pynote"><b>Read the output:</b> the five nearest distances and labels, exactly ranks 1 to 5 of the worked example's table. A tuple of tuples holds the data; a comprehension computes all distances; <code>sorted</code> with a <code>lambda</code> key orders them. (<code>distance</code> takes whole training tuples, so we only use positions 0 and 1 and ignore the label at position 2.)</div></div>
+
+<div class="py" id="c-py2-21"><pre class="src">
+# 3. the vote among the k nearest: the counting pattern from section 1
+def vote(labels):
+    counts = {}
+    for lab in labels:
+        counts[lab] = counts.get(lab, 0) + 1
+    return max(counts, key=counts.get)
+
+for k in [1, 3, 5, 7]:
+    nearest_labels = [lab for d, lab in pairs[:k]]
+    print(k, nearest_labels, "-&gt;", vote(nearest_labels))
+</pre><div class="pynote"><b>Read the output:</b> for each k, the labels of the k nearest points and the winner of the vote: blue, blue, blue, orange, matching the worked example by hand. (With two classes and an odd k there is never a tie, which is one reason people choose odd k.)</div></div>
+
+<div class="ex" id="x-py2-12" data-title="KNN classifier from scratch"><div class="task"><p>Put it together: write <code class="lc">knn_predict(train, point, k)</code> that returns the predicted label for <code>point</code> (a tuple <code>(x1, x2)</code>) using the <code>k</code> nearest neighbours in <code>train</code> (a list of <code>(x1, x2, label)</code> tuples). You may use the <code>distance</code> and <code>vote</code> functions defined in the cells above, or write everything inside. Your answers are checked against scikit-learn's <code>KNeighborsClassifier</code> on many random points.</p></div>
+<pre class="src">
+def knn_predict(train, point, k):
+    # 1. distances to every training point, with labels
+    # 2. sort by distance
+    # 3. vote among the k nearest
+    return "blue"
+</pre>
+<pre class="check">
+import numpy as np
+from sklearn.neighbors import KNeighborsClassifier
+assert knn_predict(train, (4.0, 4.5), 3) == "blue" and knn_predict(train, (4.0, 4.5), 7) == "orange", \
+    f"for (4, 4.5): k=3 should give blue and k=7 orange; got {knn_predict(train, (4.0, 4.5), 3)} and {knn_predict(train, (4.0, 4.5), 7)}"
+X = np.array([[p[0], p[1]] for p in train]); y = [p[2] for p in train]
+rng = np.random.default_rng(7)
+for k in [1, 3, 5, 9]:
+    sk = KNeighborsClassifier(n_neighbors=k).fit(X, y)
+    for pt in rng.uniform(0, 10, size=(25, 2)):
+        want = sk.predict([pt])[0]
+        got = knn_predict(train, (pt[0], pt[1]), k)
+        assert got == want, f"point ({pt[0]:.2f}, {pt[1]:.2f}), k={k}: scikit-learn says {want}, you said {got}"
+</pre>
+<div class="hint"><p>Step 1 is the comprehension <code class="lc">[(distance(point, p), p[2]) for p in train]</code>; step 2 is <code class="lc">sorted(..., key=lambda t: t[0])</code>.</p></div>
+<div class="hint"><p>Step 3: <code class="lc">labels = [lab for d, lab in pairs[:k]]</code>, then <code>return vote(labels)</code>.</p></div>
+<pre class="solution">
+def knn_predict(train, point, k):
+    pairs = [(distance(point, p), p[2]) for p in train]
+    pairs = sorted(pairs, key=lambda t: t[0])
+    labels = [lab for d, lab in pairs[:k]]
+    return vote(labels)
+</pre>
+<div class="explain"><p>Four lines, and it agrees with scikit-learn on 100 random points. You have just implemented a real classifier. Later you'll see its weaknesses (it's slow on big data, since every prediction measures every distance, and it suffers when there are many input variables) and how NumPy makes the distance step one line. To predict a <b>number</b> instead of a class (KNN regression, ISLP section 3.5), replace the vote with the <i>mean</i> of the neighbours' values.</p></div></div>
+
+<div class="callout ece"><p>KNN with \(k=1\) is a nearest-neighbour quantiser: the input space is cut into Voronoi cells around the training points, like the decision regions of a minimum-distance detector for a signal constellation (QPSK, 16-QAM). A received symbol is decided as the nearest constellation point; KNN with \(k=1\) decides a new point's class the same way. Larger \(k\) smooths those regions, trading variance for bias.</p></div>
+
+<h3 id="py2-practice">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="3"><p class="stem"><code>d = {"a": 1}</code>. What does <code>d.get("b", 0)</code> return?</p><ol class="opts"><li>a KeyError</li><li><code>None</code></li><li><code>0</code></li><li><code>1</code></li></ol><div class="why"><code>.get(key, default)</code> returns the default when the key is missing, without an error. <code>d["b"]</code> would raise KeyError; <code>d.get("b")</code> with no default returns <code>None</code>.</div></div>
+<div class="q" data-type="num" data-answer="4" data-tol="0"><p class="stem">How many items does <code>set([3, 1, 3, 2, 1, 5])</code> contain?</p><div class="why">The distinct values are 1, 2, 3, 5: four items. Sets keep one copy of each value.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">What is <code>list(zip([1, 2, 3], "ab"))</code>?</p><ol class="opts"><li><code class="lc">[(1, 'a'), (2, 'b'), (3, '')]</code></li><li><code>[(1, 'a'), (2, 'b')]</code></li><li><code>[1, 'a', 2, 'b']</code></li><li>an error</li></ol><div class="why"><code>zip</code> pairs items in tuples and stops at the shortest input (a string counts as a sequence of letters). It never pads or flattens.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">Which comprehension gives the squares of the even numbers from 0 to 9?</p><ol class="opts"><li><code class="lc">[x ** 2 if x % 2 == 0 for x in range(10)]</code></li><li><code class="lc">[x % 2 == 0 for x in range(10) if x ** 2]</code></li><li><code class="lc">[x ** 2 for x in range(1, 10) if x % 2 == 0]</code></li><li><code class="lc">[x ** 2 for x in range(10) if x % 2 == 0]</code></li></ol><div class="why">Expression first, then the loop, then the filter. Option 1 is a SyntaxError (a filter <code>if</code> goes after the loop, unless it has an <code>else</code>); option 2 collects True/False values instead of squares; option 3 starts at 1, so it misses 0, whose square (0) belongs in the answer. Option 4 gives <code>[0, 4, 16, 36, 64]</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Inside a method, what is <code>self</code>?</p><ol class="opts"><li>the object the method was called on</li><li>the class itself</li><li>a keyword that must be passed by the caller</li><li>a global variable</li></ol><div class="why">Python passes the object in automatically: <code>tv_line.predict(100)</code> runs <code>Line.predict(tv_line, 100)</code>. You never pass <code>self</code> yourself.</div></div>
+<div class="q" data-type="num" data-answer="4" data-tol="0"><p class="stem"><code>x = 64</code>, then <code>while x &gt; 5: x = x / 2</code>. How many times does the body run?</p><div class="why">64 → 32 → 16 → 8 → 4: four halvings. After the fourth, 4 &gt; 5 is false and the loop stops.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In KNN, what usually happens to the decision boundary as k increases?</p><ol class="opts"><li>It becomes more jagged</li><li>It becomes smoother</li><li>It doesn't change</li><li>It disappears</li></ol><div class="why">Each prediction averages more neighbours, so single points matter less and the boundary smooths out (lower variance, higher bias). With k = 1 it bends around every training point. Try both in the widget's map view.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem"><code class="lc">def f(x, history=[]): history.append(x); return history</code>. What does the second call <code>f(2)</code> return, after a first call <code>f(1)</code>?</p><ol class="opts"><li><code>[2]</code></li><li><code>[1]</code></li><li><code>[1, 2]</code></li><li>an error</li></ol><div class="why">The default list is created once and shared by every call, so it remembers the 1. Use <code>history=None</code> and create a new list inside the function.</div></div>
+<div class="q" data-type="open"><p class="stem">Explain in two or three sentences how k-nearest neighbours classifies a new point, and what k controls.</p><div class="model">It measures the distance from the new point to every training point, takes the k closest ones, and predicts the class that most of them have. k controls how many neighbours vote: small k follows the training data closely (a flexible, jagged boundary, high variance), large k averages over a wide area (a smooth boundary, higher bias).</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">Look up a key safely in a dictionary, with a fallback</div><div class="b"><code>d.get(key, default)</code>; <code>d[key]</code> raises KeyError if missing.</div></div>
+<div class="fc"><div class="f">The counting pattern with a dictionary</div><div class="b"><code class="lc">counts[x] = counts.get(x, 0) + 1</code> inside a loop.</div></div>
+<div class="fc"><div class="f">Distinct values of a list, sorted</div><div class="b"><code>sorted(set(xs))</code></div></div>
+<div class="fc"><div class="f">Return two values from a function and catch them</div><div class="b"><code>return a, b</code> (a tuple); <code>x, y = f()</code> (unpacking).</div></div>
+<div class="fc"><div class="f"><code>for</code> versus <code>while</code></div><div class="b"><code>for</code>: once per item, count known in advance. <code>while</code>: repeat as long as a condition is true.</div></div>
+<div class="fc"><div class="f">What do <code>enumerate(xs)</code> and <code>zip(a, b)</code> give?</div><div class="b"><code>(index, item)</code> pairs; <code>(a[i], b[i])</code> pairs, stopping at the shorter input.</div></div>
+<div class="fc"><div class="f">List comprehension shape</div><div class="b"><code class="lc">[expression for name in items if condition]</code></div></div>
+<div class="fc"><div class="f">Sort a list of (name, mark) tuples by mark, highest first</div><div class="b"><code class="lc">sorted(pairs, key=lambda p: p[1], reverse=True)</code></div></div>
+<div class="fc"><div class="f">What does <code>__init__</code> do, and what is <code>self</code>?</div><div class="b"><code>__init__</code> runs when an object is made and sets its attributes; <code>self</code> is the object itself, passed automatically to every method.</div></div>
+<div class="fc"><div class="f">scikit-learn's convention for learned attributes</div><div class="b">A trailing underscore, set by <code>fit</code>: <code>coef_</code>, <code>classes_</code>, <code>mean_</code>.</div></div>
+<div class="fc"><div class="f">Why use <code>with open(...) as f:</code>?</div><div class="b">It closes the file automatically when the block ends, even after an error.</div></div>
+<div class="fc"><div class="f">The three steps of KNN classification</div><div class="b">Distances to all training points → take the k nearest → majority vote of their labels.</div></div>
+<div class="fc"><div class="f">Mutable default argument trap and its fix</div><div class="b">A default list is shared between calls. Use <code>def f(x, acc=None):</code> and <code>if acc is None: acc = []</code>.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> <span>I can create, read, update and loop over a dictionary, and count values with one.</span></label>
+<label><input type="checkbox"> <span>I can find distinct values with a set, and use tuples and unpacking (including returning two values).</span></label>
+<label><input type="checkbox"> <span>I can write a while loop that is sure to stop, and I know <code>break</code>.</span></label>
+<label><input type="checkbox"> <span>I walk two lists together with <code>zip</code>, and use <code>enumerate</code> when I need positions.</span></label>
+<label><input type="checkbox"> <span>I can write list and dictionary comprehensions, with a filter.</span></label>
+<label><input type="checkbox"> <span>I write functions with docstrings and call them with keyword arguments; I know the mutable-default trap.</span></label>
+<label><input type="checkbox"> <span>I can sort with <code>key=lambda …</code> and find a maximum with <code>max(..., key=...)</code>.</span></label>
+<label><input type="checkbox"> <span>I can read a small class with <code>__init__</code>, <code>self</code> and methods, and write one in fit/predict style.</span></label>
+<label><input type="checkbox"> <span>I can read a CSV file line by line with <code>with open</code>.</span></label>
+<label><input type="checkbox"> <span>I wrote a KNN classifier from scratch that agrees with scikit-learn.</span></label>
+</div>
+</section>

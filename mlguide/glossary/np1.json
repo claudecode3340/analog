@@ -1,0 +1,72 @@
+{
+ "np1-package": {
+  "term": "package",
+  "def": "A bundle of extra Python code you load with <code>import</code>, e.g. <code>import numpy as np</code>.",
+  "at": "np1"
+ },
+ "np1-vectorise": {
+  "term": "vectorisation",
+  "def": "Writing an operation on a whole array at once (e.g. <code>2*x+1</code>) instead of a Python loop over its elements; it runs in compiled code and is much faster.",
+  "at": "np1"
+ },
+ "np1-attribute": {
+  "term": "attribute",
+  "def": "A fact stored on an object, read with a dot and no brackets: <code>x.shape</code>, <code>x.dtype</code>, <code>x.T</code>.",
+  "at": "np1"
+ },
+ "np1-method": {
+  "term": "method",
+  "def": "A function attached to an object, called with brackets: <code>x.sum()</code>, <code>x.reshape(2, 3)</code>.",
+  "at": "np1"
+ },
+ "np1-tuple": {
+  "term": "tuple",
+  "def": "An ordered sequence in round brackets that cannot be changed, e.g. a shape <code>(2, 3)</code>; a one-element tuple is written <code>(5,)</code>.",
+  "at": "np1"
+ },
+ "np1-upcast": {
+  "term": "upcasting",
+  "def": "NumPy choosing a more general dtype so that every element fits: one float among integers makes the whole array <code>float64</code>.",
+  "at": "np1"
+ },
+ "np1-slice": {
+  "term": "slice",
+  "def": "<code>start:stop:step</code> inside square brackets; picks from start up to but not including stop. Basic slices of arrays are views.",
+  "at": "np1"
+ },
+ "np1-fancy": {
+  "term": "fancy indexing",
+  "def": "Indexing with a list or integer array, e.g. <code>A[[1, 3]]</code>. Two index lists are paired element by element. Always returns a copy.",
+  "at": "np1"
+ },
+ "np1-mask": {
+  "term": "boolean mask",
+  "def": "An array of True/False; <code>x[mask]</code> keeps the elements where it is True. <code>mask.mean()</code> is the fraction of Trues.",
+  "at": "np1"
+ },
+ "np1-scalar": {
+  "term": "scalar",
+  "def": "A single number (not an array). Arithmetic between an array and a scalar applies the scalar to every element.",
+  "at": "np1"
+ },
+ "np1-reduction": {
+  "term": "reduction",
+  "def": "An operation that combines many elements into fewer: sum, mean, std, min, max, argmax. With <code>axis=k</code>, axis k disappears.",
+  "at": "np1"
+ },
+ "np1-rowmajor": {
+  "term": "row-major order",
+  "def": "Storing and reshaping an array row by row, so the last index changes fastest (NumPy's default, also called C order).",
+  "at": "np1"
+ },
+ "np1-transpose": {
+  "term": "transpose",
+  "def": "Swapping rows and columns: element \\([i,j]\\) moves to \\([j,i]\\). NumPy <code>A.T</code>, maths \\(\\mathbf{A}\\T\\).",
+  "at": "np1"
+ },
+ "np1-view": {
+  "term": "view",
+  "def": "An array that shares memory with another; changing one changes the other. Slices, reshape and .T give views; <code>.copy()</code> makes an independent array.",
+  "at": "np1"
+ }
+}

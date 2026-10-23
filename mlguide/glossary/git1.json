@@ -1,0 +1,13 @@
+{
+"git-vc": {"term": "version control", "def": "Software that records every saved version of a project's files, with who changed what and why, so you can compare and go back.", "at": "git1"},
+"git-git": {"term": "Git", "def": "The version-control program on your computer; it keeps a folder's history in a hidden <code>.git</code> folder and works offline.", "at": "git1"},
+"git-github": {"term": "GitHub", "def": "A website that hosts copies of Git repositories online for backup, sharing, collaboration and your portfolio.", "at": "git1"},
+"git-repo": {"term": "repository (repo)", "def": "A folder whose history Git keeps. Created with <code>git init</code> or copied with <code>git clone</code>.", "at": "git1"},
+"git-ignore": {"term": ".gitignore", "def": "A file listing names and patterns (like <code>.venv/</code>, <code>*.csv</code>) that Git should never track.", "at": "git1"},
+"git-pat": {"term": "personal access token", "def": "A password-like string generated on GitHub and used instead of your password when Git talks to GitHub over HTTPS.", "at": "git1"},
+"git-remote": {"term": "remote (origin)", "def": "A named link to a copy of the repository elsewhere, usually GitHub; <code>origin</code> is the conventional name.", "at": "git1"},
+"git-clone": {"term": "git clone", "def": "Copies a whole repository, with all its history, into a new folder.", "at": "git1"},
+"git-branch": {"term": "branch", "def": "A separate line of commits for trying an idea; <code>main</code> is the default. Combine with <code>git merge</code>.", "at": "git1"},
+"git-commit": {"term": "commit", "def": "A save point: a snapshot of the staged changes with a message, an author and an ID (a hash).", "at": "git1"},
+"git-staging": {"term": "staging area", "def": "Where <code>git add</code> puts changes chosen for the next commit.", "at": "git1"}
+}

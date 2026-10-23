@@ -1,0 +1,752 @@
+<section class="lesson" id="np2" data-book="ISLP §2.3.3, pp. 45–48">
+<p class="lede">Real data work means combining arrays of different shapes (subtract every column's mean from a 1,000 × 10 matrix), generating random numbers you can reproduce exactly, and multiplying matrices. This lesson gives you those three tools: broadcasting, seeded random generators, and NumPy's linear algebra. With them you can write k-nearest neighbours, least squares and data standardisation in a few lines each.</p>
+<div class="uses"><b>You'll use</b> <a href="#np1">NumPy I</a> (shapes, slicing, axis, reshape) · <a href="#py2">Python II</a> (functions, loops)</div>
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>apply the three broadcasting rules to any pair of shapes, say the result shape or why it fails, and fix a failing case with <code>[:, None]</code>, <code>reshape</code> or <code>keepdims=True</code>;</li>
+<li>centre and standardise the columns (or rows) of a data matrix in one line;</li>
+<li>generate reproducible random data with <code>np.random.default_rng(seed)</code>: normal, uniform, integers, <code>choice</code>, <code>permutation</code>, and use them for train/test splits and bootstrap samples;</li>
+<li>compute dot products, matrix–vector and matrix–matrix products with <code>@</code>, and use <code>np.linalg</code> for <code>inv</code>, <code>solve</code>, <code>det</code>, <code>norm</code> and <code>lstsq</code>, checking a 2 × 2 example by hand;</li>
+<li>replace a double loop with broadcasting, for example all pairwise distances for k-nearest neighbours.</li></ul></div>
+
+<div class="callout book"><blockquote>In order to ensure that our code provides exactly the same results each time it is run, we can set a random seed using the <code>np.random.default_rng()</code> function.</blockquote><cite>ISLP p. 46</cite></div>
+
+<div class="py" id="c-np2-01" data-mode="setup"><pre class="src">
+import numpy as np
+np.set_printoptions(precision=3, suppress=True)   # print 3 decimals, no 1e-05 style
+</pre><div class="pynote">This setup cell runs first whenever you run any cell of this lesson. <code>set_printoptions</code> only changes how arrays are <i>displayed</i>, never the numbers themselves. <code>suppress=True</code> avoids scientific notation for tiny numbers.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np2-broad">1. Broadcasting: arithmetic between different shapes</h3>
+<p>In <a href="#np1">NumPy I</a> you added arrays of the <i>same</i> shape, and an array plus a single number. The second case is already a small miracle: <code>x + 10</code> behaves as if the 10 were copied into an array the same shape as <code>x</code>. NumPy generalises this idea. Whenever two shapes are “compatible”, it stretches the smaller one, virtually, to match the larger one, and then works element by element. This is called <dfn data-g="np2-broadcasting">broadcasting</dfn>. Nothing is actually copied in memory: NumPy just reuses the same numbers as it walks along.</p>
+
+<h4>Case 1: a scalar</h4>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></span><span class="lab">A, shape (2, 3)</span></span><span class="op">+</span><span><span class="mgrid" style="grid-template-columns:repeat(1,auto)"><span class="h1">10</span></span><span class="lab">10, shape ()</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h1">10</span><span class="h2">10</span><span class="h2">10</span><span class="h2">10</span><span class="h2">10</span><span class="h2">10</span></span><span class="lab">10 stretched to (2, 3)</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span></span><span class="lab">(2, 3)</span></span></div>
+
+<h4>Case 2: a row vector added to every row</h4>
+<p>A 1-D array of length 3 can be added to a (2, 3) matrix: it is added to <b>each row</b>. Picture the row being copied downwards (the blue copy is virtual).</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></span><span class="lab">A, (2, 3)</span></span><span class="op">+</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h1">10</span><span class="h1">20</span><span class="h1">30</span></span><span class="lab">v, (3,)</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h1">10</span><span class="h1">20</span><span class="h1">30</span><span class="h2">10</span><span class="h2">20</span><span class="h2">30</span></span><span class="lab">v stretched down to (2, 3)</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>11</span><span>22</span><span>33</span><span>14</span><span>25</span><span>36</span></span><span class="lab">(2, 3)</span></span></div>
+
+<h4>Case 3: a column vector added to every column</h4>
+<p>To add a different number to each <i>row</i>, you need a column of shape (2, 1). It is copied across.</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></span><span class="lab">A, (2, 3)</span></span><span class="op">+</span><span><span class="mgrid" style="grid-template-columns:repeat(1,auto)"><span class="h1">100</span><span class="h1">200</span></span><span class="lab">c, (2, 1)</span></span><span class="op">→</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span class="h1">100</span><span class="h2">100</span><span class="h2">100</span><span class="h1">200</span><span class="h2">200</span><span class="h2">200</span></span><span class="lab">c stretched across to (2, 3)</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>101</span><span>102</span><span>103</span><span>204</span><span>205</span><span>206</span></span><span class="lab">(2, 3)</span></span></div>
+
+<h4>Case 4: both stretch, (3, 1) + (1, 4) gives (3, 4)</h4>
+<p>Both arrays can stretch at once. A column of 3 and a row of 4 make a full 3 × 4 table, like a times table: entry \([i, j]\) is \(c_i + r_j\).</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(1,auto)"><span class="h1">0</span><span class="h1">10</span><span class="h1">20</span></span><span class="lab">c, (3, 1)</span></span><span class="op">+</span><span><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span class="h2">1</span><span class="h2">2</span><span class="h2">3</span><span class="h2">4</span></span><span class="lab">r, (1, 4)</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(4,auto)"><span>1</span><span>2</span><span>3</span><span>4</span><span>11</span><span>12</span><span>13</span><span>14</span><span>21</span><span>22</span><span>23</span><span>24</span></span><span class="lab">c + r, (3, 4)</span></span></div>
+
+<h4>The rules, precisely</h4>
+<div class="mathblock" data-sheet="Broadcasting rules"><div class="eqlabel">NumPy broadcasting, three rules</div>
+<p><b>1.</b> Write the two shapes one above the other, <b>aligned on the right</b>. If one shape is shorter, pad it on the <b>left</b> with 1s.<br><b>2.</b> Compare column by column. Two sizes are compatible if they are <b>equal</b>, or if <b>one of them is 1</b>. Otherwise: error.<br><b>3.</b> The result's size in each column is the larger of the two; every size-1 axis is stretched to match.</p>
+<p class="say">Read: line the shapes up from the right; a 1 can stretch to anything; equal sizes stay; anything else is a mismatch.</p></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>four shape pairs through the rules</b></div>
+<div class="given">Decide the result shape of (a) (3, 4) with (4,); (b) (3, 1) with (1, 4); (c) (3, 4) with (3,); (d) (5, 1, 3) with (4, 1).</div>
+<ol class="steps">
+<li><div>(a) Pad (4,) on the left to (1, 4). Compare (3, 4) with (1, 4): first column 3 vs 1, OK (stretch the 1); second column 4 vs 4, OK. Result <span class="hlg">(3, 4)</span>.<span class="why">This is “subtract a row of column means from a data matrix”.</span></div></li>
+<li><div>(b) (3, 1) with (1, 4): 3 vs 1 OK, 1 vs 4 OK. Both stretch. Result <span class="hlg">(3, 4)</span>.</div></li>
+<li><div>(c) Pad (3,) to (1, 3). Compare (3, 4) with (1, 3): first column OK, but second column <span class="hlr">4 vs 3</span>: not equal and neither is 1. <b>Error.</b><span class="why">The 3 lines up with the columns (there are 4 of them), not the rows. To add one number per row you need shape (3, 1).</span></div></li>
+<li><div>(d) Pad (4, 1) to (1, 4, 1). Compare (5, 1, 3) with (1, 4, 1): 5 vs 1 OK, 1 vs 4 OK, 3 vs 1 OK. Result <span class="hlg">(5, 4, 3)</span>.</div></li>
+</ol>
+<div class="result">(a) (3, 4) · (b) (3, 4) · (c) ValueError · (d) (5, 4, 3)</div></div>
+
+<div class="predict" data-correct="3"><p><code>A</code> has shape (3, 4). What happens with <code>A - np.array([1, 2, 3])</code>?</p><ol class="opts"><li>It subtracts 1 from row 0, 2 from row 1, 3 from row 2</li><li>It subtracts from the first three columns only</li><li>ValueError: the shapes cannot be broadcast</li></ol>
+<div class="why">Aligned on the right, the length-3 vector faces the 4 columns: 4 vs 3, incompatible. NumPy never guesses which axis you meant. Option 1 is what you probably wanted; you get it by making the vector a column, shape (3, 1), as the cell after this one shows.</div></div>
+<div class="py" id="c-np2-02" data-mode="expect-error" data-error="ValueError"><pre class="src">
+A = np.arange(12).reshape(3, 4)
+A - np.array([1, 2, 3])
+</pre><div class="pynote">Read the error: “operands could not be broadcast together with shapes (3,4) (3,)”. NumPy tells you both shapes. Line them up from the right in your head and you see the 4 versus 3.</div></div>
+
+<h4>Making a column: [:, None], reshape, keepdims</h4>
+<p>Three ways to turn a 1-D array of length 3 into a (3, 1) column. They all do the same thing:</p>
+<div class="tw"><table class="t"><thead><tr><th>Code</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><code>v[:, None]</code> (or <code>v[:, np.newaxis]</code>)</td><td>keep all of axis 0, insert a new axis of length 1 after it</td></tr>
+<tr><td><code>v.reshape(-1, 1)</code></td><td>reshape to “as many rows as needed, 1 column”</td></tr>
+<tr><td><code>A.sum(axis=1, keepdims=True)</code></td><td>a reduction that keeps the collapsed axis with length 1, giving (3, 1) instead of (3,)</td></tr>
+</tbody></table></div>
+<div class="py" id="c-np2-03"><pre class="src">
+A = np.arange(12).reshape(3, 4)
+v = np.array([1, 2, 3])
+print(v[:, None].shape, v.reshape(-1, 1).shape)
+print(A - v[:, None])                 # 1 from row 0, 2 from row 1, 3 from row 2
+row_sums = A.sum(axis=1, keepdims=True)
+print(row_sums.shape)                 # (3, 1), ready to broadcast
+print(A / row_sums)                   # each row divided by its own sum
+</pre><div class="pynote"><b>Read the output:</b> after subtracting, row 0 starts at −1, row 1 at 2, row 2 at 5. The last array has rows that each add up to 1 (check row 1: \(4+5+6+7=22\), and \(4/22=0.182\)). “Divide each row by its total” is exactly how the softmax function of deep learning turns scores into probabilities (<a href="#udl5">Prince Chapter 5</a>).</div></div>
+
+<div class="widget" data-w="np2-broadcast" data-title="Broadcasting visualiser"><div class="wn">Pick two shapes. They are lined up from the right, each axis is checked, and the stretched grids are drawn (virtual copies are faded). Try <b>(3,4) + (3,)</b> and read why it fails; then change the second shape to <b>(3,1)</b>.</div></div>
+
+<div class="callout ece"><p><b>Broadcasting is how you build a DFT matrix.</b> The \(N\times N\) DFT matrix has entries \(W[k,n]=e^{-j2\pi kn/N}\). With <code>k = np.arange(N)[:, None]</code> (a column) and <code>n = np.arange(N)</code> (a row), <code>np.exp(-2j*np.pi*k*n/N)</code> gives the whole matrix in one line: <code>k*n</code> broadcasts (N, 1) with (N,) to (N, N). Every “table of f(i, j)” is built this way. (Python writes the imaginary unit as <code>j</code>, as electrical engineers do: <code>2j</code> is \(2j\).)</p></div>
+<div class="py" id="c-np2-04"><pre class="src">
+N = 4
+k = np.arange(N)[:, None]        # shape (4, 1)
+n = np.arange(N)                 # shape (4,)
+W = np.exp(-2j * np.pi * k * n / N)   # (4, 1) with (4,) gives (4, 4)
+print(np.round(W.real).astype(int))   # the real parts: cosines, 1, 0 or -1
+x = np.array([1., 2., 3., 4.])
+print(W @ x)                      # the DFT of x (the @ product is in section 4)
+print(np.fft.fft(x))              # NumPy's FFT agrees
+</pre><div class="pynote"><b>Read the output:</b> both lines give \(X[0]=10\), \(X[1]=-2+2j\), \(X[2]=-2\), \(X[3]=-2-2j\) (up to tiny rounding such as <code>-0.j</code>). The matrix product with the broadcast-built DFT matrix and the FFT agree.</div></div>
+
+<p>ISLP's lab uses the same idea under another name: <code style="white-space:normal">np.multiply.outer(np.cos(y), 1 / (1 + x**2))</code> (In[49]) builds the table \(f[i,j]=\cos(y_i)/(1+x_j^2)\) for a contour plot. With broadcasting that is <code style="white-space:normal">np.cos(y)[:, None] * (1 / (1 + x**2))</code>.</p>
+<div class="py" id="c-np2-05"><pre class="src">
+x = np.linspace(-np.pi, np.pi, 50)
+y = x
+f1 = np.multiply.outer(np.cos(y), 1 / (1 + x**2))   # ISLP's way
+f2 = np.cos(y)[:, None] * (1 / (1 + x**2))           # broadcasting
+print(f1.shape, np.allclose(f1, f2))
+</pre><div class="pynote"><b>Read the output:</b> <code>(50, 50) True</code>: a 50 × 50 table, identical both ways. You will plot it in <a href="#plt1">the plotting lesson</a>.</div></div>
+
+<div class="callout pitfall"><p><b>Silent broadcasting bugs.</b> A (n,) vector minus an (n, 1) column gives an (n, n) matrix, with no error. This often happens when one array came out of a model or a reduction as a column and the other did not. If a result is unexpectedly large or square, print the shapes. A habit that saves hours: <code>print(a.shape, b.shape)</code> before combining arrays you did not create yourself.</p></div>
+<div class="py" id="c-np2-06"><pre class="src">
+y_true = np.array([1., 2., 3.])
+y_pred = np.array([[1.1], [1.9], [3.2]])   # came out of some model as a column
+err = y_true - y_pred
+print(err.shape)               # (3, 3)! not (3,)
+print(np.mean(err**2))         # a wrong "MSE", and no error message
+print(np.mean((y_true - y_pred.ravel())**2))   # the right MSE: flatten first
+</pre><div class="pynote"><b>Read the output:</b> the wrong version averages the squares of all nine differences between every target and every prediction, and reports 1.42; the right one compares each prediction with its own target and gives 0.02. <code>ravel()</code> flattens the column to shape (3,).</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np2-standard">2. Centring and standardising a data matrix</h3>
+<p>Many ML methods work better when every variable is on a comparable scale. Horsepower is in the hundreds, acceleration around 15, and a method that measures distances (like k-nearest neighbours) would otherwise care almost only about horsepower. The fix is to <dfn data-g="np2-standardise">standardise</dfn> each column: subtract its mean and divide by its standard deviation.</p>
+<div class="mathblock" data-sheet="Standardising a column"><div class="eqlabel">Centring and standardising column \(j\)</div>
+\[\tilde x_{ij}=x_{ij}-\bar x_j,\qquad z_{ij}=\frac{x_{ij}-\bar x_j}{s_j}\]
+<p class="say">Read: “x-tilde i j” is the centred value: the original minus its column's mean \(\bar x_j\) (“x-bar sub j”). “z i j” is the standardised value (a <i>z-score</i>): how many standard deviations \(s_j\) the value lies above its column's mean. After standardising, every column has mean 0 and standard deviation 1.</p></div>
+
+<div class="worked"><div class="wt">Worked example · <b>standardising a 3 × 2 matrix by hand</b></div>
+<div class="given">\(\bX=\begin{pmatrix}1&10\\2&20\\3&60\end{pmatrix}\): 3 observations, 2 variables.</div>
+<ol class="steps">
+<li><div>Column means (axis 0 disappears): \(\bar x_1=(1+2+3)/3=\mathbf{2}\), \(\bar x_2=(10+20+60)/3=\mathbf{30}\). As an array, <code>[2, 30]</code>, shape (2,).</div></li>
+<li><div>Centre: broadcasting subtracts the row <code>[2, 30]</code> from every row: \(\begin{pmatrix}1-2&10-30\\2-2&20-30\\3-2&60-30\end{pmatrix}=\begin{pmatrix}-1&-20\\0&-10\\1&30\end{pmatrix}\).<span class="why">(3, 2) minus (2,): aligned on the right, 2 matches 2, and the 3 rows are covered by stretching.</span></div></li>
+<li><div>Standard deviations (dividing by \(n=3\)): column 1: \(\sqrt{(1+0+1)/3}=\sqrt{0.667}=\mathbf{0.816}\). Column 2: \(\sqrt{(400+100+900)/3}=\sqrt{466.7}=\mathbf{21.60}\).</div></li>
+<li><div>Divide each centred column by its own standard deviation (broadcasting again): column 1 becomes \(-1/0.816=-1.225,\ 0,\ 1.225\); column 2 becomes \(-20/21.6=-0.926,\ -10/21.6=-0.463,\ 30/21.6=1.389\).</div></li>
+</ol>
+<div class="result">\(\mathbf Z=\begin{pmatrix}-1.225&-0.926\\0&-0.463\\1.225&1.389\end{pmatrix}\), each column with mean 0 and standard deviation 1</div></div>
+<div class="py" id="c-np2-07"><pre class="src">
+X = np.array([[1., 10.], [2., 20.], [3., 60.]])
+mu = X.mean(axis=0)            # shape (2,)
+sd = X.std(axis=0)             # shape (2,)
+Z = (X - mu) / sd              # (3, 2) with (2,): broadcast down the rows
+print(mu, sd)
+print(Z)
+print(Z.mean(axis=0), Z.std(axis=0))   # 0 and 1 (up to rounding)
+</pre><div class="pynote"><b>Read the output:</b> every number of the worked example appears: means <code>[2. 30.]</code>, standard deviations <code>[0.816 21.602]</code>, and the matrix \(\mathbf Z\). The last line confirms mean 0 and standard deviation 1 for both columns. (A <code>-0.</code> is a tiny negative rounding error, something like \(-10^{-17}\), printed with 3 decimals.)</div></div>
+
+<div class="callout pitfall"><p><b>Standardise with the training set's numbers.</b> When you split data into a training and a test set (ISLP Chapter 5), compute <code>mu</code> and <code>sd</code> on the <i>training</i> rows only, and apply those same numbers to the test rows. Using the test set's own mean leaks information about it into your model. scikit-learn's <code>StandardScaler</code> does exactly this with <code>fit</code> then <code>transform</code>.</p></div>
+
+<p>To standardise <b>rows</b> instead (one mean per observation), reduce along axis 1 and keep the dimension, so the shapes broadcast across the columns:</p>
+<div class="py" id="c-np2-08"><pre class="src">
+R = (X - X.mean(axis=1, keepdims=True)) / X.std(axis=1, keepdims=True)
+print(R)            # each row now has mean 0, std 1
+</pre><div class="pynote"><b>Read the output:</b> each row has only two numbers, so after standardising every row is <code>[-1. 1.]</code>: one value one standard deviation below the row mean, the other one above.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np2-random">3. Random numbers you can reproduce</h3>
+<p>Machine learning uses randomness everywhere: simulated data, random train/test splits, shuffled mini-batches, initial weights of a neural network, bootstrap resamples. A computer does not produce truly random numbers; it runs a deterministic formula, a <dfn data-g="np2-prng">pseudo-random number generator</dfn>, whose output only <i>looks</i> random. The starting point of that formula is the <dfn data-g="np2-seed">seed</dfn>. Same seed, same sequence, every time, on every computer.</p>
+
+<div class="callout ece"><p><b>You have met this before:</b> a linear-feedback shift register (LFSR) generates a pseudo-noise (PN) sequence for spread spectrum. Load the same initial state and you get the same chip sequence, which is exactly why the receiver can de-spread. A NumPy seed is the initial state of a (much better) generator.</p></div>
+
+<h4>The modern way: a Generator object</h4>
+<p>ISLP (and this guide) uses <code style="white-space:normal">rng = np.random.default_rng(seed)</code>. It returns a <dfn data-g="np2-generator">Generator</dfn> object; you ask it for numbers with its methods. Here is ISLP's own demonstration (In[32]): two generators with the same seed give identical numbers.</p>
+<div class="predict" data-correct="1"><p>Two generators are created with the same seed, 1303, and each draws two normal numbers with <code>scale=5</code>. What do you expect?</p><ol class="opts"><li>Exactly the same two numbers from both</li><li>Different numbers, because they are random</li><li>Similar but not identical numbers</li></ol>
+<div class="why">The seed fixes the whole sequence. Both generators start in the same state and run the same formula, so the output is identical to the last digit. ISLP prints <code>[4.09 -1.07]</code> twice.</div></div>
+<div class="py" id="c-np2-09"><pre class="src">
+rng = np.random.default_rng(1303)
+print(rng.normal(scale=5, size=2))
+rng2 = np.random.default_rng(1303)
+print(rng2.normal(scale=5, size=2))
+print(rng.normal(scale=5, size=2))     # rng has moved on: new numbers
+</pre><div class="pynote"><b>Read the output:</b> the first two lines are identical, <code>[ 4.095 -1.075]</code>, exactly ISLP's numbers. The third line is different, because <code>rng</code> continued along its sequence. Re-run the cell: you get exactly the same three lines again, because the cell re-creates the generators from the seed.</div></div>
+
+<div class="callout"><div class="ct">New in this lesson · keyword arguments</div><p>In <code style="white-space:normal">rng.normal(loc=0, scale=5, size=2)</code> the arguments are given <b>by name</b>. These are <dfn data-g="np2-kwarg">keyword arguments</dfn>: you can give them in any order and leave out any that have defaults. <code>normal</code>'s signature is <code style="white-space:normal">normal(loc=0.0, scale=1.0, size=None)</code>: by default mean 0, standard deviation 1, one number. Arguments given without names are <i>positional</i>: matched by order. ISLP explains this on p. 46. So <code>rng.normal(50, 1, 10)</code> and <code style="white-space:normal">rng.normal(size=10, loc=50, scale=1)</code> mean the same.</p></div>
+
+<h4>The methods you will use</h4>
+<div class="tw"><table class="t"><thead><tr><th>Call</th><th>Gives</th><th>Used for</th></tr></thead><tbody>
+<tr><td><code>rng.standard_normal(size)</code></td><td>\(\mathcal N(0,1)\) samples</td><td>noise, random data (ISLP uses this most)</td></tr>
+<tr><td><code>rng.normal(loc, scale, size)</code></td><td>\(\mathcal N(\text{loc}, \text{scale}^2)\)</td><td>noise with a chosen mean and spread</td></tr>
+<tr><td><code>rng.uniform(low, high, size)</code></td><td>uniform on \([\text{low}, \text{high})\)</td><td>random x-positions, random initialisation</td></tr>
+<tr><td><code>rng.integers(low, high, size)</code></td><td>whole numbers in \([\text{low}, \text{high})\)</td><td>random labels, dice</td></tr>
+<tr><td><code style="white-space:normal">rng.choice(a, size, replace, p)</code></td><td>draws from the elements of <code>a</code></td><td>bootstrap (with replacement), subsampling, ISLP's missing-value mask</td></tr>
+<tr><td><code>rng.permutation(n)</code></td><td>0, …, n−1 in random order</td><td>shuffling rows, train/test splits</td></tr>
+</tbody></table></div>
+<p>\(\mathcal N(\mu,\sigma^2)\) is read “normal with mean mu and variance sigma squared”: the bell curve centred at \(\mu\) whose width is \(\sigma\). The <a href="#m-prob">probability lesson</a> teaches it properly; here you only need “numbers that cluster around <code>loc</code> with spread <code>scale</code>”. Note that <code>scale</code> is the standard deviation \(\sigma\), <b>not</b> the variance.</p>
+<div class="py" id="c-np2-10"><pre class="src">
+rng = np.random.default_rng(3)
+y = rng.standard_normal(10)                  # ISLP In[33]
+print(np.mean(y), y.mean())
+print(np.var(y), y.var(), np.mean((y - y.mean())**2))   # ISLP In[34]: three equal ways
+X = rng.standard_normal((10, 3))             # a 10 x 3 matrix of N(0,1)
+print(X.mean(axis=0))                        # ISLP In[37]: column means, near 0
+print(rng.uniform(0, 1, size=4))
+print(rng.integers(1, 7, size=10))           # ten dice rolls (7 is excluded)
+</pre><div class="pynote"><b>Read the output:</b> with seed 3, the mean of <code>y</code> is about −0.113 and the variance about 2.724, the same as ISLP prints (−0.11 and 2.72). The column means of <code>X</code> are near 0 but not exactly 0: ten samples are not many. The dice rolls are whole numbers from 1 to 6.</div></div>
+
+<h4>choice and permutation: shuffles, splits and bootstrap samples</h4>
+<div class="py" id="c-np2-11"><pre class="src">
+rng = np.random.default_rng(0)
+perm = rng.permutation(10)            # a random order of 0..9
+print(perm)
+train_idx, test_idx = perm[:7], perm[7:]   # a 70/30 split of 10 rows
+print(train_idx, test_idx)
+data = np.array([3, 8, 1, 9, 4])
+print(rng.choice(data, size=5, replace=True))    # a bootstrap sample: repeats allowed
+print(rng.choice(data, size=3, replace=False))   # 3 distinct elements
+print(rng.choice([0, 1], size=12, p=[0.8, 0.2])) # 1 with probability 0.2
+</pre><div class="pynote"><b>Read the output:</b> the permutation contains every index exactly once, so the first 7 and last 3 never overlap: a clean split. A bootstrap sample (ISLP Chapter 5) has the same size as the data but is drawn <i>with replacement</i>, so some values repeat and others are missing. In the last line about one draw in five is a 1.</div></div>
+
+<p>ISLP builds a correlated dataset this way (In[28]–[30]). <code>np.corrcoef(x, y)</code> returns the 2 × 2 correlation matrix; the off-diagonal entry is the correlation between <code>x</code> and <code>y</code>.</p>
+<div class="py" id="c-np2-12"><pre class="src">
+rng = np.random.default_rng(1303)
+x = rng.normal(size=50)
+y = x + rng.normal(loc=50, scale=1, size=50)    # y = x + independent N(50, 1) noise
+print(np.corrcoef(x, y))
+</pre><div class="pynote"><b>Read the output:</b> 1s on the diagonal (every variable is perfectly correlated with itself) and about 0.67 off the diagonal. ISLP shows 0.69 because it drew <code>x</code> without a seed; with a different draw you get a slightly different number. In theory the correlation is \(1/\sqrt2\approx0.71\), since <code>y</code> is <code>x</code> plus noise of equal variance.</div></div>
+
+<div class="callout pitfall"><p><b>The old way, and why to avoid it.</b> Older code (and part of ISLP's lab, In[28]) calls <code>np.random.normal(...)</code> directly, using a hidden global generator seeded by <code>np.random.seed(0)</code>. Any other code that draws random numbers silently changes your sequence. Use one <code style="white-space:normal">rng = np.random.default_rng(seed)</code> per experiment. Note also that the same seed gives different numbers in the old and new systems, and occasionally across NumPy versions (ISLP warns about this on p. 47).</p></div>
+<div class="callout key"><p><b>Why seeds matter for experiments.</b> When you compare two models, you want the difference in their scores to come from the models, not from a lucky random split. Fix the seed, and anyone (including you next week) can reproduce your numbers exactly. Then, to check that a conclusion is not a fluke of one seed, repeat with several seeds and look at the spread.</p></div>
+<div class="py" id="c-np2-13"><pre class="src">
+# The average of n uniform samples gets closer to the true mean (0.5) as n grows,
+# and with fixed seeds this whole table is reproducible.
+for n in [10, 100, 1000, 100000]:
+    means = [np.random.default_rng(s).uniform(size=n).mean() for s in range(5)]
+    print(f"n={n:6d}: means over 5 seeds = {np.round(means, 3)}")
+</pre><div class="pynote"><b>Read the output:</b> with 10 samples the five seeds give quite different means; with 100,000 they all agree to two or three decimals. The spread shrinks like \(1/\sqrt n\): a preview of the standard error you will meet in ISLP Chapter 3.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np2-linalg">4. Linear algebra: dot products and the @ operator</h3>
+<p>The full theory of vectors and matrices is the subject of the <a href="#m-linalg">next maths lesson</a>. Here you learn the NumPy code, with just enough of the maths to check every number.</p>
+
+<h4>The dot product</h4>
+<div class="mathblock" data-sheet="Dot product"><div class="eqlabel">Dot product of two vectors of length \(n\)</div>
+\[\mathbf a\cdot\mathbf b=\sum_{i=1}^{n}a_i b_i=a_1b_1+a_2b_2+\dots+a_nb_n\]
+<p class="say">Read: “a dot b” means “multiply matching entries, then add them all up”. For \(\mathbf a=(1,2,3)\), \(\mathbf b=(4,5,6)\): \(4+10+18=32\). It is <code>(a * b).sum()</code>, and NumPy writes it <code>a @ b</code> or <code>np.dot(a, b)</code>.</p></div>
+<div class="callout ece"><p><b>A dot product is an FIR filter output, and a correlator.</b> One output sample of an FIR filter is \(y[n]=\sum_k h[k]x[n-k]\): a dot product of the taps with a window of the input. A matched-filter receiver computes the dot product of the received block with the known pulse. A linear regression prediction \(\hat y=\beta_0+\beta_1x_1+\dots+\beta_px_p\) is the same operation: a dot product of a coefficient vector with a feature vector.</p></div>
+
+<h4>Matrix times vector</h4>
+<p>A matrix times a vector is a stack of dot products: each <b>row</b> of the matrix dotted with the vector gives one entry of the result.</p>
+<div class="mathblock" data-sheet="Matrix-vector product"><div class="eqlabel">Matrix–vector product</div>
+\[(\mathbf A\mathbf x)_i=\sum_{j=1}^{n}a_{ij}x_j\qquad\text{shapes: }(m\times n)\,(n)\to(m)\]
+<p class="say">Read: entry \(i\) of \(\mathbf A\mathbf x\) is row \(i\) of \(\mathbf A\) dotted with \(\mathbf x\). The number of <b>columns</b> of \(\mathbf A\) must equal the length of \(\mathbf x\).</p></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>a 3 × 2 matrix times a vector, every number</b></div>
+<div class="given">\(\mathbf A=\begin{pmatrix}2&1\\1&3\\0&4\end{pmatrix}\) (shape 3 × 2), \(\mathbf x=\begin{pmatrix}1\\2\end{pmatrix}\) (length 2). Compute \(\mathbf A\mathbf x\).</div>
+<ol class="steps">
+<li><div>Shapes: (3 × 2) times (2) gives length 3. The inner sizes, 2 and 2, match.</div></li>
+<li><div>Row 0 (yellow) dotted with \(\mathbf x\) (blue): <div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h1">2</span><span class="h1">1</span><span>1</span><span>3</span><span>0</span><span>4</span></span><span class="lab">A</span></span><span class="op">·</span><span><span class="mgrid" style="grid-template-columns:repeat(1,auto)"><span class="h2">1</span><span class="h2">2</span></span><span class="lab">x</span></span></div> \(2\cdot1+1\cdot2=\mathbf 4\).</div></li>
+<li><div>Row 1: \(1\cdot1+3\cdot2=1+6=\mathbf 7\).</div></li>
+<li><div>Row 2: \(0\cdot1+4\cdot2=\mathbf 8\).</div></li>
+</ol>
+<div class="result">\(\mathbf A\mathbf x=\begin{pmatrix}2\cdot1+1\cdot2\\1\cdot1+3\cdot2\\0\cdot1+4\cdot2\end{pmatrix}=\begin{pmatrix}4\\7\\8\end{pmatrix}\)</div></div>
+
+<div class="predict" data-correct="2"><p>For the same <code>A</code> (3 × 2) and <code>x = np.array([1, 2])</code>, what does <code>A * x</code> (star, not @) give?</p><ol class="opts"><li><code>[4, 7, 8]</code>, the same as <code>A @ x</code></li><li>a 3 × 2 array <code>[[2, 2], [1, 6], [0, 8]]</code></li><li>a ValueError</li></ol>
+<div class="why"><code>*</code> is elementwise with broadcasting: the length-2 <code>x</code> is stretched down the 3 rows and multiplied entry by entry. No sum happens. Summing each row of that result, <code>(A * x).sum(axis=1)</code>, <i>would</i> give <code>[4, 7, 8]</code>: that is literally what a matrix–vector product is.</div></div>
+<div class="py" id="c-np2-14"><pre class="src">
+A = np.array([[2, 1], [1, 3], [0, 4]])
+x = np.array([1, 2])
+print(A * x)                    # elementwise (broadcast), shape (3, 2)
+print((A * x).sum(axis=1))      # sum each row: the matrix-vector product
+print(A @ x)                    # the same, the proper way
+print(np.dot(A, x))             # older spelling of the same thing
+a, b = np.array([1, 2, 3]), np.array([4, 5, 6])
+print(a @ b, np.dot(a, b), (a * b).sum())   # dot product: 32 three ways
+</pre><div class="pynote"><b>Read the output:</b> first the 3 × 2 elementwise array from the prediction, then <code>[4 7 8]</code> three times, then <code>32 32 32</code>.</div></div>
+<div class="widget" data-w="np2-matvec" data-title="Matrix × vector, one row at a time"><div class="wn">Press <b>Next row</b> to step through the product: the highlighted row of A is multiplied entry by entry with x, and the products are added into one entry of the result. Move the sliders to change x and watch every entry respond.</div></div>
+
+<h4>Matrix times matrix</h4>
+<p>\(\mathbf A\mathbf B\) is “\(\mathbf A\) times each column of \(\mathbf B\)”. Entry \([i,j]\) is row \(i\) of \(\mathbf A\) dotted with column \(j\) of \(\mathbf B\). The shapes must chain: \((m\times k)(k\times n)\to(m\times n)\). The inner \(k\)s must be equal, and they disappear.</p>
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>2</span><span class="h1">3</span><span class="h1">4</span></span><span class="lab">A</span></span><span class="op">@</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h2">5</span><span>6</span><span class="h2">7</span><span>8</span></span><span class="lab">B</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>19</span><span>22</span><span class="h4">43</span><span>50</span></span><span class="lab">[1, 0]: 3·5 + 4·7 = 43</span></span></div>
+<div class="py" id="c-np2-15"><pre class="src">
+A = np.array([[1, 2], [3, 4]])
+B = np.array([[5, 6], [7, 8]])
+print(A @ B)           # [[1*5+2*7, 1*6+2*8], [3*5+4*7, 3*6+4*8]]
+print(B @ A)           # different! matrix products do not commute
+print(A * B)           # elementwise: a different thing again
+X = np.ones((100, 3)); W = np.ones((3, 5))
+print((X @ W).shape)   # (100, 3) @ (3, 5) -> (100, 5)
+print((X.T @ X).shape) # (3, 100) @ (100, 3) -> (3, 3): the "X transpose X" of least squares
+</pre><div class="pynote"><b>Read the output:</b> \(\mathbf A\mathbf B=\begin{pmatrix}19&22\\43&50\end{pmatrix}\) but \(\mathbf B\mathbf A=\begin{pmatrix}23&34\\31&46\end{pmatrix}\): order matters. <code>A * B</code> is <code>[[5 12] [21 32]]</code>. The two shapes follow the chaining rule.</div></div>
+<div class="callout exam"><p><b>Interview classic:</b> “What is the shape of \(\bX\T\bX\) if \(\bX\) is \(n\times p\)?” Answer: \(p\times p\), because \((p\times n)(n\times p)\). And “what is the difference between <code>*</code> and <code>@</code> in NumPy?”: elementwise (with broadcasting) versus matrix product.</p></div>
+
+<!-- ============================================================ -->
+<h3 id="np2-linalg2">5. np.linalg: inverse, determinant, solve, norm, least squares</h3>
+<p>The submodule <code>np.linalg</code> holds the standard linear-algebra routines. We check each on an example small enough to do by hand.</p>
+
+<h4>Determinant and inverse of a 2 × 2 matrix</h4>
+<div class="mathblock" data-sheet="Inverse of a 2x2 matrix"><div class="eqlabel">The 2 × 2 determinant and inverse</div>
+\[\mathbf A=\begin{pmatrix}a&b\\c&d\end{pmatrix},\qquad \det\mathbf A=ad-bc,\qquad \mathbf A^{-1}=\frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}\]
+<p class="say">Read: “A inverse” is the matrix that undoes \(\mathbf A\): \(\mathbf A^{-1}\mathbf A=\mathbf I\), the identity. Recipe: swap the diagonal entries, flip the signs of the off-diagonal ones, divide by the determinant. If \(\det\mathbf A=0\) there is no inverse (the matrix is <i>singular</i>).</p></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>inverting \(\begin{pmatrix}4&7\\2&6\end{pmatrix}\) by hand</b></div>
+<div class="given">\(a=4,\ b=7,\ c=2,\ d=6\).</div>
+<ol class="steps">
+<li><div>Determinant: \(ad-bc=4\cdot6-7\cdot2=24-14=\mathbf{10}\). Not zero, so the inverse exists.</div></li>
+<li><div>Swap \(a\) and \(d\), negate \(b\) and \(c\): \(\begin{pmatrix}6&-7\\-2&4\end{pmatrix}\).</div></li>
+<li><div>Divide by 10: \(\mathbf A^{-1}=\begin{pmatrix}0.6&-0.7\\-0.2&0.4\end{pmatrix}\).</div></li>
+<li><div>Check two entries of \(\mathbf A^{-1}\mathbf A\): row 0 times column 0 is \(0.6\cdot4+(-0.7)\cdot2=2.4-1.4=1\); row 0 times column 1 is \(0.6\cdot7+(-0.7)\cdot6=4.2-4.2=0\). The identity is appearing.</div></li>
+</ol>
+<div class="result">\(\det\mathbf A=10,\quad \mathbf A^{-1}=\begin{pmatrix}0.6&-0.7\\-0.2&0.4\end{pmatrix}\)</div></div>
+<div class="py" id="c-np2-16"><pre class="src">
+A = np.array([[4., 7.], [2., 6.]])
+print(np.linalg.det(A))         # 10, give or take a rounding error
+Ainv = np.linalg.inv(A)
+print(Ainv)
+print(Ainv @ A)                 # the identity (up to rounding)
+print(np.allclose(Ainv @ A, np.eye(2)))
+</pre><div class="pynote"><b>Read the output:</b> the determinant may print as 10.000000000000002 rather than 10. Floating-point numbers carry about 16 significant digits, and the last one can wobble. That is why you compare floats with <code>np.allclose</code>, never with <code>==</code>.</div></div>
+
+<h4>Solving a linear system</h4>
+<p>Two equations, two unknowns: \(2x+y=5\) and \(x+3y=10\). In matrix form \(\mathbf A\mathbf v=\mathbf b\) with \(\mathbf A=\begin{pmatrix}2&1\\1&3\end{pmatrix}\), \(\mathbf v=\begin{pmatrix}x\\y\end{pmatrix}\), \(\mathbf b=\begin{pmatrix}5\\10\end{pmatrix}\).</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>solve by hand, then check in NumPy</b></div>
+<div class="given">\(\mathbf A=\begin{pmatrix}2&1\\1&3\end{pmatrix}\), \(\mathbf b=\begin{pmatrix}5\\10\end{pmatrix}\).</div>
+<ol class="steps">
+<li><div>\(\det\mathbf A=2\cdot3-1\cdot1=\mathbf 5\).</div></li>
+<li><div>\(\mathbf A^{-1}=\tfrac15\begin{pmatrix}3&-1\\-1&2\end{pmatrix}\).</div></li>
+<li><div>\(\mathbf v=\mathbf A^{-1}\mathbf b=\tfrac15\begin{pmatrix}3\cdot5-1\cdot10\\-1\cdot5+2\cdot10\end{pmatrix}=\tfrac15\begin{pmatrix}5\\15\end{pmatrix}=\begin{pmatrix}1\\3\end{pmatrix}\).</div></li>
+<li><div>Check in the original equations: \(2(1)+3=5\) ✓ and \(1+3(3)=10\) ✓.</div></li>
+</ol>
+<div class="result">\(x=1,\ y=3\)</div></div>
+<div class="py" id="c-np2-17"><pre class="src">
+A = np.array([[2., 1.], [1., 3.]])
+b = np.array([5., 10.])
+v = np.linalg.solve(A, b)       # solves A v = b directly
+print(v)
+print(np.linalg.inv(A) @ b)     # same answer, but slower and less accurate for big systems
+print(A @ v)                    # gives b back: the check
+</pre><div class="pynote"><b>Read the output:</b> <code>[1. 3.]</code> twice, then <code>[ 5. 10.]</code>, which is \(\mathbf b\): the solution satisfies both equations.</div></div>
+<div class="callout key"><p><b>Prefer <code>solve</code> to <code>inv</code>.</b> To find \(\mathbf v\) in \(\mathbf A\mathbf v=\mathbf b\), <code>np.linalg.solve(A, b)</code> is faster and more accurate than <code>np.linalg.inv(A) @ b</code>. Compute an explicit inverse only when you really need the matrix itself (for example its diagonal, for standard errors in Chapter 3).</p></div>
+
+<h4>Norms: the length of a vector</h4>
+<div class="mathblock" data-sheet="Vector norms"><div class="eqlabel">L2 (Euclidean) and L1 norms</div>
+\[\|\mathbf x\|_2=\sqrt{\sum_i x_i^2},\qquad \|\mathbf x\|_1=\sum_i |x_i|\]
+<p class="say">Read: “the two-norm of x” is its ordinary length (Pythagoras); “the one-norm” adds up absolute values (the taxi-cab distance). For \((3,4)\): \(\sqrt{9+16}=5\) and \(3+4=7\). The distance between two points is the norm of their difference. Ridge and lasso regression (ISLP Chapter 6) penalise these two norms.</p></div>
+<div class="py" id="c-np2-18"><pre class="src">
+x = np.array([3., 4.])
+print(np.linalg.norm(x), np.sqrt((x**2).sum()))     # 5.0 both
+print(np.linalg.norm(x, 1), np.abs(x).sum())        # 7.0 both
+p, q = np.array([1., 1.]), np.array([4., 5.])
+print(np.linalg.norm(p - q))                        # distance between two points: 5.0
+M = np.array([[3., 4.], [6., 8.]])
+print(np.linalg.norm(M, axis=1))                    # the length of each row: 5 and 10
+</pre></div>
+
+<h4>Least squares: the best line through points</h4>
+<p>Fitting a straight line \(y\approx\beta_0+\beta_1x\) to data is the topic of <a href="#isl3-1">ISLP Chapter 3</a>. In matrix form you stack the equations \(\beta_0+\beta_1x_i\approx y_i\) for all points into \(\bX\bbeta\approx\by\), with the design matrix \(\bX\) (a column of ones and a column of \(x\)) from NumPy I. There are more equations than unknowns, so usually no exact solution exists; <dfn data-g="np2-lstsq">least squares</dfn> picks the \(\bbeta\) (“bold beta”) that makes the sum of squared errors smallest. Its solution satisfies the <i>normal equations</i>:</p>
+<div class="mathblock" data-sheet="Normal equations"><div class="eqlabel">Least squares solution</div>
+\[\hat\bbeta=(\bX\T\bX)^{-1}\bX\T\by\]
+<p class="say">Read: “beta-hat equals the inverse of X-transpose-X, times X-transpose-y”. The hat means “estimated from data”. In NumPy: <code>np.linalg.lstsq(X, y)</code> or, by the formula, <code style="white-space:normal">np.linalg.solve(X.T @ X, X.T @ y)</code>.</p></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>a line through three points</b></div>
+<div class="given">Points \((0,1),\ (1,3),\ (2,4)\). So \(\bX=\begin{pmatrix}1&0\\1&1\\1&2\end{pmatrix}\), \(\by=\begin{pmatrix}1\\3\\4\end{pmatrix}\).</div>
+<ol class="steps">
+<li><div>\(\bX\T\bX=\begin{pmatrix}1&1&1\\0&1&2\end{pmatrix}\begin{pmatrix}1&0\\1&1\\1&2\end{pmatrix}=\begin{pmatrix}1+1+1&0+1+2\\0+1+2&0+1+4\end{pmatrix}=\begin{pmatrix}3&3\\3&5\end{pmatrix}\).</div></li>
+<li><div>\(\bX\T\by=\begin{pmatrix}1+3+4\\0\cdot1+1\cdot3+2\cdot4\end{pmatrix}=\begin{pmatrix}8\\11\end{pmatrix}\).</div></li>
+<li><div>Invert \(\begin{pmatrix}3&3\\3&5\end{pmatrix}\): determinant \(15-9=6\), inverse \(\tfrac16\begin{pmatrix}5&-3\\-3&3\end{pmatrix}\).</div></li>
+<li><div>\(\hat\bbeta=\tfrac16\begin{pmatrix}5\cdot8-3\cdot11\\-3\cdot8+3\cdot11\end{pmatrix}=\tfrac16\begin{pmatrix}7\\9\end{pmatrix}=\begin{pmatrix}1.167\\1.5\end{pmatrix}\).</div></li>
+</ol>
+<div class="result">best line \(\hat y=1.167+1.5x\)</div></div>
+<div class="py" id="c-np2-19"><pre class="src">
+x = np.array([0., 1., 2.])
+y = np.array([1., 3., 4.])
+X = np.column_stack([np.ones(3), x])
+beta, rss, rank, sv = np.linalg.lstsq(X, y, rcond=None)   # four outputs; we want the first
+print(beta, rss)
+print(np.linalg.solve(X.T @ X, X.T @ y))   # the normal equations: same answer
+print(np.polyfit(x, y, 1))                 # polyfit returns [slope, intercept]: note the order!
+print(X @ beta)                            # fitted values: 1.167, 2.667, 4.167
+</pre><div class="pynote"><b>Read the output:</b> all three methods give intercept 1.167 and slope 1.5. <code>lstsq</code> returns four things; <code>beta, rss, rank, sv = ...</code> unpacks them into four names. The second is the residual sum of squares, <code>[0.167]</code>: the fitted values miss the data by \(-1/6, +1/3, -1/6\), and \(1/36+1/9+1/36=1/6\). <code>rcond=None</code> just silences a warning about a default. Beware that <code>np.polyfit</code> lists the highest power first, so slope before intercept.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np2-vector">6. Vectorising a double loop: pairwise distances</h3>
+<p>The k-nearest-neighbours method (<a href="#isl2-2">ISLP 2.2</a>) predicts for a new point by looking at the training points closest to it. So it needs the distance from every test point to every training point. With \(m\) test points and \(n\) training points, each with \(d\) features, the obvious code is a double loop. Broadcasting does it in one line.</p>
+
+<div class="mathblock" data-sheet="Pairwise distance matrix"><div class="eqlabel">Distance matrix</div>
+\[D_{ij}=\|\mathbf a_i-\mathbf b_j\|_2=\sqrt{\sum_{k=1}^{d}(a_{ik}-b_{jk})^2}\]
+<p class="say">Read: entry \(i,j\) is the straight-line distance between test point \(i\) (row \(i\) of \(\mathbf A\), shape \(m\times d\)) and training point \(j\) (row \(j\) of \(\mathbf B\), \(n\times d\)). \(D\) has shape \(m\times n\).</p></div>
+
+<p>The trick is to give the two arrays different “slots” so that every pair meets:</p>
+<ol>
+<li><code>A[:, None, :]</code> has shape \((m, 1, d)\): each test point sits in its own slice along axis 0.</li>
+<li><code>B[None, :, :]</code> has shape \((1, n, d)\): the training points lie along axis 1.</li>
+<li>Subtracting broadcasts \((m,1,d)\) with \((1,n,d)\) to \((m,n,d)\): every test point minus every training point, every feature.</li>
+<li>Square, then <code>.sum(axis=2)</code> over the \(d\) features gives \((m, n)\); <code>np.sqrt</code> gives the distances.</li>
+</ol>
+<div class="predict" data-correct="2"><p><code>A</code> has shape (2, 3) (two test points with 3 features), <code>B</code> has shape (4, 3). What is the shape of <code>A[:, None, :] - B[None, :, :]</code>?</p><ol class="opts"><li>(2, 3)</li><li>(2, 4, 3)</li><li>ValueError</li></ol>
+<div class="why">(2, 1, 3) with (1, 4, 3): 2 vs 1 OK, 1 vs 4 OK, 3 vs 3 OK, giving (2, 4, 3). Summing the squares over the last axis then gives the 2 × 4 distance matrix.</div></div>
+<div class="py" id="c-np2-20"><pre class="src">
+A = np.array([[0., 0., 0.], [1., 1., 1.]])                  # 2 test points
+B = np.array([[0., 0., 1.], [3., 4., 0.], [1., 1., 1.], [2., 0., 0.]])   # 4 training points
+diff = A[:, None, :] - B[None, :, :]
+print(diff.shape)
+D = np.sqrt((diff**2).sum(axis=2))
+print(D)
+# the slow, obvious way, for comparison:
+D_loop = np.zeros((2, 4))
+for i in range(2):
+    for j in range(4):
+        D_loop[i, j] = np.sqrt(((A[i] - B[j])**2).sum())
+print(np.allclose(D, D_loop))
+</pre><div class="pynote"><b>Read the output:</b> row 0 holds the distances from the origin to the four training points: 1, 5, 1.732, 2. Row 1 holds the distances from (1, 1, 1): its distance to the third training point is 0, because they are the same point. The loop version agrees.</div></div>
+
+<p>Now nearest neighbours take two more lines. <code>D.argmin(axis=1)</code> gives, for each test point (row), the column of the closest training point. <code>np.argsort(D, axis=1)[:, :k]</code> gives the \(k\) closest.</p>
+<div class="py" id="c-np2-21"><pre class="src">
+print(D.argmin(axis=1))                # nearest training point for each test point
+print(np.argsort(D, axis=1))           # all training points, nearest first
+y_train = np.array([10., 20., 30., 40.])
+k = 2
+nn = np.argsort(D, axis=1)[:, :k]      # indices of the 2 nearest, shape (2, 2)
+print(nn)
+print(y_train[nn].mean(axis=1))        # k-NN regression prediction for each test point
+</pre><div class="pynote"><b>Read the output:</b> test point 0 is closest to training point 0, test point 1 to training point 2. <code>y_train[nn]</code> is fancy indexing with a 2-D index array: it returns a (2, 2) array of the neighbours' y-values, and the row means are the 2-NN predictions. You have just written k-nearest-neighbours regression.</div></div>
+
+<div class="widget" data-w="np2-dist" data-title="Distance matrix and nearest neighbours"><div class="wn">Drag the three red test points. The table is the distance matrix D (rows: test points; columns: training points). Each row's smallest entry is highlighted, and a line joins each test point to its nearest neighbour. That highlight is exactly <code>D.argmin(axis=1)</code>.</div></div>
+
+<p>How much faster is the vectorised version? Time it on 300 test points and 1,000 training points:</p>
+<div class="py" id="c-np2-22"><pre class="src">
+import time
+rng = np.random.default_rng(0)
+A = rng.standard_normal((300, 5)); B = rng.standard_normal((1000, 5))
+
+t0 = time.perf_counter()
+D_vec = np.sqrt(((A[:, None, :] - B[None, :, :])**2).sum(axis=2))
+t_vec = time.perf_counter() - t0
+
+t0 = time.perf_counter()
+D_slow = np.array([[np.sqrt(((a - b)**2).sum()) for b in B] for a in A[:30]])  # only 30 rows!
+t_slow = (time.perf_counter() - t0) * 10       # scale up to 300 rows
+print(f"vectorised: {t_vec*1000:.0f} ms   loops (estimated): {t_slow*1000:.0f} ms")
+print(np.allclose(D_vec[:30], D_slow))
+</pre><div class="pynote"><b>Read the output:</b> the loop version would take many times longer, and we only ran a tenth of it. (<code>time.perf_counter()</code> reads a stopwatch: we read it before and after and subtract.) The price of broadcasting is memory: the intermediate array has \(m\times n\times d\) = 1.5 million numbers. For very large problems you process the test points in blocks (“batches”), just like block processing of a long signal.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np2-more">7. A few more tools you will meet</h3>
+<div class="tw"><table class="t"><thead><tr><th>Function</th><th>Does</th><th>Example</th></tr></thead><tbody>
+<tr><td><code>np.sort(x)</code>, <code>np.argsort(x)</code></td><td>sorted copy; the indices that would sort</td><td><code>np.argsort([30, 10, 20])</code> → <code>[1 2 0]</code></td></tr>
+<tr><td><code style="white-space:normal">np.unique(x, return_counts=True)</code></td><td>distinct values (and how often each appears)</td><td>ISLP uses it to find the <code>'?'</code> in Auto's horsepower</td></tr>
+<tr><td><code>np.where(cond, a, b)</code></td><td>elementwise if/else</td><td><code>np.where(p &gt; 0.5, 1, 0)</code>: class labels from probabilities</td></tr>
+<tr><td><code>np.clip(x, lo, hi)</code></td><td>limit values to a range</td><td>a hard limiter / saturating amplifier</td></tr>
+<tr><td><code>np.allclose(a, b)</code></td><td>equal up to rounding?</td><td>checking float results</td></tr>
+<tr><td><code>np.cumsum(x)</code></td><td>running total</td><td>discrete integration</td></tr>
+<tr><td><code>np.isnan(x)</code>, <code>np.nanmean(x)</code></td><td>find / skip missing values</td><td>ISLP's percent-missing loop</td></tr>
+</tbody></table></div>
+<div class="py" id="c-np2-23"><pre class="src">
+x = np.array([30, 10, 20, 10, 30, 30])
+print(np.sort(x), np.argsort(x))
+vals, counts = np.unique(x, return_counts=True)
+print(vals, counts)
+p = np.array([0.1, 0.7, 0.5, 0.9])
+print(np.where(p &gt; 0.5, 1, 0))
+print(np.clip(np.array([-3, 0.5, 7]), -1, 1))
+print(np.cumsum([1, 2, 3, 4]))
+</pre><div class="pynote"><b>Read the output:</b> <code>argsort</code> says “the smallest is at position 1, then 3, then 2…”. <code>unique</code> finds 10, 20, 30 appearing 2, 1 and 3 times. Note that 0.5 is <i>not</i> greater than 0.5, so it becomes 0. <code>clip</code> gives <code>[-1. 0.5 1.]</code>; the running total is 1, 3, 6, 10.</div></div>
+
+<!-- ============================================================ -->
+<h3 id="np2-ex">8. Exercises</h3>
+<p>No Python loops over array elements unless the task allows it. Where a seed is given, use <code>np.random.default_rng(seed)</code>.</p>
+
+<div class="ex" id="x-np2-01" data-title="centre the columns"><div class="task"><p>Write <code>centre(X)</code> returning <code>X</code> with each column's mean subtracted, so every column of the result has mean 0. For <code>[[1, 10], [3, 30]]</code> the answer is <code>[[-1, -10], [1, 10]]</code>.</p></div>
+<pre class="src">
+def centre(X):
+    return X - X.mean()       # subtracts ONE overall mean
+</pre>
+<pre class="check">
+r = centre(np.array([[1., 10.], [3., 30.]]))
+assert np.allclose(r, [[-1, -10], [1, 10]]), f"expected [[-1,-10],[1,10]], got\n{r}"
+Xr = np.random.default_rng(1).normal(5, 2, size=(50, 4))
+assert np.allclose(centre(Xr).mean(axis=0), 0), "every column should have mean 0"
+assert centre(Xr).shape == (50, 4), "the shape must not change"
+</pre>
+<div class="hint"><p>You need one mean per column, which means axis 0 disappears.</p></div>
+<div class="hint"><p><code>X - X.mean(axis=0)</code>: (n, p) minus (p,) broadcasts down the rows.</p></div>
+<pre class="solution">
+def centre(X):
+    return X - X.mean(axis=0)
+</pre><div class="explain"><p>The column means have shape (p,), which lines up with the last axis of X, so it is subtracted from every row.</p></div></div>
+
+<div class="ex" id="x-np2-02" data-title="standardise with training statistics"><div class="task"><p>Write <code>standardise(X_train, X_test)</code> returning a pair <code>(Z_train, Z_test)</code>: both standardised using the <b>training</b> columns' mean and standard deviation (NumPy's default, dividing by n).</p></div>
+<pre class="src">
+def standardise(X_train, X_test):
+    Z_train = (X_train - X_train.mean(axis=0)) / X_train.std(axis=0)
+    Z_test = (X_test - X_test.mean(axis=0)) / X_test.std(axis=0)   # leaks test information
+    return Z_train, Z_test
+</pre>
+<pre class="check">
+rng_ = np.random.default_rng(7)
+Xtr = rng_.normal(3, 2, size=(40, 3)); Xte = rng_.normal(10, 5, size=(10, 3))
+Ztr, Zte = standardise(Xtr, Xte)
+assert np.allclose(Ztr.mean(axis=0), 0) and np.allclose(Ztr.std(axis=0), 1), "training columns should have mean 0, std 1"
+exp = (Xte - Xtr.mean(axis=0)) / Xtr.std(axis=0)
+assert np.allclose(Zte, exp), "the test set must be scaled with the TRAINING mean and std"
+</pre>
+<div class="hint"><p>Compute <code>mu</code> and <code>sd</code> once, from <code>X_train</code>, and use them twice.</p></div>
+<pre class="solution">
+def standardise(X_train, X_test):
+    mu = X_train.mean(axis=0)
+    sd = X_train.std(axis=0)
+    return (X_train - mu) / sd, (X_test - mu) / sd
+</pre><div class="explain"><p>Both results use the same <code>mu</code> and <code>sd</code>. The test data here really does come from a shifted distribution, and the standardised test set shows that (its mean is far from 0) instead of hiding it.</p></div></div>
+
+<div class="ex" id="x-np2-03" data-title="rows into probabilities"><div class="task"><p>Write <code>row_normalise(S)</code> that divides each row of a positive matrix by that row's sum, so every row adds up to 1. <code>[[1, 3], [2, 2]]</code> → <code>[[0.25, 0.75], [0.5, 0.5]]</code>.</p></div>
+<pre class="src">
+def row_normalise(S):
+    return S / S.sum(axis=1)
+</pre>
+<pre class="check">
+r = row_normalise(np.array([[1., 3.], [2., 2.]]))
+assert np.allclose(r, [[0.25, 0.75], [0.5, 0.5]]), f"expected [[0.25,0.75],[0.5,0.5]], got\n{r}"
+S2 = np.array([[1., 1.], [1., 3.]])
+assert np.allclose(row_normalise(S2), [[0.5, 0.5], [0.25, 0.75]]), f"for [[1,1],[1,3]] expected [[0.5,0.5],[0.25,0.75]], got\n{row_normalise(S2)}"
+</pre>
+<div class="hint"><p><code>S.sum(axis=1)</code> has shape (n,), which lines up with the <i>columns</i>. You need shape (n, 1).</p></div>
+<div class="hint"><p><code>S.sum(axis=1, keepdims=True)</code>.</p></div>
+<pre class="solution">
+def row_normalise(S):
+    return S / S.sum(axis=1, keepdims=True)
+</pre><div class="explain"><p>On the first example both row sums are 4, so the starter happens to give the right answer; the second example, with row sums 2 and 4, exposes it (it divides column 0 by 2 and column 1 by 4). With <code>keepdims=True</code> the sums are a column, which broadcasts across each row. Softmax is this, applied to <code>np.exp(scores)</code>.</p></div></div>
+
+<div class="ex" id="x-np2-04" data-title="times table by broadcasting"><div class="task"><p>Write <code>table(n)</code> returning the n × n multiplication table: entry <code>[i, j]</code> is \((i+1)(j+1)\). <code>table(3)</code> is <code>[[1,2,3],[2,4,6],[3,6,9]]</code>. No loops.</p></div>
+<pre class="src">
+def table(n):
+    r = np.arange(1, n + 1)
+    return r * r
+</pre>
+<pre class="check">
+assert np.array_equal(table(3), [[1, 2, 3], [2, 4, 6], [3, 6, 9]]), f"table(3) wrong:\n{table(3)}"
+assert table(9).shape == (9, 9) and table(9)[8, 6] == 63, "table(9)[8, 6] should be 9*7 = 63"
+</pre>
+<div class="hint"><p>A column times a row: (n, 1) with (n,) broadcasts to (n, n).</p></div>
+<pre class="solution">
+def table(n):
+    r = np.arange(1, n + 1)
+    return r[:, None] * r
+</pre><div class="explain"><p><code>r[:, None]</code> is the column 1..n, <code>r</code> the row; broadcasting multiplies every pair. This is <code>np.outer(r, r)</code> and ISLP's <code>np.multiply.outer</code>.</p></div></div>
+
+<div class="ex" id="x-np2-05" data-title="reproducible noisy line"><div class="task"><p>Write <code>noisy_line(seed, n)</code> that creates a generator with the given seed, draws <code>x = rng.uniform(0, 10, size=n)</code>, <b>then</b> <code style="white-space:normal">noise = rng.normal(0, 1, size=n)</code>, and returns <code>(x, 2 + 3*x + noise)</code>. Calling it twice with the same seed must give identical arrays.</p></div>
+<pre class="src">
+def noisy_line(seed, n):
+    rng = np.random.default_rng()      # no seed: different every time
+    x = rng.uniform(0, 10, size=n)
+    noise = rng.normal(0, 1, size=n)
+    return x, 2 + 3 * x + noise
+</pre>
+<pre class="check">
+x1, y1 = noisy_line(42, 20); x2, y2 = noisy_line(42, 20)
+assert np.array_equal(x1, x2) and np.array_equal(y1, y2), "the same seed must give identical data"
+g = np.random.default_rng(42); ex = g.uniform(0, 10, size=20); en = g.normal(0, 1, size=20)
+assert np.allclose(x1, ex) and np.allclose(y1, 2 + 3 * ex + en), "draw x first, then the noise, from one generator seeded with `seed`"
+x3, _ = noisy_line(43, 20)
+assert not np.array_equal(x1, x3), "a different seed should give different data"
+</pre>
+<div class="hint"><p>Pass the seed into <code>np.random.default_rng</code>.</p></div>
+<pre class="solution">
+def noisy_line(seed, n):
+    rng = np.random.default_rng(seed)
+    x = rng.uniform(0, 10, size=n)
+    noise = rng.normal(0, 1, size=n)
+    return x, 2 + 3 * x + noise
+</pre><div class="explain"><p>The order of draws matters too: swapping the two lines would give the same <i>kind</i> of data but different numbers. Reproducibility means the same seed <i>and</i> the same sequence of calls.</p></div></div>
+
+<div class="ex" id="x-np2-06" data-title="train/test split"><div class="task"><p>Write <code style="white-space:normal">split_indices(n, test_frac, seed)</code> returning <code>(train_idx, test_idx)</code>: a random permutation of 0, …, n−1 (from <code>default_rng(seed)</code>), where the <b>last</b> <code>round(n * test_frac)</code> indices of the permutation are the test set.</p></div>
+<pre class="src">
+def split_indices(n, test_frac, seed):
+    idx = np.arange(n)                  # not shuffled
+    n_test = round(n * test_frac)
+    return idx[:n - n_test], idx[n - n_test:]
+</pre>
+<pre class="check">
+tr, te = split_indices(10, 0.3, 0)
+assert len(tr) == 7 and len(te) == 3, f"expected 7 train and 3 test, got {len(tr)} and {len(te)}"
+assert sorted(np.concatenate([tr, te]).tolist()) == list(range(10)), "together they must cover 0..9 exactly once"
+p = np.random.default_rng(0).permutation(10)
+assert np.array_equal(te, p[7:]) and np.array_equal(tr, p[:7]), "use np.random.default_rng(seed).permutation(n)"
+tr2, te2 = split_indices(392, 0.5, 1)
+assert len(set(tr2.tolist()) &amp; set(te2.tolist())) == 0 and len(te2) == 196, "no index may be in both sets"
+</pre>
+<div class="hint"><p><code style="white-space:normal">perm = np.random.default_rng(seed).permutation(n)</code>, then slice it.</p></div>
+<pre class="solution">
+def split_indices(n, test_frac, seed):
+    perm = np.random.default_rng(seed).permutation(n)
+    n_test = round(n * test_frac)
+    return perm[:n - n_test], perm[n - n_test:]
+</pre><div class="explain"><p>A permutation uses each index once, so slicing it into two parts can never overlap. This is the validation-set approach of ISLP §5.1.1 (half of Auto's 392 cars for training).</p></div></div>
+
+<div class="ex" id="x-np2-07" data-title="bootstrap means, vectorised"><div class="task"><p>Write <code>bootstrap_means(x, B, seed)</code>: draw a (B, n) array of indices with <code style="white-space:normal">rng.integers(0, n, size=(B, n))</code> from <code>default_rng(seed)</code> (n = <code>len(x)</code>), use it to build B bootstrap samples of <code>x</code>, and return the B sample means. No loops.</p></div>
+<pre class="src">
+def bootstrap_means(x, B, seed):
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(x), size=(B, len(x)))
+    return x.mean()        # one number, not B
+</pre>
+<pre class="check">
+x_ = np.array([2., 4., 6., 8., 100.])
+m = bootstrap_means(x_, 1000, 0)
+assert np.shape(m) == (1000,), f"expected 1000 means, got shape {np.shape(m)}"
+idx_ = np.random.default_rng(0).integers(0, 5, size=(1000, 5))
+assert np.allclose(m, x_[idx_].mean(axis=1)), "use x[idx] and average along each row"
+</pre>
+<div class="hint"><p><code>x[idx]</code> with a (B, n) index array gives a (B, n) array of values: each row is one bootstrap sample.</p></div>
+<div class="hint"><p>Then <code>.mean(axis=1)</code>.</p></div>
+<pre class="solution">
+def bootstrap_means(x, B, seed):
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(x), size=(B, len(x)))
+    return x[idx].mean(axis=1)
+</pre><div class="explain"><p>Fancy indexing with a 2-D integer array returns an array of the index array's shape. The standard deviation of these B means is the bootstrap estimate of the standard error of the mean (ISLP §5.2).</p></div></div>
+
+<div class="ex" id="x-np2-08" data-title="matrix-vector product by hand"><div class="task"><p>Write <code>matvec(A, x)</code> computing \(\mathbf A\mathbf x\) <b>without</b> <code>@</code>, <code>np.dot</code> or <code>np.matmul</code>: use broadcasting and a sum. Raise a <code>ValueError</code> if the number of columns of <code>A</code> differs from <code>len(x)</code>.</p></div>
+<pre class="src">
+def matvec(A, x):
+    return (A * x).sum()
+</pre>
+<pre class="check">
+A_ = np.array([[2., 1.], [1., 3.], [0., 4.]])
+assert np.allclose(matvec(A_, np.array([1., 2.])), [4, 7, 8]), f"expected [4 7 8], got {matvec(A_, np.array([1., 2.]))}"
+R = np.random.default_rng(2).normal(size=(5, 7)); v = np.arange(7.)
+assert np.allclose(matvec(R, v), R @ v), "should agree with R @ v"
+try:
+    matvec(np.ones((3, 1)), np.array([1., 2., 3.]))
+    raise AssertionError("expected a ValueError: A has 1 column but x has length 3")
+except ValueError:
+    pass
+</pre>
+<div class="hint"><p>Multiply elementwise (x broadcasts down the rows), then add up each row.</p></div>
+<div class="hint"><p>Check <code>A.shape[1] != len(x)</code> first and <code>raise ValueError("...")</code>.</p></div>
+<pre class="solution">
+def matvec(A, x):
+    if A.shape[1] != len(x):
+        raise ValueError(f"A has {A.shape[1]} columns but x has length {len(x)}")
+    return (A * x).sum(axis=1)
+</pre><div class="explain"><p>Row \(i\) of <code>A * x</code> holds \(a_{ij}x_j\) for every \(j\); summing along axis 1 gives \(\sum_j a_{ij}x_j\), the definition of the product. The explicit check matters: a (3, 1) matrix times a length-3 vector would otherwise broadcast happily into a (3, 3) array and give a wrong answer without any error.</p></div></div>
+
+<div class="ex" id="x-np2-09" data-title="2 x 2 solve by the formula"><div class="task"><p>Write <code>solve2(A, b)</code> for a 2 × 2 <code>A</code> using the inverse formula \(\frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}\) (no <code>np.linalg</code>). Raise <code>ValueError</code> if the determinant is 0. <code>solve2([[2,1],[1,3]], [5,10])</code> → <code>[1, 3]</code>.</p></div>
+<pre class="src">
+def solve2(A, b):
+    A = np.asarray(A, float); b = np.asarray(b, float)
+    a, bb, c, d = A[0, 0], A[0, 1], A[1, 0], A[1, 1]
+    inv = np.array([[d, -bb], [-c, a]])     # forgot to divide by the determinant
+    return inv @ b
+</pre>
+<pre class="check">
+assert np.allclose(solve2([[2, 1], [1, 3]], [5, 10]), [1, 3]), f"expected [1 3], got {solve2([[2, 1], [1, 3]], [5, 10])}"
+M = np.array([[4., 7.], [2., 6.]]); bv = np.array([1., -2.])
+assert np.allclose(solve2(M, bv), np.linalg.solve(M, bv)), "should agree with np.linalg.solve"
+try:
+    solve2([[1, 2], [2, 4]], [1, 1])
+    raise AssertionError("a singular matrix (det = 0) should raise ValueError")
+except ValueError:
+    pass
+</pre>
+<div class="hint"><p>Compute <code>det = a*d - bb*c</code>; if it is 0, raise; otherwise divide the swapped-and-negated matrix by it.</p></div>
+<pre class="solution">
+def solve2(A, b):
+    A = np.asarray(A, float); b = np.asarray(b, float)
+    a, bb, c, d = A[0, 0], A[0, 1], A[1, 0], A[1, 1]
+    det = a * d - bb * c
+    if det == 0:
+        raise ValueError("singular matrix: no unique solution")
+    inv = np.array([[d, -bb], [-c, a]]) / det
+    return inv @ b
+</pre><div class="explain"><p>The matrix \(\begin{pmatrix}1&2\\2&4\end{pmatrix}\) has determinant \(4-4=0\): its second row is twice the first, so the two equations are not independent. (In real code with floats you would test <code>abs(det) &lt; 1e-12</code> rather than <code>== 0</code>.)</p></div></div>
+
+<div class="ex" id="x-np2-10" data-title="fit a line with lstsq"><div class="task"><p>Write <code>fit_line(x, y)</code> returning <code>(b0, b1)</code>, the least-squares intercept and slope, by building the design matrix and calling <code>np.linalg.lstsq</code>. For the points (0,1), (1,3), (2,4) you should get about (1.1667, 1.5).</p></div>
+<pre class="src">
+def fit_line(x, y):
+    b1, b0 = np.polyfit(x, y, 1)
+    return b1, b0          # wrong order
+</pre>
+<pre class="check">
+b0, b1 = fit_line(np.array([0., 1., 2.]), np.array([1., 3., 4.]))
+assert abs(b0 - 7/6) &lt; 1e-9 and abs(b1 - 1.5) &lt; 1e-9, f"expected (1.1667, 1.5), got ({b0}, {b1})"
+g = np.random.default_rng(5); xx = g.uniform(0, 10, 100); yy = 4 - 2 * xx + g.normal(0, 0.1, 100)
+c0, c1 = fit_line(xx, yy)
+assert abs(c0 - 4) &lt; 0.1 and abs(c1 + 2) &lt; 0.02, f"on y = 4 - 2x + small noise expected about (4, -2), got ({c0:.3f}, {c1:.3f})"
+</pre>
+<div class="hint"><p><code style="white-space:normal">X = np.column_stack([np.ones(len(x)), x])</code>, then <code style="white-space:normal">np.linalg.lstsq(X, y, rcond=None)[0]</code>.</p></div>
+<pre class="solution">
+def fit_line(x, y):
+    X = np.column_stack([np.ones(len(x)), x])
+    beta = np.linalg.lstsq(X, y, rcond=None)[0]
+    return beta[0], beta[1]
+</pre><div class="explain"><p><code>lstsq</code> returns a tuple of four things; <code>[0]</code> takes the coefficients, in the order of the design matrix's columns: intercept first.</p></div></div>
+
+<div class="ex" id="x-np2-11" data-title="pairwise distances"><div class="task"><p>Write <code>pairwise(A, B)</code> returning the (m, n) Euclidean distance matrix between the rows of <code>A</code> (m × d) and <code>B</code> (n × d), with broadcasting and no loops.</p></div>
+<pre class="src">
+def pairwise(A, B):
+    return np.sqrt(((A - B)**2).sum(axis=1))   # pairs row i with row i only
+</pre>
+<pre class="check">
+A_ = np.array([[0., 0.], [3., 4.]]); B_ = np.array([[0., 0.], [6., 8.], [3., 0.]])
+D_ = pairwise(A_, B_)
+assert np.shape(D_) == (2, 3), f"shape should be (2, 3), got {np.shape(D_)}"
+assert np.allclose(D_, [[0, 10, 3], [5, 5, 4]]), f"got\n{D_}"
+from scipy.spatial.distance import cdist
+g = np.random.default_rng(3); P = g.normal(size=(7, 4)); Q = g.normal(size=(9, 4))
+assert np.allclose(pairwise(P, Q), cdist(P, Q)), "should agree with scipy's cdist"
+</pre>
+<div class="hint"><p><code>A[:, None, :] - B[None, :, :]</code> has shape (m, n, d).</p></div>
+<div class="hint"><p>Square, sum over <code>axis=2</code> (or <code>axis=-1</code>, the last axis), square root.</p></div>
+<pre class="solution">
+def pairwise(A, B):
+    diff = A[:, None, :] - B[None, :, :]
+    return np.sqrt((diff**2).sum(axis=-1))
+</pre><div class="explain"><p><code>axis=-1</code> means “the last axis”, which keeps working if you later add a batch axis in front. scipy's <code>cdist</code> computes the same matrix with a compiled loop.</p></div></div>
+
+<div class="ex" id="x-np2-12" data-title="k-NN regression"><div class="task"><p>Write <code style="white-space:normal">knn_predict(X_train, y_train, X_test, k)</code> returning, for each test row, the mean of <code>y_train</code> over its <code>k</code> nearest training rows (Euclidean distance). Compute the distances inside the function.</p></div>
+<pre class="src">
+def knn_predict(X_train, y_train, X_test, k):
+    return np.full(len(X_test), y_train.mean())   # predicts the overall mean
+</pre>
+<pre class="check">
+Xtr = np.array([[0.], [1.], [2.], [10.], [11.]]); ytr = np.array([0., 1., 2., 10., 11.])
+p = knn_predict(Xtr, ytr, np.array([[0.4], [10.6]]), 2)
+assert np.allclose(p, [0.5, 10.5]), f"expected [0.5, 10.5], got {p}"
+assert np.allclose(knn_predict(Xtr, ytr, Xtr, 1), ytr), "with k=1, predicting the training points gives their own y"
+from sklearn.neighbors import KNeighborsRegressor
+g = np.random.default_rng(4); A = g.normal(size=(60, 3)); yA = g.normal(size=60); T = g.normal(size=(15, 3))
+ref = KNeighborsRegressor(n_neighbors=5).fit(A, yA).predict(T)
+assert np.allclose(knn_predict(A, yA, T, 5), ref), "should agree with scikit-learn's KNeighborsRegressor"
+</pre>
+<div class="hint"><p>Distances (m, n), then <code>np.argsort(D, axis=1)[:, :k]</code>, then <code>y_train[nn]</code>, then the mean along axis 1.</p></div>
+<pre class="solution">
+def knn_predict(X_train, y_train, X_test, k):
+    D = np.sqrt(((X_test[:, None, :] - X_train[None, :, :])**2).sum(axis=-1))
+    nn = np.argsort(D, axis=1)[:, :k]
+    return y_train[nn].mean(axis=1)
+</pre><div class="explain"><p>Three lines, no loops, and it matches scikit-learn exactly. Notice the test points come first in the subtraction, so the rows of D are test points. This is the KNN regression of ISLP §3.5.</p></div></div>
+
+<!-- ============================================================ -->
+<h3 id="np2-quiz">9. Quiz</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">What is the shape of <code>np.ones((4, 1)) + np.ones(5)</code>?</p><ol class="opts"><li>ValueError</li><li>(4, 5)</li><li>(4, 1)</li><li>(5, 4)</li></ol><div class="why">Pad (5,) to (1, 5). Compare (4, 1) with (1, 5): each axis has a 1 on one side, so both stretch: (4, 5).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem"><code>X</code> is (100, 3). Which line divides each <b>row</b> by its own maximum?</p><ol class="opts"><li><code>X / X.max(axis=1)</code></li><li><code>X / X.max(axis=0)</code></li><li><code style="white-space:normal">X / X.max(axis=1, keepdims=True)</code></li></ol><div class="why"><code>X.max(axis=1)</code> has shape (100,), which faces the 3 columns: a broadcasting error. Option 2 divides each <i>column</i> by its maximum. With <code>keepdims=True</code> the maxima are (100, 1) and broadcast across each row.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Why does ISLP create <code style="white-space:normal">rng = np.random.default_rng(1303)</code> before generating data?</p><ol class="opts"><li>So that re-running the code gives exactly the same numbers</li><li>To make the numbers more random</li><li>To make the code run faster</li></ol><div class="why">The seed fixes the generator's starting state, so results are reproducible. It does not change the statistical quality of the numbers or the speed.</div></div>
+<div class="q" data-type="num" data-answer="32" data-tol="0"><p class="stem">What is <code>a @ b</code> for <code>a = np.array([1, 2, 3])</code> and <code>b = np.array([4, 5, 6])</code>?</p><div class="why">\(1\cdot4+2\cdot5+3\cdot6=4+10+18=32\).</div></div>
+<div class="q" data-type="num" data-answer="-2" data-tol="0.0001"><p class="stem">What is the determinant of \(\begin{pmatrix}1&2\\3&4\end{pmatrix}\)?</p><div class="why">\(ad-bc=1\cdot4-2\cdot3=4-6=-2\).</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem"><code>X</code> is \(n\times p\) with \(n=200\), \(p=5\). What is the shape of <code>X.T @ X</code>?</p><ol class="opts"><li>(200, 200)</li><li>(5, 5)</li><li>(200, 5)</li></ol><div class="why">(5, 200) @ (200, 5): the inner 200s cancel, leaving (5, 5). <code>X @ X.T</code> would be (200, 200).</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">To solve \(\mathbf A\mathbf v=\mathbf b\) in NumPy, which is preferred?</p><ol class="opts"><li><code>np.linalg.solve(A, b)</code></li><li><code>np.linalg.inv(A) @ b</code></li><li><code>b / A</code></li></ol><div class="why"><code>solve</code> is faster and more accurate. <code>inv</code> works but does more work and amplifies rounding errors. <code>b / A</code> is elementwise division, not a linear solve.</div></div>
+<div class="q" data-type="num" data-answer="5" data-tol="0.0001"><p class="stem">What is <code>np.linalg.norm([3, 4])</code>?</p><div class="why">\(\sqrt{3^2+4^2}=\sqrt{25}=5\).</div></div>
+<div class="q" data-type="open"><p class="stem">Explain in your own words why <code>A[:, None, :] - B[None, :, :]</code> produces every pairwise difference between rows of A and rows of B.</p><div class="model">A becomes (m, 1, d) and B becomes (1, n, d). By the broadcasting rules each size-1 axis stretches, so the result is (m, n, d): position [i, j, :] holds A[i] − B[j]. A's rows are repeated along the new second axis and B's rows along the new first axis, so every row of A meets every row of B exactly once.</div></div>
+</div>
+
+<h3 id="np2-cards">10. Flashcards</h3>
+<div class="cards">
+<div class="fc"><div class="f">The three broadcasting rules?</div><div class="b">Align shapes on the right (pad the shorter with 1s on the left); sizes must be equal or 1; the result takes the larger size, stretching the 1s.</div></div>
+<div class="fc"><div class="f">Result shape of (3, 1) + (1, 4)?</div><div class="b">(3, 4).</div></div>
+<div class="fc"><div class="f">Three ways to turn a length-n vector into an (n, 1) column?</div><div class="b"><code>v[:, None]</code>, <code>v.reshape(-1, 1)</code>, or a reduction with <code>keepdims=True</code>.</div></div>
+<div class="fc"><div class="f">Standardise the columns of X in one line?</div><div class="b"><code style="white-space:normal">(X - X.mean(axis=0)) / X.std(axis=0)</code></div></div>
+<div class="fc"><div class="f">How do you make reproducible random numbers in modern NumPy?</div><div class="b"><code style="white-space:normal">rng = np.random.default_rng(seed)</code>, then <code>rng.normal(...)</code>, <code>rng.uniform(...)</code>, etc.</div></div>
+<div class="fc"><div class="f">In <code>rng.normal(loc, scale, size)</code>, is <code>scale</code> the variance?</div><div class="b">No: it is the standard deviation \(\sigma\).</div></div>
+<div class="fc"><div class="f">A random 70/30 split of n rows?</div><div class="b"><code>p = rng.permutation(n)</code>; train <code>p[:int(0.7*n)]</code>, test the rest.</div></div>
+<div class="fc"><div class="f"><code>A * B</code> vs <code>A @ B</code>?</div><div class="b">Elementwise (with broadcasting) vs matrix product (rows times columns).</div></div>
+<div class="fc"><div class="f">Inverse of \(\begin{pmatrix}a&b\\c&d\end{pmatrix}\)?</div><div class="b">\(\frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}\)</div></div>
+<div class="fc"><div class="f">Least-squares coefficients in one line of NumPy?</div><div class="b"><code style="white-space:normal">np.linalg.lstsq(X, y, rcond=None)[0]</code>, which solves \((\bX\T\bX)\hat\bbeta=\bX\T\by\).</div></div>
+<div class="fc"><div class="f">Shape rule for a matrix product?</div><div class="b">\((m\times k)(k\times n)\to(m\times n)\): the inner sizes must match and disappear.</div></div>
+<div class="fc"><div class="f">All pairwise distances between rows of A (m×d) and B (n×d)?</div><div class="b"><code style="white-space:normal">np.sqrt(((A[:, None, :] - B[None, :, :])**2).sum(-1))</code>, shape (m, n).</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> <span>I can apply the broadcasting rules to any two shapes and explain an error message about them.</span></label>
+<label><input type="checkbox"> <span>I can centre and standardise the columns or rows of a matrix, using <code>keepdims</code> when needed.</span></label>
+<label><input type="checkbox"> <span>I can generate reproducible random data with a seeded generator, and split or bootstrap a dataset with <code>permutation</code> and <code>choice</code>.</span></label>
+<label><input type="checkbox"> <span>I can compute a matrix–vector product by hand and with <code>@</code>, and I never confuse <code>*</code> with <code>@</code>.</span></label>
+<label><input type="checkbox"> <span>I can invert a 2 × 2 matrix by hand, solve a system with <code>np.linalg.solve</code>, and fit a line with <code>lstsq</code>.</span></label>
+<label><input type="checkbox"> <span>I can write a pairwise-distance matrix and k-NN prediction without loops.</span></label>
+</div>
+</section>

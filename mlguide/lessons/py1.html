@@ -1,0 +1,919 @@
+<section class="lesson" id="py1" data-book="Python foundations">
+<style>#py1 code.lc{white-space:normal;overflow-wrap:anywhere}</style>
+<p class="lede">Every model in this course, from a straight-line fit in ISLP to a neural network in PyTorch, is written in Python. This lesson starts from nothing: you will type your first numbers, name them, store them in lists, make decisions, repeat work with loops and package it into functions. By the end you will have written, by yourself, the mean squared error, the number that almost every machine-learning model is trained to make small.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#s0-how">How this guide works</a> <a href="#s0-setup">Set up your Mac</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>run Python code, read its output, and do arithmetic with <code>+ - * / // % **</code> in the right order;</li>
+<li>create variables and explain what <code>=</code> really does (labels on boxes);</li>
+<li>tell apart the four basic types <code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, and convert between them;</li>
+<li>build text with f-strings and format numbers like <code>{x:.2f}</code>;</li>
+<li>make lists, pick items by position (from 0, and from the end with negatives) and cut slices;</li>
+<li>make decisions with <code>if</code> / <code>elif</code> / <code>else</code> and repeat work with <code>for</code> loops and <code>range</code>;</li>
+<li>write your own functions with parameters, default values and <code>return</code>, and import tools from libraries;</li>
+<li>read an error message calmly and fix the code.</li></ul></div>
+
+<div class="callout key"><p><b>How to study this lesson.</b> It is long on purpose: every idea is explained, and every cell's output is explained underneath it. Don't only press Run. <b>Type</b> the small examples yourself into a cell (or into a notebook on your Mac), change one thing, and run again. Programming is learned through the fingers. If you take a break, the lesson remembers your edits. When you come back, press Run on the cells above where you stopped, because Python forgets its variables when the page is reloaded.</p></div>
+
+<h3 id="py1-run">1 · Running code: print, comments and the last line</h3>
+<p>A <dfn data-g="py-program">program</dfn> is a list of instructions that Python carries out one line at a time, from top to bottom. The simplest instruction is <code>print(...)</code>, which shows whatever you put inside the round brackets.</p>
+
+<div class="py" id="c-py1-01"><pre class="src">
+# This line is a comment. Python ignores everything after a # on a line.
+print("Hello, I am learning Python for machine learning.")
+print(2026)
+print("2 + 3 =", 2 + 3)    # print can show several things, separated by commas
+</pre><div class="pynote"><b>Read the output:</b> three lines, one per <code>print</code>. Text in quotes is printed exactly as typed. A number without quotes is printed as a number. In the third line, <code>print</code> received two things separated by a comma: the text <code>"2 + 3 ="</code> and the value of <code>2 + 3</code>, which Python worked out first (5). It put a space between them. <b>Try:</b> add a fourth line that prints your name.</div></div>
+
+<p>There is a second way to see a value in a code cell: if the <b>last line</b> of a cell is just a value (not a <code>print</code>), the cell displays that value. Notebooks on your Mac do exactly the same. It saves typing when you want to look at one thing.</p>
+
+<div class="predict" data-correct="2"><p>This cell has three lines that are just values, and no <code>print</code>. What will it show?</p><ol class="opts"><li><code>10</code>, <code>20</code> and <code>30</code> on three lines</li><li>Only <code>30</code></li><li>Nothing at all</li></ol><div class="why">Only the <b>last</b> line's value is displayed automatically. The first two lines are worked out and then thrown away, because nobody asked to print them. If you want to see several values, use <code>print</code> for each one.</div></div>
+<div class="py" id="c-py1-02"><pre class="src">
+10
+20
+30
+</pre><div class="pynote"><b>Read the output:</b> just <code>30</code>. Rule to remember: <code>print</code> shows things whenever it runs; a bare value shows only if it is on the last line.</div></div>
+
+<h3 id="py1-numbers">2 · Numbers and arithmetic</h3>
+<p>Python is an excellent calculator. Here are the seven arithmetic <dfn data-g="py-operator">operators</dfn> (symbols that combine values):</p>
+<div class="tw"><table class="t"><thead><tr><th>Operator</th><th>Meaning</th><th>Example</th><th>Result</th></tr></thead><tbody>
+<tr><td><code>+</code></td><td>add</td><td><code>7 + 2</code></td><td class="n">9</td></tr>
+<tr><td><code>-</code></td><td>subtract</td><td><code>7 - 2</code></td><td class="n">5</td></tr>
+<tr><td><code>*</code></td><td>multiply (a star, not ×)</td><td><code>7 * 2</code></td><td class="n">14</td></tr>
+<tr><td><code>/</code></td><td>divide, always giving a decimal answer</td><td><code>7 / 2</code></td><td class="n">3.5</td></tr>
+<tr><td><code>//</code></td><td><b>floor division</b>: divide and round <i>down</i> to a whole number</td><td><code>7 // 2</code></td><td class="n">3</td></tr>
+<tr><td><code>%</code></td><td><b>remainder</b> (called <i>modulo</i>): what's left over after <code>//</code></td><td><code>7 % 2</code></td><td class="n">1</td></tr>
+<tr><td><code>**</code></td><td>power: <code>a ** b</code> is \(a^b\)</td><td><code>7 ** 2</code></td><td class="n">49</td></tr>
+</tbody></table></div>
+<p>The pair <code>//</code> and <code>%</code> belong together: 7 sweets shared between 2 children gives each child <code>7 // 2 = 3</code> sweets, and <code>7 % 2 = 1</code> sweet is left over. Check: \(2\times 3 + 1 = 7\). In general, <code>a == (a // b) * b + a % b</code>.</p>
+
+<div class="predict" data-correct="3"><p>What does <code>17 // 5</code> give, and what does <code>17 % 5</code> give?</p><ol class="opts"><li>3.4 and 0.4</li><li>3 and 0.4</li><li>3 and 2</li><li>4 and 3</li></ol><div class="why">17 divided by 5 is 3.4. Floor division keeps only the whole part, <b>3</b>. Then 5 × 3 = 15, and 17 − 15 = <b>2</b> is the remainder. The remainder is a whole amount left over, never a decimal like 0.4 (when you start with whole numbers).</div></div>
+<div class="py" id="c-py1-03"><pre class="src">
+print(17 / 5)
+print(17 // 5)
+print(17 % 5)
+print(2 ** 10)
+print(10 / 2)
+</pre><div class="pynote"><b>Read the output:</b> <code>3.4</code>, <code>3</code>, <code>2</code>, <code>1024</code> and <code>5.0</code>. Look at the last one: <code>10 / 2</code> is <code>5.0</code>, not <code>5</code>. The single slash <code>/</code> <i>always</i> gives a decimal number, even when the division is exact. Section 4 explains why that matters. <b>Try:</b> what is <code>2 ** 0.5</code>? (A power of one half is a square root.)</div></div>
+
+<div class="callout ece"><p><b>You already know <code>%</code>.</b> In DSP, circular convolution and the DFT index samples "modulo \(N\)": sample \(n\) of an \(N\)-periodic signal is sample \(n \bmod N\). In Python that is <code>n % N</code>. For example <code>9 % 8</code> is <code>1</code>: index 9 wraps round to index 1 of an 8-point buffer, exactly like a circular buffer in a DSP chip.</p></div>
+
+<h4 id="py1-precedence">Order of operations (BODMAS)</h4>
+<p>When a line mixes operators, Python follows the order you learned in school as BODMAS: <b>B</b>rackets first, then <b>O</b>rders (powers, <code>**</code>), then <b>D</b>ivision and <b>M</b>ultiplication (<code>/ // % *</code>, left to right), then <b>A</b>ddition and <b>S</b>ubtraction (left to right).</p>
+<div class="worked"><div class="wt">Worked example · <b>how Python reads <code>2 + 3 * 4 ** 2 / 8</code></b></div>
+<div class="given">Find the value of <code>2 + 3 * 4 ** 2 / 8</code>, one operation at a time.</div>
+<ol class="steps">
+<li><div>Powers first: <code>4 ** 2</code> = <span class="hlc">16</span>. The line becomes <code>2 + 3 * 16 / 8</code>.<span class="why">O comes before D, M, A, S.</span></div></li>
+<li><div>Multiplication and division, left to right: <code>3 * 16</code> = <span class="hlb">48</span>, then <code>48 / 8</code> = <span class="hlg">6.0</span>. The line becomes <code>2 + 6.0</code>.<span class="why">Same level, so we go left to right. Division with <code>/</code> gives a decimal.</span></div></li>
+<li><div>Addition last: <code>2 + 6.0</code> = <b>8.0</b>.</div></li>
+</ol>
+<div class="result"><code>2 + 3 * 4 ** 2 / 8</code> = 8.0</div></div>
+
+<div class="py" id="c-py1-04"><pre class="src">
+print(2 + 3 * 4 ** 2 / 8)
+print((2 + 3) * 4)      # brackets change the order
+print(2 + 3 * 4)
+print(-3 ** 2)          # careful: this is -(3 ** 2)
+print((-3) ** 2)
+</pre><div class="pynote"><b>Read the output:</b> <code>8.0</code> matches the worked example. <code>(2 + 3) * 4</code> is <code>20</code> but <code>2 + 3 * 4</code> is <code>14</code>: brackets made the addition happen first. The last two show a trap: <code>-3 ** 2</code> is <code>-9</code>, because the power is done before the minus sign is applied. If you mean "minus three, squared", write <code>(-3) ** 2</code>, which is <code>9</code>. <b>When in doubt, add brackets</b>: they cost nothing and make code easier to read.</div></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>the mean of four marks, by hand and then in Python</b></div>
+<div class="given">Four exam marks: 62, 75, 81, 70. Their mean (average) is the sum divided by how many there are. Write one line of Python for it.</div>
+<ol class="steps">
+<li><div>By hand: \(62+75+81+70 = 288\), and \(288 / 4 = 72\).</div></li>
+<li><div>First attempt in Python: <code>62 + 75 + 81 + 70 / 4</code>. With BODMAS, the division happens first: <code>70 / 4 = 17.5</code>, then <code class="lc">62 + 75 + 81 + 17.5 = 235.5</code>. Wrong!<span class="why">Without brackets only the last mark gets divided.</span></div></li>
+<li><div>Correct: <code>(62 + 75 + 81 + 70) / 4</code>. The brackets make the sum happen first: <code>288 / 4 = 72.0</code>.</div></li>
+</ol>
+<div class="result"><code>(62 + 75 + 81 + 70) / 4</code> = 72.0</div></div>
+
+<h4>Decimals are (very slightly) approximate</h4>
+<p>Numbers with a decimal point are stored in binary with about 16 significant digits, so a few simple decimals can't be stored exactly. One day you'll see this and think something is broken. It isn't:</p>
+<div class="py" id="c-py1-05"><pre class="src">
+print(0.1 + 0.2)
+print(0.1 + 0.2 == 0.3)
+print(round(0.1 + 0.2, 10) == 0.3)
+</pre><div class="pynote"><b>Read the output:</b> <code>0.30000000000000004</code>: the error is in the 17th digit. So asking "is it exactly 0.3?" with <code>==</code> says <code>False</code>. Rounding to 10 decimal places first gives <code>True</code>. In ML code we therefore compare decimals with a small tolerance, never with exact <code>==</code>. (<code>round(x, d)</code> rounds <code>x</code> to <code>d</code> decimal places; <code>==</code> asks "are these equal?" and is explained in section 7.)</div></div>
+<div class="callout ece"><p>This is quantisation error, the same idea as an ADC with a finite number of bits. Python's decimals are IEEE-754 double precision: 53 bits of mantissa, so the relative error is about \(2^{-53}\approx 1.1\times10^{-16}\). Whole numbers (<code>int</code>), on the other hand, are exact and have no maximum size in Python: <code>2 ** 100</code> just works, unlike a 32-bit register.</p></div>
+
+<div class="ex" id="x-py1-01" data-title="minutes and seconds"><div class="task"><p>A training run took <code>t</code> seconds. Complete two small functions: <code>minutes(t)</code> should give the number of <b>whole</b> minutes, and <code>seconds(t)</code> the seconds left over. For example, 200 seconds is 3 minutes and 20 seconds, so <code>minutes(200)</code> is <code>3</code> and <code>seconds(200)</code> is <code>20</code>. (Functions are explained properly in section 9. For now, replace each <code>...</code> with an expression that uses <code>t</code>.)</p></div>
+<pre class="src">
+def minutes(t):
+    return ...
+
+def seconds(t):
+    return ...
+</pre>
+<pre class="check">
+for t, m, s in [(200, 3, 20), (59, 0, 59), (60, 1, 0), (3725, 62, 5)]:
+    assert minutes(t) == m, f"minutes({t}) should be {m}, got {minutes(t)}"
+    assert seconds(t) == s, f"seconds({t}) should be {s}, got {seconds(t)}"
+</pre>
+<div class="hint"><p>One minute is 60 seconds. Which operator gives "how many whole 60s fit into t"? Which gives "what is left over"?</p></div>
+<div class="hint"><p><code>t // 60</code> and <code>t % 60</code>.</p></div>
+<pre class="solution">
+def minutes(t):
+    return t // 60
+
+def seconds(t):
+    return t % 60
+</pre>
+<div class="explain"><p><code>200 // 60</code> is 3 (three whole 60s fit in 200) and <code>200 % 60</code> is 20 (200 − 180). Note that <code>t / 60</code> would give <code>3.333…</code>, which is not "whole minutes". The checks tried edge cases like exactly 60 seconds (1 minute, 0 seconds).</p></div></div>
+
+<h3 id="py1-vars">3 · Variables: giving names to values</h3>
+<p>Typing <code>62 + 75 + 81 + 70</code> every time would be tiring. A <dfn data-g="py-variable">variable</dfn> is a name you give to a value so you can use it later. You create one with a single equals sign:</p>
+<div class="py" id="c-py1-06"><pre class="src">
+total = 62 + 75 + 81 + 70
+count = 4
+mean = total / count
+print(total, count, mean)
+</pre><div class="pynote"><b>Read the output:</b> <code>288 4 72.0</code>. The first line worked out the sum (288) and gave it the name <code>total</code>. The third line looked up <code>total</code> and <code>count</code>, divided, and named the result <code>mean</code>. The <code>=</code> lines print nothing themselves; only <code>print</code> shows anything.</div></div>
+
+<p>Read <code>=</code> out loud as <b>"gets"</b>, not "equals": <i>"total gets 62 plus 75 plus 81 plus 70"</i>. It is an instruction, an <dfn data-g="py-assignment">assignment</dfn>, not a maths equation. Python always does it in two steps:</p>
+<ol><li>work out the value on the <b>right</b>;</li><li>tie the name on the <b>left</b> to that value.</li></ol>
+<p>So <code>x = x + 1</code>, which is nonsense as an equation, makes perfect sense as an instruction: "work out x + 1 using the current x, then let x name the result".</p>
+
+<h4>The mental picture: labels on boxes</h4>
+<p>The best picture for Python is this: values are <b>boxes</b> sitting in the computer's memory, and names are <b>labels</b> (luggage tags) tied to boxes. Assignment ties a label to a box. Two labels can be tied to the same box. Step through the three short programs below, one line at a time, and watch the labels move.</p>
+
+<div class="widget" data-w="py1-boxes" data-title="Names are labels on boxes"><div class="wn">Start with <b>Numbers</b>: before each press of <i>Next line</i>, predict where each label will point. Then do <b>Lists</b>: at step 3 a list changes and <i>both</i> labels see the change. This is the most surprising thing in Python for beginners, and a classic interview question. Finally, <b>A running total</b> shows how a loop builds up a sum; you'll write loops yourself in section 8.</div></div>
+
+<div class="predict" data-correct="1"><p>After these three lines, what is printed?</p><ol class="opts"><li><code>6 5</code></li><li><code>6 6</code></li><li><code>5 5</code></li></ol><div class="why"><code>y = x</code> ties the label <code>y</code> to the box holding 5. Then <code>x = x + 1</code> makes a new box, 6, and moves only the label <code>x</code> to it. <code>y</code> still points at 5. Assignment never changes other names.</div></div>
+<div class="py" id="c-py1-07"><pre class="src">
+x = 5
+y = x
+x = x + 1
+print(x, y)
+</pre><div class="pynote"><b>Read the output:</b> <code>6 5</code>, exactly as the widget showed. <b>Try:</b> add a line <code>y = y * 10</code> before the print and predict the result first.</div></div>
+
+<p>Two short-cuts you'll see everywhere: <code>x += 1</code> means <code>x = x + 1</code>, and similarly <code>-=</code>, <code>*=</code>, <code>/=</code>. And you can't use a name before it has been given a value: Python then stops with a <code>NameError</code>. This cell fails on purpose:</p>
+<div class="py" id="c-py1-08" data-mode="expect-error" data-error="NameError"><pre class="src">
+learning_rate = 0.01
+print(learning_rat)    # a typo: the 'e' is missing
+</pre><div class="pynote"><b>Read the error:</b> the last line says <code class="lc">NameError: name 'learning_rat' is not defined</code>. (In a notebook on your Mac, Python even adds a suggestion: <code>Did you mean: 'learning_rate'?</code>) Fix the typo and run again. NameError almost always means a typo, or a cell above that you haven't run yet.</div></div>
+
+<h4>Rules for names</h4>
+<ul>
+<li>Letters, digits and underscores only, not starting with a digit: <code>mean_mark</code>, <code>x2</code>, <code>y_hat</code> are fine; <code>2x</code>, <code>mean-mark</code>, <code>my mark</code> are not.</li>
+<li>Capital letters matter: <code>Mark</code> and <code>mark</code> are two different names.</li>
+<li>Don't use Python's own words (<code>if</code>, <code>for</code>, <code>def</code>, <code>return</code>, <code>class</code>, <code>in</code>, …), and avoid the names of built-in tools such as <code>sum</code>, <code>len</code>, <code>list</code>, <code>print</code>: if you write <code>sum = 10</code>, the real <code>sum</code> stops working until you restart.</li>
+<li>Choose names that say what the value <i>is</i>: <code>n_samples</code> beats <code>n</code>, and <code>test_error</code> beats <code>e</code>. Python style is lower case with underscores (called <i>snake_case</i>).</li>
+</ul>
+
+<div class="ex" id="x-py1-02" data-title="Celsius to Fahrenheit"><div class="task"><p>Complete <code>to_fahrenheit(c)</code> so it converts a temperature from Celsius to Fahrenheit with the formula \(F = \tfrac{9}{5}C + 32\). Examples: <code>to_fahrenheit(100)</code> → <code>212.0</code>, <code>to_fahrenheit(0)</code> → <code>32.0</code>. Watch the order of operations.</p></div>
+<pre class="src">
+def to_fahrenheit(c):
+    f = ...
+    return f
+</pre>
+<pre class="check">
+for c, f in [(100, 212), (0, 32), (-40, -40), (37, 98.6)]:
+    got = to_fahrenheit(c)
+    assert got is not Ellipsis, "replace the ... with a formula"
+    assert abs(got - f) &lt; 1e-9, f"to_fahrenheit({c}) should be {f}, got {got}"
+</pre>
+<div class="hint"><p>"Nine fifths of C" is <code>9 / 5 * c</code>. Then add 32.</p></div>
+<div class="hint"><p><code>f = 9 / 5 * c + 32</code>. Multiplication and division come before the addition, so no brackets are needed here, but <code>(9 / 5) * c + 32</code> is also fine.</p></div>
+<pre class="solution">
+def to_fahrenheit(c):
+    f = 9 / 5 * c + 32
+    return f
+</pre>
+<div class="explain"><p>For <code>c = 100</code>: <code>9 / 5 = 1.8</code>, <code>1.8 * 100 = 180.0</code>, <code>180.0 + 32 = 212.0</code>. A common mistake is <code>9 / 5 * (c + 32)</code>, which adds 32 too early. The check for 37 °C compares with a tolerance (<code>abs(got - f) &lt; 1e-9</code>: "the difference is tiny") because of the decimal rounding you met in section 2.</p></div></div>
+
+<h3 id="py1-types">4 · Types: what kind of value is it?</h3>
+<p>Every value in Python has a <dfn data-g="py-type">type</dfn>, which decides what you can do with it. You can't divide a word by 2, but you can make it upper case. Four basic types cover almost everything in this lesson:</p>
+<div class="tw"><table class="t"><thead><tr><th>Type</th><th>Name means</th><th>Examples</th><th>Used for</th></tr></thead><tbody>
+<tr><td><code>int</code></td><td><b>int</b>eger: a whole number</td><td><code>0</code>, <code>42</code>, <code>-7</code>, <code>2026</code></td><td>counts, positions, number of epochs</td></tr>
+<tr><td><code>float</code></td><td><b>float</b>ing-point number: has a decimal point</td><td><code>3.5</code>, <code>0.01</code>, <code>-2.0</code>, <code>1e-3</code> (= 0.001)</td><td>measurements, predictions, errors, learning rates</td></tr>
+<tr><td><code>str</code></td><td><b>str</b>ing: text, inside quotes</td><td><code>"Auto"</code>, <code>'horsepower'</code>, <code>"42"</code></td><td>names of columns, files, labels</td></tr>
+<tr><td><code>bool</code></td><td><b>bool</b>ean: yes or no</td><td><code>True</code>, <code>False</code> (capital first letter)</td><td>answers to questions such as "is the error small?"</td></tr>
+</tbody></table></div>
+<p>The tool <code>type(...)</code> tells you the type of any value:</p>
+
+<div class="predict" data-correct="2"><p>What is <code>type(10 / 2)</code>?</p><ol class="opts"><li><code>int</code>, because 10 / 2 is exactly 5</li><li><code>float</code>, because <code>/</code> always gives a float</li><li><code>str</code></li></ol><div class="why">The result of <code>/</code> is always a <code>float</code>, here <code>5.0</code>, even when the division is exact. If you want a whole-number result, use <code>//</code>, or convert with <code>int(...)</code>.</div></div>
+<div class="py" id="c-py1-09"><pre class="src">
+print(type(42))
+print(type(10 / 2))
+print(type("42"))
+print(type(True))
+print(type(3 &gt; 2))
+</pre><div class="pynote"><b>Read the output:</b> <code>&lt;class 'int'&gt;</code>, <code>&lt;class 'float'&gt;</code>, <code>&lt;class 'str'&gt;</code>, <code>&lt;class 'bool'&gt;</code>, <code>&lt;class 'bool'&gt;</code>. ("class" is Python's word for a type; you'll make your own classes in <a href="#py2">Python II</a>.) <code>"42"</code> in quotes is text, not a number: the quotes make all the difference. And <code>3 &gt; 2</code> is a question whose answer, <code>True</code>, is a <code>bool</code>.</div></div>
+
+<h4>Converting between types</h4>
+<p>Each type's name also works as a converter. This matters because data read from files often arrives as text, and you must turn it into numbers before doing maths.</p>
+<div class="py" id="c-py1-10"><pre class="src">
+print(int("42") + 1)       # text to whole number
+print(float("72.5") * 2)   # text to decimal
+print(str(90) + " marks")  # number to text
+print(int(3.9))            # float to int CHOPS OFF the decimals (no rounding)
+print(round(3.9))          # round() rounds to the nearest whole number
+print(round(3.14159, 2))   # ... or to 2 decimal places
+</pre><div class="pynote"><b>Read the output:</b> <code>43</code>, <code>145.0</code>, <code>90 marks</code>, <code>3</code>, <code>4</code>, <code>3.14</code>. Look at <code>int(3.9)</code>: it gives 3, not 4, because <code>int</code> just throws the decimal part away (it truncates towards zero). Use <code>round</code> when you want rounding.</div></div>
+
+<p>Mixing types that don't fit together is an error. The classic beginner one is joining text and a number with <code>+</code>:</p>
+<div class="py" id="c-py1-11" data-mode="expect-error" data-error="TypeError"><pre class="src">
+score = 90
+print("Your score is " + score)
+</pre><div class="pynote"><b>Read the error:</b> <code class="lc">TypeError: can only concatenate str (not "int") to str</code>. Python means: "you asked me to join (<i>concatenate</i>) text with a number, and I don't know whether you want text or maths". Three fixes: <code class="lc">"Your score is " + str(score)</code>, or <code class="lc">print("Your score is", score)</code> with a comma, or (best) an f-string, which comes next.</div></div>
+
+<div class="callout pitfall"><p><b><code>int + float</code> is fine; <code>str + number</code> is not.</b> Python happily mixes the two number types (<code>2 + 0.5</code> is <code>2.5</code>, a float), and <code>True</code> counts as 1 and <code>False</code> as 0 in arithmetic (so <code>True + True</code> is 2, which turns out to be handy for counting). But text and numbers never mix without an explicit conversion.</p></div>
+
+<div class="ex" id="x-py1-03" data-title="text to number"><div class="task"><p>A file gave you a mark as text, for example <code>"72.5"</code>. Fix <code>add_bonus(text, bonus)</code> so it returns the mark as a number plus the bonus. Example: <code>add_bonus("72.5", 10)</code> → <code>82.5</code>.</p></div>
+<pre class="src">
+def add_bonus(text, bonus):
+    return text + bonus
+</pre>
+<pre class="check">
+assert add_bonus("72.5", 10) == 82.5, f"add_bonus('72.5', 10) should be 82.5, got {add_bonus('72.5', 10)!r}"
+assert add_bonus("60", 0.5) == 60.5, "should work for whole-number text too"
+assert type(add_bonus("1", 1)) is float, "the result should be a float"
+</pre>
+<div class="hint"><p>Right now Python tries to add a number to a string. Convert the text first.</p></div>
+<div class="hint"><p><code>float(text)</code> turns <code>"72.5"</code> into <code>72.5</code>.</p></div>
+<pre class="solution">
+def add_bonus(text, bonus):
+    return float(text) + bonus
+</pre>
+<div class="explain"><p><code>float("72.5")</code> is the number 72.5, and 72.5 + 10 = 82.5. We used <code>float</code> rather than <code>int</code> because marks can have decimals; <code>int("72.5")</code> would even be an error, since that text isn't a whole number.</p></div></div>
+
+<h3 id="py1-strings">5 · Strings: working with text</h3>
+<p>A string is text inside quotes. Single <code>'…'</code> or double <code>"…"</code> quotes both work; pick one and be consistent. Use double quotes when the text contains an apostrophe: <code>"It's working"</code>.</p>
+<div class="py" id="c-py1-12"><pre class="src">
+name = "Linear Regression"
+print(len(name))          # number of characters, spaces included
+print(name + "!")         # + joins strings
+print("ab" * 3)           # * repeats a string
+print(name[0], name[-1])  # first and last character
+print(name.upper())
+print(name.lower())
+print(name.replace("Linear", "Logistic"))
+</pre><div class="pynote"><b>Read the output:</b> <code>17</code> characters (6 + 1 space + 10). Joining gives <code>Linear Regression!</code>; <code>"ab" * 3</code> is <code>ababab</code>. <code>name[0]</code> is <code>L</code>: positions start at <b>0</b> (section 6 explains this with lists). <code>name[-1]</code>, position −1, means the last character, <code>n</code>. Then three <b>methods</b>.</div></div>
+
+<p>A <dfn data-g="py-method">method</dfn> is a tool that belongs to a value, called with a dot: <code>value.method(...)</code>. Read <code>name.upper()</code> as "name, give me your upper-case version". The brackets are needed even when empty: they mean "do it now". String methods never change the original string; they give back a new one (strings can't be changed in place). The most useful ones:</p>
+<div class="tw"><table class="t"><thead><tr><th>Method</th><th>What it gives back</th><th>Example → result</th></tr></thead><tbody>
+<tr><td><code>.upper()</code>, <code>.lower()</code>, <code>.title()</code></td><td>the text in upper / lower / Title Case</td><td><code>"auto mpg".title()</code> → <code>'Auto Mpg'</code></td></tr>
+<tr><td><code>.strip()</code></td><td>the text without spaces (and newlines) at both ends</td><td><code>"  42 \n".strip()</code> → <code>'42'</code></td></tr>
+<tr><td><code>.replace(a, b)</code></td><td>every <code>a</code> replaced by <code>b</code></td><td><code>"3,5".replace(",", ".")</code> → <code>'3.5'</code></td></tr>
+<tr><td><code>.split(sep)</code></td><td>a <b>list</b> of pieces, cut at every <code>sep</code></td><td><code>"mpg,weight".split(",")</code> → <code>['mpg', 'weight']</code></td></tr>
+<tr><td><code>.startswith(s)</code>, <code>.endswith(s)</code></td><td><code>True</code> or <code>False</code></td><td><code class="lc">"data.csv".endswith(".csv")</code> → <code>True</code></td></tr>
+<tr><td><code>sep.join(list)</code></td><td>the pieces glued with <code>sep</code> between them</td><td><code>" + ".join(["a", "b"])</code> → <code>'a + b'</code></td></tr>
+</tbody></table></div>
+
+<div class="predict" data-correct="3"><p>A line from a data file is <code>"  62,75,81 "</code>. What does <code>line.strip().split(",")</code> give?</p><ol class="opts"><li><code>[62, 75, 81]</code></li><li><code>'62 75 81'</code></li><li><code>['62', '75', '81']</code></li><li>an error, because you can't use two methods in a row</li></ol><div class="why"><code>.strip()</code> removes the spaces at the ends, giving <code>'62,75,81'</code>. Then <code>.split(",")</code> cuts it at the commas into a list of three <b>strings</b>. They are still text (note the quotes), not numbers; you'd convert each with <code>int</code>. Chaining methods is fine: each one works on the result of the previous one, left to right.</div></div>
+<div class="py" id="c-py1-13"><pre class="src">
+line = "  62,75,81 "
+parts = line.strip().split(",")
+print(parts)
+print(int(parts[0]) + int(parts[1]) + int(parts[2]))
+</pre><div class="pynote"><b>Read the output:</b> <code>['62', '75', '81']</code>, then <code>218</code>. Reading a CSV ("comma-separated values") file by hand is exactly this: strip, split, convert. pandas will do it for you later, and now you know what it's doing.</div></div>
+
+<h4 id="py1-fstrings">f-strings: putting values inside text</h4>
+<p>An <dfn data-g="py-fstring">f-string</dfn> is a string with the letter <code>f</code> just before the opening quote. Inside it, anything in curly braces <code>{…}</code> is worked out and its value is put into the text. It is the cleanest way to print results.</p>
+<div class="py" id="c-py1-14"><pre class="src">
+model = "linear regression"
+mse = 0.416666667
+accuracy = 0.8534
+n = 1234567
+print(f"The {model} model has MSE {mse}")
+print(f"MSE to 2 decimals: {mse:.2f}")
+print(f"Accuracy: {accuracy:.1%}")
+print(f"Samples: {n:,}")
+print(f"[{model:&gt;20}]")      # right-aligned in 20 characters
+print(f"2 + 3 = {2 + 3}")     # any expression works inside the braces
+</pre><div class="pynote"><b>Read the output:</b> the first line puts both values in as they are. After a colon inside the braces comes a <b>format spec</b>: <code>:.2f</code> means "as a <b>f</b>ixed-point decimal with <b>2</b> digits after the point" → <code>0.42</code> (rounded). <code>:.1%</code> multiplies by 100 and adds a percent sign, with 1 decimal → <code>85.3%</code>. <code>:,</code> adds thousands separators → <code>1,234,567</code>. <code>:&gt;20</code> right-aligns in a space 20 characters wide (<code>&lt;</code> is left, <code>^</code> centre), which makes neat tables. <b>Try:</b> change <code>.2f</code> to <code>.4f</code> and to <code>.0f</code>.</div></div>
+
+<div class="symbols"><div class="row h"><span>Format spec</span><span>Say it as</span><span>Example</span></div>
+<div class="row"><span class="s"><code>{x:.2f}</code></span><span>x as a decimal with 2 places</span><span class="eg"><code>3.14159</code> → <code>3.14</code></span></div>
+<div class="row"><span class="s"><code>{x:.3e}</code></span><span>x in scientific notation, 3 places</span><span class="eg"><code>0.000123</code> → <code>1.230e-04</code></span></div>
+<div class="row"><span class="s"><code>{x:.1%}</code></span><span>x as a percentage, 1 place</span><span class="eg"><code>0.8534</code> → <code>85.3%</code></span></div>
+<div class="row"><span class="s"><code>{x:,}</code></span><span>with thousands commas</span><span class="eg"><code>50000</code> → <code>50,000</code></span></div>
+<div class="row"><span class="s"><code>{x:8.2f}</code></span><span>2 places, padded to 8 characters wide</span><span class="eg"><code>3.14159</code> → <code>'    3.14'</code></span></div>
+</div>
+
+<div class="ex" id="x-py1-04" data-title="a results line with an f-string"><div class="task"><p>Complete <code>report(name, score)</code> so it returns text like <code>"Asha scored 87.5%"</code>: the name, the word "scored", the score with <b>one</b> decimal place, then a percent sign. The score is already out of 100 (87.456 means 87.456%), so don't use the <code>%</code> format spec, which would multiply by 100. Example: <code>report("Asha", 87.456)</code> → <code>"Asha scored 87.5%"</code>.</p></div>
+<pre class="src">
+def report(name, score):
+    return "..."
+</pre>
+<pre class="check">
+assert report("Asha", 87.456) == "Asha scored 87.5%", f"got {report('Asha', 87.456)!r}"
+assert report("Ben", 90) == "Ben scored 90.0%", f"got {report('Ben', 90)!r} (whole numbers need .0 too)"
+assert report("Chen", 3.25) in ("Chen scored 3.2%", "Chen scored 3.3%"), f"got {report('Chen', 3.25)!r}"
+</pre>
+<div class="hint"><p>Start with <code>f"{name} scored ..."</code>. Which format spec gives one decimal place?</p></div>
+<div class="hint"><p><code>{score:.1f}</code>, followed by a plain <code>%</code> character in the text.</p></div>
+<pre class="solution">
+def report(name, score):
+    return f"{name} scored {score:.1f}%"
+</pre>
+<div class="explain"><p>The braces put in <code>name</code> as it is and <code>score</code> formatted with one decimal. The <code>%</code> after the closing brace is just an ordinary character in the text. The check for 90 shows why <code>.1f</code> is better than <code>round(score, 1)</code>: it always shows exactly one decimal (<code>90.0</code>).</p></div></div>
+
+<div class="ex" id="x-py1-05" data-title="clean up a name"><div class="task"><p>Names typed by people are messy. Complete <code>clean_name(s)</code> so it removes spaces at both ends and puts each word in Title Case. Example: <code>clean_name("  asha RAO ")</code> → <code>"Asha Rao"</code>.</p></div>
+<pre class="src">
+def clean_name(s):
+    return s
+</pre>
+<pre class="check">
+assert clean_name("  asha RAO ") == "Asha Rao", f"got {clean_name('  asha RAO ')!r}"
+assert clean_name("ben") == "Ben", f"got {clean_name('ben')!r}"
+assert clean_name("\tCHEN li\n") == "Chen Li", "tabs (\\t) and newlines (\\n) count as spaces for strip()"
+</pre>
+<div class="hint"><p>Two methods from the table, one after the other.</p></div>
+<div class="hint"><p><code>s.strip().title()</code></p></div>
+<pre class="solution">
+def clean_name(s):
+    return s.strip().title()
+</pre>
+<div class="explain"><p><code>.strip()</code> removes the whitespace at the ends (spaces, tabs <code>\t</code>, newlines <code>\n</code>), then <code>.title()</code> makes the first letter of each word upper case and the rest lower case. Strip-first is the habit to build.</p></div></div>
+
+<h3 id="py1-lists">6 · Lists: many values under one name</h3>
+<p>Machine learning is about <i>many</i> numbers: a column of house prices, a row of pixel values, a set of predictions. A <dfn data-g="py-list">list</dfn> holds many values in order, under one name. Write it with square brackets and commas:</p>
+<div class="py" id="c-py1-15"><pre class="src">
+marks = [62, 75, 81, 70, 90, 55, 68]
+print(marks)
+print(len(marks))                 # how many items
+print(sum(marks), min(marks), max(marks))
+print(sum(marks) / len(marks))    # the mean, for any number of marks
+</pre><div class="pynote"><b>Read the output:</b> the list itself; <code>len</code> (length) is <code>7</code>; the sum is <code>501</code>, the smallest <code>55</code> and the largest <code>90</code>; the mean is <code class="lc">501 / 7 = 71.57142857142857</code>. The last line works unchanged whether there are 7 marks or 7 million: that is why we use lists.</div></div>
+
+<h4 id="py1-index">Positions start at 0</h4>
+<p>Each item has a position, called its <dfn data-g="py-index">index</dfn>. Python counts positions from <b>0</b>, so the first item is <code>marks[0]</code> and the last of 7 is <code>marks[6]</code>. Think of the index as "how many steps from the start": the first item is zero steps in. Negative indices count from the end: <code>marks[-1]</code> is the last item, <code>marks[-2]</code> the one before it.</p>
+<div class="tw"><table class="t"><thead><tr><th>item</th><th class="n">62</th><th class="n">75</th><th class="n">81</th><th class="n">70</th><th class="n">90</th><th class="n">55</th><th class="n">68</th></tr></thead><tbody>
+<tr><td>index from the start</td><td class="n">0</td><td class="n">1</td><td class="n">2</td><td class="n">3</td><td class="n">4</td><td class="n">5</td><td class="n">6</td></tr>
+<tr><td>index from the end</td><td class="n">−7</td><td class="n">−6</td><td class="n">−5</td><td class="n">−4</td><td class="n">−3</td><td class="n">−2</td><td class="n">−1</td></tr>
+</tbody></table></div>
+<p>For any item, <i>negative index = positive index − length</i>. For 68: \(6 - 7 = -1\).</p>
+
+<h4 id="py1-slices">Slices: cutting out a piece</h4>
+<p>A <dfn data-g="py-slice">slice</dfn> picks out a run of items: <code>marks[start:stop]</code> gives the items from position <code>start</code> up to <b>but not including</b> position <code>stop</code>. The best picture: the indices are <b>fence posts between the boxes</b>, and a slice cuts at two posts. <code>marks[1:4]</code> cuts at post 1 and post 4, giving the three boxes in between: <code>[75, 81, 70]</code>. A handy fact follows: a slice <code>[a:b]</code> has <code>b − a</code> items.</p>
+<ul>
+<li>Leave out <code>start</code> to begin at the start: <code>marks[:3]</code> is the first three, <code>[62, 75, 81]</code>.</li>
+<li>Leave out <code>stop</code> to go to the end: <code>marks[3:]</code> is everything from position 3, <code>[70, 90, 55, 68]</code>. Together, <code>marks[:3] + marks[3:]</code> is the whole list again.</li>
+<li>A third number is the <b>step</b>: <code>marks[::2]</code> takes every second item, <code>[62, 81, 90, 68]</code>. A step of <code>-1</code> walks backwards: <code>marks[::-1]</code> is the list reversed.</li>
+</ul>
+
+<div class="widget" data-w="py1-slice" data-title="Index and slice explorer" data-args='{"values":[62,75,81,70,90,55,68],"name":"marks","mode":"slice","start":1,"stop":4}'><div class="wn">Blue numbers above the boxes are positions from the start; orange ones below are positions from the end. In <b>slice</b> mode the green line is the start fence post and the dashed red line the stop post: everything between them is taken. Try: (1) <code>[1:4]</code>, then tick "leave it out" for start, then for stop; (2) start −3 with stop left out (the last three); (3) step 2, then step −1 with start and stop left out; (4) start 5, stop 2: an empty list, not an error. Then switch to <b>One item</b> and drag <code>i</code> to 7: that's an <code>IndexError</code>.</div></div>
+
+<div class="predict" data-correct="4"><p><code class="lc">marks = [62, 75, 81, 70, 90, 55, 68]</code>. What is <code>marks[-3:]</code>?</p><ol class="opts"><li><code>[81, 75, 62]</code></li><li><code>[55]</code></li><li><code>[62, 75, 81]</code></li><li><code>[90, 55, 68]</code></li></ol><div class="why">Start at position −3 (that's 90, third from the end) and go to the end: <code>[90, 55, 68]</code>, the <b>last three</b>. <code>[62, 75, 81]</code> is <code>marks[:3]</code>, the first three. A slice never reverses unless the step is negative.</div></div>
+<div class="py" id="c-py1-16"><pre class="src">
+marks = [62, 75, 81, 70, 90, 55, 68]
+print(marks[-3:])
+print(marks[1:4])
+print(marks[:3] + marks[3:])
+print(marks[::2])
+print(marks[::-1])
+print(marks[5:2])      # start after stop: empty, not an error
+</pre><div class="pynote"><b>Read the output:</b> each line matches the explanation above. The last one is <code>[]</code>, an <b>empty list</b>: a slice that contains nothing quietly gives nothing. In contrast, asking for a single position that doesn't exist is an error, as the next cell shows.</div></div>
+
+<div class="py" id="c-py1-17" data-mode="expect-error" data-error="IndexError"><pre class="src">
+marks = [62, 75, 81, 70, 90, 55, 68]
+print(marks[7])
+</pre><div class="pynote"><b>Read the error:</b> <code class="lc">IndexError: list index out of range</code>. A list of length 7 has positions 0 to 6. "Off by one" mistakes like this are the most common bug in all programming, so whenever you see IndexError, check whether you started counting at 1 instead of 0. Fix it to <code>marks[6]</code> or <code>marks[-1]</code>.</div></div>
+
+<h4>Changing a list</h4>
+<p>Unlike strings, lists can be changed in place: you can replace an item, add items, remove them.</p>
+<div class="py" id="c-py1-18"><pre class="src">
+marks = [62, 75, 81]
+marks[0] = 64            # replace the item at position 0
+marks.append(70)         # add one item at the end
+print(marks)
+print(75 in marks, 99 in marks)   # is this value somewhere in the list?
+print(sorted(marks))     # a NEW sorted list; marks itself is unchanged
+print(marks)
+empty = []               # an empty list, to fill later
+empty.append(3.5)
+print(empty, len(empty))
+</pre><div class="pynote"><b>Read the output:</b> <code>[64, 75, 81, 70]</code>: the first mark was replaced and 70 was added at the end. <code>in</code> answers "is it in there?" → <code>True False</code>. <code>sorted(...)</code> gives back a new list in increasing order and leaves the original alone. Starting from <code>[]</code> and appending is a pattern you'll use constantly: start empty, add one result per loop.</div></div>
+
+<div class="callout exam"><p><b>Classic interview question:</b> "After <code>a = [1, 2]</code>, <code>b = a</code>, <code>b.append(3)</code>, what is <code>a</code>?" Answer: <code>[1, 2, 3]</code>, because <code>b = a</code> ties a second label to the <i>same</i> list (step through "Lists" in the labels widget above). Use <code>b = a.copy()</code> (or <code>a[:]</code>) when you need an independent list. The same idea comes back with NumPy arrays and PyTorch tensors, where it causes real bugs.</p></div>
+
+<h4 id="py1-nested">Lists of lists: a table</h4>
+<p>A list can hold anything, including other lists. A list of rows is the simplest way to store a table, and it is how you should picture a matrix:</p>
+<div class="py" id="c-py1-19"><pre class="src">
+# each row: [TV budget, radio budget, sales]  (first rows of the Advertising data)
+ads = [[230.1, 37.8, 22.1],
+       [44.5, 39.3, 10.4],
+       [17.2, 45.9, 9.3]]
+print(len(ads))        # number of rows
+print(ads[1])          # the whole second row
+print(ads[1][2])       # row 1, then position 2 inside that row
+print(ads[0][0] + ads[1][0] + ads[2][0])   # total TV budget
+</pre><div class="pynote"><b>Read the output:</b> 3 rows; row 1 is <code>[44.5, 39.3, 10.4]</code>; <code>ads[1][2]</code> reads left to right: first <code>ads[1]</code> gives the row, then <code>[2]</code> picks position 2 in it, <code>10.4</code> (sales). The TV total is <code>291.8</code>. Adding by hand like this doesn't scale; loops (section 8) and NumPy (<a href="#np1">NumPy I</a>) fix that.</div></div>
+
+<div class="ex" id="x-py1-06" data-title="the last three"><div class="task"><p>Complete <code>last_three(xs)</code> so it returns a list of the last three items of <code>xs</code>. If <code>xs</code> has fewer than three items, return all of them. Examples: <code class="lc">last_three([62, 75, 81, 70, 90])</code> → <code>[81, 70, 90]</code>; <code>last_three([1, 2])</code> → <code>[1, 2]</code>.</p></div>
+<pre class="src">
+def last_three(xs):
+    return xs[0]
+</pre>
+<pre class="check">
+assert last_three([62, 75, 81, 70, 90]) == [81, 70, 90], f"got {last_three([62, 75, 81, 70, 90])}"
+assert last_three([1, 2]) == [1, 2], f"for a short list, return everything; got {last_three([1, 2])}"
+assert last_three([5, 6, 7]) == [5, 6, 7]
+assert last_three([]) == [], "an empty list should give an empty list"
+</pre>
+<div class="hint"><p>Use a slice with a negative start and no stop.</p></div>
+<div class="hint"><p><code>xs[-3:]</code>. For short lists, slices don't complain: they just take what exists.</p></div>
+<pre class="solution">
+def last_three(xs):
+    return xs[-3:]
+</pre>
+<div class="explain"><p><code>-3</code> means "three from the end", and leaving out the stop means "to the end". For <code>[1, 2]</code>, position −3 would be before the start, so Python clips it to 0 and returns <code>[1, 2]</code>. That forgiving behaviour is special to slices; <code>xs[-3]</code> alone would be an IndexError.</p></div></div>
+
+<div class="ex" id="x-py1-07" data-title="drop the first and the last"><div class="task"><p>When you smooth a signal, the first and last samples often have to be dropped. Complete <code>middle(xs)</code> so it returns every item except the first and the last. Example: <code>middle([3, 1, 4, 1, 5])</code> → <code>[1, 4, 1]</code>.</p></div>
+<pre class="src">
+def middle(xs):
+    return xs
+</pre>
+<pre class="check">
+assert middle([3, 1, 4, 1, 5]) == [1, 4, 1], f"got {middle([3, 1, 4, 1, 5])}"
+assert middle([10, 20]) == [], f"two items leave nothing in the middle; got {middle([10, 20])}"
+assert middle(list(range(10))) == [1, 2, 3, 4, 5, 6, 7, 8]
+</pre>
+<div class="hint"><p>Start at position 1 (the second item). Stop just before the last item, whose position from the end is −1.</p></div>
+<div class="hint"><p><code>xs[1:-1]</code></p></div>
+<pre class="solution">
+def middle(xs):
+    return xs[1:-1]
+</pre>
+<div class="explain"><p>The slice starts at fence post 1 (after the first box) and stops at fence post −1 (before the last box). For a 5-item list that is <code>xs[1:4]</code>, three items, which is 4 − 1 = 3 as promised. (<code>list(range(10))</code> in the check is the list 0 to 9; <code>range</code> is in section 8.)</p></div></div>
+
+<div class="ex" id="x-py1-08" data-title="the mean of a list"><div class="task"><p>Complete <code>mean(xs)</code> so it returns the average of the numbers in the list <code>xs</code> (assume the list isn't empty). Example: <code>mean([62, 75, 81, 70])</code> → <code>72.0</code>.</p></div>
+<pre class="src">
+def mean(xs):
+    return ...
+</pre>
+<pre class="check">
+import statistics
+assert mean([62, 75, 81, 70]) == 72.0, f"mean([62, 75, 81, 70]) should be 72.0, got {mean([62, 75, 81, 70])}"
+for xs in [[1], [1, 2], [2.5, 3.5, -1.0], list(range(100))]:
+    assert abs(mean(xs) - statistics.mean(xs)) &lt; 1e-12, f"mean({xs}) should be {statistics.mean(xs)}, got {mean(xs)}"
+</pre>
+<div class="hint"><p>You need two built-in tools: one adds up a list, one counts its items.</p></div>
+<div class="hint"><p><code>sum(xs) / len(xs)</code></p></div>
+<pre class="solution">
+def mean(xs):
+    return sum(xs) / len(xs)
+</pre>
+<div class="explain"><p>This is the formula \(\bar{x} = \frac{1}{n}\sum_{i=1}^{n} x_i\) in one line: <code>sum(xs)</code> is \(\sum x_i\) and <code>len(xs)</code> is \(n\). The check compares your answer with Python's own <code>statistics.mean</code> on several lists, including a list of length 1.</p></div></div>
+
+<h3 id="py1-if">7 · Comparisons and decisions</h3>
+<p>Programs need to make decisions: "if the error is still large, keep training". Decisions are built from <b>comparisons</b>, questions whose answer is <code>True</code> or <code>False</code>:</p>
+<div class="tw"><table class="t"><thead><tr><th>Write</th><th>Asks</th><th>Example → result</th></tr></thead><tbody>
+<tr><td><code>a == b</code></td><td>is a equal to b? (<b>two</b> equals signs)</td><td><code>3 == 3.0</code> → <code>True</code></td></tr>
+<tr><td><code>a != b</code></td><td>is a different from b?</td><td><code>"cat" != "Cat"</code> → <code>True</code></td></tr>
+<tr><td><code>a &lt; b</code>, <code>a &lt;= b</code></td><td>less than; less than or equal to</td><td><code>40 &lt;= 40</code> → <code>True</code></td></tr>
+<tr><td><code>a &gt; b</code>, <code>a &gt;= b</code></td><td>greater than; greater than or equal to</td><td><code>39.5 &gt; 40</code> → <code>False</code></td></tr>
+<tr><td><code>lo &lt;= x &lt;= hi</code></td><td>is x between lo and hi (inclusive)?</td><td><code>0 &lt;= 0.7 &lt;= 1</code> → <code>True</code></td></tr>
+</tbody></table></div>
+<p>Combine questions with the words <code>and</code> (both must be true), <code>or</code> (at least one must be true) and <code>not</code> (flips True and False). Example: <code class="lc">mark &gt;= 40 and attendance &gt;= 0.75</code>.</p>
+<div class="callout pitfall"><p><b><code>=</code> versus <code>==</code>.</b> One equals sign <i>assigns</i> (x gets 5). Two equals signs <i>ask</i> (is x equal to 5?). Writing <code>if x = 5:</code> is a SyntaxError, which is lucky: Python catches the mix-up for you.</p></div>
+
+<h4>if, elif, else</h4>
+<p>An <code>if</code> statement runs a block of code only when a condition is true:</p>
+<div class="py" id="c-py1-20"><pre class="src">
+error = 0.8
+if error &gt; 0.5:
+    print("Error is large: keep training.")
+    print("(this line is also inside the if)")
+print("This line always runs.")
+</pre><div class="pynote"><b>Read the output:</b> all three lines, because 0.8 &gt; 0.5 is True. Change <code>error</code> to <code>0.2</code> and run again: only the last line prints. Two pieces of grammar matter: the <b>colon</b> <code>:</code> at the end of the <code>if</code> line, and the <b>indentation</b> (4 spaces) of the lines that belong to the <code>if</code>. The first line that isn't indented is outside the <code>if</code> and always runs.</div></div>
+
+<p><b>Indentation is grammar in Python.</b> Other languages use curly brackets to group lines; Python uses the spaces at the start of the line. All lines in a block must be indented by the same amount, normally 4 spaces (pressing <kbd class="k">Tab</kbd> in a code cell or in VS Code inserts 4 spaces). A block is always introduced by a line ending in a colon.</p>
+
+<p>For more than two cases, chain conditions with <code>elif</code> ("else if") and finish with <code>else</code> ("in every other case"). Python checks the conditions <b>from the top</b> and runs only the <b>first</b> block whose condition is true:</p>
+<div class="predict" data-correct="2"><p>With <code>mark = 78</code>, what does this print?</p><ol class="opts"><li><code>distinction</code> and then <code>first class</code></li><li><code>distinction</code> only</li><li><code>first class</code> only</li></ol><div class="why">78 &gt;= 75 is True, so the first block runs and Python skips <b>all</b> the remaining <code>elif</code>/<code>else</code> branches, even though 78 &gt;= 60 is also true. Only one branch of an if/elif/else chain ever runs. That's why we test the highest threshold first.</div></div>
+<div class="py" id="c-py1-21"><pre class="src">
+mark = 78
+if mark &gt;= 75:
+    print("distinction")
+elif mark &gt;= 60:
+    print("first class")
+elif mark &gt;= 40:
+    print("pass")
+else:
+    print("fail")
+</pre><div class="pynote"><b>Read the output:</b> <code>distinction</code>. Try <code>mark = 60</code> (exactly on the boundary: <code>&gt;=</code> includes it, so "first class"), then <code>39.5</code> ("fail"). <b>Try:</b> swap the order so the <code>&gt;= 40</code> test comes first, and see why the order matters.</div></div>
+
+<div class="ex" id="x-py1-09" data-title="grade a mark"><div class="task"><p>Complete <code>grade(mark)</code> so it <b>returns</b> (not prints) the text <code>"distinction"</code> for 75 and above, <code>"first class"</code> for 60 up to (not including) 75, <code>"pass"</code> for 40 up to 60, and <code>"fail"</code> below 40.</p></div>
+<pre class="src">
+def grade(mark):
+    if mark &gt;= 75:
+        return "distinction"
+    # add the other cases here
+</pre>
+<pre class="check">
+cases = [(90, "distinction"), (75, "distinction"), (74.9, "first class"), (60, "first class"),
+         (59, "pass"), (40, "pass"), (39.99, "fail"), (0, "fail")]
+for m, g in cases:
+    assert grade(m) == g, f"grade({m}) should be {g!r}, got {grade(m)!r}"
+</pre>
+<div class="hint"><p>Add <code>elif mark &gt;= 60:</code> with its own <code>return</code>, then another <code>elif</code>, then <code>else:</code>. Keep them at the same indentation as the first <code>if</code>.</p></div>
+<div class="hint"><p>Once a <code>return</code> runs, the function stops, so each case only needs to check its lower boundary.</p></div>
+<pre class="solution">
+def grade(mark):
+    if mark &gt;= 75:
+        return "distinction"
+    elif mark &gt;= 60:
+        return "first class"
+    elif mark &gt;= 40:
+        return "pass"
+    else:
+        return "fail"
+</pre>
+<div class="explain"><p>Testing from the highest threshold downward means each <code>elif</code> already knows the mark is below the previous threshold, so <code>mark &gt;= 60</code> really means "60 to 74.99…". The checks test every boundary (75, 60, 40) and just below each, because boundaries are exactly where bugs hide.</p></div></div>
+
+<h3 id="py1-loops">8 · Repeating work: for loops and range</h3>
+<p>A <dfn data-g="py-loop">for loop</dfn> repeats a block of code once for every item in a list. In plain words: "for each mark in the list of marks, do this".</p>
+<div class="py" id="c-py1-22"><pre class="src">
+marks = [62, 75, 81]
+for m in marks:
+    print("This mark is", m, "and its square is", m ** 2)
+print("Done")
+</pre><div class="pynote"><b>Read the output:</b> three lines, one per mark, then <code>Done</code> once. On each trip round the loop, the name <code>m</code> is tied to the next item (62, then 75, then 81) and the indented block runs with that value. <code>m</code> is a name you choose: <code>for mark in marks:</code> works just as well. Same grammar as <code>if</code>: a colon, then an indented block.</div></div>
+
+<h4>The accumulator pattern</h4>
+<p>The most important loop pattern in ML code is the <b>running total</b>: start a variable at 0 before the loop, add to it inside the loop, use it after the loop. You saw it in the labels widget ("A running total"). Here is how it works, the way <code>sum()</code> does it inside:</p>
+<div class="worked"><div class="wt">Worked example · <b>a trace table for a running total</b></div>
+<div class="given"><code>total = 0</code>, then <code class="lc">for m in [62, 75, 81]: total = total + m</code>. Track every value.</div>
+<div class="tw"><table class="t"><thead><tr><th>trip</th><th>m</th><th>total before</th><th>total + m</th><th>total after</th></tr></thead><tbody>
+<tr><td>(start)</td><td>–</td><td>–</td><td>–</td><td class="n">0</td></tr>
+<tr><td class="n">1</td><td class="n">62</td><td class="n">0</td><td class="n">0 + 62</td><td class="n">62</td></tr>
+<tr><td class="n">2</td><td class="n">75</td><td class="n">62</td><td class="n">62 + 75</td><td class="n">137</td></tr>
+<tr><td class="n">3</td><td class="n">81</td><td class="n">137</td><td class="n">137 + 81</td><td class="n">218</td></tr>
+</tbody></table></div>
+<div class="result">After the loop, <code>total</code> = 218 and the mean is 218 / 3 = 72.67</div></div>
+<p>Writing a trace table like this by hand, on paper, is the most reliable way to understand any loop. Professionals still do it when code surprises them.</p>
+
+<h4 id="py1-range">range: counting with a loop</h4>
+<p><code>range</code> produces a sequence of whole numbers to loop over. Like slices, it stops <b>before</b> the stop value:</p>
+<div class="tw"><table class="t"><thead><tr><th>Write</th><th>Gives</th><th>Read as</th></tr></thead><tbody>
+<tr><td><code>range(5)</code></td><td>0, 1, 2, 3, 4</td><td>five numbers, starting from 0</td></tr>
+<tr><td><code>range(1, 6)</code></td><td>1, 2, 3, 4, 5</td><td>from 1 up to (not including) 6</td></tr>
+<tr><td><code>range(0, 10, 2)</code></td><td>0, 2, 4, 6, 8</td><td>from 0 to 10, in steps of 2</td></tr>
+<tr><td><code>range(5, 0, -1)</code></td><td>5, 4, 3, 2, 1</td><td>counting down</td></tr>
+</tbody></table></div>
+
+<div class="predict" data-correct="3"><p>How many lines does this loop print?</p><ol class="opts"><li>3</li><li>4</li><li>5</li><li>6</li></ol><div class="why"><code>range(1, 6)</code> is 1, 2, 3, 4, 5: five numbers. It starts at 1 and stops <i>before</i> 6. Quick count: stop − start = 6 − 1 = 5, the same rule as for slices.</div></div>
+<div class="py" id="c-py1-23"><pre class="src">
+for epoch in range(1, 6):
+    print(f"epoch {epoch}: learning rate {0.1 / epoch:.3f}")
+print(list(range(0, 10, 2)))
+</pre><div class="pynote"><b>Read the output:</b> five lines for epochs 1 to 5, each with a learning rate that shrinks as 0.1 / epoch (0.100, 0.050, 0.033, 0.025, 0.020). An <b>epoch</b> is one pass through the training data; you'll meet the word properly in the Prince lessons. <code>list(range(...))</code> turns the range into a list so you can see all of it at once: <code>[0, 2, 4, 6, 8]</code>.</div></div>
+
+<p>The most useful <code>range</code> of all is <code>range(len(xs))</code>: it gives every valid index of a list, 0 to <code>len(xs) - 1</code>. You need it when you walk through <b>two lists side by side</b>, such as true values and predictions:</p>
+<div class="worked"><div class="wt">Worked example · <b>squared errors, the heart of regression</b></div>
+<div class="given">True values \(y = (3,\ 5,\ 7)\). A model predicted \(\hat y = (2.5,\ 5,\ 8)\) (\(\hat y\) is read <i>y-hat</i>: our guess for \(y\)). The <b>error</b> (or residual) for item \(i\) is \(y_i - \hat y_i\). Find each squared error and their sum.</div>
+<ol class="steps">
+<li><div>Item 0: \(3 - 2.5 = 0.5\), squared: \(0.25\).</div></li>
+<li><div>Item 1: \(5 - 5 = 0\), squared: \(0\).</div></li>
+<li><div>Item 2: \(7 - 8 = -1\), squared: \(1\).<span class="why">Squaring makes every error positive, so a too-high guess and a too-low guess can't cancel out.</span></div></li>
+<li><div>Sum of squared errors: \(0.25 + 0 + 1 = 1.25\). Mean squared error: \(1.25 / 3 = 0.41\overline{6}\).</div></li>
+</ol>
+<div class="result">SSE = 1.25, MSE ≈ 0.4167</div></div>
+
+<div class="mathblock" data-sheet="Mean squared error"><div class="eqlabel">Mean squared error</div>
+\[\mathrm{MSE}=\frac{1}{n}\sum_{i=1}^{n}\left(y_i-\hat y_i\right)^2\]
+<p class="say">Read: "M-S-E equals one over n times the sum, for i from 1 to n, of y-i minus y-hat-i, squared". In words: for each item take the error and square it; add them all up; divide by how many items there are. Example above: \((0.25+0+1)/3 = 0.4167\).</p></div>
+
+<div class="py" id="c-py1-24"><pre class="src">
+y     = [3, 5, 7]        # true values
+y_hat = [2.5, 5, 8]      # predictions
+total = 0
+for i in range(len(y)):          # i = 0, 1, 2
+    err = y[i] - y_hat[i]
+    print(f"i={i}: error {err:+.1f}, squared {err ** 2:.2f}")
+    total = total + err ** 2
+print("sum of squared errors:", total)
+print("MSE:", total / len(y))
+</pre><div class="pynote"><b>Read the output:</b> one line per item, exactly the numbers of the worked example (the format <code>:+.1f</code> always shows a plus or minus sign). Then SSE <code>1.25</code> and MSE <code>0.4166666666666667</code>. The maths and the code have the same shape: \(\sum\) became a loop with a running total. Python counts from 0 while maths usually counts from 1, so \(y_1\) in a formula is <code>y[0]</code> in code. <b>Try:</b> change the last prediction to 7 and predict the new MSE before running.</div></div>
+
+<div class="ex" id="x-py1-10" data-title="count how many pass"><div class="task"><p>Complete <code>count_above(xs, threshold)</code> so it returns how many numbers in <code>xs</code> are <b>strictly greater</b> than <code>threshold</code>. Use a loop and a counter that starts at 0. Example: <code class="lc">count_above([62, 35, 81, 40, 90], 40)</code> → <code>3</code>.</p></div>
+<pre class="src">
+def count_above(xs, threshold):
+    count = 0
+    for x in xs:
+        pass   # replace this line
+    return count
+</pre>
+<pre class="check">
+assert count_above([62, 35, 81, 40, 90], 40) == 3, f"expected 3, got {count_above([62, 35, 81, 40, 90], 40)} (40 itself is not above 40)"
+assert count_above([], 0) == 0, "an empty list has nothing above anything"
+assert count_above([0.1, 0.2, 0.3], 0.15) == 2
+assert count_above([5, 5, 5], 4) == 3
+</pre>
+<div class="hint"><p><code>pass</code> means "do nothing" (Python needs at least one line in a block). Replace it with an <code>if</code> and a comparison; inside the <code>if</code>, add 1 to <code>count</code>. Mind the indentation: the <code>if</code> is inside the <code>for</code>, and <code>count = count + 1</code> is inside the <code>if</code>.</p></div>
+<div class="hint"><pre>        if x &gt; threshold:
+            count = count + 1</pre></div>
+<pre class="solution">
+def count_above(xs, threshold):
+    count = 0
+    for x in xs:
+        if x &gt; threshold:
+            count = count + 1
+    return count
+</pre>
+<div class="explain"><p>A counter is a running total that adds 1 instead of adding a value. The <code>return</code> is indented to the level of <code>for</code>, not inside it, so it runs once after the loop finishes. (Indent it one level more and the function returns during the first trip.)</p></div></div>
+
+<div class="ex" id="x-py1-11" data-title="sum of squared errors"><div class="task"><p>Complete <code>sse(y, y_hat)</code> so it returns the <b>sum</b> of squared errors \(\sum_i (y_i - \hat y_i)^2\) of two equally long lists. Example: <code class="lc">sse([3, 5, 7], [2.5, 5, 8])</code> → <code>1.25</code>.</p></div>
+<pre class="src">
+def sse(y, y_hat):
+    total = 0
+    # loop over the positions and add each squared error
+    return total
+</pre>
+<pre class="check">
+import numpy as np
+assert abs(sse([3, 5, 7], [2.5, 5, 8]) - 1.25) &lt; 1e-12, f"expected 1.25, got {sse([3, 5, 7], [2.5, 5, 8])}"
+assert sse([1, 2], [1, 2]) == 0, "perfect predictions have zero error"
+rng = np.random.default_rng(0)
+a, b = list(rng.normal(size=20)), list(rng.normal(size=20))
+want = float(np.sum((np.array(a) - np.array(b)) ** 2))
+assert abs(sse(a, b) - want) &lt; 1e-9, f"on random data expected {want:.6f} (computed with NumPy), got {sse(a, b)}"
+</pre>
+<div class="hint"><p>Use <code>for i in range(len(y)):</code> and inside it add <code>(y[i] - y_hat[i]) ** 2</code> to <code>total</code>.</p></div>
+<div class="hint"><p>Brackets matter: <code>y[i] - y_hat[i] ** 2</code> would square only the prediction.</p></div>
+<pre class="solution">
+def sse(y, y_hat):
+    total = 0
+    for i in range(len(y)):
+        total = total + (y[i] - y_hat[i]) ** 2
+    return total
+</pre>
+<div class="explain"><p>This is the loop from the MSE cell without the prints. The check compares your function with a NumPy calculation on 20 random numbers; you'll learn that one-line NumPy version in <a href="#np1">NumPy I</a>.</p></div></div>
+
+<h3 id="py1-functions">9 · Functions: machines with knobs</h3>
+<p>You've been using functions all along: <code>print</code>, <code>len</code>, <code>sum</code>, <code>round</code>. A <dfn data-g="py-function">function</dfn> is a named machine: you feed values in, it does a job, and it hands a value back. Writing your own means writing a job once and using it everywhere, with different inputs. Every model you build in this course is a function: inputs go in, a prediction comes out.</p>
+<div class="py" id="c-py1-25"><pre class="src">
+def predict(x, b0, b1):
+    """Predict y from x with the straight line y = b0 + b1 * x."""
+    y_hat = b0 + b1 * x
+    return y_hat
+
+print(predict(10, 7.0, 0.05))
+print(predict(200, 7.0, 0.05))
+p = predict(0, 7.0, 0.05)
+print("at x = 0 the prediction is", p)
+</pre><div class="pynote"><b>Read the output:</b> <code>7.5</code>, <code>17.0</code>, then <code>7.0</code>. The first block <i>defines</i> the machine; nothing is computed yet. Each call such as <code>predict(10, 7.0, 0.05)</code> sends 10, 7.0 and 0.05 into the slots <code>x</code>, <code>b0</code>, <code>b1</code> (in that order), runs the body, and the call is replaced by whatever <code>return</code> sends back. (A line with intercept 7 and slope 0.05 roughly predicts sales from TV budget in ISLP's Advertising data.)</div></div>
+
+<p>The parts of a function, piece by piece:</p>
+<div class="symbols"><div class="row h"><span>Piece</span><span>What it is</span><span>In the example</span></div>
+<div class="row"><span class="s"><code>def</code></span><span>"define": starts a new function</span><span class="eg"><code>def predict(...):</code></span></div>
+<div class="row"><span class="s">name</span><span>what you'll call it; same rules as variable names</span><span class="eg"><code>predict</code></span></div>
+<div class="row"><span class="s">parameters</span><span>the input slots, in brackets. Think of them as the machine's <b>knobs</b>: the same machine gives different outputs as you turn them</span><span class="eg"><code>x, b0, b1</code></span></div>
+<div class="row"><span class="s">docstring</span><span>optional text in triple quotes saying what the function does</span><span class="eg"><code>"""Predict y…"""</code></span></div>
+<div class="row"><span class="s">body</span><span>the indented lines that do the work</span><span class="eg"><code>y_hat = b0 + b1 * x</code></span></div>
+<div class="row"><span class="s"><code>return</code></span><span>hands a value back and <b>ends</b> the function at once</span><span class="eg"><code>return y_hat</code></span></div>
+</div>
+<p>The values you put in the brackets when calling are called <b>arguments</b>. Parameters are the slots; arguments are what you put in them.</p>
+
+<h4>return versus print</h4>
+<p>This is the most common confusion for beginners. <code>print</code> <b>shows</b> a value on the screen for a human to read; the program can't use it afterwards. <code>return</code> <b>hands the value back</b> to the code that called the function, so it can be stored, added, compared. A function without <code>return</code> gives back the special value <code>None</code>, meaning "nothing".</p>
+<div class="predict" data-correct="3"><p>What does this cell print?</p><ol class="opts"><li><code>20</code></li><li><code>10</code> and then <code>20</code></li><li><code>10</code> and then an error</li></ol><div class="why"><code>show_double(5)</code> prints <code>10</code>, but returns nothing, i.e. <code>None</code>. So <code>result</code> is <code>None</code>, and <code>None * 2</code> is a TypeError: you can't multiply "nothing". This cell fails on purpose.</div></div>
+<div class="py" id="c-py1-26" data-mode="expect-error" data-error="TypeError"><pre class="src">
+def show_double(x):
+    print(x * 2)        # shows it, but doesn't hand it back
+
+result = show_double(5)
+print(result * 2)
+</pre><div class="pynote"><b>Read the error:</b> first <code>10</code> appears (the print inside the function), then <code class="lc">TypeError: unsupported operand type(s) for *: 'NoneType' and 'int'</code>. <code>NoneType</code> is the type of <code>None</code>. <b>Fix it:</b> change <code>print(x * 2)</code> to <code>return x * 2</code>; the last line then prints <code>20</code>. Rule of thumb: functions should <code>return</code> results; print only when a human needs to read something.</div></div>
+
+<h4>Default values: knobs with a factory setting</h4>
+<p>A parameter can have a <b>default value</b>, written <code>name=value</code> in the <code>def</code> line. If the caller doesn't give that argument, the default is used. Library functions use this everywhere: scikit-learn's models have dozens of knobs, all with sensible defaults, so you only set the ones you care about.</p>
+<div class="py" id="c-py1-27"><pre class="src">
+def predict(x, b0=0.0, b1=1.0):
+    return b0 + b1 * x
+
+print(predict(3))              # both defaults: 0.0 + 1.0 * 3
+print(predict(3, 1.0))         # b0 given, b1 default
+print(predict(3, 1.0, 2.0))    # everything given
+print(predict(3, b1=2.0))      # give b1 by name, keep b0's default
+</pre><div class="pynote"><b>Read the output:</b> <code>3.0</code>, <code>4.0</code>, <code>7.0</code>, <code>6.0</code>. The last call names the knob it sets, <code>b1=2.0</code>; this is a <b>keyword argument</b>, and it lets you skip <code>b0</code>. Python II covers keyword arguments in depth. Parameters with defaults must come after those without.</div></div>
+
+<div class="callout analogy"><p><b>A function is like a recipe card.</b> Writing the <code>def</code> is writing the card: nothing gets cooked. Calling the function is cooking from the card with today's ingredients (the arguments). The <code>return</code> value is the dish you hand over. <code>print</code> would be describing the dish out loud instead of handing it over: nice to hear, but nobody can eat it.</p></div>
+
+<div class="ex" id="x-py1-12" data-title="mean squared error"><div class="task"><p>Write a function <code>mse(y, y_hat)</code> that <b>returns</b> the mean squared error of two equally long lists. You may call your <code>sse</code> function from the exercise above (if you solved it) or write the loop again. Example: <code class="lc">mse([3, 5, 7], [2.5, 5, 8])</code> → <code>0.41666…</code>.</p></div>
+<pre class="src">
+def mse(y, y_hat):
+    print("I should return a number")
+</pre>
+<pre class="check">
+from sklearn.metrics import mean_squared_error
+assert mse([3, 5, 7], [2.5, 5, 8]) is not None, "your function returns None: did you print instead of return?"
+assert abs(mse([3, 5, 7], [2.5, 5, 8]) - 0.4166666666666667) &lt; 1e-12, f"expected 0.41667, got {mse([3, 5, 7], [2.5, 5, 8])}"
+for y, yh in [([1, 2, 3], [1, 2, 3]), ([0, 0], [1, -1]), ([2.5, -1.0, 4.0, 0.0], [3.0, -0.5, 2.0, 1.0])]:
+    want = mean_squared_error(y, yh)
+    assert abs(mse(y, yh) - want) &lt; 1e-12, f"mse({y}, {yh}) should be {want} (scikit-learn), got {mse(y, yh)}"
+</pre>
+<div class="hint"><p>MSE = (sum of squared errors) / (number of items).</p></div>
+<div class="hint"><pre>    total = 0
+    for i in range(len(y)):
+        total = total + (y[i] - y_hat[i]) ** 2
+    return total / len(y)</pre></div>
+<pre class="solution">
+def mse(y, y_hat):
+    total = 0
+    for i in range(len(y)):
+        total = total + (y[i] - y_hat[i]) ** 2
+    return total / len(y)
+</pre>
+<div class="explain"><p>The check compares your function with scikit-learn's <code>mean_squared_error</code>, the professional version you'll use in ISLP chapter 3. Yours gives the same numbers, so you now know exactly what that library function does inside. (<code class="lc">return sse(y, y_hat) / len(y)</code> is even better: re-use a machine you already built.)</p></div></div>
+
+<div class="ex" id="x-py1-13" data-title="a prediction machine with knobs"><div class="task"><p>Write <code class="lc">predict_all(xs, b0=0.0, b1=1.0)</code> that returns a <b>list</b> of predictions \(b_0 + b_1 x\), one for each <code>x</code> in <code>xs</code>. Example: <code class="lc">predict_all([0, 1, 2], b0=1, b1=2)</code> → <code>[1, 3, 5]</code>, and <code>predict_all([4, 5])</code> → <code>[4.0, 5.0]</code> (the defaults).</p></div>
+<pre class="src">
+def predict_all(xs, b0=0.0, b1=1.0):
+    preds = []
+    return preds
+</pre>
+<pre class="check">
+assert predict_all([0, 1, 2], b0=1, b1=2) == [1, 3, 5], f"got {predict_all([0, 1, 2], b0=1, b1=2)}"
+assert predict_all([4, 5]) == [4.0, 5.0], f"with the default knobs, got {predict_all([4, 5])}"
+assert predict_all([], 3, 4) == [], "no inputs, no predictions"
+assert predict_all([10], 7.0, 0.05) == [7.5]
+</pre>
+<div class="hint"><p>Start with an empty list, loop over <code>xs</code>, and <code>append</code> one prediction per <code>x</code>.</p></div>
+<div class="hint"><pre>    for x in xs:
+        preds.append(b0 + b1 * x)</pre></div>
+<pre class="solution">
+def predict_all(xs, b0=0.0, b1=1.0):
+    preds = []
+    for x in xs:
+        preds.append(b0 + b1 * x)
+    return preds
+</pre>
+<div class="explain"><p>"Start empty, append in a loop, return" builds a new list from an old one. It is what <code>model.predict(X)</code> does for a whole dataset in scikit-learn. In Python II you'll write it in one line with a list comprehension, and in NumPy as <code>b0 + b1 * x</code> on a whole array.</p></div></div>
+
+<h3 id="py1-import">10 · Importing: borrowing other people's tools</h3>
+<p>Python comes with many extra tools grouped into <dfn data-g="py-module">modules</dfn>, and libraries such as NumPy are made of modules too. To use one, you first <b>import</b> it. Three forms:</p>
+<div class="py" id="c-py1-28"><pre class="src">
+import math                  # 1. import the whole module, use it with a dot
+print(math.sqrt(16), math.pi)
+
+from math import sqrt, exp   # 2. import just some names, use them directly
+print(sqrt(2), exp(1))
+
+import statistics as st      # 3. import with a short nickname
+print(st.mean([62, 75, 81, 70]), st.median([62, 75, 81, 70]))
+</pre><div class="pynote"><b>Read the output:</b> <code>4.0 3.141592653589793</code>; then \(\sqrt2 \approx 1.4142\) and \(e^1 \approx 2.7183\); then the mean <code>72</code> and median <code>72.5</code>. Form 3 is how you'll import the big libraries: <code>import numpy as np</code>, <code>import pandas as pd</code>, <code class="lc">import matplotlib.pyplot as plt</code>. Everyone uses these exact nicknames, so code from anywhere looks the same.</div></div>
+
+<p>Imports go at the top of a file or notebook. If you misspell a module name you get <code>ModuleNotFoundError</code>; on your Mac this can also mean the library isn't installed in the active environment (see the troubleshooting table in <a href="#s0-setup">Set up your Mac</a>).</p>
+
+<div class="ex" id="x-py1-14" data-title="root mean squared error"><div class="task"><p>The <b>RMSE</b> (root mean squared error) is \(\sqrt{\text{MSE}}\). It is in the same units as \(y\) (MSE is in units squared), so it's easier to interpret: "predictions are off by about this much". Write <code>rmse(y, y_hat)</code> using <code>sqrt</code> from the <code>math</code> module. Example: <code class="lc">rmse([3, 5, 7], [2.5, 5, 8])</code> → about <code>0.6455</code>, because \(\sqrt{0.41667} \approx 0.6455\).</p></div>
+<pre class="src">
+def rmse(y, y_hat):
+    return ...
+</pre>
+<pre class="check">
+import math as _m
+assert rmse([3, 5, 7], [2.5, 5, 8]) is not Ellipsis, "replace ... with your calculation"
+assert abs(rmse([3, 5, 7], [2.5, 5, 8]) - _m.sqrt(1.25 / 3)) &lt; 1e-12, f"expected about 0.6455, got {rmse([3, 5, 7], [2.5, 5, 8])}"
+assert rmse([1, 2], [1, 2]) == 0
+assert abs(rmse([0, 0, 0, 0], [2, -2, 2, -2]) - 2.0) &lt; 1e-12, "every error is 2 in size, so RMSE should be 2"
+</pre>
+<div class="hint"><p>Put <code>from math import sqrt</code> on its own line at the top of the cell. Then compute the MSE with a loop (or call your <code>mse</code>) and return its square root.</p></div>
+<div class="hint"><pre>from math import sqrt
+
+def rmse(y, y_hat):
+    total = 0
+    for i in range(len(y)):
+        total = total + (y[i] - y_hat[i]) ** 2
+    return sqrt(total / len(y))</pre></div>
+<pre class="solution">
+from math import sqrt
+
+def rmse(y, y_hat):
+    total = 0
+    for i in range(len(y)):
+        total = total + (y[i] - y_hat[i]) ** 2
+    return sqrt(total / len(y))
+</pre>
+<div class="explain"><p>\(\sqrt{1.25/3} = \sqrt{0.41667} = 0.6455\). The last check is a neat sanity test: if every error has size 2, the average squared error is 4 and its root is 2, so RMSE recovers the "typical error size" exactly.</p></div></div>
+
+<h3 id="py1-errors">11 · Reading error messages without panic</h3>
+<p>Errors are not failures; they are Python telling you precisely what it couldn't do. Every programmer sees dozens a day. The message is called a <dfn data-g="py-traceback">traceback</dfn>, and you read it like this:</p>
+<ol>
+<li><b>Read the last line first.</b> It has the error <b>type</b> (e.g. <code>TypeError</code>) and a short reason.</li>
+<li><b>Then find the line number</b> it points at (<code>line 3</code>) and look at that line of your code. With a SyntaxError, a caret <code>^</code> points at the spot.</li>
+<li><b>Ask what the values were</b> at that moment. Add a <code>print</code> just above the failing line if you're not sure.</li>
+</ol>
+<p>This guide adds a plain-English hint under each error. Here are four more you'll meet often, each failing on purpose. Read each one, then fix it.</p>
+
+<div class="py" id="c-py1-29" data-mode="expect-error" data-error="SyntaxError"><pre class="src">
+for m in [62, 75, 81]
+    print(m)
+</pre><div class="pynote"><b>SyntaxError</b> means Python couldn't even read the code, so nothing ran. Here it says <code>expected ':'</code>: the <code>for</code> line needs a colon at the end. Missing colons, brackets and quotes cause most SyntaxErrors. Add the colon and run.</div></div>
+
+<div class="py" id="c-py1-30" data-mode="expect-error" data-error="IndentationError"><pre class="src">
+def mean(xs):
+return sum(xs) / len(xs)
+</pre><div class="pynote"><b>IndentationError</b>: <code class="lc">expected an indented block after function definition</code>. The body of a function must be indented. Put 4 spaces before <code>return</code>.</div></div>
+
+<div class="py" id="c-py1-31" data-mode="expect-error" data-error="ZeroDivisionError"><pre class="src">
+marks = []
+print(sum(marks) / len(marks))
+</pre><div class="pynote"><b>ZeroDivisionError</b>: the list is empty, so <code>len(marks)</code> is 0 and we divided 0 by 0. The code is right; the <i>data</i> is unexpected. Real programs guard against this with an <code>if</code>: <code>if len(marks) &gt; 0:</code>. When an error appears, always ask "what were the values?", not only "what's wrong with the code?".</div></div>
+
+<div class="py" id="c-py1-32" data-mode="expect-error" data-error="AttributeError"><pre class="src">
+marks = [62, 75, 81]
+marks.add(70)
+</pre><div class="pynote"><b>AttributeError</b>: <code class="lc">'list' object has no attribute 'add'</code>. Lists don't have a method called <code>add</code>; the method is <code>append</code>. (Sets, in Python II, do use <code>add</code>.) When you see AttributeError, check the method name, and check the type of the value with <code>type(...)</code>.</div></div>
+
+<p>You've already met <code>NameError</code> (a typo or a missing earlier cell), <code>TypeError</code> (wrong kind of value, like text + number, or <code>None</code> from a missing <code>return</code>) and <code>IndexError</code> (a position that doesn't exist).</p>
+
+<div class="ex" id="x-py1-15" data-title="debug: two bugs"><div class="task"><p>This function should return the mean of only the <b>positive</b> numbers in a list: <code class="lc">mean_of_positive([2, -1, 4])</code> → <code>3.0</code> (the positives are 2 and 4). It has <b>two</b> bugs: one stops it running at all, and one gives a wrong answer once it runs. Find and fix both. Press Check first to see the first error message.</p></div>
+<pre class="src">
+def mean_of_positive(xs)
+    total = 0
+    count = 0
+    for x in xs:
+        if x &gt; 0:
+            total = total + x
+            count = count + 1
+    return total / len(xs)
+</pre>
+<pre class="check">
+assert mean_of_positive([2, -1, 4]) == 3.0, f"mean_of_positive([2, -1, 4]) should be 3.0 (mean of 2 and 4), got {mean_of_positive([2, -1, 4])}"
+assert mean_of_positive([5]) == 5.0
+assert abs(mean_of_positive([1, 2, -3, -4, 3]) - 2.0) &lt; 1e-12, "positives are 1, 2, 3, so the mean is 2"
+</pre>
+<div class="hint"><p>Bug 1: read the SyntaxError. Which line is missing a character that every <code>def</code>, <code>for</code> and <code>if</code> line needs?</p></div>
+<div class="hint"><p>Bug 2: we want the mean of the positive numbers only. How many positive numbers were there, and which variable counted them? The last line divides by something else.</p></div>
+<pre class="solution">
+def mean_of_positive(xs):
+    total = 0
+    count = 0
+    for x in xs:
+        if x &gt; 0:
+            total = total + x
+            count = count + 1
+    return total / count
+</pre>
+<div class="explain"><p>Bug 1 was the missing colon after <code>def mean_of_positive(xs)</code>: a SyntaxError, so nothing ran. Bug 2 was dividing by <code>len(xs)</code> (3 numbers) instead of <code>count</code> (2 positive numbers): it ran, but gave 6/3 = 2.0 instead of 6/2 = 3.0. The second kind of bug is the dangerous one: no error message, just a wrong number. Checks with known answers are how you catch it.</p></div></div>
+
+<h3 id="py1-project">12 · Putting it together: your first ML-flavoured program</h3>
+<p>Here is everything from this lesson in one small program. It takes a few (TV budget, sales) pairs from ISLP's Advertising data, makes predictions with a straight line, and reports how good they are. In ISLP chapter 3 you'll learn how to find the best line; for now we try two lines and compare their errors, which is the core idea of all model fitting: <b>try settings, measure the error, keep the better one</b>.</p>
+<div class="py" id="c-py1-33"><pre class="src">
+from math import sqrt
+
+tv    = [230.1, 44.5, 17.2, 151.5, 180.8]   # TV budget, thousands of dollars
+sales = [22.1, 10.4, 9.3, 18.5, 12.9]       # sales, thousands of units
+
+def predict_all(xs, b0, b1):
+    return [b0 + b1 * x for x in xs]        # one-line loop (you'll learn this in Python II)
+
+def mse(y, y_hat):
+    total = 0
+    for i in range(len(y)):
+        total += (y[i] - y_hat[i]) ** 2
+    return total / len(y)
+
+for b0, b1 in [(5.0, 0.08), (7.0, 0.05)]:
+    preds = predict_all(tv, b0, b1)
+    err = mse(sales, preds)
+    print(f"line: sales = {b0} + {b1} * TV  -&gt;  MSE {err:6.2f}, RMSE {sqrt(err):5.2f}")
+</pre><div class="pynote"><b>Read the output:</b> two lines, one per candidate line. The second, \(7 + 0.05\,\mathrm{TV}\) (close to the least-squares line ISLP finds, \(7.03 + 0.0475\,\mathrm{TV}\)), has the smaller MSE (8.33 against 11.73), so it fits these five points better; its RMSE says its predictions are typically off by about 2.9 thousand units. Two new things appear, both taught in <a href="#py2">Python II</a>: <code>for b0, b1 in [...]</code> takes two values at a time, and <code>[b0 + b1 * x for x in xs]</code> is a short way to write the append loop. <b>Try:</b> add a third pair <code>(7.0, 0.0475)</code> to the list and see whether it does even better.</div></div>
+
+<h3 id="py1-practice">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="num" data-answer="2" data-tol="0"><p class="stem">What is <code>23 % 7</code>?</p><div class="why">\(7 \times 3 = 21\) and \(23 - 21 = 2\). So <code>23 // 7</code> is 3 and <code>23 % 7</code> is 2.</div></div>
+<div class="q" data-type="num" data-answer="14" data-tol="0"><p class="stem">What is the value of <code>2 + 3 * 4</code>?</p><div class="why">Multiplication first (BODMAS): \(3 \times 4 = 12\), then \(2 + 12 = 14\). <code>(2 + 3) * 4</code> would be 20.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">After <code>a = [1, 2]</code>, <code>b = a</code>, <code>b.append(3)</code>, what is <code>a</code>?</p><ol class="opts"><li><code>[1, 2]</code></li><li><code>[1, 2, 3]</code></li><li><code>[1, 2, [3]]</code></li><li>an error</li></ol><div class="why"><code>b = a</code> ties a second label to the same list; <code>append</code> changes that one list, so <code>a</code> sees it. Option 1 would be right with <code>b = a.copy()</code>. Option 3 confuses <code>append(3)</code> with <code>append([3])</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem"><code>xs = [10, 20, 30, 40, 50]</code>. Which expression gives <code>[20, 30, 40]</code>?</p><ol class="opts"><li><code>xs[2:4]</code></li><li><code>xs[1:3]</code></li><li><code>xs[2:5]</code></li><li><code>xs[1:4]</code></li></ol><div class="why">20 is at position 1 and 40 at position 3. The stop is exclusive, so we need stop = 4: <code>xs[1:4]</code>, with 4 − 1 = 3 items. <code>xs[1:3]</code> gives only <code>[20, 30]</code>; <code>xs[2:4]</code> gives <code>[30, 40]</code>; <code>xs[2:5]</code> gives <code>[30, 40, 50]</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">What is <code>type(7 / 7)</code>?</p><ol class="opts"><li><code>float</code></li><li><code>int</code></li><li><code>bool</code></li><li><code>str</code></li></ol><div class="why"><code>/</code> always produces a float, here <code>1.0</code>. <code>7 // 7</code> would be the int <code>1</code>.</div></div>
+<div class="q" data-type="num" data-answer="5" data-tol="0"><p class="stem">How many times does the body of <code>for i in range(2, 12, 2):</code> run?</p><div class="why">The values are 2, 4, 6, 8, 10 (it stops before 12): five times.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">A function computes a result but ends with <code>print(result)</code> instead of <code>return result</code>. What does <code>x = f(...)</code> store in <code>x</code>?</p><ol class="opts"><li>the result</li><li>the text that was printed</li><li><code>None</code></li><li>it's an error to call it</li></ol><div class="why">Without a <code>return</code>, a function hands back <code>None</code>. The value was only shown on screen, not handed back. Any later maths with <code>x</code> gives a TypeError mentioning <code>NoneType</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">With <code>mark = 65</code>, the chain <code class="lc">if mark &gt;= 40: … elif mark &gt;= 60: … elif mark &gt;= 75: …</code> runs which branch?</p><ol class="opts"><li>the <code>&gt;= 60</code> branch</li><li>the <code>&gt;= 40</code> branch</li><li>all three</li><li>none</li></ol><div class="why">Python runs only the <b>first</b> branch whose condition is true, and 65 &gt;= 40 is true, so the others are never checked. This ordering is a bug: test the highest threshold first.</div></div>
+<div class="q" data-type="num" data-answer="0.5" data-tol="0.001"><p class="stem">True values \(y = (1, 2)\), predictions \(\hat y = (2, 2)\). What is the MSE?</p><div class="why">Errors: \(1-2=-1\) and \(2-2=0\). Squared: 1 and 0. Mean: \((1+0)/2 = 0.5\).</div></div>
+<div class="q" data-type="open"><p class="stem">In your own words, what does <code>x = x + 1</code> do, and why isn't it a contradiction?</p><div class="model"><code>=</code> is an instruction ("gets"), not an equation. Python first works out the right side using the current value of <code>x</code> (say 5 + 1 = 6), then moves the label <code>x</code> onto the new value 6. After the line, <code>x</code> is one bigger than before.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">What do <code>7 / 2</code>, <code>7 // 2</code> and <code>7 % 2</code> give?</div><div class="b"><code>3.5</code> (true division, always a float), <code>3</code> (floor division), <code>1</code> (remainder).</div></div>
+<div class="fc"><div class="f">How do you read <code>x = 5</code> out loud, and what does Python do?</div><div class="b">"x gets 5": work out the right side, then tie the label <code>x</code> to that value.</div></div>
+<div class="fc"><div class="f">The four basic types, with an example of each</div><div class="b"><code>int</code> 42 · <code>float</code> 3.5 · <code>str</code> "text" · <code>bool</code> True/False</div></div>
+<div class="fc"><div class="f">f-string that shows <code>x</code> with 2 decimal places</div><div class="b"><code>f"{x:.2f}"</code> (and <code>{x:.1%}</code> for a percentage, <code>{x:,}</code> for thousands commas)</div></div>
+<div class="fc"><div class="f">First and last item of a list <code>xs</code></div><div class="b"><code>xs[0]</code> and <code>xs[-1]</code> (positions start at 0)</div></div>
+<div class="fc"><div class="f">What does <code>xs[a:b]</code> give, and how many items?</div><div class="b">Items from position a up to but <b>not including</b> b; \(b-a\) items.</div></div>
+<div class="fc"><div class="f">Reverse a list with a slice; take every second item</div><div class="b"><code>xs[::-1]</code>; <code>xs[::2]</code></div></div>
+<div class="fc"><div class="f">After <code>b = a</code> (a list), how do you get an independent copy instead?</div><div class="b"><code>b = a.copy()</code> (or <code>a[:]</code>). Plain <code>=</code> never copies.</div></div>
+<div class="fc"><div class="f">What values does <code>range(1, 6)</code> produce?</div><div class="b">1, 2, 3, 4, 5 (it stops before 6)</div></div>
+<div class="fc"><div class="f">Difference between <code>=</code> and <code>==</code></div><div class="b"><code>=</code> assigns ("gets"); <code>==</code> asks "are these equal?" and gives True/False.</div></div>
+<div class="fc"><div class="f"><code>return</code> versus <code>print</code> in a function</div><div class="b"><code>return</code> hands the value back to the caller (and ends the function); <code>print</code> only shows it. No return → the function gives <code>None</code>.</div></div>
+<div class="fc"><div class="f">Mean squared error formula</div><div class="b">\(\mathrm{MSE}=\frac{1}{n}\sum_{i=1}^n (y_i-\hat y_i)^2\)</div></div>
+<div class="fc"><div class="f">Reading a traceback: which line first?</div><div class="b">The last line (error type and reason), then the line number it points to.</div></div>
+<div class="fc"><div class="f">Three ways to import <code>sqrt</code></div><div class="b"><code>import math</code> → <code>math.sqrt</code>; <code>from math import sqrt</code> → <code>sqrt</code>; <code>import math as m</code> → <code>m.sqrt</code></div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> <span>I can predict the result of <code>/</code>, <code>//</code>, <code>%</code> and <code>**</code>, and use brackets to control the order.</span></label>
+<label><input type="checkbox"> <span>I can explain <code>=</code> with the labels-on-boxes picture, including why <code>b = a</code> doesn't copy a list.</span></label>
+<label><input type="checkbox"> <span>I can name the four basic types, check a type with <code>type()</code> and convert with <code>int()</code>, <code>float()</code>, <code>str()</code>.</span></label>
+<label><input type="checkbox"> <span>I can format numbers in f-strings with <code>.2f</code>, <code>.1%</code> and <code>,</code>.</span></label>
+<label><input type="checkbox"> <span>I can index and slice a list, including negative positions and steps, and predict how many items a slice has.</span></label>
+<label><input type="checkbox"> <span>I can write if/elif/else chains with the conditions in the right order.</span></label>
+<label><input type="checkbox"> <span>I can write a for loop with a running total, and use <code>range(len(xs))</code> to walk two lists together.</span></label>
+<label><input type="checkbox"> <span>I can write a function with parameters, a default value and a <code>return</code>.</span></label>
+<label><input type="checkbox"> <span>I wrote <code>mse</code> myself and it matches scikit-learn.</span></label>
+<label><input type="checkbox"> <span>When I see an error, I read the last line first and can fix SyntaxError, IndentationError, NameError, TypeError and IndexError.</span></label>
+</div>
+</section>
