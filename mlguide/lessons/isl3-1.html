@@ -1,0 +1,571 @@
+<section class="lesson" id="isl3-1" data-book="ISLP §3.1, pp. 69–80">
+<p class="lede">Simple linear regression fits a straight line through a cloud of points and then tells you how much to trust that line. Nearly every model you will meet later, from multiple regression to neural networks, reuses its ideas: residuals, least squares, standard errors, tests and R². Learn it here with every number shown, and the rest of machine learning gets easier.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#m-calc-partial">Partial derivatives</a> · <a href="#m-prob-sampling">Standard error</a> · <a href="#m-prob-ci">Confidence intervals</a> · <a href="#m-prob-tests">t-tests and p-values</a> · <a href="#pd1">pandas</a> · <a href="#isl2-2">ISLP 2.2</a> (reducible and irreducible error)</div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>write the simple linear regression model and say what every symbol in it means;</li>
+<li>derive the least-squares formulas for \(\hat\beta_0\) and \(\hat\beta_1\) with calculus, and compute them by hand for a small data set;</li>
+<li>reproduce the book's Advertising fit (\(\hat\beta_0=7.03\), \(\hat\beta_1=0.0475\)) in Python, three different ways;</li>
+<li>compute standard errors, 95% confidence intervals, t-statistics and p-values for a regression, and say in plain words what each one means;</li>
+<li>judge how well a line fits with the RSE and \(R^2\), and explain why \(R^2=r^2\) for one predictor.</li></ul></div>
+
+<div class="callout book"><blockquote>Simple linear regression lives up to its name: it is a very straightforward approach for predicting a quantitative response \(Y\) on the basis of a single predictor variable \(X\).</blockquote><cite>ISLP p. 70</cite></div>
+
+<h3 id="isl3-1-questions">Why we are here: seven questions about advertising</h3>
+<p>Chapter 3 is built around one story. You are a consultant. A company gives you the <b>Advertising</b> data: for 200 markets, the money spent on TV, radio and newspaper advertising (in thousands of dollars) and the product's <b>sales</b> (in thousands of units). They want a marketing plan for next year. Before you can advise them, the book says you need answers to seven questions:</p>
+<div class="tw"><table class="t"><thead><tr><th>#</th><th>Question</th><th>Tool that answers it (where)</th></tr></thead><tbody>
+<tr><td class="n">1</td><td>Is there a relationship between advertising budget and sales?</td><td>t-test (this lesson), F-test (<a href="#isl3-2">3.2</a>)</td></tr>
+<tr><td class="n">2</td><td>How strong is the relationship?</td><td>RSE and \(R^2\) (this lesson)</td></tr>
+<tr><td class="n">3</td><td>Which media are associated with sales?</td><td>multiple regression p-values (<a href="#isl3-2">3.2</a>)</td></tr>
+<tr><td class="n">4</td><td>How large is the association between each medium and sales?</td><td>confidence intervals (this lesson and 3.2)</td></tr>
+<tr><td class="n">5</td><td>How accurately can we predict future sales?</td><td>prediction intervals (<a href="#isl3-2">3.2</a>)</td></tr>
+<tr><td class="n">6</td><td>Is the relationship linear?</td><td>residual plots (<a href="#isl3-3">3.3</a>)</td></tr>
+<tr><td class="n">7</td><td>Is there synergy among the media?</td><td>interaction terms (<a href="#isl3-3">3.3</a>)</td></tr>
+</tbody></table></div>
+<p>“Synergy” is the marketing word for what statisticians call an <b>interaction</b>: spending $50,000 on TV <i>and</i> $50,000 on radio might sell more than $100,000 on either one alone. Keep these seven questions in mind. By the end of <a href="#isl3-3">lesson 3.3</a> you will have answered every one of them with numbers.</p>
+<p>In this lesson we use <b>only one predictor</b>, the TV budget, and ask: what straight line best describes how sales change with TV spending, and how sure can we be about it?</p>
+
+<h3 id="isl3-1-model">The model: a straight line plus noise</h3>
+<p>In plain words: we guess that sales go up (or down) by roughly the same amount for every extra thousand dollars of TV advertising. A straight line says exactly that. The book writes it as</p>
+<div class="mathblock" data-sheet="Simple linear regression model"><div class="eqlabel">The simple linear regression model (3.1)</div>
+\[Y \approx \beta_0 + \beta_1 X\]
+<p class="say">Read: “Y is approximately beta-nought plus beta-one times X.” The wavy equals sign \(\approx\) means “is approximately modelled as”.</p></div>
+<p>We say we are <b>regressing \(Y\) on \(X\)</b> (or “onto \(X\)”). For our data: \(\text{sales} \approx \beta_0 + \beta_1\times\text{TV}\).</p>
+
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(X\)</span><span>“X”: the <b>predictor</b> (input), here the TV budget in thousands of dollars</span><span class="eg">\(X=100\) means $100,000 on TV</span></div>
+<div class="row"><span class="s">\(Y\)</span><span>“Y”: the <b>response</b> (output), here sales in thousands of units</span><span class="eg">\(Y=12\) means 12,000 units sold</span></div>
+<div class="row"><span class="s">\(\beta_0\)</span><span>“beta-nought” (or beta-zero): the <dfn data-g="intercept">intercept</dfn>, the height of the line when \(X=0\)</span><span class="eg">\(\beta_0=7\): with no TV ads, about 7,000 units</span></div>
+<div class="row"><span class="s">\(\beta_1\)</span><span>“beta-one”: the <dfn data-g="slope">slope</dfn>, how much \(Y\) changes when \(X\) goes up by 1</span><span class="eg">\(\beta_1=0.05\): +1 in TV gives +0.05 in sales</span></div>
+<div class="row"><span class="s">\(\hat\beta_0,\ \hat\beta_1\)</span><span>“beta-nought-hat”, “beta-one-hat”: our <i>estimates</i> of \(\beta_0,\beta_1\) from data. A hat always means “estimated”</span><span class="eg">\(\hat\beta_1=0.0475\)</span></div>
+<div class="row"><span class="s">\(\hat y\)</span><span>“y-hat”: our <b>prediction</b> of \(Y\)</span><span class="eg">\(\hat y = 7.03+0.0475\times100=11.78\)</span></div>
+</div>
+
+<p>Together \(\beta_0\) and \(\beta_1\) are called the model <dfn data-g="coefficient">coefficients</dfn> or <b>parameters</b>. They are unknown. We use training data to compute estimates \(\hat\beta_0,\hat\beta_1\), and then predict with</p>
+<div class="mathblock" data-sheet="Prediction from a fitted line"><div class="eqlabel">Prediction (3.2)</div>
+\[\hat y = \hat\beta_0 + \hat\beta_1 x\]
+<p class="say">Read: “y-hat equals beta-nought-hat plus beta-one-hat times x.” Put in a TV budget \(x\), get out a predicted sales figure.</p></div>
+<p><b>Tiny example.</b> With the book's estimates \(\hat\beta_0=7.03\) and \(\hat\beta_1=0.0475\), a market that spends \(x=200\) (that is, $200,000) on TV is predicted to sell \(\hat y = 7.03 + 0.0475\times 200 = 7.03+9.50=16.53\) thousand units.</p>
+
+<h3 id="isl3-1-ls">Least squares: what “best line” means</h3>
+<p>Many lines pass near the points. We need a rule to choose one. Suppose we have \(n\) pairs of observations \((x_1,y_1),(x_2,y_2),\dots,(x_n,y_n)\); for Advertising, \(n=200\) markets. For any candidate line, the prediction for market \(i\) is \(\hat y_i=\hat\beta_0+\hat\beta_1x_i\). The miss for that market is the <dfn data-g="residual">residual</dfn>:</p>
+<div class="mathblock" data-sheet="Residual"><div class="eqlabel">Residual</div>
+\[e_i = y_i - \hat y_i\]
+<p class="say">Read: “e-sub-i equals y-sub-i minus y-hat-sub-i”: what really happened minus what the line predicted. Positive means the point is above the line.</p></div>
+<p>We add up the <i>squared</i> residuals to get one number that measures how badly the line fits, the <dfn data-g="rss">residual sum of squares</dfn> (RSS):</p>
+<div class="mathblock" data-sheet="Residual sum of squares"><div class="eqlabel">RSS (3.3)</div>
+\[\RSS = e_1^2+e_2^2+\dots+e_n^2 = \sum_{i=1}^n \big(y_i-\hat\beta_0-\hat\beta_1x_i\big)^2\]
+<p class="say">Read: “RSS is the sum, over every observation i, of (y-i minus beta-nought-hat minus beta-one-hat x-i) squared.”</p></div>
+<p>The <dfn data-g="least-squares">least squares</dfn> line is the one whose \(\hat\beta_0,\hat\beta_1\) make RSS as small as possible.</p>
+<p><b>Tiny example.</b> Three points \((1,2),(2,3),(3,5)\) and the line \(\hat y = 0.5+1.5x\). Predictions: \(2,\ 3.5,\ 5\). Residuals: \(2-2=0\), \(3-3.5=-0.5\), \(5-5=0\). RSS \(=0^2+(-0.5)^2+0^2=0.25\).</p>
+
+<figure class="book" data-fig="islp-3.1"><figcaption>The Advertising data (sales against TV budget) with the least-squares line in blue. <b>Each grey vertical segment is one residual</b> \(e_i\): the vertical distance from a point to the line. Least squares picks the line that makes the sum of the squared lengths of these segments as small as possible. Notice the fan shape: the points spread out more as TV grows, and on the far left the line sits above most points (the book says the line “overestimates the trend in the left of the plot”).</figcaption></figure>
+
+<div class="callout intuition"><p><b>Why square the residuals?</b> Three reasons. (1) Squaring makes every miss positive, so misses above and below the line cannot cancel. (2) Big misses are punished much more than small ones: a miss of 4 costs 16, a miss of 1 costs 1. (3) Squares are smooth, so calculus gives an exact formula for the best line. Other choices exist (Chapter 6 discusses some), but least squares is by far the most common.</p></div>
+<div class="callout ece"><p><b>You have met this before.</b> Minimising a sum of squared errors is minimising the <i>energy</i> of an error signal. The Wiener filter, LMS adaptive equalisers and least-squares channel estimation all minimise exactly this kind of quantity. Linear regression is the simplest member of that family: a “filter” with two taps, \(\beta_0\) and \(\beta_1\).</p></div>
+
+<h3 id="isl3-1-derive">Deriving the least-squares formulas, step by step</h3>
+<p>The book says “using some calculus, one can show” the answer. Here is that calculus with nothing skipped. It uses exactly the recipe from <a href="#m-calc-min">Finding a minimum</a> and <a href="#m-calc-partial">Partial derivatives</a>: at the bottom of a smooth bowl, the slope is zero in every direction.</p>
+<p>Treat RSS as a function of two unknowns, \(b_0\) and \(b_1\) (we drop the hats while we search):</p>
+\[\RSS(b_0,b_1)=\sum_{i=1}^n (y_i-b_0-b_1x_i)^2 .\]
+
+<div class="worked"><div class="wt">Derivation · <b>the least-squares estimates (3.4)</b></div>
+<div class="given">Minimise \(\RSS(b_0,b_1)=\sum_i (y_i-b_0-b_1x_i)^2\). Notation: \(\bar x=\frac1n\sum_i x_i\) (read “x-bar”, the mean of the \(x\)'s) and \(\bar y=\frac1n\sum_i y_i\).</div>
+<ol class="steps">
+<li><div><b>Differentiate with respect to \(b_0\).</b> Chain rule on each term: the derivative of \((\text{stuff})^2\) is \(2(\text{stuff})\) times the derivative of the stuff, and the derivative of \(y_i-b_0-b_1x_i\) with respect to \(b_0\) is \(-1\):
+\[\frac{\partial \RSS}{\partial b_0}=\sum_i 2(y_i-b_0-b_1x_i)(-1)=-2\sum_i (y_i-b_0-b_1x_i).\]<span class="why">\(\partial\) is read “partial”: differentiate with respect to \(b_0\) while holding \(b_1\) fixed.</span></div></li>
+<li><div><b>Set it to zero and solve for \(b_0\).</b> Divide by \(-2\): \(\sum_i y_i - n b_0 - b_1\sum_i x_i = 0\). (Adding \(b_0\) to itself \(n\) times gives \(nb_0\).) Divide by \(n\):
+\[\bar y - b_0 - b_1\bar x = 0 \quad\Longrightarrow\quad \boxed{b_0=\bar y-b_1\bar x}.\]<span class="why">This already tells us something lovely: the best line passes through the point \((\bar x,\bar y)\). Put \(x=\bar x\) into the line and you get \(\bar y\).</span></div></li>
+<li><div><b>Differentiate with respect to \(b_1\).</b> Now the inner derivative is \(-x_i\):
+\[\frac{\partial \RSS}{\partial b_1}=\sum_i 2(y_i-b_0-b_1x_i)(-x_i)=-2\sum_i x_i(y_i-b_0-b_1x_i).\]</div></li>
+<li><div><b>Substitute \(b_0=\bar y-b_1\bar x\)</b> and set to zero:
+\[\sum_i x_i\big(y_i-\bar y+b_1\bar x-b_1x_i\big)=0\ \Longrightarrow\ \sum_i x_i(y_i-\bar y) - b_1\sum_i x_i(x_i-\bar x)=0.\]</div></li>
+<li><div><b>Solve for \(b_1\):</b>
+\[b_1=\frac{\sum_i x_i(y_i-\bar y)}{\sum_i x_i(x_i-\bar x)}.\]</div></li>
+<li><div><b>Make it symmetric.</b> Deviations from a mean add to zero: \(\sum_i (y_i-\bar y)=0\) and \(\sum_i(x_i-\bar x)=0\). So we may subtract \(\bar x\sum_i(y_i-\bar y)=0\) from the top and \(\bar x\sum_i(x_i-\bar x)=0\) from the bottom without changing anything:
+\[\sum_i x_i(y_i-\bar y)=\sum_i (x_i-\bar x)(y_i-\bar y),\qquad \sum_i x_i(x_i-\bar x)=\sum_i (x_i-\bar x)^2.\]</div></li>
+<li><div><b>Is it really a minimum?</b> The second derivatives are \(\partial^2\RSS/\partial b_0^2=2n>0\), \(\partial^2\RSS/\partial b_1^2=2\sum x_i^2>0\) and \(\partial^2\RSS/\partial b_0\partial b_1=2\sum x_i\). The determinant of this 2 × 2 matrix is \(4\big(n\sum x_i^2-(\sum x_i)^2\big)=4n\sum(x_i-\bar x)^2>0\) as long as the \(x_i\) are not all equal. So RSS is a bowl that opens upwards (it is <a href="#m-calc-convex">convex</a>), and the flat point is the bottom.<span class="why">If all \(x_i\) are equal, \(\sum(x_i-\bar x)^2=0\) and no unique slope exists: you cannot learn a slope from points stacked on one vertical line.</span></div></li>
+</ol>
+<div class="result">\(\hat\beta_1=\dfrac{\sum_i (x_i-\bar x)(y_i-\bar y)}{\sum_i (x_i-\bar x)^2},\qquad \hat\beta_0=\bar y-\hat\beta_1\bar x\)</div></div>
+
+<div class="mathblock" data-sheet="Least-squares estimates (simple regression)"><div class="eqlabel">Least-squares coefficient estimates (3.4)</div>
+\[\hat\beta_1=\frac{\sum_{i=1}^n (x_i-\bar x)(y_i-\bar y)}{\sum_{i=1}^n (x_i-\bar x)^2},\qquad \hat\beta_0=\bar y-\hat\beta_1\bar x\]
+<p class="say">Read: “beta-one-hat is the sum of (x-deviation times y-deviation) divided by the sum of squared x-deviations. Beta-nought-hat is y-bar minus beta-one-hat times x-bar.” The top measures how \(x\) and \(y\) move together; the bottom measures how much \(x\) moves on its own.</p></div>
+<p>We will write \(S_{xy}=\sum(x_i-\bar x)(y_i-\bar y)\) and \(S_{xx}=\sum(x_i-\bar x)^2\) as short names, so \(\hat\beta_1=S_{xy}/S_{xx}\). (If you divide top and bottom by \(n-1\), \(\hat\beta_1\) is the sample <a href="#m-prob-cov">covariance</a> of \(x\) and \(y\) divided by the sample variance of \(x\).)</p>
+
+<h3 id="isl3-1-hand">A complete hand calculation on five points</h3>
+<p>Before using the computer, do one fit entirely by hand. Get a pencil. The data are five shops: \(x\) is advertising spend and \(y\) is sales.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>least squares on five points, every sum shown</b></div>
+<div class="given">\(x = (1, 2, 3, 4, 5)\), \(y = (2, 4, 5, 4, 5)\), so \(n=5\). Find \(\hat\beta_0\), \(\hat\beta_1\), the fitted values, the residuals and the RSS.</div>
+<ol class="steps">
+<li><div><b>Means.</b> \(\bar x = (1+2+3+4+5)/5 = 15/5 = \)<span class="hlc">3</span>. \(\bar y=(2+4+5+4+5)/5=20/5=\)<span class="hlb">4</span>.</div></li>
+<li><div><b>Deviations and their products, one row per point.</b>
+<div class="tw"><table class="t"><thead><tr><th>\(i\)</th><th>\(x_i\)</th><th>\(y_i\)</th><th>\(x_i-\bar x\)</th><th>\(y_i-\bar y\)</th><th>\((x_i-\bar x)(y_i-\bar y)\)</th><th>\((x_i-\bar x)^2\)</th><th>\((y_i-\bar y)^2\)</th></tr></thead><tbody>
+<tr><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="n">−2</td><td class="n">−2</td><td class="n">4</td><td class="n">4</td><td class="n">4</td></tr>
+<tr><td class="n">2</td><td class="n">2</td><td class="n">4</td><td class="n">−1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">0</td></tr>
+<tr><td class="n">3</td><td class="n">3</td><td class="n">5</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td></tr>
+<tr><td class="n">4</td><td class="n">4</td><td class="n">4</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">0</td></tr>
+<tr><td class="n">5</td><td class="n">5</td><td class="n">5</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n">4</td><td class="n">1</td></tr>
+<tr><td><b>Σ</b></td><td class="n">15</td><td class="n">20</td><td class="n">0</td><td class="n">0</td><td class="n"><b>6</b></td><td class="n"><b>10</b></td><td class="n"><b>6</b></td></tr>
+</tbody></table></div>
+So \(S_{xy}=\)<span class="hlg">6</span>, \(S_{xx}=\)<span class="hlr">10</span>, and (we need it later) \(\text{TSS}=\sum(y_i-\bar y)^2=6\).<span class="why">The two deviation columns add to 0. That is always true, and it is a good arithmetic check.</span></div></li>
+<li><div><b>Slope.</b> \(\hat\beta_1 = S_{xy}/S_{xx} = \)<span class="hlg">6</span>\(/\)<span class="hlr">10</span>\( = \mathbf{0.6}\). Each extra unit of spend is associated with 0.6 more units of sales.</div></li>
+<li><div><b>Intercept.</b> \(\hat\beta_0 = \bar y - \hat\beta_1\bar x = \)<span class="hlb">4</span>\( - 0.6\times\)<span class="hlc">3</span>\( = 4-1.8 = \mathbf{2.2}\).</div></li>
+<li><div><b>Fitted values and residuals.</b> \(\hat y_i = 2.2+0.6x_i\):
+<div class="tw"><table class="t"><thead><tr><th>\(i\)</th><th>\(x_i\)</th><th>\(y_i\)</th><th>\(\hat y_i=2.2+0.6x_i\)</th><th>\(e_i=y_i-\hat y_i\)</th><th>\(e_i^2\)</th></tr></thead><tbody>
+<tr><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="n">2.8</td><td class="n">−0.8</td><td class="n">0.64</td></tr>
+<tr><td class="n">2</td><td class="n">2</td><td class="n">4</td><td class="n">3.4</td><td class="n">0.6</td><td class="n">0.36</td></tr>
+<tr><td class="n">3</td><td class="n">3</td><td class="n">5</td><td class="n">4.0</td><td class="n">1.0</td><td class="n">1.00</td></tr>
+<tr><td class="n">4</td><td class="n">4</td><td class="n">4</td><td class="n">4.6</td><td class="n">−0.6</td><td class="n">0.36</td></tr>
+<tr><td class="n">5</td><td class="n">5</td><td class="n">5</td><td class="n">5.2</td><td class="n">−0.2</td><td class="n">0.04</td></tr>
+<tr><td><b>Σ</b></td><td></td><td class="n">20</td><td class="n">20</td><td class="n">0</td><td class="n"><b>2.40</b></td></tr>
+</tbody></table></div>
+<span class="why">The residuals add to exactly 0: that is step 2 of the derivation, \(\partial\RSS/\partial b_0=0\), in action. Step 3 also says \(\sum x_ie_i=0\): check \(1(-0.8)+2(0.6)+3(1)+4(-0.6)+5(-0.2)=-0.8+1.2+3-2.4-1=0\).</span></div></li>
+<li><div><b>RSS.</b> \(0.64+0.36+1.00+0.36+0.04 = \mathbf{2.40}\). No other straight line through these five points has a smaller RSS.</div></li>
+</ol>
+<div class="result">\(\hat y = 2.2 + 0.6x\), \(\RSS=2.40\)</div></div>
+
+<p>Now check the hand calculation with code. This first cell loads everything the lesson needs. It is a <i>setup</i> cell: run it first whenever you come back to this lesson.</p>
+<div class="py" id="c-isl3-1-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import statsmodels.api as sm          # the statistics library the book uses
+from scipy import stats               # probability distributions (t, normal, ...)
+
+Advertising = pd.read_csv('Advertising.csv', index_col=0)
+x5 = np.array([1, 2, 3, 4, 5], dtype=float)   # the five-point example
+y5 = np.array([2, 4, 5, 4, 5], dtype=float)
+print(Advertising.shape)
+Advertising.head()
+</pre><div class="pynote"><b>Read the output:</b> 200 rows (markets) and 4 columns. <code>index_col=0</code> tells pandas that the first, unnamed column of the file is just a row number, so it becomes the row labels instead of a data column. Two new imports: <code>statsmodels.api</code> (nicknamed <code>sm</code>) fits regression models and prints the statistics the book reports; <code>scipy.stats</code> gives us the t-distribution for p-values.</div></div>
+
+<div class="predict" data-correct="2"><p>The next cell computes \(\hat\beta_1\) and \(\hat\beta_0\) for the five points with the formulas. What will it print?</p><ol class="opts"><li><code>0.6 2.2</code>, exactly</li><li><code>0.6 2.2</code>, possibly with tiny rounding digits such as <code>2.2000000000000006</code></li><li><code>1.0 1.0</code></li></ol><div class="why">The arithmetic is the same as the hand calculation, so the answer is 0.6 and 2.2. Computers store decimals in binary and 0.6 × 3 cannot be stored exactly, so a trailing digit like <code>…0006</code> may appear. That is not an error: it is the last bit of a 64-bit number. Option C would be the line through the first and last points only, which ignores the middle three.</div></div>
+<div class="py" id="c-isl3-1-02"><pre class="src">
+xbar, ybar = x5.mean(), y5.mean()
+Sxy = np.sum((x5 - xbar) * (y5 - ybar))
+Sxx = np.sum((x5 - xbar) ** 2)
+b1 = Sxy / Sxx
+b0 = ybar - b1 * xbar
+print("Sxy =", Sxy, " Sxx =", Sxx)
+print(b1, b0)
+resid = y5 - (b0 + b1 * x5)
+print("residuals:", resid.round(3), " RSS =", round(np.sum(resid ** 2), 4))
+</pre><div class="pynote"><b>Read the output:</b> the same 6, 10, 0.6, 2.2 and RSS 2.4 as on paper. <code>x5 - xbar</code> subtracts the mean from every element at once (NumPy broadcasting), and <code>** 2</code> squares every element. <code>.round(3)</code> only changes how the numbers are shown.</div></div>
+
+<h3 id="isl3-1-tv">The Advertising fit: sales on TV</h3>
+<p>Now the real data. Same formula, 200 points instead of 5. The book reports \(\hat\beta_0=7.03\) and \(\hat\beta_1=0.0475\). Let us get them three ways: by the formula, with NumPy's <code>polyfit</code>, and with statsmodels.</p>
+<div class="py" id="c-isl3-1-03"><pre class="src">
+x = Advertising['TV'].to_numpy()
+y = Advertising['sales'].to_numpy()
+n = len(x)
+xbar, ybar = x.mean(), y.mean()
+Sxx = np.sum((x - xbar) ** 2)
+Sxy = np.sum((x - xbar) * (y - ybar))
+b1 = Sxy / Sxx
+b0 = ybar - b1 * xbar
+print(f"n = {n}, xbar = {xbar:.4f}, ybar = {ybar:.4f}")
+print(f"Sxy = {Sxy:,.2f}   Sxx = {Sxx:,.2f}")
+print(f"beta1_hat = {b1:.6f}   beta0_hat = {b0:.4f}")
+</pre><div class="pynote"><b>Read the output:</b> \(\bar x=147.04\) (the average market spends $147,000 on TV), \(\bar y=14.02\) (it sells about 14,000 units), \(S_{xy}=69{,}727.65\), \(S_{xx}=1{,}466{,}819.03\), so \(\hat\beta_1=69{,}727.65/1{,}466{,}819.03=0.04754\) and \(\hat\beta_0=14.0225-0.04754\times147.0425=7.0326\). These are the book's 0.0475 and 7.03. Inside an f-string, <code>{b1:.6f}</code> means “show b1 with 6 digits after the point”, and <code>{Sxx:,.2f}</code> adds thousands separators.</div></div>
+
+<div class="callout key"><p><b>Interpret every number.</b> \(\hat\beta_1=0.0475\): sales are in <i>thousands of units</i> and TV in <i>thousands of dollars</i>, so an extra $1,000 of TV advertising is associated with about \(0.0475\times1000=47.5\) extra units sold. \(\hat\beta_0=7.03\): in a market with zero TV advertising, the line predicts about 7,030 units. Notice the word <b>associated</b>: the data show that the two move together, not that one causes the other.</p></div>
+
+<div class="py" id="c-isl3-1-04"><pre class="src">
+# Two library routes to the same answer
+slope, intercept = np.polyfit(x, y, deg=1)      # NumPy: fit a degree-1 polynomial
+print("polyfit:    ", round(intercept, 4), round(slope, 6))
+
+X = sm.add_constant(x)          # put a column of 1s in front of x (for the intercept)
+results = sm.OLS(y, X).fit()    # OLS = ordinary least squares
+print("statsmodels:", results.params.round(6))
+print(X[:3])
+</pre><div class="pynote"><b>Read the output:</b> all three routes agree. <code>np.polyfit(x, y, deg=1)</code> returns the coefficients highest power first (slope, then intercept). <code>sm.add_constant(x)</code> builds a two-column table whose first column is all 1s: the 1 multiplies \(\beta_0\), the second column multiplies \(\beta_1\). This is the <a href="#m-linalg-design">design matrix</a>, and lesson <a href="#isl3-2">3.2</a> uses it for many predictors. <code>sm.OLS(y, X)</code> only <i>describes</i> the model; <code>.fit()</code> does the work and returns a results object.</div></div>
+
+<div class="py" id="c-isl3-1-05"><pre class="src">
+fig, ax = plt.subplots(figsize=(7, 4))
+yhat = b0 + b1 * x
+ax.vlines(x, yhat, y, color='grey', lw=0.8)          # residual segments
+ax.scatter(x, y, color='#C0392F', s=14, zorder=3)
+xs = np.array([0, 300])
+ax.plot(xs, b0 + b1 * xs, color='#3B4AD0', lw=2.5)
+ax.set_xlabel('TV'); ax.set_ylabel('Sales')
+ax.set_title('Reproducing Figure 3.1')
+plt.show()
+</pre><div class="pynote"><b>Read the output:</b> this is Figure 3.1 rebuilt. <code>ax.vlines(x, yhat, y)</code> draws a vertical line at each \(x_i\) from the fitted value to the observed value: the residuals. <code>zorder=3</code> draws the dots on top of the segments.</div></div>
+
+<div class="callout pitfall"><p><b>Pitfall: \(\hat\beta_1\) is not “the importance of TV”.</b> Its size depends on units. If TV were measured in dollars instead of thousands of dollars, \(\hat\beta_1\) would be 1000 times smaller, yet the relationship would be exactly as strong. To judge strength you need the standard error, the t-statistic and \(R^2\), which come next.</p></div>
+
+<h3 id="isl3-1-surface">The RSS surface: a bowl with one bottom</h3>
+<p>RSS is a function of two numbers, \(\beta_0\) and \(\beta_1\), so we can draw it as a landscape over the \((\beta_0,\beta_1)\) plane. Each residual is linear in \(\beta_0\) and \(\beta_1\), so RSS, a sum of their squares, is a <i>quadratic</i> function of them: a smooth bowl. Its contours (lines of equal height, like on a map) are ellipses.</p>
+<figure class="book" data-fig="islp-3.2"><figcaption><b>Left:</b> a contour map of RSS for the Advertising regression of sales on TV. The labels are RSS in thousands (2.11 means RSS = 2,110). The red dot is the least-squares pair \((\hat\beta_0,\hat\beta_1)=(7.03,\ 0.0475)\), at the centre of the smallest ellipse. <b>Right:</b> the same function drawn as a 3-D bowl, with the red dot at its bottom. The ellipses are tilted: if you raise the intercept, you must lower the slope to stay at the same RSS, because both changes lift the line over the data and can partly stand in for each other.</figcaption></figure>
+
+<div class="widget" data-w="isl3-1-rss" data-title="Drag the line: residuals, RSS and the RSS map"><div class="wn">The line starts too steep and too low. Move the two sliders (or click on the contour map) and watch the red residual segments and the RSS. Try to get the RSS below 2,150 by hand, then press <b>Jump to least squares</b>. Moving along the long axis of the tilted ellipses changes RSS slowly; moving across them changes it fast.</div></div>
+
+<p>We can draw the contour map ourselves too. The next cell evaluates RSS on a grid of 100 × 100 candidate lines.</p>
+<div class="py" id="c-isl3-1-06"><pre class="src">
+B0, B1 = np.meshgrid(np.linspace(5, 9, 100), np.linspace(0.03, 0.065, 100))
+RSS = np.zeros_like(B0)
+for i in range(n):                         # add one market's squared residual at a time
+    RSS += (y[i] - B0 - B1 * x[i]) ** 2
+fig, ax = plt.subplots(figsize=(5.5, 4))
+cs = ax.contour(B0, B1, RSS / 1000, levels=[2.11, 2.15, 2.2, 2.3, 2.5, 3], colors='#3B4AD0')
+ax.clabel(cs, fontsize=8)
+ax.plot(b0, b1, 'o', color='#C0392F')
+ax.set_xlabel(r'$\beta_0$'); ax.set_ylabel(r'$\beta_1$')
+print("smallest RSS on the grid:", RSS.min().round(1), " RSS at least squares:", round(np.sum((y - b0 - b1*x)**2), 1))
+</pre><div class="pynote"><b>Read the output:</b> the picture matches Figure 3.2 (left). <code>np.meshgrid</code> makes two 100 × 100 tables: one holds the \(\beta_0\) value of each grid point, the other the \(\beta_1\) value. Adding each market's squared residual to every grid point at once builds the whole surface. The grid minimum is slightly above the true minimum 2102.5 because no grid point lands exactly on \((7.0326,\ 0.04754)\).</div></div>
+
+<h3 id="isl3-1-population">Population line versus least-squares line</h3>
+<p>So far we have fitted a line to the data we have. Now step back. Why should the line fitted to <i>these</i> 200 markets tell us anything about markets we have not seen? To answer, the book writes down a model for how the data were generated:</p>
+<div class="mathblock" data-sheet="Population regression line"><div class="eqlabel">The true (population) model (3.5)</div>
+\[Y=\beta_0+\beta_1X+\epsilon\]
+<p class="say">Read: “Y equals beta-nought plus beta-one X plus epsilon.” \(\epsilon\) (epsilon) is the <b>error term</b>: a random amount, with mean zero, added to every observation.</p></div>
+<p>The error term is a catch-all for everything the straight line misses: the true relationship is probably not exactly linear, other variables also affect \(Y\), and there is measurement error. We usually assume \(\epsilon\) is independent of \(X\). Here \(\beta_0\) is the expected value of \(Y\) when \(X=0\), and \(\beta_1\) is the average increase in \(Y\) for a one-unit increase in \(X\).</p>
+<p>The line \(\beta_0+\beta_1X\) with the <i>true</i>, unknown coefficients is the <dfn data-g="population-line">population regression line</dfn>: the best linear approximation to the truth. The line \(\hat\beta_0+\hat\beta_1X\) computed from our data is the <b>least-squares line</b>. They are different lines, and we only ever see the second one.</p>
+
+<figure class="book" data-fig="islp-3.3"><figcaption>A simulation where we <i>know</i> the truth: 100 points from \(Y=2+3X+\epsilon\). <b>Left:</b> the red line is the population line \(2+3X\); the blue line is the least-squares line from these 100 black points. Close, but not the same. <b>Right:</b> ten different data sets from the same model give ten different least-squares lines (light blue). They scatter around the red line, and on average they sit right on it.</figcaption></figure>
+
+<p>This is the same situation as estimating a mean, which you met in <a href="#m-prob-sampling">Samples and the standard error</a>. The population mean \(\mu\) is unknown; the sample mean \(\hat\mu=\bar y\) estimates it; a different sample gives a different \(\bar y\), but \(\bar y\) is <dfn data-g="unbiased">unbiased</dfn>: averaged over a huge number of samples, it equals \(\mu\). The least-squares estimates are unbiased too: \(\E(\hat\beta_0)=\beta_0\) and \(\E(\hat\beta_1)=\beta_1\). A single estimate may be too high or too low, but there is no systematic lean.</p>
+
+<div class="py" id="c-isl3-1-07"><pre class="src">
+rng = np.random.default_rng(0)              # a seeded random number generator
+slopes = []
+fig, ax = plt.subplots(figsize=(6, 4))
+for k in range(10):                          # ten data sets, as in Figure 3.3 (right)
+    xs = rng.uniform(-2, 2, size=100)
+    ys = 2 + 3 * xs + rng.normal(0, 2, size=100)
+    s, c = np.polyfit(xs, ys, 1)
+    slopes.append(s)
+    ax.plot([-2, 2], [c - 2*s, c + 2*s], color='#6BB5F2', lw=1)
+ax.plot([-2, 2], [-4, 8], color='#C0392F', lw=2.5, label='population line 2 + 3X')
+ax.legend(); ax.set_xlabel('X'); ax.set_ylabel('Y')
+print(np.round(slopes, 3))
+print("average of the ten slopes:", round(np.mean(slopes), 3))
+</pre><div class="pynote"><b>Read the output:</b> ten slopes scattered around 3, and their average is close to 3. <code>rng.uniform(-2, 2, size=100)</code> draws 100 numbers evenly spread between −2 and 2; <code>rng.normal(0, 2, size=100)</code> draws 100 errors from a normal curve with mean 0 and standard deviation 2. Change the seed <code>0</code> to another number: the slopes change, but they still centre on 3.</div></div>
+
+<div class="widget" data-w="isl3-1-sampling" data-title="Many data sets, many least-squares lines"><div class="wn">Press <b>Draw 200 data sets</b> and watch the histogram of \(\hat\beta_1\) pile up around the true value 3. Compare the measured spread of the slopes with the formula SE in the last box: they agree. Then double the noise \(\sigma\): the spread doubles. Make \(n\) four times bigger: the spread halves.</div></div>
+
+<h3 id="isl3-1-se">Standard errors: how far off is one estimate?</h3>
+<p>Unbiased means “right on average”. But we get only one data set. How far off might <i>our</i> estimate be? For the sample mean, <a href="#m-prob-sampling">m-prob</a> gave the answer: its <dfn data-g="standard-error">standard error</dfn>.</p>
+<div class="mathblock" data-sheet="Standard error of the mean"><div class="eqlabel">Standard error of the sample mean (3.7)</div>
+\[\Var(\hat\mu)=\SE(\hat\mu)^2=\frac{\sigma^2}{n}\]
+<p class="say">Read: “the variance of mu-hat equals SE of mu-hat squared equals sigma squared over n.” \(\sigma\) is the standard deviation of each observation. Roughly, the SE is the typical distance between the estimate and the truth.</p></div>
+<p><b>Tiny reminder.</b> Heights with \(\sigma=10\) cm and \(n=25\): \(\SE=10/\sqrt{25}=2\) cm; with \(n=100\), \(\SE=1\) cm. (This needs the observations to be uncorrelated.) The regression coefficients have formulas of the same flavour:</p>
+<div class="mathblock" data-sheet="Standard errors of regression coefficients"><div class="eqlabel">Standard errors of \(\hat\beta_0\) and \(\hat\beta_1\) (3.8)</div>
+\[\SE(\hat\beta_0)^2=\sigma^2\left[\frac1n+\frac{\bar x^2}{\sum_{i=1}^n(x_i-\bar x)^2}\right],\qquad \SE(\hat\beta_1)^2=\frac{\sigma^2}{\sum_{i=1}^n(x_i-\bar x)^2}\]
+<p class="say">Read: “SE of beta-one-hat squared is sigma squared divided by the sum of squared x-deviations.” Here \(\sigma^2=\Var(\epsilon)\), the variance of the error term.</p></div>
+<p>Three things to read from these formulas:</p>
+<ul>
+<li><b>More noise, bigger SE.</b> \(\sigma\) is on top.</li>
+<li><b>More spread-out \(x\), smaller \(\SE(\hat\beta_1)\).</b> \(S_{xx}\) is on the bottom. If your \(x\)'s are bunched together, a little noise can tilt the line a lot; if they are spread out, you have more <i>leverage</i> to pin down the slope, like holding a ruler at its two ends rather than near the middle.</li>
+<li>If \(\bar x=0\), \(\SE(\hat\beta_0)^2=\sigma^2/n\), the same as for a sample mean. In that case \(\hat\beta_0=\bar y\).</li>
+</ul>
+<p>These formulas assume the errors \(\epsilon_i\) all have the same variance \(\sigma^2\) and are uncorrelated. Figure 3.1's fan shape shows this is not quite true for Advertising, but the book notes the formulas are still a good approximation. Lesson <a href="#isl3-3">3.3</a> shows what to do when these assumptions fail.</p>
+
+<h4>Estimating \(\sigma\): the residual standard error</h4>
+<p>We do not know \(\sigma\). We estimate it from the residuals with the <dfn data-g="rse">residual standard error</dfn>:</p>
+<div class="mathblock" data-sheet="Residual standard error"><div class="eqlabel">Residual standard error (3.15)</div>
+\[\text{RSE}=\sqrt{\frac{\RSS}{n-2}}=\sqrt{\frac{1}{n-2}\sum_{i=1}^n(y_i-\hat y_i)^2}\]
+<p class="say">Read: “RSE is the square root of RSS divided by n minus 2.” It is the typical size of a residual.</p></div>
+<p>Why \(n-2\) and not \(n\)? We used the data to estimate two numbers (\(\hat\beta_0\) and \(\hat\beta_1\)), and the residuals are forced to satisfy two equations (\(\sum e_i=0\) and \(\sum x_ie_i=0\)). Only \(n-2\) of them are free: these are the <dfn data-g="dof">degrees of freedom</dfn>. It is the same reason the sample variance in m-prob divides by \(n-1\) (one mean estimated). Dividing by \(n-2\) makes \(\text{RSE}^2\) an unbiased estimate of \(\sigma^2\). (Strictly we should write \(\widehat{\SE}\) once \(\sigma\) is replaced by RSE; the book, like everyone, drops the extra hat.)</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>standard errors by hand, five points and Advertising</b></div>
+<div class="given">Five points: \(n=5\), \(\RSS=2.4\), \(S_{xx}=10\), \(\bar x=3\). Advertising: \(n=200\), \(\RSS=2102.53\), \(S_{xx}=1{,}466{,}819.03\), \(\bar x=147.0425\).</div>
+<ol class="steps">
+<li><div><b>Five points, RSE.</b> \(\text{RSE}=\sqrt{2.4/(5-2)}=\sqrt{0.8}=0.8944\).</div></li>
+<li><div><b>Five points, \(\SE(\hat\beta_1)\).</b> \(\sqrt{0.8/10}=\sqrt{0.08}=0.2828\).</div></li>
+<li><div><b>Five points, \(\SE(\hat\beta_0)\).</b> \(\sqrt{0.8\,[1/5+3^2/10]}=\sqrt{0.8\times1.1}=\sqrt{0.88}=0.9381\).</div></li>
+<li><div><b>Advertising, RSE.</b> \(\sqrt{2102.53/198}=\sqrt{10.6189}=3.2587\). A typical market's sales sit about 3,260 units away from the line.</div></li>
+<li><div><b>Advertising, \(\SE(\hat\beta_1)\).</b> \(\sqrt{S_{xx}}=\sqrt{1{,}466{,}819}=1211.12\), so \(\SE(\hat\beta_1)=3.2587/1211.12=0.002691\).</div></li>
+<li><div><b>Advertising, \(\SE(\hat\beta_0)\).</b> \(\bar x^2/S_{xx}=21{,}621.5/1{,}466{,}819=0.014740\). Add \(1/200=0.005\): \(0.019740\). Square root: \(0.14050\). Times RSE: \(3.2587\times0.14050=0.4578\).</div></li>
+</ol>
+<div class="result">Advertising: \(\SE(\hat\beta_0)=0.4578\), \(\SE(\hat\beta_1)=0.0027\): exactly the “Std. error” column of Table 3.1.</div></div>
+
+<div class="py" id="c-isl3-1-08"><pre class="src">
+RSS_tv = np.sum((y - b0 - b1 * x) ** 2)
+RSE = np.sqrt(RSS_tv / (n - 2))
+se_b1 = RSE / np.sqrt(Sxx)
+se_b0 = RSE * np.sqrt(1/n + xbar**2 / Sxx)
+print(f"RSS = {RSS_tv:.2f}, RSE = {RSE:.4f}")
+print(f"SE(b0) = {se_b0:.4f}, SE(b1) = {se_b1:.6f}")
+print("statsmodels says:", results.bse.round(6))
+</pre><div class="pynote"><b>Read the output:</b> our formula values match statsmodels' <code>results.bse</code> (“b-s-e”: the standard errors of the coefficients) to every digit.</div></div>
+
+<h3 id="isl3-1-ci">Confidence intervals</h3>
+<p>You built confidence intervals for a mean in <a href="#m-prob-ci">m-prob</a>. The recipe for a coefficient is identical: estimate ± multiplier × SE. The 95% <dfn data-g="confidence-interval">confidence interval</dfn> has the property that, if we repeated the whole experiment many times and built the interval each time, 95% of those intervals would contain the true value. For regression it is approximately</p>
+<div class="mathblock" data-sheet="95% confidence interval for a coefficient"><div class="eqlabel">Approximate 95% confidence intervals (3.9)–(3.11)</div>
+\[\hat\beta_1\pm2\cdot\SE(\hat\beta_1)=\big[\hat\beta_1-2\,\SE(\hat\beta_1),\ \hat\beta_1+2\,\SE(\hat\beta_1)\big],\qquad \hat\beta_0\pm2\cdot\SE(\hat\beta_0)\]
+<p class="say">Read: “beta-one-hat plus or minus two standard errors.”</p></div>
+<p>The “2” is a rounding of the exact multiplier \(t_{0.975,\,n-2}\), the 97.5% point of a t-distribution with \(n-2\) degrees of freedom (assuming normal errors): 1.972 for \(n-2=198\), but 3.182 for \(n-2=3\). The t-distribution's heavier tails pay for having estimated \(\sigma\); see <a href="#m-prob-dists">the distributions you will meet</a>.</p>
+
+<div class="worked"><div class="wt">Worked example · <b>the book's intervals for Advertising</b></div>
+<div class="given">\(\hat\beta_0=7.0326\), \(\SE=0.4578\); \(\hat\beta_1=0.047537\), \(\SE=0.0026906\); exact multiplier \(t_{0.975,198}=1.972\).</div>
+<ol class="steps">
+<li><div>\(\beta_1\): half-width \(1.972\times0.0026906=0.005306\). Interval \([0.047537-0.005306,\ 0.047537+0.005306]=[0.042,\ 0.053]\).</div></li>
+<li><div>\(\beta_0\): half-width \(1.972\times0.4578=0.9029\). Interval \([7.0326-0.9029,\ 7.0326+0.9029]=[6.130,\ 7.935]\).</div></li>
+<li><div><b>In words.</b> With no TV advertising, average sales are somewhere between 6,130 and 7,935 units. Each extra $1,000 of TV advertising is associated with an average increase of between 42 and 53 units.</div></li>
+</ol>
+<div class="result">\(\beta_0\in[6.130,\ 7.935]\), \(\beta_1\in[0.042,\ 0.053]\): exactly the book's numbers (p. 76).</div></div>
+
+<div class="py" id="c-isl3-1-09"><pre class="src">
+tcrit = stats.t.ppf(0.975, df=n - 2)        # the exact multiplier instead of 2
+print("t multiplier:", round(tcrit, 4))
+print("beta0 CI:", round(b0 - tcrit*se_b0, 3), round(b0 + tcrit*se_b0, 3))
+print("beta1 CI:", round(b1 - tcrit*se_b1, 4), round(b1 + tcrit*se_b1, 4))
+print(results.conf_int(alpha=0.05).round(4))
+</pre><div class="pynote"><b>Read the output:</b> <code>stats.t.ppf(0.975, df=198)</code> is the “percent point function”: the value with 97.5% of the t-distribution below it. statsmodels' <code>conf_int</code> gives the same intervals (row 0 is the intercept, row 1 the slope).</div></div>
+
+<div class="callout pitfall"><p><b>Pitfall: what “95% confidence” does not mean.</b> It does not mean “there is a 95% probability that \(\beta_1\) is in <i>this</i> interval”: \(\beta_1\) is a fixed number, and it either is or is not inside. The 95% describes the <i>procedure</i>: over many repeated data sets, 95% of intervals built this way catch the true value.</p></div>
+
+<h3 id="isl3-1-test">Hypothesis tests, t-statistics and p-values</h3>
+<p>Question 1 of our seven was: is there any relationship between TV and sales at all? As in <a href="#m-prob-tests">m-prob</a>, we turn it into a <dfn data-g="hypothesis-test">hypothesis test</dfn>. The <b>null hypothesis</b> \(H_0\) is the boring explanation; the <b>alternative</b> \(H_a\) is the interesting one:</p>
+<div class="mathblock" data-sheet="Null hypothesis for the slope"><div class="eqlabel">Testing for a relationship (3.12)–(3.13)</div>
+\[H_0:\ \beta_1=0\quad\text{(no relationship)}\qquad\text{versus}\qquad H_a:\ \beta_1\neq0\quad\text{(some relationship)}\]
+<p class="say">Read: “H-nought: beta-one equals zero, versus H-a: beta-one is not zero.” If \(\beta_1=0\) the model becomes \(Y=\beta_0+\epsilon\) and \(X\) plays no part.</p></div>
+<p>Our \(\hat\beta_1=0.0475\) is not zero, but it never would be exactly zero, even with no real relationship, because of noise. Is it <i>far enough</i> from zero? “Far” must be measured in standard errors. That is the <dfn data-g="t-statistic">t-statistic</dfn>:</p>
+<div class="mathblock" data-sheet="t-statistic"><div class="eqlabel">t-statistic (3.14)</div>
+\[t=\frac{\hat\beta_1-0}{\SE(\hat\beta_1)}\]
+<p class="say">Read: “t equals beta-one-hat minus zero, over its standard error”: how many standard errors the estimate is away from zero.</p></div>
+<p>If \(H_0\) is true, \(t\) follows a t-distribution with \(n-2\) degrees of freedom. The <dfn data-g="p-value">p-value</dfn> is the probability of seeing \(|t|\) at least as large as ours if \(H_0\) were true. A small p-value says “a slope this far from zero would be very surprising if there were no relationship”, so we <b>reject \(H_0\)</b>. Typical cut-offs are 5% or 1%; for \(n=30\) these correspond to \(|t|\) of about 2 and 2.75.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>t and p for the five points and for Advertising</b></div>
+<div class="given">Five points: \(\hat\beta_1=0.6\), \(\SE=0.2828\), \(n-2=3\). Advertising: \(\hat\beta_1=0.047537\), \(\SE=0.0026906\), \(n-2=198\); \(\hat\beta_0=7.0326\), \(\SE=0.4578\).</div>
+<ol class="steps">
+<li><div><b>Five points.</b> \(t=0.6/0.2828=2.12\). With only 3 degrees of freedom the t-distribution has fat tails: the 5% cut-off is 3.182, and the p-value is about 0.12. <b>We cannot reject \(H_0\)</b>. Five points are not enough evidence, even though the line clearly slopes upwards.</div></li>
+<li><div><b>Advertising slope.</b> \(t=0.047537/0.0026906=17.67\). The estimate is almost 18 standard errors from zero. The p-value is about \(1.5\times10^{-42}\): essentially zero.</div></li>
+<li><div><b>Advertising intercept.</b> \(t=7.0326/0.4578=15.36\), p essentially zero. This tests \(H_0:\beta_0=0\); rejecting it says that with no TV spending, sales are not zero.</div></li>
+</ol>
+<div class="result">TV: \(t=17.67\), \(p\lt 0.0001\). There is a relationship between TV advertising and sales.</div></div>
+
+<div class="widget" data-w="isl3-1-tdist" data-title="From a t-statistic to a p-value" data-args='{"t":2.12,"df":3}'><div class="wn">It starts at the five-point example: \(t=2.12\) with 3 degrees of freedom, so the red tail area (the p-value) is about 0.12, more than 0.05. Switch to df = 198 with the same t: the tails shrink and p drops below 0.05. Then slide t to 6 (the Advertising t of 17.67 is far off the right edge): the red area vanishes. The dashed grey curve is the standard normal; with large df the blue t-curve lies right on top of it.</div></div>
+
+<p>Here is Table 3.1, re-typed from the book:</p>
+<div class="tw"><table class="t"><thead><tr><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td>Intercept</td><td class="n">7.0325</td><td class="n">0.4578</td><td class="n">15.36</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>TV</td><td class="n">0.0475</td><td class="n">0.0027</td><td class="n">17.67</td><td class="n">&lt; 0.0001</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.1 (ISLP p. 77). Advertising data: least-squares regression of units sold on TV budget. An increase of $1,000 in TV budget is associated with an increase in sales of around 50 units.</p>
+
+<div class="predict" data-correct="1"><p>The next cell rebuilds Table 3.1 from our own numbers. What will the p-value column show?</p><ol class="opts"><li>Numbers so small they print as 0 (or like 1e-42)</li><li>About 0.05</li><li>About 0.5</li></ol><div class="why">A t of 15 or 17 is far into the tail of a t-distribution with 198 degrees of freedom. The probability is around \(10^{-35}\) to \(10^{-42}\): Python prints it in scientific notation, and the book just writes “&lt; 0.0001”. A p-value near 0.05 would need \(|t|\) near 2.</div></div>
+<div class="py" id="c-isl3-1-10"><pre class="src">
+t_b0, t_b1 = b0 / se_b0, b1 / se_b1
+p_b0 = 2 * stats.t.sf(abs(t_b0), df=n - 2)   # sf = 1 - cdf: the upper tail area
+p_b1 = 2 * stats.t.sf(abs(t_b1), df=n - 2)   # times 2: both tails
+table31 = pd.DataFrame({'Coefficient': [b0, b1], 'Std. error': [se_b0, se_b1],
+                        't-statistic': [t_b0, t_b1], 'p-value': [p_b0, p_b1]},
+                       index=['Intercept', 'TV'])
+print(table31.round(4))
+print(p_b0, p_b1)
+</pre><div class="pynote"><b>Read the output:</b> rounded to 4 decimals the p-values show as 0.0; the full numbers are around \(10^{-35}\) and \(10^{-42}\). <code>stats.t.sf</code> is the “survival function”: the area to the <i>right</i> of a value. We double it because a t far below zero would be just as surprising as one far above (\(H_a\) is \(\beta_1\neq0\), a two-sided test). <code>pd.DataFrame({...}, index=[...])</code> builds a table from a dictionary of columns.</div></div>
+
+<div class="callout exam"><p><b>Interview classic:</b> “What is a p-value?” A good answer: “Assuming the null hypothesis is true, the probability of getting a test statistic at least as extreme as the one we observed.” It is <i>not</i> the probability that the null hypothesis is true, and a large p-value does not prove there is no effect: it means the data are not strong enough to tell.</p></div>
+
+<h3 id="isl3-1-fit">How well does the line fit? RSE and R²</h3>
+<p>Once we know there <i>is</i> a relationship (question 1), we ask how strong it is (question 2). The book reports three numbers in Table 3.2:</p>
+<div class="tw"><table class="t"><thead><tr><th>Quantity</th><th>Value</th></tr></thead><tbody>
+<tr><td>Residual standard error</td><td class="n">3.26</td></tr>
+<tr><td>\(R^2\)</td><td class="n">0.612</td></tr>
+<tr><td>F-statistic</td><td class="n">312.1</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.2 (ISLP p. 78). More information about the least-squares model for the regression of units sold on TV budget.</p>
+
+<h4>RSE: lack of fit in the units of \(Y\)</h4>
+<p>The RSE (3.15) estimates the standard deviation of \(\epsilon\): roughly, how far the response typically lands from the true line. Advertising's RSE is 3.26, so even if we knew the true \(\beta_0\) and \(\beta_1\) exactly, a prediction of a market's sales from TV alone would typically be off by about 3,260 units. Is that a lot? Average sales are about 14,000 units, so the percentage error is \(3{,}260/14{,}000\approx23\%\). RSS itself is (3.16): \(\RSS=\sum(y_i-\hat y_i)^2\).</p>
+
+<h4>R²: the fraction of variance explained</h4>
+<p>RSE has units, so it is hard to say what a “good” RSE is. \(R^2\) is unit-free and always between 0 and 1. It compares two sums of squares:</p>
+<ul><li>the <dfn data-g="tss">total sum of squares</dfn> \(\text{TSS}=\sum(y_i-\bar y)^2\): how much \(y\) varies <i>before</i> regression, when the best guess for every market is just \(\bar y\);</li>
+<li>the RSS: how much variation is <i>left</i> after regression.</li></ul>
+<div class="mathblock" data-sheet="R squared"><div class="eqlabel">The \(R^2\) statistic (3.17)</div>
+\[R^2=\frac{\text{TSS}-\RSS}{\text{TSS}}=1-\frac{\RSS}{\text{TSS}}\]
+<p class="say">Read: “R-squared equals TSS minus RSS, over TSS”: the proportion of the variability in \(Y\) that is explained by \(X\).</p></div>
+<p><b>Five-point example:</b> \(\text{TSS}=6\), \(\RSS=2.4\), so \(R^2=1-2.4/6=1-0.4=0.6\). The line explains 60% of the variation in sales.</p>
+<p><b>Advertising:</b> \(\text{TSS}=5417.15\), \(\RSS=2102.53\), so \(R^2=1-2102.53/5417.15=1-0.3881=0.612\). Just under two-thirds of the variability in sales is explained by a linear regression on TV.</p>
+<p>What counts as a good <dfn data-g="r-squared">\(R^2\)</dfn> depends on the field. In a physics experiment where the law really is linear, anything below 0.99 might mean a broken instrument. In biology, psychology or marketing, where many unmeasured factors matter, an \(R^2\) well below 0.1 can be realistic and still useful.</p>
+
+<h4>Correlation, and why \(R^2=r^2\) here</h4>
+<p>The sample <dfn data-g="correlation">correlation</dfn> between \(X\) and \(Y\) (see <a href="#m-prob-cov">m-prob</a>) also measures a linear relationship:</p>
+<div class="mathblock" data-sheet="Correlation"><div class="eqlabel">Correlation (3.18)</div>
+\[r=\text{Cor}(X,Y)=\frac{\sum_i(x_i-\bar x)(y_i-\bar y)}{\sqrt{\sum_i(x_i-\bar x)^2}\sqrt{\sum_i(y_i-\bar y)^2}}=\frac{S_{xy}}{\sqrt{S_{xx}\,\text{TSS}}}\]
+<p class="say">Read: “r is S-x-y over the square root of S-x-x times S-y-y.” It lies between −1 and +1.</p></div>
+<p><b>Five points:</b> \(r=6/\sqrt{10\times6}=6/7.746=0.7746\), and \(r^2=0.6=R^2\). <b>Advertising:</b> \(r=69{,}727.65/\sqrt{1{,}466{,}819\times5417.15}=0.7822\), and \(0.7822^2=0.612=R^2\). In simple linear regression \(R^2=r^2\) always (you will prove it in <a href="#isl3-ex">Exercise 7</a>). With several predictors correlation no longer works, because it relates only two variables at a time, and \(R^2\) takes over.</p>
+<p>And the F-statistic in Table 3.2? It belongs to <a href="#isl3-2">lesson 3.2</a>. With one predictor it is simply \(t^2\): \(17.67^2=312.1\).</p>
+
+<div class="py" id="c-isl3-1-11"><pre class="src">
+TSS = np.sum((y - ybar) ** 2)
+R2 = 1 - RSS_tv / TSS
+r = Sxy / np.sqrt(Sxx * TSS)
+print(f"TSS = {TSS:.2f}  RSS = {RSS_tv:.2f}")
+print(f"RSE = {RSE:.3f}   R^2 = {R2:.4f}   r = {r:.4f}   r^2 = {r**2:.4f}")
+print(f"np.corrcoef: {np.corrcoef(x, y)[0, 1]:.4f}")
+print(f"F = t^2 = {t_b1**2:.1f}   statsmodels F = {results.fvalue:.1f}, R^2 = {results.rsquared:.4f}")
+print(f"percentage error: {RSE / ybar:.1%}")
+</pre><div class="pynote"><b>Read the output:</b> Table 3.2 reproduced: RSE 3.26, \(R^2=0.612\), F 312.1. <code>np.corrcoef(x, y)</code> returns a 2 × 2 correlation matrix; entry <code>[0, 1]</code> is the correlation between x and y. The format <code>:.1%</code> prints a fraction as a percentage.</div></div>
+
+<div class="callout pitfall"><p><b>Pitfall: \(R^2\) measures <i>linear</i> fit only.</b> A perfect U-shaped relationship can have \(R^2\) near 0. And a high \(R^2\) does not make a model correct: Figure 3.1 has \(R^2=0.61\) yet the residuals fan out, which breaks the equal-variance assumption behind the standard errors. Always look at the plot.</p></div>
+
+<h3 id="isl3-1-practice">Practice: write it yourself</h3>
+
+<div class="ex" id="x-isl3-1-01" data-title="least-squares fit from the formula"><div class="task"><p>Write <code>fit_line(x, y)</code> that returns the pair <code>(b0, b1)</code> using formula (3.4). Do not use <code>polyfit</code> or statsmodels inside it. Example: <code>fit_line([1,2,3,4,5], [2,4,5,4,5])</code> should give <code>(2.2, 0.6)</code> (up to rounding).</p></div>
+<pre class="src">
+def fit_line(x, y):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    b1 = ...   # your code here
+    b0 = ...
+    return b0, b1
+</pre>
+<pre class="check">
+b0_, b1_ = fit_line([1, 2, 3, 4, 5], [2, 4, 5, 4, 5])
+assert abs(b0_ - 2.2) < 1e-9 and abs(b1_ - 0.6) < 1e-9, f"expected (2.2, 0.6), got ({b0_}, {b1_})"
+b0_, b1_ = fit_line(Advertising['TV'], Advertising['sales'])
+s_, c_ = np.polyfit(Advertising['TV'], Advertising['sales'], 1)
+assert abs(b1_ - s_) < 1e-9 and abs(b0_ - c_) < 1e-7, f"Advertising: expected ({c_:.4f}, {s_:.6f}), got ({b0_}, {b1_})"
+b0_, b1_ = fit_line([0, 1, 2], [5, 3, 1])
+assert abs(b1_ + 2) < 1e-9 and abs(b0_ - 5) < 1e-9, f"a falling line: expected (5, -2), got ({b0_}, {b1_})"
+</pre>
+<div class="hint"><p>First compute <code>xbar = x.mean()</code> and <code>ybar = y.mean()</code>.</p></div>
+<div class="hint"><pre style="overflow-x:auto;font-size:13px;white-space:pre-wrap">b1 = np.sum((x - xbar) * (y - ybar)) / np.sum((x - xbar) ** 2)</pre><p>Then <code>b0 = ybar - b1 * xbar</code>.</p></div>
+<pre class="solution">
+def fit_line(x, y):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    xbar, ybar = x.mean(), y.mean()
+    b1 = np.sum((x - xbar) * (y - ybar)) / np.sum((x - xbar) ** 2)
+    b0 = ybar - b1 * xbar
+    return b0, b1
+</pre>
+<div class="explain"><p>This is (3.4) translated line by line. <code>np.asarray(..., dtype=float)</code> lets the function accept lists or pandas columns. The checks try the hand example, the real Advertising data (compared against <code>np.polyfit</code>), and a line with a negative slope.</p></div></div>
+
+<div class="ex" id="x-isl3-1-02" data-title="RSS of any line"><div class="task"><p>Write <code>rss(b0, b1, x, y)</code> returning the residual sum of squares of the line \(b_0+b_1x\). Example: for the five points, <code>rss(2.2, 0.6, x5, y5)</code> is 2.4, and <code>rss(4, 0, x5, y5)</code> (a flat line at \(\bar y\)) is 6, the TSS.</p></div>
+<pre class="src">
+def rss(b0, b1, x, y):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    return ...
+</pre>
+<pre class="check">
+assert abs(rss(2.2, 0.6, x5, y5) - 2.4) < 1e-9, f"expected 2.4, got {rss(2.2, 0.6, x5, y5)}"
+assert abs(rss(4, 0, x5, y5) - 6) < 1e-9, f"flat line at ybar should give TSS = 6, got {rss(4, 0, x5, y5)}"
+assert abs(rss(0, 0, [1, 2], [3, 4]) - 25) < 1e-9, "residuals 3 and 4 should give 9 + 16 = 25"
+r_ = rss(7.0325935, 0.04753664, Advertising['TV'], Advertising['sales'])
+assert abs(r_ - 2102.53) < 0.01, f"Advertising least-squares RSS should be 2102.53, got {r_:.2f}"
+</pre>
+<div class="hint"><p>The residuals are <code>y - (b0 + b1 * x)</code>.</p></div>
+<div class="hint"><p>Square them and add: <code>np.sum(... ** 2)</code>.</p></div>
+<pre class="solution">
+def rss(b0, b1, x, y):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    return np.sum((y - (b0 + b1 * x)) ** 2)
+</pre>
+<div class="explain"><p>Formula (3.3) in one line. Notice the second check: the horizontal line \(\hat y=\bar y\) has RSS equal to TSS, which is why \(R^2\) compares a model against that flat line.</p></div></div>
+
+<div class="ex" id="x-isl3-1-03" data-title="RSE, R² and the slope's standard error"><div class="task"><p>Write <code>fit_stats(x, y)</code> that returns a dictionary with keys <code>'rse'</code>, <code>'r2'</code> and <code>'se_b1'</code>, using (3.15), (3.17) and (3.8). You may call your <code>fit_line</code> from the first exercise. For the five points: rse 0.8944, r2 0.6, se_b1 0.2828.</p></div>
+<pre class="src">
+def fit_stats(x, y):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    n = len(x)
+    # your code here
+    return {'rse': None, 'r2': None, 'se_b1': None}
+</pre>
+<pre class="check">
+d = fit_stats(x5, y5)
+assert d['rse'] is not None, "fill in the three values"
+assert abs(d['rse'] - np.sqrt(0.8)) < 1e-9, f"rse should be 0.8944, got {d['rse']}"
+assert abs(d['r2'] - 0.6) < 1e-9, f"r2 should be 0.6, got {d['r2']}"
+assert abs(d['se_b1'] - np.sqrt(0.08)) < 1e-9, f"se_b1 should be 0.2828, got {d['se_b1']}"
+res_ = sm.OLS(Advertising['sales'], sm.add_constant(Advertising['TV'])).fit()
+d = fit_stats(Advertising['TV'], Advertising['sales'])
+assert abs(d['r2'] - res_.rsquared) < 1e-9, f"Advertising R^2 should be {res_.rsquared:.4f}, got {d['r2']}"
+assert abs(d['se_b1'] - res_.bse.iloc[1]) < 1e-9, f"Advertising SE should be {res_.bse.iloc[1]:.6f}, got {d['se_b1']}"
+assert abs(d['rse'] - np.sqrt(res_.scale)) < 1e-9, "Advertising RSE should match statsmodels' sqrt(scale)"
+</pre>
+<div class="hint"><p>Get the residuals <code>e = y - (b0 + b1*x)</code>, then <code>RSS = np.sum(e**2)</code> and <code>TSS = np.sum((y - y.mean())**2)</code>.</p></div>
+<div class="hint"><p><code>rse = np.sqrt(RSS / (n - 2))</code>; <code>r2 = 1 - RSS / TSS</code>; </p><pre style="overflow-x:auto;font-size:13px;white-space:pre-wrap">se_b1 = rse / np.sqrt(np.sum((x - x.mean())**2))</pre></div>
+<pre class="solution">
+def fit_stats(x, y):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    n = len(x)
+    b0, b1 = fit_line(x, y)
+    e = y - (b0 + b1 * x)
+    RSS = np.sum(e ** 2)
+    TSS = np.sum((y - y.mean()) ** 2)
+    rse = np.sqrt(RSS / (n - 2))
+    return {'rse': rse, 'r2': 1 - RSS / TSS,
+            'se_b1': rse / np.sqrt(np.sum((x - x.mean()) ** 2))}
+</pre>
+<div class="explain"><p>Each value is one formula from this lesson. The checks compare against statsmodels: <code>res_.scale</code> is statsmodels' name for \(\text{RSE}^2\) (its estimate of \(\sigma^2\)), and <code>res_.bse</code> holds the standard errors.</p></div></div>
+
+<div class="ex" id="x-isl3-1-04" data-title="t-statistic and two-sided p-value"><div class="task"><p>Write <code>t_test(b, se, df)</code> returning <code>(t, p)</code> for \(H_0:\beta=0\), where <code>p</code> is the two-sided p-value from a t-distribution with <code>df</code> degrees of freedom. Example: <code>t_test(0.6, np.sqrt(0.08), 3)</code> gives \(t\approx2.121\), \(p\approx0.124\).</p></div>
+<pre class="src">
+def t_test(b, se, df):
+    t = ...
+    p = ...
+    return t, p
+</pre>
+<pre class="check">
+t_, p_ = t_test(0.6, np.sqrt(0.08), 3)
+assert abs(t_ - 2.1213) < 1e-3, f"t should be 2.1213, got {t_}"
+assert abs(p_ - 0.1240) < 1e-3, f"p should be about 0.124, got {p_}"
+t_, p_ = t_test(-0.6, np.sqrt(0.08), 3)
+assert abs(t_ + 2.1213) < 1e-3 and abs(p_ - 0.1240) < 1e-3, "a negative estimate must give a negative t but the SAME two-sided p"
+res_ = sm.OLS(Advertising['sales'], sm.add_constant(Advertising['TV'])).fit()
+t_, p_ = t_test(res_.params.iloc[1], res_.bse.iloc[1], 198)
+assert abs(t_ - res_.tvalues.iloc[1]) < 1e-8 and abs(p_ - res_.pvalues.iloc[1]) < 1e-50, "should match statsmodels for TV"
+</pre>
+<div class="hint"><p>\(t=\hat\beta/\SE\). The area beyond \(|t|\) in one tail is <code>stats.t.sf(abs(t), df)</code>.</p></div>
+<div class="hint"><p>Two-sided means both tails: <code>p = 2 * stats.t.sf(abs(t), df)</code>. Forgetting <code>abs</code> breaks negative estimates.</p></div>
+<pre class="solution">
+def t_test(b, se, df):
+    t = b / se
+    p = 2 * stats.t.sf(abs(t), df)
+    return t, p
+</pre>
+<div class="explain"><p>The t-statistic counts standard errors from zero; the p-value is the area in both tails beyond \(\pm|t|\). Using <code>abs(t)</code> makes the function correct for negative estimates too.</p></div></div>
+
+<h3 id="isl3-1-quiz">Quiz</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In \(\hat y=\hat\beta_0+\hat\beta_1x\), what does the hat on \(\hat\beta_1\) tell you?</p><ol class="opts"><li>It is the true slope of the population line</li><li>It is an estimate computed from the data</li><li>It is a squared quantity</li></ol><div class="why">A hat always marks an estimate (or a prediction). The true slope \(\beta_1\) has no hat and is unknown. Nothing is squared.</div></div>
+<div class="q" data-type="num" data-answer="0.5" data-tol="0.001"><p class="stem">Data: \(x=(0,2,4)\), \(y=(1,1,3)\). Compute \(\hat\beta_1\).</p><div class="why">\(\bar x=2\), \(\bar y=5/3\). Deviations: \(x\): −2, 0, 2; \(y\): −2/3, −2/3, 4/3. \(S_{xy}=(−2)(−2/3)+0+2(4/3)=4/3+8/3=4\). \(S_{xx}=4+0+4=8\). \(\hat\beta_1=4/8=0.5\).</div></div>
+<div class="q" data-type="num" data-answer="0.667" data-tol="0.01"><p class="stem">Same data, \(x=(0,2,4)\), \(y=(1,1,3)\), \(\hat\beta_1=0.5\). Compute \(\hat\beta_0\) (to 3 decimals).</p><div class="why">\(\hat\beta_0=\bar y-\hat\beta_1\bar x=5/3-0.5\times2=1.667-1=0.667\).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">You collect the same number of points, but your \(x\) values are spread over a range three times as wide. Noise is unchanged. What happens to \(\SE(\hat\beta_1)\)?</p><ol class="opts"><li>It triples</li><li>It stays the same</li><li>It shrinks to about a third</li></ol><div class="why">Tripling the spread multiplies every \(x_i-\bar x\) by 3, so \(S_{xx}\) is multiplied by 9 and \(\SE(\hat\beta_1)=\sigma/\sqrt{S_{xx}}\) is divided by 3. Spread-out inputs pin down a slope better.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">A slope has \(\hat\beta_1=0.8\) and \(\SE(\hat\beta_1)=0.5\), with \(n=200\). Which statement is right?</p><ol class="opts"><li>\(t=1.6\); we cannot reject \(H_0:\beta_1=0\) at the 5% level</li><li>\(t=1.6\); we reject \(H_0\) because 0.8 is not zero</li><li>\(t=0.4\); we cannot reject \(H_0\)</li></ol><div class="why">\(t=0.8/0.5=1.6\), below the cut-off of about 1.97, so p ≈ 0.11. Being non-zero is not enough: the estimate must be far from zero <i>in units of its standard error</i>. Option C divides the wrong way round.</div></div>
+<div class="q" data-type="num" data-answer="0.75" data-tol="0.001"><p class="stem">A regression has TSS = 400 and RSS = 100. What is \(R^2\)?</p><div class="why">\(R^2=1-\RSS/\text{TSS}=1-100/400=0.75\): 75% of the variance is explained.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In a simple regression, the correlation between \(X\) and \(Y\) is \(r=-0.9\). What is \(R^2\)?</p><ol class="opts"><li>−0.81</li><li>0.81</li><li>0.9</li></ol><div class="why">\(R^2=r^2=(-0.9)^2=0.81\). \(R^2\) can never be negative for least squares with an intercept; the sign of \(r\) gives the direction of the slope, not the strength.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Why does the RSE divide RSS by \(n-2\) instead of \(n\)?</p><ol class="opts"><li>To make the RSE look smaller</li><li>Because two observations are always outliers</li><li>Because two parameters were estimated from the same data, leaving \(n-2\) degrees of freedom</li></ol><div class="why">Fitting \(\hat\beta_0,\hat\beta_1\) forces two constraints on the residuals (\(\sum e_i=0\), \(\sum x_ie_i=0\)), so the residuals are a little smaller than the true errors. Dividing by \(n-2\) corrects this so \(\text{RSE}^2\) is unbiased for \(\sigma^2\). (Dividing by a smaller number makes the RSE larger, not smaller.)</div></div>
+<div class="q" data-type="open"><p class="stem">Explain to a friend the difference between the population regression line and the least-squares line, using Figure 3.3.</p><div class="model">The population line \(\beta_0+\beta_1X\) uses the true, unknown coefficients: it is the average relationship in the whole population (in Figure 3.3, the red line \(2+3X\)). The least-squares line uses estimates computed from one sample, so it wobbles from sample to sample (the light-blue lines). Each least-squares line is a bit off, but they are unbiased: on average they equal the population line, just as sample means average to the population mean. Standard errors measure how big the wobble typically is.</div></div>
+</div>
+
+<h3 id="isl3-1-cards">Flashcards</h3>
+<div class="cards">
+<div class="fc"><div class="f">Simple linear regression model (with error term)</div><div class="b">\(Y=\beta_0+\beta_1X+\epsilon\)</div></div>
+<div class="fc"><div class="f">Residual \(e_i\)</div><div class="b">\(e_i=y_i-\hat y_i\): observed minus predicted.</div></div>
+<div class="fc"><div class="f">RSS</div><div class="b">\(\RSS=\sum_i(y_i-\hat\beta_0-\hat\beta_1x_i)^2\)</div></div>
+<div class="fc"><div class="f">Least-squares slope \(\hat\beta_1\)</div><div class="b">\(\dfrac{\sum(x_i-\bar x)(y_i-\bar y)}{\sum(x_i-\bar x)^2}\)</div></div>
+<div class="fc"><div class="f">Least-squares intercept \(\hat\beta_0\)</div><div class="b">\(\bar y-\hat\beta_1\bar x\) (so the line passes through \((\bar x,\bar y)\))</div></div>
+<div class="fc"><div class="f">\(\SE(\hat\beta_1)^2\)</div><div class="b">\(\sigma^2/\sum(x_i-\bar x)^2\)</div></div>
+<div class="fc"><div class="f">\(\SE(\hat\beta_0)^2\)</div><div class="b">\(\sigma^2\left[\frac1n+\frac{\bar x^2}{\sum(x_i-\bar x)^2}\right]\)</div></div>
+<div class="fc"><div class="f">RSE (simple regression)</div><div class="b">\(\sqrt{\RSS/(n-2)}\): estimate of \(\sigma\), the sd of \(\epsilon\).</div></div>
+<div class="fc"><div class="f">Approximate 95% CI for \(\beta_1\)</div><div class="b">\(\hat\beta_1\pm2\,\SE(\hat\beta_1)\) (exactly: \(\pm t_{0.975,n-2}\SE\))</div></div>
+<div class="fc"><div class="f">t-statistic for \(H_0:\beta_1=0\)</div><div class="b">\(t=\hat\beta_1/\SE(\hat\beta_1)\); t-distribution with \(n-2\) df under \(H_0\).</div></div>
+<div class="fc"><div class="f">\(R^2\)</div><div class="b">\(1-\RSS/\text{TSS}\), with TSS \(=\sum(y_i-\bar y)^2\): fraction of variance explained.</div></div>
+<div class="fc"><div class="f">Link between \(R^2\) and correlation in simple regression</div><div class="b">\(R^2=r^2=\text{Cor}(X,Y)^2\)</div></div>
+<div class="fc"><div class="f">Advertising, sales on TV: \(\hat\beta_0\), \(\hat\beta_1\), \(R^2\), RSE</div><div class="b">7.03, 0.0475, 0.612, 3.26</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can write the model \(Y=\beta_0+\beta_1X+\epsilon\) and read every symbol aloud.</label>
+<label><input type="checkbox"> I can derive (3.4) by setting the two partial derivatives of RSS to zero.</label>
+<label><input type="checkbox"> I can fit a line to five points by hand with a table of sums.</label>
+<label><input type="checkbox"> I reproduced \(\hat\beta_0=7.03\), \(\hat\beta_1=0.0475\) and Table 3.1 in Python.</label>
+<label><input type="checkbox"> I can compute an SE, a 95% CI, a t-statistic and a p-value for a coefficient, and say what each means in words.</label>
+<label><input type="checkbox"> I can compute RSE and \(R^2\) and explain why \(R^2=r^2\) with one predictor.</label>
+<label><input type="checkbox"> I can explain the difference between the population line and the least-squares line.</label>
+</div>
+</section>

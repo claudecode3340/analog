@@ -1,0 +1,14 @@
+{
+"argument": {"term": "argument", "def": "An input passed to a function, e.g. the 11 in <code>print('fit', 11)</code>. Keyword arguments are passed by name (<code>size=50</code>), positional ones by order.", "at": "isl2-lab"},
+"method": {"term": "method", "def": "A function attached to an object and called with a dot, e.g. <code>x.sum()</code>; the object is passed in automatically.", "at": "isl2-lab"},
+"attribute": {"term": "attribute", "def": "A value attached to an object, read with a dot and no brackets, e.g. <code>x.shape</code>, <code>x.dtype</code>.", "at": "isl2-lab"},
+"tuple": {"term": "tuple", "def": "An ordered sequence in round brackets, like <code>(2, 3)</code>, whose items cannot be changed.", "at": "isl2-lab"},
+"random-seed": {"term": "random seed", "def": "A number given to a random generator (<code>np.random.default_rng(1303)</code>) so the same 'random' numbers are produced every run.", "at": "isl2-lab"},
+"slice": {"term": "slice notation", "def": "<code>[start:stop:step]</code>: items from start up to but not including stop, every step-th one.", "at": "isl2-lab"},
+"boolean-index": {"term": "Boolean indexing", "def": "Selecting entries with an array of True/False values of the same length: True entries are kept.", "at": "isl2-lab"},
+"data-frame": {"term": "data frame", "def": "A pandas table: columns of equal length, possibly of different types, with row and column labels.", "at": "isl2-lab"},
+"na-values": {"term": "missing values (NaN)", "def": "Entries with no data, stored as <code>np.nan</code>; <code>read_csv(..., na_values=['?'])</code> converts a marker such as '?' into NaN.", "at": "isl2-lab"},
+"lambda": {"term": "lambda", "def": "A one-line unnamed function, e.g. <code>lambda df: df['year'] &gt; 80</code>.", "at": "isl2-lab"},
+"boxplot": {"term": "boxplot", "def": "A plot of the median, quartiles, whiskers and outliers of a variable, often side by side for each category of another variable.", "at": "isl2-lab"},
+"scatter-matrix": {"term": "scatterplot matrix", "def": "A grid of scatterplots of every pair of variables, with each variable's histogram on the diagonal.", "at": "isl2-lab"}
+}

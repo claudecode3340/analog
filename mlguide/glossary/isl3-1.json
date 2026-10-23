@@ -1,0 +1,72 @@
+{
+"intercept": {
+"term": "intercept",
+"def": "\\(\\beta_0\\) in \\(Y=\\beta_0+\\beta_1X+\\epsilon\\): the value of the line when \\(X=0\\).",
+"at": "isl3-1"
+},
+"slope": {
+"term": "slope",
+"def": "\\(\\beta_1\\): the average change in \\(Y\\) for a one-unit increase in \\(X\\).",
+"at": "isl3-1"
+},
+"coefficient": {
+"term": "coefficient (parameter)",
+"def": "An unknown constant of a model, such as \\(\\beta_0\\) or \\(\\beta_1\\); estimated from data and then written with a hat.",
+"at": "isl3-1"
+},
+"residual": {
+"term": "residual",
+"def": "\\(e_i=y_i-\\hat y_i\\): the observed response minus the model's prediction for that observation.",
+"at": "isl3-1"
+},
+"rss": {
+"term": "residual sum of squares (RSS)",
+"def": "\\(\\RSS=\\sum_i (y_i-\\hat y_i)^2\\): the quantity least squares minimises.",
+"at": "isl3-1"
+},
+"population-line": {
+"term": "population regression line",
+"def": "\\(\\beta_0+\\beta_1X\\) with the true, unknown coefficients: the best linear approximation to the true relationship. The least-squares line estimates it.",
+"at": "isl3-1"
+},
+"unbiased": {
+"term": "unbiased estimator",
+"def": "An estimator whose average over many data sets equals the true value: it does not systematically over- or under-estimate.",
+"at": "isl3-1"
+},
+"rse": {
+"term": "residual standard error (RSE)",
+"def": "\\(\\sqrt{\\RSS/(n-p-1)}\\): an estimate of \\(\\sigma\\), the standard deviation of the error term; in the units of \\(Y\\).",
+"at": "isl3-1"
+},
+"dof": {
+"term": "degrees of freedom",
+"def": "The number of observations minus the number of estimated parameters, e.g. \\(n-2\\) in simple linear regression.",
+"at": "isl3-1"
+},
+"t-statistic": {
+"term": "t-statistic",
+"def": "\\(t=\\hat\\beta/\\SE(\\hat\\beta)\\): how many standard errors an estimate lies from zero.",
+"at": "isl3-1"
+},
+"p-value": {
+"term": "p-value",
+"def": "Assuming \\(H_0\\) is true, the probability of a test statistic at least as extreme as the one observed. Small p-values are evidence against \\(H_0\\).",
+"at": "isl3-1"
+},
+"tss": {
+"term": "total sum of squares (TSS)",
+"def": "\\(\\sum_i(y_i-\\bar y)^2\\): the variability in the response before any predictor is used.",
+"at": "isl3-1"
+},
+"r-squared": {
+"term": "\\(R^2\\) statistic",
+"def": "\\(1-\\RSS/\\text{TSS}\\): the proportion of variance in \\(Y\\) explained by the model; between 0 and 1.",
+"at": "isl3-1"
+},
+"correlation": {
+"term": "correlation",
+"def": "\\(r=S_{xy}/\\sqrt{S_{xx}S_{yy}}\\), between −1 and 1: the strength and direction of a linear relationship between two variables.",
+"at": "isl3-1"
+}
+}

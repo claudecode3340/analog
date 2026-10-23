@@ -1,0 +1,552 @@
+<section class="lesson" id="isl3-3" data-book="ISLP §3.3–3.5, pp. 91–115">
+<p class="lede">The plain linear model assumes every predictor is a number, that effects simply add up, that the relationship is a straight line, and that the errors are well behaved. Real data break all of these. This lesson shows you how to bend the linear model to fit qualitative predictors, synergies and curves, how to spot each of the six classic problems from a residual plot, and when a flexible method like KNN beats a straight line.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#isl3-1">ISLP 3.1</a> · <a href="#isl3-2">ISLP 3.2</a> (multiple regression, F-test) · <a href="#isl2-2">ISLP 2.2</a> (bias–variance, KNN) · <a href="#pd1">pandas</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>encode a qualitative predictor with dummy (one-hot) variables and interpret every coefficient relative to the baseline;</li>
+<li>add an interaction term, explain the hierarchical principle, and read Table 3.9 as “the TV slope depends on radio”;</li>
+<li>fit a polynomial regression and explain why it is still a <i>linear</i> model;</li>
+<li>diagnose non-linearity, correlated errors, heteroscedasticity, outliers, high leverage and collinearity, and compute a leverage statistic and a VIF by hand;</li>
+<li>answer the seven marketing questions with numbers, and say when KNN regression beats linear regression and when the curse of dimensionality reverses that.</li></ul></div>
+
+<div class="callout book"><blockquote>In our discussion so far, we have assumed that all variables in our linear regression model are quantitative. But in practice, this is not necessarily the case; often some predictors are qualitative.</blockquote><cite>ISLP p. 91</cite></div>
+
+<div class="py" id="c-isl3-3-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from scipy import stats
+from ISLP import load_data
+from statsmodels.stats.outliers_influence import variance_inflation_factor as VIF
+
+Credit = pd.read_csv('Credit.csv')
+Advertising = pd.read_csv('Advertising.csv', index_col=0)
+Auto = load_data('Auto')
+def ols(y, X):
+    """Least squares of y on the columns of X (an intercept column is added)."""
+    return sm.OLS(y, sm.add_constant(X)).fit()
+def coef_table(res):
+    return pd.DataFrame({'coef': res.params, 'std err': res.bse, 't': res.tvalues, 'P>|t|': res.pvalues}).round(4)
+Credit.head()
+</pre><div class="pynote"><b>Read the output:</b> the Credit data: 400 card holders. <code>Balance</code> (average credit-card debt) is the response. Quantitative predictors: <code>Income</code> (thousands of dollars), <code>Limit</code> (credit limit), <code>Rating</code> (credit rating), <code>Cards</code>, <code>Age</code>, <code>Education</code> (years). Qualitative predictors: <code>Own</code> (owns a house), <code>Student</code>, <code>Married</code> and <code>Region</code> (East, South or West). We wrote two helpers so later cells stay short: <code>ols</code> fits a regression with an intercept, and <code>coef_table</code> prints the four columns the book shows. <code>Auto</code> comes from the ISLP package.</div></div>
+
+<h3 id="isl3-3-qual">Qualitative predictors and dummy variables</h3>
+<figure class="book" data-fig="islp-3.6"><figcaption>A <b>scatterplot matrix</b> of the Credit data: every pair of quantitative variables gets its own small scatter plot. The panel in row “Balance”, column “Age” shows balance against age, and so on. <b>Look at Limit and Rating</b> (bottom right): they lie almost on a straight line. Remember this: it causes trouble in the collinearity section. Also note that Balance rises with Limit and Rating but shows little pattern with Age, Cards or Education.</figcaption></figure>
+<p>A <dfn data-g="qualitative-predictor">qualitative predictor</dfn> (also called a <b>factor</b>) takes values that are categories, not numbers: “owns a house: yes or no”, “region: East, South, West”. Each possible value is a <b>level</b>. You cannot multiply “Yes” by a coefficient, so we must turn categories into numbers first.</p>
+
+<h4>Two levels: one dummy variable</h4>
+<p>Create a <dfn data-g="dummy-variable">dummy variable</dfn> (also called an indicator) that is 1 for one level and 0 for the other:</p>
+<div class="mathblock" data-sheet="Dummy variable, two levels"><div class="eqlabel">Dummy variable and its model (3.26)–(3.27)</div>
+\[x_i=\begin{cases}1&\text{if person } i \text{ owns a house}\\0&\text{if not}\end{cases}\qquad y_i=\beta_0+\beta_1x_i+\epsilon_i=\begin{cases}\beta_0+\beta_1+\epsilon_i&\text{owner}\\\beta_0+\epsilon_i&\text{non-owner}\end{cases}\]
+<p class="say">Read: “x-i is one for an owner and zero otherwise.” Then the model has a different intercept for each group.</p></div>
+<p>Now the coefficients have clear meanings: \(\beta_0\) is the average balance of <b>non-owners</b>; \(\beta_0+\beta_1\) the average balance of <b>owners</b>; and \(\beta_1\) the average <b>difference</b> between owners and non-owners. In machine learning this coding is called <dfn data-g="one-hot">one-hot encoding</dfn>.</p>
+
+<div class="tw"><table class="t"><thead><tr><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td>Intercept</td><td class="n">509.80</td><td class="n">33.13</td><td class="n">15.389</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>own[Yes]</td><td class="n">19.73</td><td class="n">46.05</td><td class="n">0.429</td><td class="n">0.6690</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.7 (ISLP p. 93). Regression of balance onto own in the Credit data, with ownership encoded as the dummy (3.26).</p>
+<p><b>Read it.</b> Non-owners carry on average $509.80 of debt. Owners carry $19.73 more: \(509.80+19.73=\$529.53\). But the p-value of the dummy is 0.67: a difference this small would be quite likely by chance. There is <b>no statistical evidence</b> that average balance differs between owners and non-owners.</p>
+
+<div class="py" id="c-isl3-3-02"><pre class="src">
+own = (Credit['Own'] == 'Yes').astype(int)     # True/False -> 1/0
+print(pd.DataFrame({'Own': Credit['Own'], 'dummy': own}).head(4))
+res_own = ols(Credit['Balance'], own.rename('own[Yes]'))
+print(coef_table(res_own))
+print(Credit.groupby('Own')['Balance'].mean().round(2))
+</pre><div class="pynote"><b>Read the output:</b> the dummy column is 1 where <code>Own</code> is “Yes”. The regression reproduces Table 3.7 (509.80, 19.73, p = 0.67). The last lines are the plain group averages: 509.80 for “No”, 529.54 for “Yes”. With a single dummy, least squares simply finds each group's mean. <code>.astype(int)</code> turns True/False into 1/0; <code>.rename</code> just names the column so the table reads nicely.</div></div>
+
+<p>The choice of which level gets the 1 is arbitrary. It changes the coefficients but <b>not the predictions</b>. Coding non-owners as 1 instead gives \(\hat\beta_0=529.53\), \(\hat\beta_1=-19.73\): the same two group means. Another option is a \(\pm1\) coding: \(x_i=1\) for owners and \(x_i=-1\) for non-owners. Then owners get \(\beta_0+\beta_1\), non-owners \(\beta_0-\beta_1\), so \(\beta_0\) is halfway between the two group means and \(\beta_1\) is half the difference.</p>
+
+<div class="worked"><div class="wt">Worked example · <b>the ±1 coding by hand</b></div>
+<div class="given">Group means: owners 529.53, non-owners 509.80.</div>
+<ol class="steps">
+<li><div>Owners: \(\beta_0+\beta_1=529.53\). Non-owners: \(\beta_0-\beta_1=509.80\).</div></li>
+<li><div>Add the two equations: \(2\beta_0=1039.33\), so \(\hat\beta_0=519.67\).</div></li>
+<li><div>Subtract: \(2\beta_1=19.73\), so \(\hat\beta_1=9.87\).</div></li>
+<li><div>Predictions: owners \(519.67+9.87=529.53\), non-owners \(519.67-9.87=509.80\). Identical to the 0/1 coding.<span class="why">The book prints 519.665 and 9.865. \(\beta_0\) is the overall average only when the two groups are the same size; here 207 owners and 193 non-owners, so it is the midpoint of the two means, not the overall mean.</span></div></li>
+</ol>
+<div class="result">\(\hat\beta_0=519.67\) (midpoint), \(\hat\beta_1=9.87\) (half the difference)</div></div>
+<div class="py" id="c-isl3-3-03"><pre class="src">
+pm1 = np.where(Credit['Own'] == 'Yes', 1, -1)        # +1 for owners, -1 otherwise
+res_pm = ols(Credit['Balance'], pd.Series(pm1, name='own(+1/-1)'))
+print(res_pm.params.round(3))
+print("predictions:", np.unique(res_pm.fittedvalues.round(2)))
+</pre><div class="pynote"><b>Read the output:</b> intercept 519.67, slope 9.87, and the only two distinct predictions are 509.80 and 529.54, as before. <code>np.where(condition, a, b)</code> gives <code>a</code> where the condition is true and <code>b</code> elsewhere; <code>np.unique</code> lists the distinct values.</div></div>
+
+<h4>More than two levels: one fewer dummy than levels</h4>
+<p>Region has three levels. One dummy cannot hold three values, so we make two:</p>
+<div class="mathblock" data-sheet="Dummy variables, three levels"><div class="eqlabel">Region coded by two dummies (3.28)–(3.30)</div>
+\[x_{i1}=\begin{cases}1&\text{South}\\0&\text{otherwise}\end{cases}\quad x_{i2}=\begin{cases}1&\text{West}\\0&\text{otherwise}\end{cases}\quad y_i=\beta_0+\beta_1x_{i1}+\beta_2x_{i2}+\epsilon_i=\begin{cases}\beta_0+\beta_1+\epsilon_i&\text{South}\\\beta_0+\beta_2+\epsilon_i&\text{West}\\\beta_0+\epsilon_i&\text{East}\end{cases}\]</div>
+<p>East has no dummy of its own: it is the <dfn data-g="baseline">baseline</dfn> level, where both dummies are 0. \(\beta_0\) is East's average balance; \(\beta_1\) is South minus East; \(\beta_2\) is West minus East. <b>There is always one fewer dummy than levels.</b></p>
+<div class="worked"><div class="wt">Worked example · <b>the design matrix for five people</b></div>
+<div class="given">Regions of five people: East, South, West, South, East.</div>
+<ol class="steps"><li><div>Columns: intercept, South dummy, West dummy.
+\[\bX=\begin{pmatrix}1&0&0\\1&1&0\\1&0&1\\1&1&0\\1&0&0\end{pmatrix}\begin{matrix}\leftarrow\text{East}\\\leftarrow\text{South}\\\leftarrow\text{West}\\\leftarrow\text{South}\\\leftarrow\text{East}\end{matrix}\]</div></li>
+<li><div>Why not also an East column? Then East + South + West would always equal 1, exactly the intercept column. The columns would be perfectly collinear, \(\bX\T\bX\) could not be inverted, and the coefficients would not be unique. This is the <b>dummy variable trap</b>.</div></li></ol>
+<div class="result">\(p\) levels → \(p-1\) dummies plus the intercept</div></div>
+
+<div class="tw"><table class="t"><thead><tr><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td>Intercept</td><td class="n">531.00</td><td class="n">46.32</td><td class="n">11.464</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>region[South]</td><td class="n">−12.50</td><td class="n">56.68</td><td class="n">−0.221</td><td class="n">0.8260</td></tr>
+<tr><td>region[West]</td><td class="n">−18.69</td><td class="n">65.02</td><td class="n">−0.287</td><td class="n">0.7740</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.8 (ISLP p. 94). Regression of balance onto region in the Credit data, with region encoded by the two dummies (3.28)–(3.29).</p>
+<p><b>Read it.</b> East (the baseline) averages $531.00. South averages $12.50 less, West $18.69 less. (The book's text on p. 94 swaps the two amounts; the table is right.) Both p-values are large, so there is no evidence of a real difference from East. Because the individual coefficients depend on which baseline you choose, it is better to test \(H_0:\beta_1=\beta_2=0\) with an F-test, which does not depend on the coding: its p-value is 0.96, so we cannot reject that region is unrelated to balance.</p>
+
+<div class="py" id="c-isl3-3-04"><pre class="src">
+dummies = pd.get_dummies(Credit['Region'], prefix='region', drop_first=True, dtype=int)
+print(dummies.head(4))
+res_reg = ols(Credit['Balance'], dummies)
+print(coef_table(res_reg))
+print("F =", round(res_reg.fvalue, 4), " p-value =", round(res_reg.f_pvalue, 4))
+</pre><div class="pynote"><b>Read the output:</b> <code>pd.get_dummies</code> makes one 0/1 column per level; <code>drop_first=True</code> drops the first level alphabetically (East), which becomes the baseline. The table is Table 3.8, and the overall F-test p-value is 0.957. Qualitative and quantitative predictors mix freely: to model balance on income and student status, put the income column and a student dummy side by side in \(\bX\).</div></div>
+
+<div class="callout pitfall"><p><b>Pitfall: a coefficient for a level is always relative to the baseline.</b> “region[West] = −18.69” does not mean West has negative debt. It means West's average is 18.69 below East's. Change the baseline and every dummy coefficient and its p-value changes, while the predictions and the overall F-test stay exactly the same. Other codings (called <i>contrasts</i>) exist; they give the same fit with different interpretations.</p></div>
+
+<h3 id="isl3-3-interact">Removing the additive assumption: interactions</h3>
+<p>The standard model makes two strong assumptions:</p>
+<ul><li><b>Additive:</b> the effect of \(X_j\) on \(Y\) does not depend on the other predictors.</li><li><b>Linear:</b> a one-unit change in \(X_j\) changes \(Y\) by the same amount whatever the value of \(X_j\).</li></ul>
+<p>Additivity says: the extra sales from $1,000 more TV are the same whether radio spending is zero or huge. But Figure 3.5 in lesson 3.2 suggested otherwise: splitting the budget between TV and radio sold more than the flat plane predicted. That is an <dfn data-g="interaction">interaction</dfn> (marketing calls it synergy). We model it by adding the product of the two predictors as a third predictor:</p>
+<div class="mathblock" data-sheet="Interaction model"><div class="eqlabel">Interaction term (3.31)–(3.32)</div>
+\[Y=\beta_0+\beta_1X_1+\beta_2X_2+\beta_3X_1X_2+\epsilon=\beta_0+\underbrace{(\beta_1+\beta_3X_2)}_{\tilde\beta_1}X_1+\beta_2X_2+\epsilon\]
+<p class="say">Read: “the slope of \(X_1\) is now beta-one plus beta-three times \(X_2\)”. Change \(X_2\) and the effect of \(X_1\) changes.</p></div>
+<p>It is still a linear model in the coefficients: the product \(X_1X_2\) is just one more column of \(\bX\).</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>the factory (ISLP p. 96)</b></div>
+<div class="given">Units produced \(\approx 1.2+3.4\times\text{lines}+0.22\times\text{workers}+1.4\times(\text{lines}\times\text{workers})\).</div>
+<ol class="steps">
+<li><div>Group the terms with “lines”: \(1.2+(3.4+1.4\times\text{workers})\times\text{lines}+0.22\times\text{workers}\).</div></li>
+<li><div>With 10 workers, one extra production line adds \(3.4+1.4\times10=17.4\) units.</div></li>
+<li><div>With 20 workers, one extra line adds \(3.4+1.4\times20=31.4\) units.<span class="why">The more workers you have, the more an extra line is worth: with nobody to run them, lines produce nothing extra. An additive model could not express this.</span></div></li>
+</ol>
+<div class="result">Effect of one more line \(=3.4+1.4\times\text{workers}\)</div></div>
+
+<p>For Advertising, the interaction model is</p>
+\[\text{sales}=\beta_0+\beta_1\times\text{TV}+\beta_2\times\text{radio}+\beta_3\times(\text{radio}\times\text{TV})+\epsilon=\beta_0+(\beta_1+\beta_3\times\text{radio})\times\text{TV}+\beta_2\times\text{radio}+\epsilon.\qquad(3.33)\]
+<div class="tw"><table class="t"><thead><tr><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td>Intercept</td><td class="n">6.7502</td><td class="n">0.248</td><td class="n">27.23</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>TV</td><td class="n">0.0191</td><td class="n">0.002</td><td class="n">12.70</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>radio</td><td class="n">0.0289</td><td class="n">0.009</td><td class="n">3.24</td><td class="n">0.0014</td></tr>
+<tr><td>TV×radio</td><td class="n">0.0011</td><td class="n">0.000</td><td class="n">20.73</td><td class="n">&lt; 0.0001</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.9 (ISLP p. 96). Regression of sales onto TV and radio with an interaction term, as in (3.33).</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>reading Table 3.9</b></div>
+<div class="given">\(\hat\beta_1=0.0191\), \(\hat\beta_2=0.0289\), \(\hat\beta_3=0.0011\). \(R^2\): 0.968 with the interaction, 0.897 without.</div>
+<ol class="steps">
+<li><div><b>Is there synergy?</b> The interaction's t is 20.73 and p &lt; 0.0001: strong evidence that \(\beta_3\neq0\). The true relationship is not additive.</div></li>
+<li><div><b>Effect of $1,000 more TV</b> \(=(\hat\beta_1+\hat\beta_3\times\text{radio})\times1000=19+1.1\times\text{radio}\) units. With radio = 0: 19 units. With radio = 40 ($40,000): \(19+44=63\) units.</div></li>
+<li><div><b>Effect of $1,000 more radio</b> \(=(\hat\beta_2+\hat\beta_3\times\text{TV})\times1000=29+1.1\times\text{TV}\) units. With TV = 100: \(29+110=139\) units.</div></li>
+<li><div><b>How much of the leftover variance did the interaction explain?</b> The additive model left \(100-89.7=10.3\%\) unexplained. The interaction recovered \(96.8-89.7=7.1\) points of it: \(7.1/10.3=69\%\).</div></li>
+</ol>
+<div class="result">69% of the variance the additive model missed is explained by the TV×radio term</div></div>
+
+<div class="py" id="c-isl3-3-05"><pre class="src">
+A = Advertising.copy()
+A['TV:radio'] = A['TV'] * A['radio']          # the interaction is just a new column
+res_int = ols(A['sales'], A[['TV', 'radio', 'TV:radio']])
+res_add = ols(A['sales'], A[['TV', 'radio']])
+print(coef_table(res_int))
+print(f"R^2 additive = {res_add.rsquared:.4f}, with interaction = {res_int.rsquared:.4f}")
+gain = (res_int.rsquared - res_add.rsquared) / (1 - res_add.rsquared)
+print(f"share of the remaining variance explained: {gain:.0%}")
+</pre><div class="pynote"><b>Read the output:</b> Table 3.9 (the coefficients are 6.7502, 0.0191, 0.0289, 0.0011), \(R^2\) 0.8972 → 0.9678, and 69%. <code>.copy()</code> makes a separate copy so adding a column does not change the original <code>Advertising</code> table.</div></div>
+
+<div class="callout key"><p><b>The hierarchical principle.</b> If you include an interaction \(X_1X_2\), also include the <dfn data-g="main-effect">main effects</dfn> \(X_1\) and \(X_2\), even if their p-values are large. Two reasons: once \(X_1X_2\) matters, whether \(\beta_1\) or \(\beta_2\) is exactly zero is of little interest; and \(X_1X_2\) is usually correlated with \(X_1\) and \(X_2\), so leaving them out changes the meaning of the interaction.</p></div>
+
+<h4>Interactions between a qualitative and a quantitative predictor</h4>
+<p>Predict balance from income (quantitative) and student status (qualitative). Without an interaction:</p>
+\[\text{balance}_i\approx\beta_0+\beta_1\times\text{income}_i+\begin{cases}\beta_2&\text{student}\\0&\text{not}\end{cases}=\beta_1\times\text{income}_i+\begin{cases}\beta_0+\beta_2&\text{student}\\\beta_0&\text{not student}\end{cases}\qquad(3.34)\]
+<p>Two <b>parallel</b> lines: different intercepts, same slope. That says an extra $1,000 of income raises balance by the same amount for students and non-students, a strong assumption. Add income × student:</p>
+\[\text{balance}_i\approx\begin{cases}(\beta_0+\beta_2)+(\beta_1+\beta_3)\times\text{income}_i&\text{student}\\\beta_0+\beta_1\times\text{income}_i&\text{not student}\end{cases}\qquad(3.35)\]
+<p>Now each group has its own intercept <i>and</i> its own slope.</p>
+<figure class="book" data-fig="islp-3.7"><figcaption>Credit data, balance against income for students (red) and non-students (black). <b>Left:</b> model (3.34), no interaction: parallel lines, students about $383 higher everywhere. <b>Right:</b> model (3.35) with an interaction: the student line starts higher but rises more slowly (slope about 4.2 per $1,000 of income versus 6.2 for non-students). In this data the interaction is not significant (p = 0.25), so the simpler left-hand model is adequate, but the right-hand picture shows what an interaction can express.</figcaption></figure>
+<div class="py" id="c-isl3-3-06"><pre class="src">
+C = Credit.copy()
+C['student'] = (C['Student'] == 'Yes').astype(int)
+C['income:student'] = C['Income'] * C['student']
+r34 = ols(C['Balance'], C[['Income', 'student']])
+r35 = ols(C['Balance'], C[['Income', 'student', 'income:student']])
+print(coef_table(r35))
+b = r35.params
+print("slope non-students:", round(b['Income'], 3), " slope students:", round(b['Income'] + b['income:student'], 3))
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.5), sharey=True)
+inc = np.array([0, 150])
+for ax, r, ttl in [(axes[0], r34, '(3.34) no interaction'), (axes[1], r35, '(3.35) interaction')]:
+    q = r.params; inter = q.get('income:student', 0)
+    ax.plot(inc, q['const'] + q['student'] + (q['Income'] + inter) * inc, 'r', lw=2.5, label='student')
+    ax.plot(inc, q['const'] + q['Income'] * inc, 'k', lw=2.5, label='non-student')
+    ax.set_title(ttl); ax.set_xlabel('Income')
+axes[0].set_ylabel('Balance'); axes[1].legend()
+plt.show()
+</pre><div class="pynote"><b>Read the output:</b> Figure 3.7 rebuilt. Non-students' slope is 6.22, students' 6.22 − 2.00 = 4.22. The interaction's p-value is 0.25. <code>q.get('income:student', 0)</code> returns the interaction coefficient if the model has one and 0 otherwise, so one loop draws both panels.</div></div>
+
+<h3 id="isl3-3-poly">Non-linear relationships: polynomial regression</h3>
+<figure class="book" data-fig="islp-3.8"><figcaption>The Auto data: miles per gallon against horsepower for 392 cars. The orange straight line misses the clear curve (too high in the middle, too low at both ends). The blue curve adds horsepower² and follows the data much better. The green curve uses all powers up to 5: it wiggles, especially at the right edge where data are sparse, without fitting noticeably better.</figcaption></figure>
+<p>The points bend. A simple way to capture a curve is to add transformed predictors, for example a square:</p>
+<div class="mathblock" data-sheet="Polynomial regression"><div class="eqlabel">Quadratic regression (3.36)</div>
+\[\text{mpg}=\beta_0+\beta_1\times\text{horsepower}+\beta_2\times\text{horsepower}^2+\epsilon\]
+<p class="say">This is a curve in horsepower, but it is <b>still a linear model</b>: linear in the coefficients. It is a multiple regression with \(X_1=\text{horsepower}\) and \(X_2=\text{horsepower}^2\).</p></div>
+<div class="tw"><table class="t"><thead><tr><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td>Intercept</td><td class="n">56.9001</td><td class="n">1.8004</td><td class="n">31.6</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>horsepower</td><td class="n">−0.4662</td><td class="n">0.0311</td><td class="n">−15.0</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>horsepower²</td><td class="n">0.0012</td><td class="n">0.0001</td><td class="n">10.1</td><td class="n">&lt; 0.0001</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.10 (ISLP p. 99). Auto data: regression of mpg onto horsepower and horsepower².</p>
+<p><b>Read it.</b> The squared term is highly significant (t = 10.1). \(R^2\) rises from 0.606 (linear) to 0.688 (quadratic). Prediction at 100 horsepower: \(56.9001-0.4662\times100+0.0012\times10{,}000\approx56.90-46.62+12.3=22.6\) mpg (using the unrounded coefficient 0.00123). Why stop at 2? Degree 5 gives \(R^2=0.697\), barely better, with a wiggly curve: the extra terms mostly chase noise. Chapter 7 covers non-linear models properly.</p>
+<div class="py" id="c-isl3-3-07"><pre class="src">
+hp, mpg = Auto['horsepower'], Auto['mpg']
+fits = {}
+for d in [1, 2, 5]:
+    Xd = pd.DataFrame({f'hp^{k}': hp.astype(float) ** k for k in range(1, d + 1)})
+    fits[d] = ols(mpg, Xd)
+    print(f"degree {d}: R^2 = {fits[d].rsquared:.3f}")
+print(coef_table(fits[2]))
+grid = np.linspace(46, 230, 200)
+fig, ax = plt.subplots(figsize=(7, 4))
+ax.scatter(hp, mpg, s=10, facecolors='none', edgecolors='grey')
+for d, col in [(1, '#E69F00'), (2, '#56B4E9'), (5, '#009E73')]:
+    Xg = sm.add_constant(pd.DataFrame({f'hp^{k}': grid ** k for k in range(1, d + 1)}))
+    ax.plot(grid, fits[d].predict(Xg), color=col, lw=2.5, label=f'degree {d}')
+ax.set_xlabel('Horsepower'); ax.set_ylabel('Miles per gallon'); ax.legend(); plt.show()
+</pre><div class="pynote"><b>Read the output:</b> \(R^2\) 0.606, 0.688, 0.697 and Table 3.10, then Figure 3.8 redrawn. The dictionary comprehension inside <code>pd.DataFrame(...)</code> builds one column per power, named <code>hp^1</code>, <code>hp^2</code> and so on. (Raw powers of numbers near 200 get huge; for high degrees the lab's <code>poly()</code> uses <i>orthogonal</i> polynomials to stay numerically stable.)</div></div>
+
+<h3 id="isl3-3-problems">Six potential problems</h3>
+<p>When you fit a linear regression, the book lists the most common things that go wrong:</p>
+<ol><li>non-linearity of the response–predictor relationships;</li><li>correlation of error terms;</li><li>non-constant variance of error terms;</li><li>outliers;</li><li>high-leverage points;</li><li>collinearity.</li></ol>
+<p>Spotting and fixing them is “as much an art as a science”. Most are diagnosed with one tool: the residual plot.</p>
+
+<h4 id="isl3-3-nonlin">1. Non-linearity of the data</h4>
+<p>A <dfn data-g="residual-plot">residual plot</dfn> shows residuals \(e_i\) against the fitted values \(\hat y_i\) (with one predictor you can use \(x_i\) instead). If the model is right, it shows <b>no pattern</b>: a shapeless band around zero. A curve in the residual plot means the model misses a curve in the data.</p>
+<figure class="book" data-fig="islp-3.9"><figcaption>Residual plots for the Auto data; the red line is a smooth fit through the residuals. <b>Left:</b> mpg on horsepower. A clear U-shape: residuals are positive for small and large fitted values and negative in the middle. The straight line is systematically wrong. <b>Right:</b> after adding horsepower², the smooth line is almost flat: little pattern remains. Points 323, 330, 334 and 155 are labelled because they have large residuals.</figcaption></figure>
+<div class="py" id="c-isl3-3-08"><pre class="src">
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.5))
+for ax, d, ttl in [(axes[0], 1, 'Linear fit'), (axes[1], 2, 'Quadratic fit')]:
+    r = fits[d]
+    ax.scatter(r.fittedvalues, r.resid, s=10, facecolors='none', edgecolors='grey')
+    smooth = sm.nonparametric.lowess(r.resid, r.fittedvalues, frac=0.3)
+    ax.plot(smooth[:, 0], smooth[:, 1], 'r', lw=2)
+    ax.axhline(0, ls=':', c='k'); ax.set_title('Residual plot: ' + ttl); ax.set_xlabel('Fitted values')
+axes[0].set_ylabel('Residuals'); plt.show()
+</pre><div class="pynote"><b>Read the output:</b> Figure 3.9 reproduced: U-shape on the left, almost flat on the right. <code>lowess</code> (“locally weighted smoothing”) draws the red trend line by fitting many small local regressions; <code>frac=0.3</code> means each local fit uses 30% of the points. Its output is a two-column array: sorted x, smoothed y.</div></div>
+<p><b>Fix:</b> add non-linear transformations of the predictors, such as \(\log X\), \(\sqrt X\) or \(X^2\).</p>
+
+<h4 id="isl3-3-correrr">2. Correlation of error terms</h4>
+<p>The standard errors, confidence intervals and p-values all assume the errors \(\epsilon_1,\dots,\epsilon_n\) are <b>uncorrelated</b>: knowing \(\epsilon_i\) is positive tells you nothing about \(\epsilon_{i+1}\). If errors are positively correlated, the computed standard errors are too small: intervals are too narrow and p-values too small, giving “an unwarranted sense of confidence”.</p>
+<div class="callout intuition"><p><b>The book's extreme example.</b> Accidentally copy every observation twice. The coefficient estimates do not change, but the software thinks it has \(2n\) independent points. Every SE contains a \(1/\sqrt{n}\)-type factor, so every SE shrinks by \(\sqrt2\) and every confidence interval becomes about 29% narrower (\(1-1/\sqrt2=0.29\)), with no new information at all.</p></div>
+<p>Correlated errors are common in <b>time series</b>, where neighbouring time points share influences, but also, for example, among members of the same family in a height–weight study. To check, plot residuals in time order and look for <b>tracking</b>: neighbours having similar values.</p>
+<figure class="book" data-fig="islp-3.10"><figcaption>Residuals from simulated time series with correlation \(\rho\) between neighbouring errors. <b>Top (\(\rho=0\)):</b> jagged, no pattern. <b>Bottom (\(\rho=0.9\)):</b> long smooth runs above and below zero: tracking. <b>Middle (\(\rho=0.5\)):</b> some tracking, less obvious.</figcaption></figure>
+<div class="py" id="c-isl3-3-09"><pre class="src">
+rng = np.random.default_rng(3)
+fig, axes = plt.subplots(3, 1, figsize=(8, 5), sharex=True)
+for ax, rho in zip(axes, [0.0, 0.5, 0.9]):
+    e = np.zeros(100)
+    for t in range(1, 100):                 # each error remembers rho of the previous one
+        e[t] = rho * e[t - 1] + np.sqrt(1 - rho**2) * rng.normal()
+    ax.plot(e, 'o-', ms=3, color='#1C7650'); ax.axhline(0, ls='--', c='k')
+    ax.set_title(f'rho = {rho}', fontsize=9)
+    print(f"rho = {rho}: correlation of neighbouring values = {np.corrcoef(e[:-1], e[1:])[0, 1]:.2f}")
+axes[2].set_xlabel('Observation'); plt.tight_layout(); plt.show()
+</pre><div class="pynote"><b>Read the output:</b> Figure 3.10's three panels and the measured neighbour correlations (about 0, 0.5 and 0.9; the −0.16 for \(\rho=0\) is chance wobble in only 100 values). This recursion is an <b>AR(1) process</b>, the same as a first-order IIR low-pass filter \(e_t=\rho e_{t-1}+w_t\) driven by white noise: larger \(\rho\) means a lower cut-off and smoother wandering residuals. <code>zip</code> walks through two lists side by side.</div></div>
+
+<h4 id="isl3-3-hetero">3. Non-constant variance of error terms</h4>
+<p>The SE formulas assume \(\Var(\epsilon_i)=\sigma^2\) for every \(i\). Often the spread instead grows with the response. Non-constant variance is called <dfn data-g="heteroscedasticity">heteroscedasticity</dfn> (hetero = different, scedastic = spread). It shows up as a <b>funnel</b> in the residual plot.</p>
+<figure class="book" data-fig="islp-3.11"><figcaption>Residual plots; red is the smooth trend, blue lines track the outer quantiles. <b>Left:</b> response \(Y\). The residuals fan out as the fitted values grow: a funnel, so heteroscedasticity. <b>Right:</b> response \(\log Y\). The spread is now roughly constant (a slight curve remains in the trend).</figcaption></figure>
+<p><b>Fixes.</b> (1) Transform the response with a concave function such as \(\log Y\) or \(\sqrt Y\): it shrinks large responses more than small ones. (2) If you know each response's variance, use <dfn data-g="wls">weighted least squares</dfn>. Example: if \(y_i\) is the average of \(n_i\) raw observations, each with variance \(\sigma^2\), then \(\Var(y_i)=\sigma^2/n_i\), and you weight each observation by \(w_i=n_i\), the inverse of its variance (up to the constant \(\sigma^2\)).</p>
+<div class="py" id="c-isl3-3-10"><pre class="src">
+rng = np.random.default_rng(4)
+x = rng.uniform(0, 10, 500)
+yh = np.exp(1 + 0.2 * x + rng.normal(0, 0.15, 500))     # multiplicative noise: spread grows with y
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.4))
+for ax, resp, name in [(axes[0], yh, 'Response Y'), (axes[1], np.log(yh), 'Response log(Y)')]:
+    r = ols(resp, pd.Series(x, name='x'))
+    ax.scatter(r.fittedvalues, r.resid, s=6, alpha=0.5)
+    ax.axhline(0, c='k', ls=':'); ax.set_title(name); ax.set_xlabel('Fitted values')
+    lo, hi = np.median(r.fittedvalues), r.fittedvalues.max()
+    print(f"{name}: residual sd, low half = {r.resid[r.fittedvalues < lo].std():.3f}, high half = {r.resid[r.fittedvalues >= lo].std():.3f}")
+plt.show()
+</pre><div class="pynote"><b>Read the output:</b> a simulated version of Figure 3.11. With \(Y\) the residual standard deviation is about 1.7 times larger in the upper half of the fitted values than in the lower half (2.37 against 1.42); after taking logs the two are nearly equal (0.147 and 0.155). <code>r.resid[r.fittedvalues &lt; lo]</code> keeps only the residuals whose fitted value is below the median (boolean indexing from <a href="#np1">NumPy I</a>).</div></div>
+
+<h4 id="isl3-3-outliers">4. Outliers</h4>
+<p>An <dfn data-g="outlier">outlier</dfn> is a point whose \(y_i\) is far from the value the model predicts. It can come from a recording error, or it can signal that the model is missing something.</p>
+<figure class="book" data-fig="islp-3.12"><figcaption><b>Left:</b> point 20 (red) is an outlier. The red line is the fit with it, the blue dashed line without it: almost identical, because point 20 has an ordinary \(x\) value. <b>Centre:</b> the residual plot shows it clearly. <b>Right:</b> its <i>studentized</i> residual is about 6, while every other point is between −2 and 2.</figcaption></figure>
+<p>The outlier barely moves the line, yet it still matters: in the book's example it raises the RSE from 0.77 to 1.09 and lowers \(R^2\) from 0.892 to 0.805. Since the RSE feeds every confidence interval and p-value, one point changes all of them.</p>
+<p>How large must a residual be to count as an outlier? Raw residuals have units, so instead we use <dfn data-g="studentized-residual">studentized residuals</dfn>: each residual \(e_i\) divided by its estimated standard error. Values beyond about ±3 are possible outliers.</p>
+<div class="py" id="c-isl3-3-11"><pre class="src">
+rng = np.random.default_rng(20)
+xo = rng.normal(0, 1, 40); yo = 1 + 2 * xo + rng.normal(0, 0.75, 40)
+xo[19], yo[19] = 0.3, 1 + 2 * 0.3 + 4.5          # make observation 20 an outlier
+with_o = ols(yo, pd.Series(xo, name='x'))
+without = ols(np.delete(yo, 19), pd.Series(np.delete(xo, 19), name='x'))
+for name, r in [('with outlier', with_o), ('without', without)]:
+    print(f"{name:13s} b0 = {r.params.iloc[0]:.3f}  b1 = {r.params.iloc[1]:.3f}  RSE = {np.sqrt(r.scale):.3f}  R^2 = {r.rsquared:.3f}")
+stud = with_o.get_influence().resid_studentized_external
+print("studentized residual of obs 20:", stud[19].round(2), "  largest |other|:", np.abs(np.delete(stud, 19)).max().round(2))
+</pre><div class="pynote"><b>Read the output:</b> our own version of Figure 3.12 (40 points, observation 20 lifted by 4.5). The slope and intercept change only a little, but the RSE jumps and \(R^2\) drops, just as in the book. Observation 20's studentized residual is far above 3; all others are within about ±2.5. <code>np.delete(a, 19)</code> returns a copy without element 19 (Python counts from 0, so that is the 20th). <code>get_influence()</code> computes per-observation diagnostics; <code>resid_studentized_external</code> divides each residual by an SE estimated <i>without</i> that point.</div></div>
+<p><b>What to do:</b> if you are sure it is a recording error, remove it. But be careful: an outlier may instead reveal a missing predictor or a wrong model.</p>
+
+<h4 id="isl3-3-leverage">5. High-leverage points</h4>
+<p>Outliers have unusual \(y\). Points with <dfn data-g="leverage">high leverage</dfn> have unusual \(x\). They can pull the whole line towards themselves.</p>
+<figure class="book" data-fig="islp-3.13"><figcaption><b>Left:</b> the same data as Figure 3.12 plus point 41, far to the right. Removing 41 (blue dashed) changes the line much more than removing the outlier 20 did. <b>Centre:</b> two predictors. The red point is not unusual in \(X_1\) alone or in \(X_2\) alone, but it is far outside the cloud (the dashed ellipse): high leverage you would miss by looking at one predictor at a time. <b>Right:</b> studentized residuals against leverage. Point 41 has both high leverage and a large residual: the dangerous combination. Point 20 has a large residual but low leverage, which is why it hardly moved the line.</figcaption></figure>
+<p>To measure leverage we compute the <b>leverage statistic</b>. For simple linear regression:</p>
+<div class="mathblock" data-sheet="Leverage statistic"><div class="eqlabel">Leverage (3.37)</div>
+\[h_i=\frac1n+\frac{(x_i-\bar x)^2}{\sum_{i'=1}^n(x_{i'}-\bar x)^2}\]
+<p class="say">Read: “h-i equals one over n plus x-i's squared distance from the mean, divided by the total of all squared distances.” The further \(x_i\) is from \(\bar x\), the larger \(h_i\).</p></div>
+<p>Facts: \(h_i\) is always between \(1/n\) and 1, and the average of all \(h_i\) is \((p+1)/n\). A point whose leverage greatly exceeds \((p+1)/n\) has high leverage. (In multiple regression, \(h_i\) is the \(i\)-th diagonal entry of the “hat matrix” \(\bX(\bX\T\bX)^{-1}\bX\T\), the matrix that turns \(\by\) into \(\hat\by\).)</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>leverage by hand</b></div>
+<div class="given">First the five points of lesson 3.1: \(x=(1,2,3,4,5)\), \(\bar x=3\), \(S_{xx}=10\), \(n=5\). Then add a sixth point at \(x=12\).</div>
+<ol class="steps">
+<li><div><b>Five points.</b> \(h_i=\frac15+\frac{(x_i-3)^2}{10}\):
+<div class="tw"><table class="t"><thead><tr><th>\(x_i\)</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>sum</th></tr></thead><tbody>
+<tr><td>\((x_i-3)^2/10\)</td><td class="n">0.4</td><td class="n">0.1</td><td class="n">0</td><td class="n">0.1</td><td class="n">0.4</td><td class="n">1</td></tr>
+<tr><td>\(h_i\)</td><td class="n">0.6</td><td class="n">0.3</td><td class="n">0.2</td><td class="n">0.3</td><td class="n">0.6</td><td class="n">2</td></tr>
+</tbody></table></div>
+The sum is \(2=p+1\), so the average is \(2/5=0.4=(p+1)/n\). The ends have the most leverage, the centre the least (exactly \(1/n=0.2\)).</div></li>
+<li><div><b>Six points</b> \(x=(1,2,3,4,5,12)\). New mean \(\bar x=27/6=4.5\). Deviations: −3.5, −2.5, −1.5, −0.5, 0.5, 7.5. Squares: 12.25, 6.25, 2.25, 0.25, 0.25, 56.25; \(S_{xx}=77.5\).</div></li>
+<li><div><b>Leverage of the new point.</b> \(h_6=\frac16+\frac{56.25}{77.5}=0.167+0.726=0.892\). The average is \(2/6=0.333\): the new point's leverage is 2.7 times the average.<span class="why">\(h_6=0.89\) means its fitted value is 89% determined by its own \(y_6\): the line almost has to go through it.</span></div></li>
+</ol>
+<div class="result">\(h=(0.6,0.3,0.2,0.3,0.6)\); adding \(x=12\) gives that point \(h=0.89\) against an average of 0.33</div></div>
+<div class="py" id="c-isl3-3-12"><pre class="src">
+def leverage(x):
+    x = np.asarray(x, dtype=float)
+    return 1 / len(x) + (x - x.mean()) ** 2 / np.sum((x - x.mean()) ** 2)
+x6 = np.array([1, 2, 3, 4, 5, 12.])
+print("formula:    ", leverage(x6).round(3))
+y6 = np.array([2, 4, 5, 4, 5, 3.])
+print("statsmodels:", ols(y6, pd.Series(x6, name='x')).get_influence().hat_matrix_diag.round(3))
+print("sum =", leverage(x6).sum().round(6), " average =", leverage(x6).mean().round(3))
+</pre><div class="pynote"><b>Read the output:</b> the formula and statsmodels' <code>hat_matrix_diag</code> (the diagonal of the hat matrix) agree, the last point has leverage 0.892, and the leverages add to exactly 2. Leverage depends only on the \(x\)'s, not on \(y\): we could put any numbers in <code>y6</code>.</div></div>
+
+<div class="widget" data-w="isl3-3-leverage" data-title="Outlier, leverage, or both? Drag the red point"><div class="wn">The red line fits all points including the big red one; the blue dashed line ignores it. Use the three buttons, then drag the point yourself. An outlier near the middle (low leverage) barely tilts the line. A far-out point on the trend has high leverage but a small residual: harmless. A far-out point off the trend combines both and swings the slope a lot.</div></div>
+
+<div class="widget" data-w="isl3-3-resid" data-title="Reading residual plots: six situations"><div class="wn">Each button simulates one situation. Left: data and the fitted model. Right: residuals against fitted values (or against time order for correlated errors), with a red smooth trend. Learn the pictures: a U-shape means non-linearity; a funnel means heteroscedasticity; long runs mean tracking. Then press the <b>fix</b> button and watch the pattern disappear (except for correlated errors, which need time-series methods).</div></div>
+
+<h4 id="isl3-3-collinear">6. Collinearity</h4>
+<p><dfn data-g="collinearity">Collinearity</dfn> means two or more predictors are closely related to each other. Then it is hard to separate their individual effects: when limit goes up, rating goes up too, so which one is responsible for higher balance?</p>
+<figure class="book" data-fig="islp-3.14"><figcaption>Credit data. <b>Left:</b> age against limit: no relationship, not collinear. <b>Right:</b> rating against limit: almost a perfect straight line (correlation 0.997). These two are highly collinear.</figcaption></figure>
+<figure class="book" data-fig="islp-3.15"><figcaption>Contours of RSS over pairs of coefficients; the black dot is the least-squares estimate. <b>Left:</b> balance on age and limit. The contours are near-circles with a clear bottom: the estimates are well determined, \(\beta_{\text{Limit}}\) between about 0.15 and 0.20. <b>Right:</b> balance on rating and limit. The contours form a long narrow valley: many \((\beta_{\text{Limit}},\beta_{\text{Rating}})\) pairs fit almost equally well. A small change in the data could slide the estimate anywhere along the valley, so each coefficient is very uncertain, here \(\beta_{\text{Limit}}\) ranges from about −0.2 to 0.2, eight times wider. (The pair is still pinned to the valley: \(-0.1\) and 1 together would be implausible.)</figcaption></figure>
+<p>Collinearity inflates standard errors. Since \(t=\hat\beta_j/\SE(\hat\beta_j)\), a bigger SE means a smaller t, so we may fail to reject \(H_0:\beta_j=0\) even when \(X_j\) matters. Collinearity reduces the <dfn data-g="power">power</dfn> of the test: the probability of correctly detecting a non-zero coefficient.</p>
+<div class="tw"><table class="t"><thead><tr><th></th><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td rowspan="3">Model 1</td><td>Intercept</td><td class="n">−173.411</td><td class="n">43.828</td><td class="n">−3.957</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>age</td><td class="n">−2.292</td><td class="n">0.672</td><td class="n">−3.407</td><td class="n">0.0007</td></tr>
+<tr><td>limit</td><td class="n">0.173</td><td class="n">0.005</td><td class="n">34.496</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td rowspan="3">Model 2</td><td>Intercept</td><td class="n">−377.537</td><td class="n">45.254</td><td class="n">−8.343</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>rating</td><td class="n">2.202</td><td class="n">0.952</td><td class="n">2.312</td><td class="n">0.0213</td></tr>
+<tr><td>limit</td><td class="n">0.025</td><td class="n">0.064</td><td class="n">0.384</td><td class="n">0.7012</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.11 (ISLP p. 108). Model 1: balance on age and limit. Model 2: balance on rating and limit. The SE of \(\hat\beta_{\text{limit}}\) is about 12 times larger in model 2 because of collinearity.</p>
+<p><b>Read it.</b> In model 1, limit is overwhelmingly significant (t = 34.5). In model 2, the same variable has p = 0.70: its importance has been <b>masked</b> by rating, which carries almost the same information.</p>
+<div class="py" id="c-isl3-3-13"><pre class="src">
+print(Credit[['Limit', 'Rating', 'Age']].corr().round(3))
+m1 = ols(Credit['Balance'], Credit[['Age', 'Limit']])
+m2 = ols(Credit['Balance'], Credit[['Rating', 'Limit']])
+print("Model 1\n", coef_table(m1)); print("Model 2\n", coef_table(m2))
+print("SE ratio for limit:", round(m2.bse['Limit'] / m1.bse['Limit'], 1))
+</pre><div class="pynote"><b>Read the output:</b> corr(Limit, Rating) = 0.997, Table 3.11, and the SE of limit multiplied by about 12.7 (the book says “12-fold”).</div></div>
+
+<h4>Detecting collinearity: the variance inflation factor</h4>
+<p>Looking at the correlation matrix catches pairs of collinear variables. But three or more variables can be collinear even when no pair is highly correlated (<dfn data-g="multicollinearity">multicollinearity</dfn>). A better tool is the <dfn data-g="vif">variance inflation factor</dfn>: how much larger the variance of \(\hat\beta_j\) is in the full model than it would be if \(X_j\) were unrelated to the other predictors.</p>
+<div class="mathblock" data-sheet="Variance inflation factor"><div class="eqlabel">Variance inflation factor</div>
+\[\text{VIF}(\hat\beta_j)=\frac{1}{1-R^2_{X_j|X_{-j}}}\]
+<p class="say">Read: “VIF of beta-j-hat is one over one minus R-squared of X-j given X-minus-j.” \(R^2_{X_j|X_{-j}}\) is the \(R^2\) from regressing \(X_j\) on <i>all the other predictors</i>. If the others predict \(X_j\) well, \(R^2\) is near 1 and the VIF explodes.</p></div>
+<p>The smallest possible VIF is 1 (no collinearity). As a rule of thumb, a VIF above 5 or 10 is a problem.</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>VIFs for balance on age, rating and limit</b></div>
+<div class="given">From the code below: regressing limit on age and rating gives \(R^2=0.99377\); regressing rating on age and limit gives \(R^2=0.99378\); regressing age on rating and limit gives \(R^2=0.0113\).</div>
+<ol class="steps">
+<li><div><b>Limit.</b> \(1-0.99377=0.00623\). \(\text{VIF}=1/0.00623=160.6\). The variance of \(\hat\beta_{\text{limit}}\) is 160 times what it would be without collinearity, so its SE is \(\sqrt{160.6}=12.7\) times bigger: exactly the ratio we saw in Table 3.11.</div></li>
+<li><div><b>Rating.</b> \(1/(1-0.99378)=160.7\).</div></li>
+<li><div><b>Age.</b> \(1/(1-0.0113)=1.011\): essentially no collinearity.</div></li>
+</ol>
+<div class="result">VIFs 1.01 (age), 160.67 (rating), 160.59 (limit): the book's numbers</div></div>
+<div class="py" id="c-isl3-3-14"><pre class="src">
+preds = ['Age', 'Rating', 'Limit']
+for j in preds:
+    others = [c for c in preds if c != j]
+    r2 = ols(Credit[j], Credit[others]).rsquared        # R^2 of X_j on the others
+    print(f"{j:7s} R^2 = {r2:.5f}  VIF = {1 / (1 - r2):.2f}")
+Xv = sm.add_constant(Credit[preds])
+print("statsmodels:", [round(VIF(Xv.values, i), 2) for i in range(1, 4)])
+</pre><div class="pynote"><b>Read the output:</b> our VIFs by the formula and statsmodels' <code>variance_inflation_factor</code> agree: 1.01, 160.67, 160.59. In <code>VIF(Xv.values, i)</code>, <code>i</code> is the column number in the design matrix; column 0 is the constant, so we start at 1.</div></div>
+<p><b>Two fixes.</b> (1) Drop one of the collinear variables: it carries redundant information. Balance on age and limit (no rating) has VIFs near 1 and \(R^2\) drops only from 0.754 to 0.750. (2) Combine them into one predictor, for example the average of standardised limit and rating as a “credit-worthiness” score.</p>
+
+<h3 id="isl3-3-plan">The marketing plan: answering the seven questions</h3>
+<p>Section 3.4 of the book returns to the questions from the start of the chapter. Here are the answers, each with the tool and the number.</p>
+<div class="tw"><table class="t"><thead><tr><th>Question</th><th>Answer, with evidence</th></tr></thead><tbody>
+<tr><td>1. Is there a relationship between advertising and sales?</td><td>Yes. Fit sales on TV, radio and newspaper and test \(H_0:\beta_{\text{TV}}=\beta_{\text{radio}}=\beta_{\text{newspaper}}=0\): F = 570, p essentially 0.</td></tr>
+<tr><td>2. How strong is it?</td><td>RSE 1.69 thousand units against mean sales 14.022: about 12% error. \(R^2\): the media explain almost 90% of the variance.</td></tr>
+<tr><td>3. Which media are associated with sales?</td><td>TV and radio (p &lt; 0.0001 in Table 3.4). Not newspaper (p = 0.86) once TV and radio are accounted for.</td></tr>
+<tr><td>4. How large is each association?</td><td>95% CIs from Table 3.4: TV (0.043, 0.049), radio (0.172, 0.206), newspaper (−0.013, 0.011). The newspaper interval contains 0. Is collinearity to blame for its width? No: VIFs are 1.005, 1.145, 1.145. Separately (Tables 3.1, 3.3), TV and radio are strongly associated with sales and newspaper only mildly, when the other media are ignored.</td></tr>
+<tr><td>5. How accurately can we predict future sales?</td><td>Use a prediction interval for one market's sales (\(Y=f(X)+\epsilon\)), a confidence interval for the average (\(f(X)\)). Example: TV 100, radio 20 → PI [7,930, 14,580], CI [10,985, 11,528].</td></tr>
+<tr><td>6. Is the relationship linear?</td><td>Not quite. Residual plots (and Figure 3.5) show a non-linear pattern; transformations or extra terms can accommodate it.</td></tr>
+<tr><td>7. Is there synergy among the media?</td><td>Yes. The TV×radio interaction has a tiny p-value, and \(R^2\) rises from about 90% to almost 97% (Table 3.9).</td></tr>
+</tbody></table></div>
+<div class="py" id="c-isl3-3-15"><pre class="src">
+full = ols(Advertising['sales'], Advertising[['TV', 'radio', 'newspaper']])
+print(full.conf_int().round(3))
+Xa = sm.add_constant(Advertising[['TV', 'radio', 'newspaper']])
+print("VIFs:", [round(VIF(Xa.values, i), 3) for i in range(1, 4)])
+print(f"RSE / mean sales = {np.sqrt(full.scale) / Advertising['sales'].mean():.1%}")
+</pre><div class="pynote"><b>Read the output:</b> the confidence intervals of question 4, the VIFs 1.005, 1.145, 1.145 and the 12% relative error of question 2.</div></div>
+
+<h3 id="isl3-3-knn">Linear regression versus K-nearest neighbours</h3>
+<p>Linear regression is <b>parametric</b>: it assumes a form for \(f(X)\) (linear) and estimates a few coefficients. That makes it easy to fit and interpret, and gives tests and p-values. The cost: if the assumed form is far from the truth, predictions are poor. <b>Non-parametric</b> methods assume no form. The simplest is <dfn data-g="knn-regression">K-nearest neighbours regression</dfn>, the regression cousin of the KNN classifier from <a href="#isl2-2">ISLP 2.2</a>.</p>
+<div class="mathblock" data-sheet="KNN regression"><div class="eqlabel">KNN regression</div>
+\[\hat f(x_0)=\frac1K\sum_{x_i\in\mathcal N_0}y_i\]
+<p class="say">Read: “f-hat at x-nought is the average of the y-values of the K training points nearest to x-nought.” \(\mathcal N_0\) (“N-nought”) is that set of K nearest neighbours.</p></div>
+<p><b>Tiny example.</b> Training points \((1,3),(2,5),(4,4),(7,10)\). Predict at \(x_0=3\) with \(K=2\): the two nearest \(x\)'s are 2 and 4 (each at distance 1), so \(\hat f(3)=(5+4)/2=4.5\). With \(K=1\) there is a tie; break it by taking the first, \(x=2\): \(\hat f(3)=5\).</p>
+<div class="callout ece"><p><b>KNN regression is a moving-average filter.</b> On evenly spaced 1-D data, averaging the K nearest samples is exactly a length-K boxcar (moving-average) FIR filter. Small K: little smoothing, follows the noise. Large K: heavy smoothing, blurs real detail. The bias–variance trade-off is the familiar noise-versus-resolution trade-off of choosing a filter length.</p></div>
+<figure class="book" data-fig="islp-3.16"><figcaption>KNN regression on 64 points with two predictors. <b>Left, K = 1:</b> a rough step surface that passes through every training point (orange). <b>Right, K = 9:</b> still a step surface, but each step averages nine points, so it is much smoother. Small K: low bias, high variance. Large K: smoother, but it can blur real structure (bias).</figcaption></figure>
+<p>When does linear regression win? <b>When its assumed form is close to the truth.</b> The book shows this in stages.</p>
+<figure class="book" data-fig="islp-3.17"><figcaption>A truly linear \(f\) (black) and 50 noisy points. <b>Left:</b> KNN with K = 1 (blue) zig-zags through every point. <b>Right:</b> K = 9 is smoother and closer to the line.</figcaption></figure>
+<figure class="book" data-fig="islp-3.18"><figcaption>Same data. <b>Left:</b> the least-squares line (blue dashed) is almost exactly the truth. <b>Right:</b> test MSE against \(1/K\) (log scale; flexibility increases to the right). Green: KNN. Dashed black: linear regression, which is lower for every K. KNN comes close only for large K (left side).</figcaption></figure>
+<figure class="book" data-fig="islp-3.19"><figcaption><b>Top:</b> a slightly non-linear \(f\). Linear regression still beats KNN with small K, but KNN wins for K ≥ 4. <b>Bottom:</b> a strongly non-linear \(f\). KNN wins for every K, and linear regression's test MSE has more than doubled. Note KNN's error barely changes between the two rows.</figcaption></figure>
+<p>So should we always prefer KNN, losing a little when \(f\) is linear and gaining a lot when it is not? No, because of dimension.</p>
+<figure class="book" data-fig="islp-3.20"><figcaption>The strongly non-linear setting again, but with extra <b>noise predictors</b> added that have nothing to do with \(Y\). With p = 1 or 2, KNN wins. With p = 3 it is mixed. From p = 4 on, linear regression wins, and by p = 20 KNN's error has grown more than ten-fold while linear regression's has barely moved.</figcaption></figure>
+<p>This is the <dfn data-g="curse-dimensionality">curse of dimensionality</dfn>. Fifty points spread over one dimension are dense; spread over 20 dimensions they are hopelessly sparse, so the “nearest” neighbours of a test point are actually far away and their average is a poor estimate. As a general rule, <b>parametric methods tend to beat non-parametric ones when there are few observations per predictor</b>. And even when KNN is slightly more accurate, a linear model with a few interpretable coefficients and p-values may be worth a small loss in accuracy.</p>
+
+<div class="widget" data-w="isl3-3-knn" data-title="KNN or linear regression? Non-linearity and dimension"><div class="wn">It starts with a linear truth and p = 1: linear regression (dashed in the right panel) wins. Raise the non-linearity to 1: the dashed line jumps up and KNN wins (as in Figure 3.19). Now, keeping non-linearity at 1, switch p to 4, 10 and 20: the extra predictors are pure noise, yet KNN's error climbs steeply while linear regression barely changes (Figure 3.20). With p &gt; 1 the left panel shows KNN predictions at test points as dots.</div></div>
+
+<div class="py" id="c-isl3-3-16"><pre class="src">
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.linear_model import LinearRegression
+rng = np.random.default_rng(1)
+def make(n, p, nonlin):
+    X = rng.uniform(-1, 1, size=(n, p))
+    f = 2 + 1.2 * X[:, 0] + nonlin * 1.3 * np.sin(3.2 * X[:, 0])
+    return X, f + rng.normal(0, 0.3, n)
+for nonlin in [0, 1]:
+    for p in [1, 2, 4, 10, 20]:
+        Xtr, ytr = make(50, p, nonlin); Xte, yte = make(2000, p, nonlin)
+        lr = np.mean((yte - LinearRegression().fit(Xtr, ytr).predict(Xte)) ** 2)
+        knn = min(np.mean((yte - KNeighborsRegressor(K).fit(Xtr, ytr).predict(Xte)) ** 2) for K in range(1, 11))
+        print(f"non-linear={nonlin}  p={p:2d}:  linear MSE {lr:.3f}   best KNN MSE {knn:.3f}   -> {'KNN' if knn < lr else 'linear'}")
+</pre><div class="pynote"><b>Read the output:</b> with a linear truth, linear regression wins at every p. With a non-linear truth, KNN wins for small p, but as noise predictors are added its error grows quickly and linear regression takes over: the pattern of Figures 3.18–3.20. scikit-learn models all work the same way: create the model, call <code>.fit(X, y)</code>, then <code>.predict(Xnew)</code>. <code>min(... for K in range(1, 11))</code> takes the best of K = 1 to 10 (we are being generous to KNN by choosing K on the test set).</div></div>
+
+<h3 id="isl3-3-practice">Practice: write it yourself</h3>
+<div class="ex" id="x-isl3-3-01" data-title="dummy variables with a chosen baseline"><div class="task"><p>Write <code>make_dummies(series, baseline)</code> that returns a DataFrame with one 0/1 integer column for every level <b>except</b> <code>baseline</code>, named like <code>'Region[South]'</code> (series name, then the level in square brackets), with levels in sorted order. Example: for Credit's Region with baseline <code>'East'</code>, the columns are <code>Region[South]</code> and <code>Region[West]</code>.</p></div>
+<pre class="src">
+def make_dummies(series, baseline):
+    cols = {}
+    for level in sorted(series.unique()):
+        ...   # skip the baseline; otherwise add a 0/1 column
+    return pd.DataFrame(cols)
+</pre>
+<pre class="check">
+D = make_dummies(Credit['Region'], 'East')
+assert list(D.columns) == ['Region[South]', 'Region[West]'], f"columns should be ['Region[South]', 'Region[West]'], got {list(D.columns)}"
+assert D.sum().tolist() == [199, 102], f"there are 199 South and 102 West people, got {D.sum().tolist()}"
+D2 = make_dummies(Credit['Region'], 'West')
+assert list(D2.columns) == ['Region[East]', 'Region[South]'], f"with West as baseline, got {list(D2.columns)}"
+r_ = ols(Credit['Balance'], D2)
+assert abs(r_.params['const'] - 512.3137) < 1e-3, "with West as baseline the intercept is West's mean, 512.31"
+assert D.dtypes.iloc[0].kind == 'i', "use integer 0/1 columns, e.g. (series == level).astype(int)"
+</pre>
+<div class="hint"><p>Skip with <code>if level == baseline: continue</code>.</p></div>
+<div class="hint"><p>The column is <code>(series == level).astype(int)</code> and its name is <code>f"{series.name}[{level}]"</code>.</p></div>
+<pre class="solution">
+def make_dummies(series, baseline):
+    cols = {}
+    for level in sorted(series.unique()):
+        if level == baseline:
+            continue
+        cols[f"{series.name}[{level}]"] = (series == level).astype(int)
+    return pd.DataFrame(cols)
+</pre>
+<div class="explain"><p>One column per non-baseline level, exactly the coding (3.28)–(3.29). The fourth check shows that with West as the baseline the intercept becomes West's average balance, 512.31: the predictions are unchanged, only the reference point moves.</p></div></div>
+
+<div class="ex" id="x-isl3-3-02" data-title="VIF from an auxiliary regression"><div class="task"><p>Write <code>vif(df, col)</code> that returns the VIF of column <code>col</code>: regress <code>df[col]</code> on all the other columns of <code>df</code> (with an intercept) and return \(1/(1-R^2)\). Example: if <code>df</code> holds Credit's Age, Rating and Limit columns, <code>vif(df, 'Limit')</code> is about 160.59.</p></div>
+<pre class="src">
+def vif(df, col):
+    others = [c for c in df.columns if c != col]
+    r2 = ...
+    return ...
+</pre>
+<pre class="check">
+v_ = vif(Credit[['Age', 'Rating', 'Limit']], 'Limit')
+assert v_ is not Ellipsis and abs(v_ - 160.59) < 0.01, f"VIF of Limit should be 160.59, got {v_}"
+assert abs(vif(Credit[['Age', 'Rating', 'Limit']], 'Age') - 1.0114) < 1e-3, "VIF of Age should be about 1.011"
+Xv_ = sm.add_constant(Advertising[['TV', 'radio', 'newspaper']])
+assert abs(vif(Advertising[['TV', 'radio', 'newspaper']], 'radio') - VIF(Xv_.values, 2)) < 1e-8, "should match statsmodels for radio"
+</pre>
+<div class="hint"><p>Use the <code>ols</code> helper from the setup cell:</p><pre style="overflow-x:auto;font-size:13px;white-space:pre-wrap">r2 = ols(df[col], df[others]).rsquared</pre></div>
+<div class="hint"><p><code>return 1 / (1 - r2)</code></p></div>
+<pre class="solution">
+def vif(df, col):
+    others = [c for c in df.columns if c != col]
+    r2 = ols(df[col], df[others]).rsquared
+    return 1 / (1 - r2)
+</pre>
+<div class="explain"><p>The VIF formula is one auxiliary regression. <code>[c for c in df.columns if c != col]</code> is a list comprehension that keeps every column name except <code>col</code>.</p></div></div>
+
+<div class="ex" id="x-isl3-3-03" data-title="KNN regression in one dimension"><div class="task"><p>Write <code>knn_predict(x_train, y_train, x0, K)</code> for one predictor: return the average of the <code>y_train</code> values of the <code>K</code> training points closest to <code>x0</code>. Example:</p><pre style="overflow-x:auto;font-size:13px;white-space:pre-wrap">knn_predict([1,2,4,7], [3,5,4,10], 3, 2)   # gives 4.5</pre></div>
+<pre class="src">
+def knn_predict(x_train, y_train, x0, K):
+    x_train = np.asarray(x_train, dtype=float)
+    y_train = np.asarray(y_train, dtype=float)
+    dist = ...          # distance of every training x to x0
+    nearest = ...       # indices of the K smallest distances
+    return ...
+</pre>
+<pre class="check">
+assert abs(knn_predict([1, 2, 4, 7], [3, 5, 4, 10], 3, 2) - 4.5) < 1e-12, f"expected 4.5, got {knn_predict([1, 2, 4, 7], [3, 5, 4, 10], 3, 2)}"
+assert abs(knn_predict([1, 2, 4, 7], [3, 5, 4, 10], 6.5, 1) - 10) < 1e-12, "with K=1 near 7 the answer is 10"
+assert abs(knn_predict([1, 2, 4, 7], [3, 5, 4, 10], 0, 4) - 5.5) < 1e-12, "with K=n every prediction is the overall mean 5.5"
+xs_ = rng.uniform(-1, 1, 60); ys_ = np.sin(3 * xs_)
+sk_ = KNeighborsRegressor(5).fit(xs_.reshape(-1, 1), ys_).predict([[0.123]])[0]
+assert abs(knn_predict(xs_, ys_, 0.123, 5) - sk_) < 1e-12, "should match scikit-learn's KNeighborsRegressor"
+</pre>
+<div class="hint"><p><code>dist = np.abs(x_train - x0)</code>. <code>np.argsort(dist)</code> gives the indices that would sort the distances.</p></div>
+<div class="hint"><p><code>nearest = np.argsort(dist)[:K]</code>, then <code>return y_train[nearest].mean()</code>.</p></div>
+<pre class="solution">
+def knn_predict(x_train, y_train, x0, K):
+    x_train = np.asarray(x_train, dtype=float)
+    y_train = np.asarray(y_train, dtype=float)
+    dist = np.abs(x_train - x0)
+    nearest = np.argsort(dist, kind='stable')[:K]
+    return y_train[nearest].mean()
+</pre>
+<div class="explain"><p>Distance, sort, take the first K, average: the KNN formula. The third check shows the large-K limit: with K = n every prediction is the mean of all \(y\)'s, the most biased, least variable fit. <code>.reshape(-1, 1)</code> turns a flat array into one column, which scikit-learn requires.</p></div></div>
+
+<h3 id="isl3-3-quiz">Quiz</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">A factor has four levels. How many dummy variables go into a model that has an intercept?</p><ol class="opts"><li>4</li><li>3</li><li>2</li></ol><div class="why">One fewer than the number of levels. The left-out level is the baseline. Four dummies plus an intercept would be perfectly collinear (the dummy trap).</div></div>
+<div class="q" data-type="num" data-answer="63" data-tol="0.5"><p class="stem">From Table 3.9, the effect of $1,000 more TV is \(19+1.1\times\text{radio}\) units. How many extra units for $1,000 more TV in a market that spends 40 (thousand dollars) on radio?</p><div class="why">\(19+1.1\times40=19+44=63\) units.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Your model includes TV×radio, which is very significant, but radio's own p-value is 0.3. What should you do?</p><ol class="opts"><li>Drop radio and keep TV×radio</li><li>Drop the interaction</li><li>Keep radio: the hierarchical principle says to keep main effects when an interaction is included</li></ol><div class="why">Leaving out a main effect changes the meaning of the interaction, and whether its coefficient is exactly zero is of little interest once the interaction matters.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Is \(y=\beta_0+\beta_1x+\beta_2x^2+\epsilon\) a linear model?</p><ol class="opts"><li>Yes: it is linear in the coefficients, with \(x^2\) as an extra column</li><li>No: it contains \(x^2\)</li><li>Only if \(\beta_2=0\)</li></ol><div class="why">“Linear model” means linear in the parameters. Least squares fits it exactly as a multiple regression with predictors \(x\) and \(x^2\).</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">A residual-versus-fitted plot shows a funnel that widens to the right. What is the problem and a common fix?</p><ol class="opts"><li>Non-linearity; add \(x^2\)</li><li>Heteroscedasticity; transform the response, e.g. \(\log Y\)</li><li>Collinearity; drop a variable</li></ol><div class="why">A funnel means the error variance grows with the response. A concave transform such as \(\log Y\) or \(\sqrt Y\) shrinks large values more and evens out the spread; weighted least squares is another option.</div></div>
+<div class="q" data-type="num" data-answer="0.893" data-tol="0.002"><p class="stem">Four observations have \(x=(0,1,2,5)\). Compute the leverage of the point \(x=5\) in a simple regression (3 decimals).</p><div class="why">\(\bar x=8/4=2\). Squared deviations: \(4,1,0,9\), so \(S_{xx}=14\). \(h=\frac14+\frac{9}{14}=0.250+0.643=0.893\), against an average leverage of \(2/4=0.5\).</div></div>
+<div class="q" data-type="num" data-answer="25" data-tol="0.01"><p class="stem">Regressing \(X_j\) on the other predictors gives \(R^2=0.96\). What is the VIF of \(\hat\beta_j\)?</p><div class="why">\(1/(1-0.96)=1/0.04=25\): well above the rule-of-thumb limits of 5 or 10. The SE of \(\hat\beta_j\) is \(\sqrt{25}=5\) times what it would be without collinearity.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">The true \(f\) is strongly non-linear in \(X_1\). You have 50 observations and 20 predictors, 19 of which are noise. Which is likely to have lower test MSE?</p><ol class="opts"><li>KNN, because \(f\) is non-linear</li><li>They will be about equal</li><li>Linear regression, because KNN suffers from the curse of dimensionality</li></ol><div class="why">Fifty points in 20 dimensions leave no truly near neighbours, so KNN's averages are poor (Figure 3.20, p = 20). Linear regression's bias costs less than KNN's variance here.</div></div>
+<div class="q" data-type="open"><p class="stem">Explain the difference between an outlier and a high-leverage point, and why a point that is both is dangerous.</p><div class="model">An outlier has an unusual response: \(y_i\) far from the model's prediction (large residual, studentized beyond about ±3). A high-leverage point has unusual predictor values: \(x_i\) far from the bulk of the \(x\)'s (leverage well above \((p+1)/n\)). An outlier with ordinary \(x\) mostly inflates the RSE; a high-leverage point on the trend does little harm. A point that is both pulls the fitted line strongly towards itself, so one bad observation can change the coefficients and every conclusion.</div></div>
+</div>
+
+<h3 id="isl3-3-cards">Flashcards</h3>
+<div class="cards">
+<div class="fc"><div class="f">How many dummy variables for a factor with \(L\) levels (with intercept)?</div><div class="b">\(L-1\); the left-out level is the baseline.</div></div>
+<div class="fc"><div class="f">Meaning of a dummy coefficient</div><div class="b">Average difference in \(Y\) between that level and the baseline level (other predictors fixed).</div></div>
+<div class="fc"><div class="f">Interaction model with two predictors</div><div class="b">\(Y=\beta_0+\beta_1X_1+\beta_2X_2+\beta_3X_1X_2+\epsilon\); slope of \(X_1\) is \(\beta_1+\beta_3X_2\).</div></div>
+<div class="fc"><div class="f">Hierarchical principle</div><div class="b">If an interaction is in the model, keep its main effects too, even if they are not significant.</div></div>
+<div class="fc"><div class="f">Why polynomial regression is still linear regression</div><div class="b">It is linear in the coefficients; \(X^2, X^3,\dots\) are just extra columns of \(\bX\).</div></div>
+<div class="fc"><div class="f">Six potential problems in linear regression</div><div class="b">Non-linearity, correlated errors, non-constant variance, outliers, high-leverage points, collinearity.</div></div>
+<div class="fc"><div class="f">Residual plot patterns: U-shape / funnel / tracking</div><div class="b">Non-linearity / heteroscedasticity / correlated errors.</div></div>
+<div class="fc"><div class="f">Leverage statistic (simple regression)</div><div class="b">\(h_i=\frac1n+\frac{(x_i-\bar x)^2}{\sum(x_{i'}-\bar x)^2}\); between \(1/n\) and 1, average \((p+1)/n\).</div></div>
+<div class="fc"><div class="f">Studentized residual: outlier rule of thumb</div><div class="b">\(|\text{studentized residual}|>3\).</div></div>
+<div class="fc"><div class="f">VIF formula and threshold</div><div class="b">\(\text{VIF}_j=1/(1-R^2_{X_j|X_{-j}})\); above 5–10 is a problem; minimum 1.</div></div>
+<div class="fc"><div class="f">KNN regression prediction</div><div class="b">\(\hat f(x_0)=\frac1K\sum_{x_i\in\mathcal N_0}y_i\): average response of the K nearest training points.</div></div>
+<div class="fc"><div class="f">When does linear regression beat KNN?</div><div class="b">When the true \(f\) is close to linear, and when there are few observations per predictor (curse of dimensionality).</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can build dummy variables by hand, explain the baseline, and reproduce Tables 3.7 and 3.8.</label>
+<label><input type="checkbox"> I can add an interaction term, read Table 3.9, and state the hierarchical principle.</label>
+<label><input type="checkbox"> I can fit a polynomial regression (Table 3.10) and explain why it is still linear.</label>
+<label><input type="checkbox"> I can recognise the six problems from plots and say how to fix each one.</label>
+<label><input type="checkbox"> I can compute leverage and a VIF by hand and with code.</label>
+<label><input type="checkbox"> I can answer the seven marketing questions with the right numbers.</label>
+<label><input type="checkbox"> I can explain when KNN beats linear regression and what the curse of dimensionality is.</label>
+</div>
+</section>

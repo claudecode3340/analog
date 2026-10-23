@@ -1,0 +1,6 @@
+{
+"namespace": {"term": "namespace", "def": "The set of names (variables, functions, modules) Python currently knows; <code>dir()</code> lists them.", "at": "isl3-lab"},
+"transform": {"term": "transform (fit / transform)", "def": "An object built with settings that learns from data with <code>fit()</code> and then produces new data, such as a design matrix, with <code>transform()</code>; <code>fit_transform()</code> does both.", "at": "isl3-lab"},
+"orthogonal-polynomial": {"term": "orthogonal polynomials", "def": "Polynomial basis columns (combinations of \\(x, x^2, \\dots\\)) made uncorrelated with each other for numerically stable least squares; same fitted values as raw powers.", "at": "isl3-lab"},
+"list-comprehension": {"term": "list comprehension", "def": "A one-line loop that builds a list: <code>[expression for item in sequence]</code>.", "at": "isl3-lab"}
+}

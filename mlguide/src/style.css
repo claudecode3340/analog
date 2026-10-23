@@ -425,3 +425,6 @@ dfn{font-style:normal;border-bottom:1.5px dotted var(--faint);cursor:help}
 .checklist label{display:block;position:relative;padding:4px 0 4px 28px}
 .checklist label input{position:absolute;left:0;top:9px;transform:none}
 .tw{position:relative}
+.prob>.prh .tt{flex:1 1 220px}
+section.lesson pre:not(.src):not(.check):not(.solution){overflow-x:auto;max-width:100%}
+@media (max-width:640px){:not(pre)>code{white-space:normal;overflow-wrap:anywhere}}

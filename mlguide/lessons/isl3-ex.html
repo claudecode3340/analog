@@ -1,0 +1,583 @@
+<section class="lesson" id="isl3-ex" data-book="ISLP §3.7, pp. 127–134">
+<p class="lede">Every exercise of Chapter 3, conceptual and applied, with layered answers: a hint, the final answer, a full step-by-step solution and the mistakes people usually make. Do each one on paper or in your own notebook first; open the layers only when you are stuck or finished. The applied solutions are real code whose every number is explained.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#isl3-1">ISLP 3.1</a> · <a href="#isl3-2">ISLP 3.2</a> · <a href="#isl3-3">ISLP 3.3</a> · <a href="#isl3-lab">ISLP 3.6 Lab</a></div>
+
+<div class="callout key"><p><b>How to use this page.</b> The 7 conceptual exercises need only pencil and paper. The 8 applied ones need the setup cell below; inside each “Full solution” the code cells are real and can be run in order (run the setup cell first). Mark an exercise solved only when you could do it without the solution.</p></div>
+
+<div class="py" id="c-isl3-ex-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import subplots
+import statsmodels.api as sm
+from statsmodels.stats.anova import anova_lm
+from statsmodels.stats.outliers_influence import variance_inflation_factor as VIF
+from ISLP import load_data
+from ISLP.models import ModelSpec, summarize, poly
+from functools import partial
+MS = partial(ModelSpec, intercept=True)     # as in the lab: always add the intercept column
+Auto = load_data('Auto')
+Carseats = load_data('Carseats')
+Boston = load_data('Boston')
+print(Auto.shape, Carseats.shape, Boston.shape)
+</pre><div class="pynote"><b>Read the output:</b> Auto has 392 cars and 8 columns (the car <code>name</code> is the row index, so it is not a predictor), Carseats 400 stores, Boston 506 neighbourhoods. <code>MS</code> is set up exactly as in the <a href="#isl3-lab">lab</a>.</div></div>
+
+<h3 id="isl3-ex-conceptual">Conceptual exercises</h3>
+
+<div class="prob" id="p-isl3-ex-01" data-src="ISLP 3.7 · Conceptual 1" data-title="The null hypotheses behind Table 3.4">
+<div class="stmt"><p>Describe the null hypotheses to which the p-values given in Table 3.4 correspond. Explain what conclusions you can draw based on these p-values. Your explanation should be phrased in terms of <code>sales</code>, <code>TV</code>, <code>radio</code> and <code>newspaper</code>, rather than in terms of the coefficients of the linear model.</p>
+<div class="tw"><table class="t"><thead><tr><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td>Intercept</td><td class="n">2.939</td><td class="n">0.3119</td><td class="n">9.42</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>TV</td><td class="n">0.046</td><td class="n">0.0014</td><td class="n">32.81</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>radio</td><td class="n">0.189</td><td class="n">0.0086</td><td class="n">21.89</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>newspaper</td><td class="n">−0.001</td><td class="n">0.0059</td><td class="n">−0.18</td><td class="n">0.8599</td></tr>
+</tbody></table></div></div>
+<details class="hintd"><summary>Hint</summary><div><p>Each row's p-value tests “this coefficient is zero <i>given the other predictors are in the model</i>”. Translate “\(\beta_{\text{TV}}=0\)” into words about sales.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Four null hypotheses: (1) with zero spending on all three media, average sales are zero; (2) TV spending is not associated with sales once radio and newspaper are held fixed; (3) the same for radio, with TV and newspaper fixed; (4) the same for newspaper, with TV and radio fixed. We reject (1), (2) and (3) (p &lt; 0.0001), but not (4) (p = 0.86).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Intercept.</b> \(H_0:\beta_0=0\): “when the TV, radio and newspaper budgets are all zero, expected sales are zero.” p &lt; 0.0001, so we reject it: even with no advertising, a market is expected to sell about 2,939 units.</div></li>
+<li><div><b>TV.</b> \(H_0:\beta_{\text{TV}}=0\): “for markets with the same radio and newspaper budgets, TV spending makes no difference to average sales.” p &lt; 0.0001: rejected. Holding the other two fixed, each extra $1,000 on TV is associated with about 46 more units sold.</div></li>
+<li><div><b>radio.</b> \(H_0:\beta_{\text{radio}}=0\): “with TV and newspaper fixed, radio spending is not associated with sales.” p &lt; 0.0001: rejected. About 189 more units per extra $1,000 on radio.</div></li>
+<li><div><b>newspaper.</b> \(H_0:\beta_{\text{newspaper}}=0\): “with TV and radio fixed, newspaper spending is not associated with sales.” p = 0.86: we <b>cannot</b> reject it. The data give no evidence that newspaper advertising adds anything once TV and radio are accounted for.</div></li>
+<li><div><b>Conclusion.</b> TV and radio are associated with sales; newspaper is not, after adjusting for the other two. (On its own, newspaper does look related to sales, because it is correlated with radio: <a href="#isl3-2-paradox">the newspaper paradox</a>.)</div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Writing “newspaper has no effect on sales”. The test cannot prove zero; and it is conditional on TV and radio being in the model.</li><li>Forgetting the intercept's null hypothesis, or describing one null as “all coefficients are zero” (that is the F-test).</li><li>Saying the hypotheses in symbols only: the exercise asks for words about sales and budgets.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-02" data-src="ISLP 3.7 · Conceptual 2" data-title="KNN classifier versus KNN regression">
+<div class="stmt"><p>Carefully explain the differences between the KNN classifier and KNN regression methods.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Both find the same neighbours. What kind of response do they predict, and how do they combine the neighbours' responses?</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Both find the K training points nearest to \(x_0\). The classifier predicts a <b>class</b>: it estimates \(\Pr(Y=j\mid X=x_0)\) by the fraction of neighbours in class \(j\) and outputs the most common class (majority vote). Regression predicts a <b>number</b>: the average of the neighbours' responses, \(\hat f(x_0)=\frac1K\sum_{x_i\in\mathcal N_0}y_i\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>What is shared.</b> Choose K. For a test point \(x_0\), find \(\mathcal N_0\), the K training observations closest to \(x_0\) (usually by Euclidean distance). Both are non-parametric: no formula for \(f\) is assumed.</div></li>
+<li><div><b>Response type.</b> KNN classification is for a qualitative response (e.g. default yes/no); KNN regression for a quantitative response (e.g. sales).</div></li>
+<li><div><b>How neighbours are combined.</b> Classifier: \(\Pr(Y=j\mid X=x_0)\approx\frac1K\sum_{i\in\mathcal N_0}I(y_i=j)\), then pick the class with the largest proportion. Regression: \(\hat f(x_0)=\frac1K\sum_{i\in\mathcal N_0}y_i\), the mean of their numbers.</div></li>
+<li><div><b>Output.</b> The classifier's output is a label and its decision boundary is a set of regions; the regression output is a step-function surface (Figure 3.16).</div></li>
+<li><div><b>How they are judged.</b> Classifier: error rate (fraction misclassified). Regression: mean squared error.</div></li>
+<li><div><b>Tiny example.</b> Neighbours with responses (Yes, No, Yes) for classification → predict Yes (2 of 3). Neighbours with responses (3, 5, 4) for regression → predict 4.</div></li>
+<li><div><b>Same trade-off.</b> In both, small K gives a flexible, low-bias, high-variance fit; large K a smoother, higher-bias one. Both suffer from the curse of dimensionality.</div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Saying the classifier “averages the classes”: classes cannot be averaged; it takes a vote (proportions).</li><li>Thinking KNN regression fits a line through the neighbours: it only averages them.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-03" data-src="ISLP 3.7 · Conceptual 3" data-title="Starting salary with interactions">
+<div class="stmt"><p>Suppose we have a data set with five predictors, \(X_1=\) GPA, \(X_2=\) IQ, \(X_3=\) Level (1 for College and 0 for High School), \(X_4=\) Interaction between GPA and IQ, and \(X_5=\) Interaction between GPA and Level. The response is starting salary after graduation (in thousands of dollars). Suppose we use least squares to fit the model, and get \(\hat\beta_0=50\), \(\hat\beta_1=20\), \(\hat\beta_2=0.07\), \(\hat\beta_3=35\), \(\hat\beta_4=0.01\), \(\hat\beta_5=-10\).</p>
+<p>(a) Which answer is correct, and why?</p>
+<ol type="i"><li>For a fixed value of IQ and GPA, high school graduates earn more, on average, than college graduates.</li><li>For a fixed value of IQ and GPA, college graduates earn more, on average, than high school graduates.</li><li>For a fixed value of IQ and GPA, high school graduates earn more, on average, than college graduates provided that the GPA is high enough.</li><li>For a fixed value of IQ and GPA, college graduates earn more, on average, than high school graduates provided that the GPA is high enough.</li></ol>
+<p>(b) Predict the salary of a college graduate with IQ of 110 and a GPA of 4.0.</p>
+<p>(c) True or false: Since the coefficient for the GPA/IQ interaction term is very small, there is very little evidence of an interaction effect. Justify your answer.</p></div>
+<div class="ansin" data-answer="137.1" data-tol="0.05" data-unit="thousand $"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Write the model out and subtract the high-school prediction from the college prediction at the same GPA and IQ: everything without Level cancels.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) <b>iii</b>: college minus high school \(=35-10\times\text{GPA}\), negative once GPA &gt; 3.5. (b) \(\hat y=137.1\), i.e. $137,100. (c) <b>False</b>: the size of a coefficient is not evidence; you need its standard error / p-value. And GPA × IQ is a large number (about 400), so 0.01 per unit is about 4 thousand dollars.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>The model.</b> \(\hat y=50+20\,\text{GPA}+0.07\,\text{IQ}+35\,\text{Level}+0.01\,(\text{GPA}\times\text{IQ})-10\,(\text{GPA}\times\text{Level})\).</div></li>
+<li><div><b>(a) High school (Level = 0):</b> \(50+20\,\text{GPA}+0.07\,\text{IQ}+0.01\,\text{GPA}\cdot\text{IQ}\). <b>College (Level = 1):</b> the same plus \(35-10\,\text{GPA}\).</div></li>
+<li><div><b>Difference</b> (college − high school) \(=35-10\,\text{GPA}\). It is positive when GPA &lt; 3.5 and negative when GPA &gt; 3.5. So at fixed IQ and GPA, high-school graduates earn more on average <b>provided the GPA is high enough</b> (above 3.5): option iii. Options i and ii are wrong because the sign depends on GPA; iv has the direction reversed.</div></li>
+<li><div><b>(b)</b> GPA = 4.0, IQ = 110, Level = 1:
+\[\hat y=50+20(4)+0.07(110)+35(1)+0.01(4\times110)-10(4\times1)=50+80+7.7+35+4.4-40=137.1.\]
+Salary is in thousands: <b>$137,100</b>.</div></li>
+<li><div><b>(c)</b> False. Whether there is <i>evidence</i> for an interaction is judged by the t-statistic \(\hat\beta_4/\SE(\hat\beta_4)\) and its p-value, which we are not given. A small coefficient with a tiny SE can be highly significant. Moreover the coefficient's size depends on units: GPA × IQ is around \(4\times110=440\), so the term contributes \(0.01\times440=4.4\) thousand dollars, as part (b) showed. That is not negligible.</div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Choosing ii because \(\hat\beta_3=35\) is positive, forgetting the GPA × Level term.</li><li>In (b), forgetting that salary is in thousands, or using Level = 0.</li><li>In (c), judging significance by the size of the coefficient.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-04" data-src="ISLP 3.7 · Conceptual 4" data-title="Linear versus cubic: training and test RSS">
+<div class="stmt"><p>I collect a set of data (\(n=100\) observations) containing a single predictor and a quantitative response. I then fit a linear regression model to the data, as well as a separate cubic regression, i.e. \(Y=\beta_0+\beta_1X+\beta_2X^2+\beta_3X^3+\epsilon\).</p>
+<p>(a) Suppose that the true relationship between \(X\) and \(Y\) is linear, i.e. \(Y=\beta_0+\beta_1X+\epsilon\). Consider the training residual sum of squares (RSS) for the linear regression, and also the training RSS for the cubic regression. Would we expect one to be lower than the other, would we expect them to be the same, or is there not enough information to tell? Justify your answer.</p>
+<p>(b) Answer (a) using test rather than training RSS.</p>
+<p>(c) Suppose that the true relationship between \(X\) and \(Y\) is not linear, but we don't know how far it is from linear. Consider the training RSS for the linear regression, and also the training RSS for the cubic regression. Would we expect one to be lower than the other, would we expect them to be the same, or is there not enough information to tell? Justify your answer.</p>
+<p>(d) Answer (c) using test rather than training RSS.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>The linear model is a special case of the cubic (set \(\beta_2=\beta_3=0\)). What does that imply for the <i>training</i> RSS? For test RSS, think bias–variance.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) Cubic training RSS ≤ linear (almost always strictly lower). (b) Expect the linear model's test RSS to be lower: the cubic adds variance without reducing bias. (c) Cubic training RSS ≤ linear, always. (d) Not enough information: it depends on how non-linear the truth is.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Key fact.</b> The two models are <b>nested</b>: any line \(\beta_0+\beta_1X\) is a cubic with \(\beta_2=\beta_3=0\). Least squares on the cubic searches a bigger set of curves that includes every line, so its minimum training RSS can only be lower or equal.</div></li>
+<li><div><b>(a)</b> Even though the truth is linear, the cubic will use \(\beta_2,\beta_3\) to chase the noise in the 100 points, so its training RSS is lower (equal only in the freak case where the best cubic coefficients are exactly 0).</div></li>
+<li><div><b>(b)</b> On new data, the linear model has no bias (it has the right form) and lower variance. The cubic has the same zero bias but extra variance from fitting noise, so we expect the <b>linear model's test RSS to be lower</b>. It is an expectation, not a guarantee: with a particular test set it could go either way.</div></li>
+<li><div><b>(c)</b> Same nesting argument: the cubic's training RSS is lower or equal whatever the truth is.</div></li>
+<li><div><b>(d)</b> Now the linear model has bias. If the truth is strongly non-linear, the cubic's reduction in bias outweighs its extra variance and its test RSS is lower. If the truth is only very slightly non-linear, the linear model's lower variance may win. Without knowing how far from linear the truth is, <b>there is not enough information to tell</b>.</div></li>
+</ol>
+<p>The code below checks (a) and (b) by simulation.</p>
+<div class="py" id="c-isl3-ex-02"><pre class="src">
+rng = np.random.default_rng(0)
+wins_train, wins_test = 0, 0
+for rep in range(500):
+    x = rng.normal(size=100); y = 1 + 2 * x + rng.normal(size=100)          # linear truth
+    xt = rng.normal(size=1000); yt = 1 + 2 * xt + rng.normal(size=1000)     # test data
+    c1, c3 = np.polyfit(x, y, 1), np.polyfit(x, y, 3)
+    tr1, tr3 = np.sum((y - np.polyval(c1, x))**2), np.sum((y - np.polyval(c3, x))**2)
+    te1, te3 = np.sum((yt - np.polyval(c1, xt))**2), np.sum((yt - np.polyval(c3, xt))**2)
+    wins_train += tr3 &lt;= tr1; wins_test += te1 &lt; te3
+print("cubic training RSS <= linear in", wins_train, "of 500 data sets")
+print("linear test RSS < cubic in", wins_test, "of 500 data sets")
+</pre><div class="pynote"><b>Read the output:</b> the cubic's training RSS is lower in all 500 data sets, and the linear model's test RSS is lower in most but not all of them, exactly as argued. <code>np.polyval(c, x)</code> evaluates the polynomial with coefficients <code>c</code> at <code>x</code>; adding a True/False to a number counts True as 1.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>In (a), answering “the same, because the truth is linear”: training RSS never rewards the right model, it rewards flexibility.</li><li>In (b), claiming the linear test RSS is <i>always</i> lower: it is lower on average.</li><li>In (d), confidently picking the cubic: a nearly linear truth can still favour the line.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-05" data-src="ISLP 3.7 · Conceptual 5" data-title="Fitted values are linear combinations of the responses">
+<div class="stmt"><p>Consider the fitted values that result from performing linear regression without an intercept. In this setting, the \(i\)th fitted value takes the form \(\hat y_i=x_i\hat\beta\), where
+\[\hat\beta=\left(\sum_{i=1}^n x_iy_i\right)\Big/\left(\sum_{i'=1}^n x_{i'}^2\right).\qquad(3.38)\]
+Show that we can write \(\hat y_i=\sum_{i'=1}^n a_{i'}y_{i'}\). What is \(a_{i'}\)?</p>
+<p><i>Note: we interpret this result by saying that the fitted values from linear regression are linear combinations of the response values.</i></p></div>
+<details class="hintd"><summary>Hint</summary><div><p>The index \(i\) inside the sum in \(\hat\beta\) is a dummy index: rename it \(i'\) so it does not clash with the \(i\) of \(\hat y_i\). Rename the one in the denominator \(k\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div>\[a_{i'}=\frac{x_i\,x_{i'}}{\sum_{k=1}^n x_k^2}\]</div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Rename dummy indices.</b> A summation index is a placeholder; any letter works. Write \(\hat\beta=\dfrac{\sum_{i'=1}^n x_{i'}y_{i'}}{\sum_{k=1}^n x_k^2}\).<span class="why">This avoids confusing the fixed \(i\) (the observation whose fitted value we want) with the running index of the sum.</span></div></li>
+<li><div><b>Substitute.</b> \(\hat y_i=x_i\hat\beta=x_i\,\dfrac{\sum_{i'}x_{i'}y_{i'}}{\sum_k x_k^2}\).</div></li>
+<li><div><b>Move the constants inside the sum.</b> \(x_i\) and \(\sum_kx_k^2\) do not depend on \(i'\), so they can go inside:
+\[\hat y_i=\sum_{i'=1}^n\left(\frac{x_ix_{i'}}{\sum_kx_k^2}\right)y_{i'}.\]</div></li>
+<li><div><b>Read off.</b> This has the form \(\sum_{i'}a_{i'}y_{i'}\) with \(a_{i'}=\dfrac{x_ix_{i'}}{\sum_kx_k^2}\). The weights depend only on the \(x\)'s, never on the \(y\)'s.</div></li>
+<li><div><b>Tiny check.</b> \(x=(1,2)\), \(y=(3,5)\): \(\hat\beta=(3+10)/(1+4)=2.6\), so \(\hat y_2=2\times2.6=5.2\). Weights for \(i=2\): \(a_1=2\cdot1/5=0.4\), \(a_2=2\cdot2/5=0.8\); \(0.4\times3+0.8\times5=1.2+4=5.2\). ✓</div></li>
+<li><div><b>In matrix form</b> (any linear regression): \(\hat\by=\bX(\bX\T\bX)^{-1}\bX\T\by=\mathbf{H}\by\). Row \(i\) of the hat matrix \(\mathbf{H}\) holds the weights \(a_{i'}\); its diagonal entries are the leverages \(h_i\). Here \(h_i=a_i=x_i^2/\sum_kx_k^2\).</div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Keeping the same letter \(i\) inside and outside the sum, which leads to nonsense like \(a_i=x_i^2/\sum x_i^2\) for every weight.</li><li>Putting \(y\)'s inside \(a_{i'}\): the weights must not depend on the responses.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-06" data-src="ISLP 3.7 · Conceptual 6" data-title="The line passes through the means">
+<div class="stmt"><p>Using (3.4), argue that in the case of simple linear regression, the least squares line always passes through the point \((\bar x,\bar y)\).</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Evaluate the fitted line at \(x=\bar x\) and use the formula for \(\hat\beta_0\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>At \(x=\bar x\): \(\hat y=\hat\beta_0+\hat\beta_1\bar x=(\bar y-\hat\beta_1\bar x)+\hat\beta_1\bar x=\bar y\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div>From (3.4): \(\hat\beta_0=\bar y-\hat\beta_1\bar x\).</div></li>
+<li><div>The least-squares line is \(\hat y(x)=\hat\beta_0+\hat\beta_1x\). Put \(x=\bar x\): \(\hat y(\bar x)=\hat\beta_0+\hat\beta_1\bar x\).</div></li>
+<li><div>Substitute step 1: \(\hat y(\bar x)=\bar y-\hat\beta_1\bar x+\hat\beta_1\bar x=\bar y\).</div></li>
+<li><div>So the point \((\bar x,\bar y)\) lies on the line, for any data set (as long as \(\hat\beta_1\) exists, i.e. the \(x\)'s are not all equal). Check with lesson 3.1's five points: \(2.2+0.6\times3=4=\bar y\). ✓</div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Proving it only for one numerical example: the exercise asks for a general argument.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-07" data-src="ISLP 3.7 · Conceptual 7" data-title="Prove that R² equals the squared correlation">
+<div class="stmt"><p>It is claimed in the text that in the case of simple linear regression of \(Y\) onto \(X\), the \(R^2\) statistic (3.17) is equal to the square of the correlation between \(X\) and \(Y\) (3.18). Prove that this is the case. For simplicity, you may assume that \(\bar x=\bar y=0\).</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>With \(\bar x=\bar y=0\): \(\hat\beta_0=0\), \(\hat\beta_1=\sum x_iy_i/\sum x_i^2\), \(\text{TSS}=\sum y_i^2\), \(r=\sum x_iy_i/\sqrt{\sum x_i^2\sum y_i^2}\). Expand RSS.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\RSS=\sum y_i^2-\frac{(\sum x_iy_i)^2}{\sum x_i^2}\), so \(R^2=1-\frac{\RSS}{\text{TSS}}=\frac{(\sum x_iy_i)^2}{\sum x_i^2\sum y_i^2}=r^2\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>Simplify with zero means.</b> \(\hat\beta_0=\bar y-\hat\beta_1\bar x=0\). \(\hat\beta_1=\dfrac{\sum(x_i-0)(y_i-0)}{\sum(x_i-0)^2}=\dfrac{S}{X}\), where we write \(S=\sum x_iy_i\), \(X=\sum x_i^2\), \(Y=\sum y_i^2\) to keep the algebra light. Fitted values: \(\hat y_i=\hat\beta_1x_i\).</div></li>
+<li><div><b>Total sum of squares.</b> \(\text{TSS}=\sum(y_i-\bar y)^2=\sum y_i^2=Y\).</div></li>
+<li><div><b>Expand RSS.</b>
+\[\RSS=\sum(y_i-\hat\beta_1x_i)^2=\sum y_i^2-2\hat\beta_1\sum x_iy_i+\hat\beta_1^2\sum x_i^2=Y-2\frac{S}{X}S+\frac{S^2}{X^2}X.\]</div></li>
+<li><div><b>Simplify.</b> \(Y-\frac{2S^2}{X}+\frac{S^2}{X}=Y-\frac{S^2}{X}\).</div></li>
+<li><div><b>\(R^2\).</b> \(R^2=1-\frac{\RSS}{\text{TSS}}=1-\frac{Y-S^2/X}{Y}=\frac{S^2/X}{Y}=\frac{S^2}{XY}\).</div></li>
+<li><div><b>Correlation.</b> With zero means, (3.18) is \(r=\dfrac{\sum x_iy_i}{\sqrt{\sum x_i^2}\sqrt{\sum y_i^2}}=\dfrac{S}{\sqrt{XY}}\), so \(r^2=\dfrac{S^2}{XY}\).</div></li>
+<li><div><b>Compare</b> steps 5 and 6: \(R^2=r^2\). ∎<span class="why">Why the zero-mean assumption costs nothing: subtracting the means from \(x\) and \(y\) changes neither \(R^2\) nor \(r\), so the proof covers every data set.</span></div></li>
+</ol>
+<div class="py" id="c-isl3-ex-03"><pre class="src">
+rng = np.random.default_rng(7)
+x = rng.normal(size=50); y = 3 - 2 * x + rng.normal(size=50)
+r = np.corrcoef(x, y)[0, 1]
+R2 = sm.OLS(y, sm.add_constant(x)).fit().rsquared
+print(f"r = {r:.5f}, r^2 = {r**2:.5f}, R^2 = {R2:.5f}")
+</pre><div class="pynote"><b>Read the output:</b> a numerical check on random data (with non-zero means): \(r^2\) and \(R^2\) agree to every digit, and \(r\) is negative because the slope is negative.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Expanding \((y_i-\hat\beta_1x_i)^2\) and forgetting the factor 2 in the cross term.</li><li>Writing TSS as \(\sum(y_i-\hat y_i)^2\): that is RSS.</li><li>Concluding \(R^2=r\): the correlation must be squared (\(r\) can be negative, \(R^2\) cannot).</li></ul></div></details>
+</div>
+
+<h3 id="isl3-ex-applied">Applied exercises</h3>
+
+<div class="prob" id="p-isl3-ex-08" data-src="ISLP 3.7 · Applied 8" data-title="Auto: mpg on horsepower">
+<div class="stmt"><p>This question involves the use of simple linear regression on the <code>Auto</code> data set.</p>
+<p>(a) Use the <code>sm.OLS()</code> function to perform a simple linear regression with <code>mpg</code> as the response and <code>horsepower</code> as the predictor. Use the <code>summarize()</code> function to print the results. Comment on the output. For example: (i) Is there a relationship between the predictor and the response? (ii) How strong is the relationship between the predictor and the response? (iii) Is the relationship between the predictor and the response positive or negative? (iv) What is the predicted <code>mpg</code> associated with a <code>horsepower</code> of 98? What are the associated 95% confidence and prediction intervals?</p>
+<p>(b) Plot the response and the predictor in a new set of axes <code>ax</code>. Use the <code>ax.axline()</code> method or the <code>abline()</code> function defined in the lab to display the least squares regression line.</p>
+<p>(c) Produce some of diagnostic plots of the least squares regression fit as described in the lab. Comment on any problems you see with the fit.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Follow the lab: <code>MS(['horsepower'])</code>, <code>sm.OLS(...).fit()</code>, <code>get_prediction</code> with a one-row data frame, and <code>conf_int(obs=True)</code> for the prediction interval.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) \(\widehat{\text{mpg}}=39.94-0.1578\times\text{horsepower}\). (i) Yes: t = −24.5, p ≈ 0. (ii) Fairly strong: \(R^2=0.606\), RSE 4.91 mpg (about 21% of mean mpg 23.4). (iii) Negative. (iv) At 98 hp: 24.47 mpg; 95% CI [23.97, 24.96]; 95% PI [14.81, 34.12]. (b) The line misses the curve in the data. (c) The residual plot is U-shaped (non-linearity) and fans out (heteroscedasticity); a few points have studentized residuals above 3 and some have high leverage.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<p><b>(a)</b> Fit and summarise.</p>
+<div class="py" id="c-isl3-ex-04"><pre class="src">
+y = Auto['mpg']
+design = MS(['horsepower']).fit(Auto)
+X = design.transform(Auto)
+res8 = sm.OLS(y, X).fit()
+print(summarize(res8))
+print(f"R^2 = {res8.rsquared:.3f}, RSE = {np.sqrt(res8.scale):.3f}, mean mpg = {y.mean():.2f}")
+</pre><div class="pynote"><b>Read the output:</b> slope −0.1578 (SE 0.006, t = −24.5, p ≈ 0) and intercept 39.94. <b>(i)</b> The p-value is essentially zero, so there is a relationship. <b>(ii)</b> \(R^2=0.606\): horsepower alone explains about 61% of the variance in mpg. The RSE of 4.91 mpg is about \(4.91/23.45=21\%\) of the average mpg. <b>(iii)</b> Negative: each extra horsepower is associated with 0.158 fewer miles per gallon (about 1.6 mpg per 10 hp).</div></div>
+<div class="py" id="c-isl3-ex-05"><pre class="src">
+new = design.transform(pd.DataFrame({'horsepower': [98]}))
+pred = res8.get_prediction(new)
+print("prediction:", pred.predicted_mean.round(3))
+print("95% CI:", pred.conf_int(alpha=0.05).round(3))
+print("95% PI:", pred.conf_int(obs=True, alpha=0.05).round(3))
+</pre><div class="pynote"><b>Read the output:</b> <b>(iv)</b> \(39.936-0.1578\times98=24.47\) mpg. The 95% confidence interval for the <i>average</i> mpg of 98-hp cars is [23.97, 24.96]; the 95% prediction interval for <i>one</i> such car is [14.81, 34.12], far wider because individual cars vary a lot around the line.</div></div>
+<p><b>(b)</b> Scatter plot with the line.</p>
+<div class="py" id="c-isl3-ex-06"><pre class="src">
+fig, ax = subplots(figsize=(6, 4))
+ax.scatter(Auto['horsepower'], y, s=10, alpha=0.6)
+ax.axline((0, res8.params.iloc[0]), slope=res8.params.iloc[1], c='r', ls='--', lw=2)
+ax.set_xlim(40, 235); ax.set_ylim(5, 48)
+ax.set_xlabel('horsepower'); ax.set_ylabel('mpg'); plt.show()
+</pre><div class="pynote"><b>Read the output:</b> <code>ax.axline(point, slope=...)</code> draws an infinite line through <code>(0, intercept)</code> with the given slope. The points curve: they lie above the line at low and high horsepower and below it in the middle.</div></div>
+<p><b>(c)</b> Diagnostics: residuals against fitted values, and leverage.</p>
+<div class="py" id="c-isl3-ex-07"><pre class="src">
+infl = res8.get_influence()
+fig, axes = subplots(1, 2, figsize=(9, 3.5))
+axes[0].scatter(res8.fittedvalues, res8.resid, s=10, alpha=0.6); axes[0].axhline(0, c='k', ls='--')
+axes[0].set_xlabel('Fitted value'); axes[0].set_ylabel('Residual')
+axes[1].scatter(infl.hat_matrix_diag, infl.resid_studentized_external, s=10, alpha=0.6)
+axes[1].set_xlabel('Leverage'); axes[1].set_ylabel('Studentized residual'); plt.show()
+h = infl.hat_matrix_diag
+print("studentized residuals beyond +-3:", np.sum(np.abs(infl.resid_studentized_external) > 3))
+print(f"max leverage {h.max():.4f} ({Auto.index[np.argmax(h)]}), average (p+1)/n = {2/len(y):.4f}")
+</pre><div class="pynote"><b>Read the output:</b> the residual plot has a clear <b>U-shape</b> (the straight line misses a curve: non-linearity, as in Figure 3.9) and the spread <b>widens</b> with the fitted value (heteroscedasticity). Two cars have studentized residuals beyond ±3 (possible outliers). The highest leverage, about 0.030 for the Pontiac Grand Prix (a high-horsepower car), is about 6 times the average 0.005: noticeable but not extreme. A quadratic term or \(\log(\text{mpg})\) would address the main problems.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Reporting the confidence interval when asked about one car (use the prediction interval for that).</li><li>Concluding the model is “good” from the p-value alone: the residual plot shows it is mis-specified.</li><li>Calling a large-horsepower car an outlier: unusual \(x\) is leverage; outliers have unusual \(y\).</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-09" data-src="ISLP 3.7 · Applied 9" data-title="Auto: multiple regression">
+<div class="stmt"><p>This question involves the use of multiple linear regression on the <code>Auto</code> data set.</p>
+<p>(a) Produce a scatterplot matrix which includes all of the variables in the data set.</p>
+<p>(b) Compute the matrix of correlations between the variables using the <code>DataFrame.corr()</code> method.</p>
+<p>(c) Use the <code>sm.OLS()</code> function to perform a multiple linear regression with <code>mpg</code> as the response and all other variables except <code>name</code> as the predictors. Use the <code>summarize()</code> function to print the results. Comment on the output. For instance: (i) Is there a relationship between the predictors and the response? Use the <code>anova_lm()</code> function from <code>statsmodels</code> to answer this question. (ii) Which predictors appear to have a statistically significant relationship to the response? (iii) What does the coefficient for the <code>year</code> variable suggest?</p>
+<p>(d) Produce some of diagnostic plots of the linear regression fit as described in the lab. Comment on any problems you see with the fit. Do the residual plots suggest any unusually large outliers? Does the leverage plot identify any observations with unusually high leverage?</p>
+<p>(e) Fit some models with interactions as described in the lab. Do any interactions appear to be statistically significant?</p>
+<p>(f) Try a few different transformations of the variables, such as \(\log(X)\), \(\sqrt X\), \(X^2\). Comment on your findings.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>In ISLP's Auto, <code>name</code> is already the row index, so <code>Auto.columns.drop('mpg')</code> gives the 7 predictors. For (c)(i), compare the full model with the intercept-only model <code>MS([])</code> using <code>anova_lm</code>.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(c) F = 252.4, p ≈ \(10^{-139}\): yes, a relationship. Significant at 5%: displacement, weight, year, origin (not cylinders, horsepower, acceleration). year 0.75: holding the others fixed, each model year adds about 0.75 mpg (cars got more efficient over time). \(R^2=0.82\). (d) U-shaped, fanning residuals; 4 studentized residuals between 3.4 and 4.0 (mild outliers); one car (the Buick Estate Wagon) has leverage 0.19, about 9 times the average 0.020. (e) horsepower:weight and acceleration:year are significant; displacement:cylinders is not. (f) log(horsepower) fits better than horsepower (\(R^2\) 0.668 vs 0.606); a quadratic does best (0.688); logging mpg in the full model raises \(R^2\) to 0.88.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<p><b>(a)</b> A scatterplot matrix: every pair of variables.</p>
+<div class="py" id="c-isl3-ex-08"><pre class="src">
+pd.plotting.scatter_matrix(Auto, figsize=(9, 9), s=6, alpha=0.5)
+plt.show()
+</pre><div class="pynote"><b>Read the output:</b> mpg falls with cylinders, displacement, horsepower and weight (curving downwards), and rises with year and origin. The four engine-size variables are strongly related to each other: a warning of collinearity. <code>pd.plotting.scatter_matrix</code> draws the grid with histograms on the diagonal.</div></div>
+<p><b>(b)</b> The correlation matrix.</p>
+<div class="py" id="c-isl3-ex-09"><pre class="src">
+Auto.corr().round(2)
+</pre><div class="pynote"><b>Read the output:</b> mpg correlates −0.83 with weight, −0.81 with displacement, −0.78 with horsepower and cylinders, +0.58 with year. Among predictors: cylinders–displacement 0.95, displacement–weight 0.93, displacement–horsepower 0.90: severe collinearity among engine-size measures.</div></div>
+<p><b>(c)</b> All predictors.</p>
+<div class="py" id="c-isl3-ex-10"><pre class="src">
+terms = Auto.columns.drop('mpg')
+res9 = sm.OLS(y, MS(terms).fit_transform(Auto)).fit()
+print(summarize(res9))
+print(f"R^2 = {res9.rsquared:.3f}")
+res0 = sm.OLS(y, MS([]).fit_transform(Auto)).fit()        # intercept only
+anova_lm(res0, res9)
+</pre><div class="pynote"><b>Read the output:</b>
+<ul><li><b>(i)</b> <code>anova_lm</code> compares the intercept-only model (RSS 23,819) with the full one (RSS 4,252): F = 252.4 on 7 and 384 degrees of freedom, p ≈ \(2\times10^{-139}\). There is clearly a relationship between the predictors and mpg. (This F equals the overall F-statistic (3.23).) <code>MS([])</code> builds a design matrix with only the intercept column.</li>
+<li><b>(ii)</b> Significant at 5%: <b>displacement</b> (p = 0.008), <b>weight</b> (p ≈ 0), <b>year</b> (p ≈ 0), <b>origin</b> (p ≈ 0). Not significant: cylinders (0.13), horsepower (0.22), acceleration (0.42). Horsepower's simple-regression significance disappears because weight and displacement carry the same information (collinearity).</li>
+<li><b>(iii)</b> year = 0.7508: holding the other variables fixed, each later model year is associated with 0.75 more mpg, about 7.5 mpg per decade: newer cars of the same size and weight were more efficient.</li>
+<li>Note: <code>origin</code> (1 = American, 2 = European, 3 = Japanese) is a code, so treating it as a number assumes equal steps between regions. Making it categorical (dummies) would be more honest.</li></ul></div></div>
+<p><b>(d)</b> Diagnostics.</p>
+<div class="py" id="c-isl3-ex-11"><pre class="src">
+infl9 = res9.get_influence()
+sr, h = infl9.resid_studentized_external, infl9.hat_matrix_diag
+fig, axes = subplots(1, 2, figsize=(9, 3.5))
+axes[0].scatter(res9.fittedvalues, res9.resid, s=10, alpha=0.6); axes[0].axhline(0, c='k', ls='--')
+axes[0].set_xlabel('Fitted value'); axes[0].set_ylabel('Residual')
+axes[1].scatter(h, sr, s=10, alpha=0.6); axes[1].set_xlabel('Leverage'); axes[1].set_ylabel('Studentized residual')
+plt.show()
+print("studentized residuals > 3:", np.round(np.sort(sr[np.abs(sr) > 3]), 2))
+print(f"max leverage {h.max():.3f} ({Auto.index[np.argmax(h)]}), average {8/392:.4f}")
+</pre><div class="pynote"><b>Read the output:</b> the residual plot is again <b>U-shaped</b> and widens to the right: non-linearity and heteroscedasticity. Four cars have studentized residuals between 3.4 and 4.0: mild outliers, not dramatic. The Buick Estate Wagon has leverage 0.19, about 9 times the average \((p+1)/n=8/392=0.020\): a very heavy car with an unusual combination of predictors. Its studentized residual is moderate, so it is influential but not an outlier.</div></div>
+<p><b>(e)</b> Interactions.</p>
+<div class="py" id="c-isl3-ex-12"><pre class="src">
+inter = list(terms) + [('horsepower', 'weight'), ('displacement', 'cylinders'), ('acceleration', 'year')]
+res9e = sm.OLS(y, MS(inter).fit_transform(Auto)).fit()
+print(summarize(res9e).iloc[-3:])
+print(f"R^2 = {res9e.rsquared:.3f} (was {res9.rsquared:.3f})")
+</pre><div class="pynote"><b>Read the output:</b> <b>horsepower:weight</b> (p ≈ 0) and <b>acceleration:year</b> (p ≈ 0) are significant; displacement:cylinders (p = 0.48) is not. \(R^2\) rises from 0.82 to about 0.86. A positive horsepower:weight coefficient means the mpg penalty for extra horsepower is smaller in heavier cars. <code>.iloc[-3:]</code> shows the last three rows (the interactions). Remember the hierarchical principle: the main effects stay in.</div></div>
+<p><b>(f)</b> Transformations.</p>
+<div class="py" id="c-isl3-ex-13"><pre class="src">
+A2 = Auto.copy()
+A2['log_hp'] = np.log(A2['horsepower'])
+A2['sqrt_hp'] = np.sqrt(A2['horsepower'])
+A2['hp_sq'] = A2['horsepower'] ** 2
+for cols in [['horsepower'], ['log_hp'], ['sqrt_hp'], ['horsepower', 'hp_sq']]:
+    r2 = sm.OLS(y, MS(cols).fit_transform(A2)).fit().rsquared
+    print(f"{' + '.join(cols):20s} R^2 = {r2:.3f}")
+print(f"log(mpg) on all predictors: R^2 = {sm.OLS(np.log(y), MS(terms).fit_transform(Auto)).fit().rsquared:.3f}")
+</pre><div class="pynote"><b>Read the output:</b> \(R^2\) for one horsepower term: 0.606 (raw), 0.644 (\(\sqrt{X}\)), 0.668 (\(\log X\)); with horsepower and horsepower²: 0.688. Transformations that bend the curve (log, square) capture the non-linearity seen in (a) and (d). Logging the <i>response</i> in the full model raises \(R^2\) from 0.82 to 0.88 and also tames the funnel, because mpg's spread grows with its level. (\(R^2\) values for different responses, mpg and log mpg, are not strictly comparable, but the residual plot of the log model is clearly better.) <code>' + '.join(cols)</code> glues a list of names into one string.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Including <code>name</code> as a predictor (in some versions of the data it is a column): 300+ dummy variables for 392 cars.</li><li>Reading “horsepower is not significant” as “horsepower does not affect mpg”: it is just redundant given weight and displacement.</li><li>Comparing \(R^2\) across models with different response variables as if it were the same scale.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-10" data-src="ISLP 3.7 · Applied 10" data-title="Carseats: Price, Urban and US">
+<div class="stmt"><p>This question should be answered using the <code>Carseats</code> data set.</p>
+<p>(a) Fit a multiple regression model to predict <code>Sales</code> using <code>Price</code>, <code>Urban</code>, and <code>US</code>. (b) Provide an interpretation of each coefficient in the model. Be careful: some of the variables in the model are qualitative! (c) Write out the model in equation form, being careful to handle the qualitative variables properly. (d) For which of the predictors can you reject the null hypothesis \(H_0:\beta_j=0\)? (e) On the basis of your response to the previous question, fit a smaller model that only uses the predictors for which there is evidence of association with the outcome. (f) How well do the models in (a) and (e) fit the data? (g) Using the model from (e), obtain 95% confidence intervals for the coefficient(s). (h) Is there evidence of outliers or high leverage observations in the model from (e)?</p></div>
+<details class="hintd"><summary>Hint</summary><div><p><code>Sales</code> is in thousands of units and <code>Price</code> in dollars. <code>MS</code> turns Urban and US into dummies <code>Urban[Yes]</code> and <code>US[Yes]</code> with “No” as the baseline.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) \(\widehat{\text{Sales}}=13.04-0.0545\,\text{Price}-0.022\,\text{Urban[Yes]}+1.20\,\text{US[Yes]}\). (d) Price and US (p ≈ 0); not Urban (p = 0.94). (e) \(\widehat{\text{Sales}}=13.03-0.0545\,\text{Price}+1.20\,\text{US[Yes]}\). (f) Both poor: \(R^2=0.239\), RSE ≈ 2.47 thousand units; the smaller model is just as good (anova p = 0.94). (g) Price [−0.0648, −0.0442], US[Yes] [0.692, 1.708]. (h) No outliers (max |studentized residual| 2.89); some moderately high-leverage points (max 0.043 vs average 0.0075), none combined with a large residual.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<div class="py" id="c-isl3-ex-14"><pre class="src">
+res10a = sm.OLS(Carseats['Sales'], MS(['Price', 'Urban', 'US']).fit_transform(Carseats)).fit()
+print(summarize(res10a))
+print(f"R^2 = {res10a.rsquared:.4f}, RSE = {np.sqrt(res10a.scale):.4f}")
+</pre><div class="pynote"><b>(a) and (b), coefficient by coefficient:</b>
+<ul><li><b>Intercept 13.04:</b> predicted sales (13,040 seats) for a non-urban, non-US store charging $0: an extrapolation, mainly a reference point.</li>
+<li><b>Price −0.0545:</b> holding Urban and US fixed, each $1 increase in price is associated with about 54 fewer seats sold (0.0545 thousand).</li>
+<li><b>Urban[Yes] −0.022:</b> urban stores sell about 22 fewer seats than rural ones at the same price and US status, but p = 0.94: no evidence of any difference.</li>
+<li><b>US[Yes] 1.20:</b> US stores sell about 1,200 more seats than non-US stores at the same price and urban status (p ≈ 0).</li></ul></div></div>
+<p><b>(c)</b> In equation form, with dummies \(\text{Urban}_i=1\) if urban, \(\text{US}_i=1\) if in the US:</p>
+\[\widehat{\text{Sales}}_i=13.043-0.0545\,\text{Price}_i-0.022\,\text{Urban}_i+1.201\,\text{US}_i=\begin{cases}13.043-0.0545\,\text{Price}_i&\text{rural, non-US}\\13.021-0.0545\,\text{Price}_i&\text{urban, non-US}\\14.244-0.0545\,\text{Price}_i&\text{rural, US}\\14.222-0.0545\,\text{Price}_i&\text{urban, US}\end{cases}\]
+<p>Four parallel lines in Price, one per combination of the two qualitative variables.</p>
+<p><b>(d)</b> We can reject \(H_0:\beta_j=0\) for <b>Price</b> (t = −10.4) and <b>US</b> (t = 4.6), but not for <b>Urban</b> (p = 0.94).</p>
+<div class="py" id="c-isl3-ex-15"><pre class="src">
+res10e = sm.OLS(Carseats['Sales'], MS(['Price', 'US']).fit_transform(Carseats)).fit()
+print(summarize(res10e))
+for name, r in [('(a)', res10a), ('(e)', res10e)]:
+    print(f"model {name}: R^2 = {r.rsquared:.4f}, RSE = {np.sqrt(r.scale):.4f}")
+print(anova_lm(res10e, res10a))
+print(res10e.conf_int(alpha=0.05).round(4))
+</pre><div class="pynote"><b>(e)</b> The smaller model: Sales = 13.03 − 0.0545 Price + 1.20 US[Yes]. <b>(f)</b> Both models explain only about 24% of the variance in sales (\(R^2=0.2393\) and 0.2393), with RSE about 2.47 thousand seats against mean sales of 7.5: a weak fit. The smaller model is just as good: its RSE is even slightly lower (2.469 vs 2.472) and the F-test for dropping Urban has p = 0.94. <b>(g)</b> 95% intervals: Price [−0.0648, −0.0442] (each $1 costs 44 to 65 seats), US[Yes] [0.692, 1.708] (US stores sell between about 690 and 1,710 more). Neither interval contains 0.</div></div>
+<p><b>(h)</b> Outliers and leverage for model (e).</p>
+<div class="py" id="c-isl3-ex-16"><pre class="src">
+inf10 = res10e.get_influence()
+sr10, h10 = inf10.resid_studentized_external, inf10.hat_matrix_diag
+fig, ax = subplots(figsize=(6, 3.5))
+ax.scatter(h10, sr10, s=10, alpha=0.6); ax.set_xlabel('Leverage'); ax.set_ylabel('Studentized residual')
+ax.axvline(3 / 400, c='grey', ls=':'); plt.show()
+print(f"max |studentized residual| = {np.abs(sr10).max():.2f}")
+print(f"max leverage = {h10.max():.4f}, average (p+1)/n = {3/400:.4f}, points above 2x average: {(h10 > 2*3/400).sum()}")
+</pre><div class="pynote"><b>Read the output:</b> no studentized residual exceeds 3 (the largest is 2.89), so no clear outliers. The largest leverage is 0.043, about 6 times the average 0.0075, and 20 stores exceed twice the average (stores with very high or very low prices). None of them has a large residual, so they do not distort the fit much. The dotted line marks the average leverage.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Interpreting Price per thousand dollars: Price is in dollars, Sales in thousands of units.</li><li>Writing the equation with “Urban = Yes” instead of a 0/1 dummy.</li><li>Concluding that the smaller model fits worse because its \(R^2\) is lower in the fifth decimal: \(R^2\) always drops when a variable is removed.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-11" data-src="ISLP 3.7 · Applied 11" data-title="The t-statistic without an intercept">
+<div class="stmt"><p>In this problem we will investigate the t-statistic for the null hypothesis \(H_0:\beta=0\) in simple linear regression without an intercept. To begin, we generate a predictor <code>x</code> and a response <code>y</code> as follows.</p>
+<pre style="overflow-x:auto;font-size:13px">rng = np.random.default_rng(1)
+x = rng.normal(size=100)
+y = 2 * x + rng.normal(size=100)</pre>
+<p>(a) Perform a simple linear regression of <code>y</code> onto <code>x</code>, without an intercept. Report the coefficient estimate \(\hat\beta\), the standard error of this coefficient estimate, and the t-statistic and p-value associated with the null hypothesis \(H_0:\beta=0\). Comment on these results. (You can perform regression without an intercept using the keywords argument <code>intercept=False</code> to <code>ModelSpec()</code>.)</p>
+<p>(b) Now perform a simple linear regression of <code>x</code> onto <code>y</code> without an intercept, and report the coefficient estimate, its standard error, and the corresponding t-statistic and p-values associated with the null hypothesis \(H_0:\beta=0\). Comment on these results.</p>
+<p>(c) What is the relationship between the results obtained in (a) and (b)?</p>
+<p>(d) For the regression of \(Y\) onto \(X\) without an intercept, the t-statistic for \(H_0:\beta=0\) takes the form \(\hat\beta/\SE(\hat\beta)\), where \(\hat\beta\) is given by (3.38), and where
+\[\SE(\hat\beta)=\sqrt{\frac{\sum_{i=1}^n(y_i-x_i\hat\beta)^2}{(n-1)\sum_{i'=1}^nx_{i'}^2}}.\]
+(These formulas are slightly different from those given in Sections 3.1.1 and 3.1.2, since here we are performing regression without an intercept.) Show algebraically, and confirm numerically, that the t-statistic can be written as
+\[\frac{(\sqrt{n-1})\sum_{i=1}^nx_iy_i}{\sqrt{(\sum_{i=1}^nx_i^2)(\sum_{i'=1}^ny_{i'}^2)-(\sum_{i'=1}^nx_{i'}y_{i'})^2}}.\]</p>
+<p>(e) Using the results from (d), argue that the t-statistic for the regression of <code>y</code> onto <code>x</code> is the same as the t-statistic for the regression of <code>x</code> onto <code>y</code>.</p>
+<p>(f) Show that when regression is performed with an intercept, the t-statistic for \(H_0:\beta_1=0\) is the same for the regression of <code>y</code> onto <code>x</code> as it is for the regression of <code>x</code> onto <code>y</code>.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>For (d), write \(S=\sum x_iy_i\), \(X=\sum x_i^2\), \(Y=\sum y_i^2\). Then \(\hat\beta=S/X\) and \(\sum(y_i-x_i\hat\beta)^2=Y-S^2/X\) (same expansion as Conceptual 7).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) \(\hat\beta=1.976\), SE 0.117, t = 16.90, p ≈ 0. (b) \(\hat\beta=0.376\), SE 0.022, t = 16.90, p ≈ 0. (c) The estimates differ (not reciprocals: \(1/1.976=0.506\ne0.376\)) but the t-statistics and p-values are identical. (d) see the solution. (e) the formula is symmetric in \(x\) and \(y\). (f) with an intercept both t's are 16.73.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<div class="py" id="c-isl3-ex-17"><pre class="src">
+rng = np.random.default_rng(1)
+x = rng.normal(size=100)
+y = 2 * x + rng.normal(size=100)
+df11 = pd.DataFrame({'x': x, 'y': y})
+res_yx = sm.OLS(y, ModelSpec(['x'], intercept=False).fit_transform(df11)).fit()
+res_xy = sm.OLS(x, ModelSpec(['y'], intercept=False).fit_transform(df11)).fit()
+print(summarize(res_yx)); print(summarize(res_xy))
+</pre><div class="pynote"><b>(a)</b> \(\hat\beta=1.9762\), SE 0.117, t = 16.90, p ≈ 0: close to the true slope 2, and overwhelming evidence that \(\beta\ne0\). <b>(b)</b> \(\hat\beta=0.3757\), SE 0.022, t = 16.90, p ≈ 0. Since \(x=(y-\epsilon)/2\), one might guess about 0.5, but regressing \(x\) on \(y\) shrinks the slope because \(y\) contains noise (\(\hat\beta=\sum xy/\sum y^2\)). <b>(c)</b> Different slopes, <b>identical t-statistics and p-values</b>. <code>ModelSpec(['x'], intercept=False)</code> builds a design matrix with just the <code>x</code> column, no ones.</div></div>
+<p><b>(d) Algebra.</b> Let \(S=\sum x_iy_i\), \(X=\sum x_i^2\), \(Y=\sum y_i^2\).</p>
+<ol class="steps">
+<li><div>\(\hat\beta=S/X\).</div></li>
+<li><div>Residual sum: \(\sum(y_i-x_i\hat\beta)^2=Y-2\hat\beta S+\hat\beta^2X=Y-\frac{2S^2}{X}+\frac{S^2}{X}=Y-\frac{S^2}{X}=\frac{XY-S^2}{X}\).</div></li>
+<li><div>\(\SE(\hat\beta)=\sqrt{\dfrac{(XY-S^2)/X}{(n-1)X}}=\dfrac{\sqrt{XY-S^2}}{X\sqrt{n-1}}\).</div></li>
+<li><div>\(t=\dfrac{\hat\beta}{\SE(\hat\beta)}=\dfrac{S}{X}\cdot\dfrac{X\sqrt{n-1}}{\sqrt{XY-S^2}}=\dfrac{\sqrt{n-1}\,S}{\sqrt{XY-S^2}}\), which is the required formula. ∎</div></li>
+</ol>
+<div class="py" id="c-isl3-ex-18"><pre class="src">
+n = 100
+S, Xs, Ys = np.sum(x * y), np.sum(x ** 2), np.sum(y ** 2)
+t_formula = np.sqrt(n - 1) * S / np.sqrt(Xs * Ys - S ** 2)
+print(f"formula: {t_formula:.4f}   statsmodels y on x: {res_yx.tvalues.iloc[0]:.4f}   x on y: {res_xy.tvalues.iloc[0]:.4f}")
+</pre><div class="pynote"><b>Read the output:</b> all three numbers are 16.8984: the algebra is confirmed.</div></div>
+<p><b>(e)</b> The formula uses \(S\), and \(XY\), both of which stay the same if we swap \(x\) and \(y\) (\(\sum x_iy_i=\sum y_ix_i\), \(XY=YX\)). So the regression of \(x\) onto \(y\) has exactly the same t-statistic.</p>
+<p><b>(f)</b> With an intercept the same argument works on centred data: the slope's t-statistic becomes \(t=\dfrac{r\sqrt{n-2}}{\sqrt{1-r^2}}\), where \(r\) is the correlation, which is symmetric in \(x\) and \(y\).</p>
+<div class="py" id="c-isl3-ex-19"><pre class="src">
+t1 = sm.OLS(y, sm.add_constant(x)).fit().tvalues[1]
+t2 = sm.OLS(x, sm.add_constant(y)).fit().tvalues[1]
+r = np.corrcoef(x, y)[0, 1]
+print(f"y on x: {t1:.4f}   x on y: {t2:.4f}   r*sqrt(n-2)/sqrt(1-r^2): {r*np.sqrt(98)/np.sqrt(1-r**2):.4f}")
+</pre><div class="pynote"><b>Read the output:</b> 16.7343 three times. The slopes still differ, but the evidence against “no relationship” is the same whichever variable you call the response, as it should be: the test is really about the correlation.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Expecting the slope of \(x\) on \(y\) to be \(1/\hat\beta\): least squares minimises vertical distances, so the two regressions are different lines.</li><li>Using \(n-2\) degrees of freedom without an intercept: only one parameter is estimated, so it is \(n-1\).</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-12" data-src="ISLP 3.7 · Applied 12" data-title="When are the two no-intercept slopes equal?">
+<div class="stmt"><p>This problem involves simple linear regression without an intercept.</p>
+<p>(a) Recall that the coefficient estimate \(\hat\beta\) for the linear regression of \(Y\) onto \(X\) without an intercept is given by (3.38). Under what circumstance is the coefficient estimate for the regression of \(X\) onto \(Y\) the same as the coefficient estimate for the regression of \(Y\) onto \(X\)?</p>
+<p>(b) Generate an example in Python with \(n=100\) observations in which the coefficient estimate for the regression of \(X\) onto \(Y\) is different from the coefficient estimate for the regression of \(Y\) onto \(X\).</p>
+<p>(c) Generate an example in Python with \(n=100\) observations in which the coefficient estimate for the regression of \(X\) onto \(Y\) is the same as the coefficient estimate for the regression of \(Y\) onto \(X\).</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>The two estimates are \(\sum x_iy_i/\sum x_i^2\) and \(\sum x_iy_i/\sum y_i^2\). Same numerator.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) When \(\sum x_i^2=\sum y_i^2\) (or in the degenerate case \(\sum x_iy_i=0\), when both are 0). (b) e.g. \(y=2x+\epsilon\). (c) e.g. \(y\) = a shuffled copy of \(x\), or \(y=-x\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div><ol class="steps">
+<li><div><b>(a)</b> \(\hat\beta_{y\sim x}=\dfrac{\sum x_iy_i}{\sum x_i^2}\) and \(\hat\beta_{x\sim y}=\dfrac{\sum x_iy_i}{\sum y_i^2}\). With a non-zero numerator they are equal exactly when the denominators are equal: \(\sum x_i^2=\sum y_i^2\), i.e. \(x\) and \(y\) have the same sum of squares (same “energy”, in signal terms).</div></li>
+</ol>
+<div class="py" id="c-isl3-ex-20"><pre class="src">
+rng = np.random.default_rng(12)
+def slopes(x, y):
+    return np.sum(x * y) / np.sum(x ** 2), np.sum(x * y) / np.sum(y ** 2)
+x = rng.normal(size=100)
+y_b = 2 * x + rng.normal(size=100)           # (b): different energies
+y_c = rng.permutation(x)                     # (c): same numbers, shuffled
+print("(b) y on x, x on y:", np.round(slopes(x, y_b), 4))
+print("(c) y on x, x on y:", np.round(slopes(x, y_c), 4), " sums of squares:", round(np.sum(x**2), 3), round(np.sum(y_c**2), 3))
+</pre><div class="pynote"><b>Read the output:</b> in (b) the slopes are about 2 and 0.4: different, because \(\sum y^2\) is about 5 times \(\sum x^2\). In (c), <code>rng.permutation(x)</code> shuffles the same 100 numbers, so \(\sum y^2=\sum x^2\) and the two slopes are identical (and close to 0, since a shuffled copy is unrelated to \(x\)). Another valid example: \(y=-x\), where both slopes equal −1.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Answering “when \(x=y\)”: that is one case, but any pair with equal sums of squares works.</li><li>Including an intercept: the exercise is about regression through the origin.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-13" data-src="ISLP 3.7 · Applied 13" data-title="Simulated data: noise, fits and intervals">
+<div class="stmt"><p>In this exercise you will create some simulated data and will fit simple linear regression models to it. Make sure to use the default random number generator with seed set to 1 prior to starting part (a) to ensure consistent results.</p>
+<p>(a) Using the <code>normal()</code> method of your random number generator, create a vector, <code>x</code>, containing 100 observations drawn from a \(N(0,1)\) distribution. This represents a feature, \(X\). (b) Using the <code>normal()</code> method, create a vector, <code>eps</code>, containing 100 observations drawn from a \(N(0,0.25)\) distribution, a normal distribution with mean zero and variance 0.25. (c) Using <code>x</code> and <code>eps</code>, generate a vector <code>y</code> according to the model \(Y=-1+0.5X+\epsilon\). (3.39) What is the length of the vector <code>y</code>? What are the values of \(\beta_0\) and \(\beta_1\) in this linear model? (d) Create a scatterplot displaying the relationship between <code>x</code> and <code>y</code>. Comment on what you observe. (e) Fit a least squares linear model to predict <code>y</code> using <code>x</code>. Comment on the model obtained. How do \(\hat\beta_0\) and \(\hat\beta_1\) compare to \(\beta_0\) and \(\beta_1\)? (f) Display the least squares line on the scatterplot obtained in (d). Draw the population regression line on the plot, in a different color. Use the <code>legend()</code> method of the axes to create an appropriate legend. (g) Now fit a polynomial regression model that predicts <code>y</code> using <code>x</code> and <code>x^2</code>. Is there evidence that the quadratic term improves the model fit? Explain your answer. (h) Repeat (a)–(f) after modifying the data generation process in such a way that there is less noise in the data. The model (3.39) should remain the same. You can do this by decreasing the variance of the normal distribution used to generate the error term \(\epsilon\) in (b). Describe your results. (i) Repeat (a)–(f) after modifying the data generation process in such a way that there is more noise in the data. The model (3.39) should remain the same. You can do this by increasing the variance of the normal distribution used to generate the error term \(\epsilon\) in (b). Describe your results. (j) What are the confidence intervals for \(\beta_0\) and \(\beta_1\) based on the original data set, the noisier data set, and the less noisy data set? Comment on your results.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>NumPy's <code>normal(scale=...)</code> takes the <b>standard deviation</b>, not the variance: variance 0.25 means <code>scale=0.5</code>.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(c) length 100; \(\beta_0=-1\), \(\beta_1=0.5\). (e) \(\hat\beta_0=-1.038\), \(\hat\beta_1=0.484\), \(R^2=0.41\). (g) No: the quadratic term has p = 0.96. (h) sd 0.1: \(\hat\beta=(-1.008,\ 0.497)\), \(R^2=0.95\). (i) sd 1: \(\hat\beta=(-1.076,\ 0.469)\), \(R^2=0.14\). (j) CIs for \(\beta_1\): original [0.368, 0.601], less noisy [0.474, 0.520], noisier [0.235, 0.702]: width proportional to the noise sd, all containing 0.5.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<div class="py" id="c-isl3-ex-21"><pre class="src">
+def simulate(sd, seed=1):
+    rng = np.random.default_rng(seed)
+    x = rng.normal(size=100)                   # (a) X ~ N(0, 1)
+    eps = rng.normal(scale=sd, size=100)       # (b) sd = sqrt(variance)
+    return x, -1 + 0.5 * x + eps               # (c) the model (3.39)
+x13, y13 = simulate(0.5)
+print("length of y:", len(y13))
+res13 = sm.OLS(y13, sm.add_constant(x13)).fit()
+print(res13.params.round(4), f" R^2 = {res13.rsquared:.3f}, RSE = {np.sqrt(res13.scale):.3f}")
+</pre><div class="pynote"><b>(c)</b> <code>y</code> has length 100; the true \(\beta_0=-1\), \(\beta_1=0.5\). <b>(e)</b> \(\hat\beta_0=-1.038\), \(\hat\beta_1=0.484\): both within a few hundredths of the truth. \(R^2=0.41\): with noise sd 0.5 and slope 0.5, signal and noise are of similar size. The RSE (0.50) is a good estimate of the true \(\sigma=0.5\).</div></div>
+<div class="py" id="c-isl3-ex-22"><pre class="src">
+def plot_fit(x, y, res, title):
+    fig, ax = subplots(figsize=(5.5, 3.6))
+    ax.scatter(x, y, s=12, alpha=0.7)
+    ax.axline((0, res.params[0]), slope=res.params[1], c='#3B4AD0', lw=2, label='least squares line')
+    ax.axline((0, -1), slope=0.5, c='#C0392F', lw=2, ls='--', label='population line')
+    ax.legend(); ax.set_title(title); ax.set_xlabel('x'); ax.set_ylabel('y'); plt.show()
+plot_fit(x13, y13, res13, 'variance 0.25')
+</pre><div class="pynote"><b>(d) and (f)</b> The scatter shows a clear positive linear trend with moderate scatter. The least-squares line (blue) and the population line (red dashed) nearly coincide. <code>ax.legend()</code> uses the <code>label=</code> of each line.</div></div>
+<div class="py" id="c-isl3-ex-23"><pre class="src">
+res13q = sm.OLS(y13, sm.add_constant(np.column_stack([x13, x13 ** 2]))).fit()
+print(res13q.params.round(4), " p-value of x^2:", round(res13q.pvalues[2], 3))
+print(anova_lm(res13, res13q))
+</pre><div class="pynote"><b>(g)</b> The quadratic coefficient is −0.002 with p = 0.96, and the anova F-test also gives p = 0.96. There is no evidence that \(x^2\) improves the fit; \(R^2\) rises only in the fifth decimal (as adding any variable must). That is right: the truth is linear. <code>np.column_stack</code> puts arrays side by side as columns.</div></div>
+<div class="py" id="c-isl3-ex-24"><pre class="src">
+results13 = {}
+for label, sd in [('original (sd 0.5)', 0.5), ('less noise (sd 0.1)', 0.1), ('more noise (sd 1.0)', 1.0)]:
+    xs, ys = simulate(sd)
+    r = sm.OLS(ys, sm.add_constant(xs)).fit()
+    results13[label] = r
+    print(f"{label:20s} b0 = {r.params[0]:.4f}  b1 = {r.params[1]:.4f}  R^2 = {r.rsquared:.3f}")
+plot_fit(*simulate(0.1), results13['less noise (sd 0.1)'], 'variance 0.01')
+plot_fit(*simulate(1.0), results13['more noise (sd 1.0)'], 'variance 1')
+</pre><div class="pynote"><b>(h)</b> With variance 0.01 (sd 0.1) the points hug the line, \(\hat\beta=(-1.008, 0.497)\), \(R^2=0.95\), and the two lines are indistinguishable. <b>(i)</b> With variance 1 (sd 1) the cloud is wide, \(\hat\beta=(-1.076, 0.469)\), \(R^2=0.14\), and the fitted line visibly departs from the true one. The <code>*</code> in <code>plot_fit(*simulate(0.1), ...)</code> unpacks the pair <code>(x, y)</code> into two arguments. We reuse seed 1, so <code>x</code> is identical in all three data sets and only the noise is scaled.</div></div>
+<div class="py" id="c-isl3-ex-25"><pre class="src">
+for label, r in results13.items():
+    ci = r.conf_int(alpha=0.05)
+    print(f"{label:20s} beta0: [{ci[0,0]:.3f}, {ci[0,1]:.3f}]   beta1: [{ci[1,0]:.3f}, {ci[1,1]:.3f}]   width(beta1) = {ci[1,1]-ci[1,0]:.3f}")
+</pre><div class="pynote"><b>(j)</b> All six intervals contain the true values (−1 and 0.5). Their widths are proportional to the noise: \(\beta_1\)'s interval is 0.047 wide with sd 0.1, 0.233 with sd 0.5 and 0.467 with sd 1. That is formula (3.8): \(\SE(\hat\beta_1)=\sigma/\sqrt{S_{xx}}\), and \(S_{xx}\) is the same in all three because <code>x</code> is the same.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Passing the variance 0.25 as <code>scale=</code>: that makes the sd 0.25 and halves the noise.</li><li>Re-seeding differently for each part, so the comparisons mix noise level with a different <code>x</code>.</li><li>Calling the quadratic term useful because \(R^2\) went up slightly.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-14" data-src="ISLP 3.7 · Applied 14" data-title="The collinearity problem">
+<div class="stmt"><p>This problem focuses on the collinearity problem.</p>
+<p>(a) Perform the following commands in Python:</p>
+<pre style="overflow-x:auto;font-size:13px">rng = np.random.default_rng(10)
+x1 = rng.uniform(0, 1, size=100)
+x2 = 0.5 * x1 + rng.normal(size=100) / 10
+y = 2 + 2 * x1 + 0.3 * x2 + rng.normal(size=100)</pre>
+<p>The last line corresponds to creating a linear model in which <code>y</code> is a function of <code>x1</code> and <code>x2</code>. Write out the form of the linear model. What are the regression coefficients?</p>
+<p>(b) What is the correlation between <code>x1</code> and <code>x2</code>? Create a scatterplot displaying the relationship between the variables. (c) Using this data, fit a least squares regression to predict <code>y</code> using <code>x1</code> and <code>x2</code>. Describe the results obtained. What are \(\hat\beta_0\), \(\hat\beta_1\), and \(\hat\beta_2\)? How do these relate to the true \(\beta_0\), \(\beta_1\), and \(\beta_2\)? Can you reject the null hypothesis \(H_0:\beta_1=0\)? How about the null hypothesis \(H_0:\beta_2=0\)? (d) Now fit a least squares regression to predict <code>y</code> using only <code>x1</code>. Comment on your results. Can you reject the null hypothesis \(H_0:\beta_1=0\)? (e) Now fit a least squares regression to predict <code>y</code> using only <code>x2</code>. Comment on your results. Can you reject the null hypothesis \(H_0:\beta_1=0\)? (f) Do the results obtained in (c)–(e) contradict each other? Explain your answer. (g) Suppose we obtain one additional observation, which was unfortunately mismeasured. We use the function <code>np.concatenate()</code> to add this additional observation to each of <code>x1</code>, <code>x2</code> and <code>y</code>.</p>
+<pre style="overflow-x:auto;font-size:13px">x1 = np.concatenate([x1, [0.1]])
+x2 = np.concatenate([x2, [0.8]])
+y = np.concatenate([y, [6]])</pre>
+<p>Re-fit the linear models from (c) to (e) using this new data. What effect does this new observation have on the each of the models? In each model, is this observation an outlier? A high-leverage point? Both? Explain your answers.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>For (g), compare each model's leverage of the new point with the average \((p+1)/n\) (here \(n=101\)), and its studentized residual with ±3.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) \(Y=2+2X_1+0.3X_2+\epsilon\): \(\beta_0=2\), \(\beta_1=2\), \(\beta_2=0.3\). (b) corr 0.77. (c) \(\hat\beta=(1.96,\ 1.62,\ 0.94)\); reject \(\beta_1=0\) (p = 0.003), cannot reject \(\beta_2=0\) (p = 0.26). (d) \(\hat\beta_1=2.08\), p ≈ 0: reject. (e) \(\hat\beta_1=2.91\), p ≈ 0: reject. (f) No contradiction: collinearity. (g) Both-predictor model: the coefficients swap importance (x1 0.86, p = 0.07; x2 2.27, p = 0.002); the point has very high leverage (0.35 vs 0.03) and a borderline studentized residual (2.8). x1-only: an outlier (studentized residual 4.2), low leverage. x2-only: high leverage (0.11 vs 0.02), not an outlier.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<div class="py" id="c-isl3-ex-26"><pre class="src">
+rng = np.random.default_rng(10)
+x1 = rng.uniform(0, 1, size=100)
+x2 = 0.5 * x1 + rng.normal(size=100) / 10
+y14 = 2 + 2 * x1 + 0.3 * x2 + rng.normal(size=100)
+print("corr(x1, x2) =", round(np.corrcoef(x1, x2)[0, 1], 3))
+fig, ax = subplots(figsize=(4.5, 3.4)); ax.scatter(x1, x2, s=12); ax.set_xlabel('x1'); ax.set_ylabel('x2'); plt.show()
+</pre><div class="pynote"><b>(a)</b> The model is \(Y=2+2X_1+0.3X_2+\epsilon\) with \(\epsilon\sim N(0,1)\): \(\beta_0=2\), \(\beta_1=2\), \(\beta_2=0.3\). <b>(b)</b> The correlation is 0.77, and the scatter is a clear rising band: \(x_2\) is half of \(x_1\) plus a little noise.</div></div>
+<div class="py" id="c-isl3-ex-27"><pre class="src">
+def fit14(cols, y):
+    return sm.OLS(y, sm.add_constant(np.column_stack(cols))).fit()
+for name, cols in [('x1 + x2', [x1, x2]), ('x1 only', [x1]), ('x2 only', [x2])]:
+    r = fit14(cols, y14)
+    print(name, ' coef:', r.params.round(3), ' SE:', r.bse.round(3), ' p:', r.pvalues.round(4))
+</pre><div class="pynote"><b>(c)</b> Both: \(\hat\beta_0=1.96\), \(\hat\beta_1=1.62\), \(\hat\beta_2=0.94\). \(\hat\beta_0\) is close to 2; \(\hat\beta_1\) is a bit low and \(\hat\beta_2\) far too high compared with 0.3, and their SEs (0.53 and 0.83) are large. We can reject \(H_0:\beta_1=0\) (p = 0.003) but not \(H_0:\beta_2=0\) (p = 0.26). <b>(d)</b> x1 alone: \(\hat\beta_1=2.08\), SE 0.34, p ≈ 0: reject. <b>(e)</b> x2 alone: slope 2.91, SE 0.55, p ≈ 0: reject.</div></div>
+<p><b>(f)</b> No contradiction. x1 and x2 are strongly correlated, so each one alone carries most of the information about \(y\) and is highly significant. Put together, the model cannot tell which of the two deserves the credit: the RSS surface is a narrow valley (Figure 3.15), the standard errors inflate, and the weaker one (x2) loses its significance. The VIF here is \(1/(1-0.77^2)\approx2.5\).</p>
+<div class="py" id="c-isl3-ex-28"><pre class="src">
+x1g, x2g, yg = np.concatenate([x1, [0.1]]), np.concatenate([x2, [0.8]]), np.concatenate([y14, [6]])
+for name, cols in [('x1 + x2', [x1g, x2g]), ('x1 only', [x1g]), ('x2 only', [x2g])]:
+    r = fit14(cols, yg); inf = r.get_influence()
+    p = len(cols)
+    print(f"{name}: coef {np.round(r.params, 3)}  p {np.round(r.pvalues, 4)}")
+    print(f"    new point: leverage {inf.hat_matrix_diag[-1]:.3f} (average {(p+1)/101:.3f}), studentized residual {inf.resid_studentized_external[-1]:.2f}")
+</pre><div class="pynote"><b>(g), model by model:</b>
+<ul><li><b>x1 + x2:</b> the coefficients swap roles: x1 drops to 0.86 (p = 0.07, no longer significant) and x2 rises to 2.27 (p = 0.002). One bad point flipped the conclusion, a typical collinearity symptom. The point's leverage is 0.35, more than 10 times the average 0.030: very high leverage, because \((x_1,x_2)=(0.1, 0.8)\) breaks the usual \(x_2\approx0.5x_1\) pattern (like the red point in the centre of Figure 3.13), even though neither value alone is extreme. Its studentized residual, 2.8, is borderline; with this much leverage the line moves towards it, hiding its residual. Mainly a <b>high-leverage point</b>.</li>
+<li><b>x1 only:</b> \(x_1=0.1\) is ordinary (leverage 0.030, about 1.5 times the average 0.020), but \(y=6\) is far above the line: studentized residual 4.2. An <b>outlier</b>, not high leverage.</li>
+<li><b>x2 only:</b> \(x_2=0.8\) is beyond the range of the other \(x_2\) values (leverage 0.11, about 5.5 times the average), but \(y=6\) is roughly where that line would predict: studentized residual 1.3. <b>High leverage</b>, not an outlier.</li></ul></div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Concluding from (c) that x2 has no effect: the true \(\beta_2=0.3\ne0\); collinearity hides it.</li><li>Judging leverage in the two-predictor model by looking at x1 and x2 separately: the point is unusual only in combination.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl3-ex-15" data-src="ISLP 3.7 · Applied 15" data-title="Boston: predicting the crime rate">
+<div class="stmt"><p>This problem involves the <code>Boston</code> data set, which we saw in the lab for this chapter. We will now try to predict per capita crime rate using the other variables in this data set. In other words, per capita crime rate is the response, and the other variables are the predictors.</p>
+<p>(a) For each predictor, fit a simple linear regression model to predict the response. Describe your results. In which of the models is there a statistically significant association between the predictor and the response? Create some plots to back up your assertions. (b) Fit a multiple regression model to predict the response using all of the predictors. Describe your results. For which predictors can we reject the null hypothesis \(H_0:\beta_j=0\)? (c) How do your results from (a) compare to your results from (b)? Create a plot displaying the univariate regression coefficients from (a) on the x-axis, and the multiple regression coefficients from (b) on the y-axis. That is, each predictor is displayed as a single point in the plot. Its coefficient in a simple linear regression model is shown on the x-axis, and its coefficient estimate in the multiple linear regression model is shown on the y-axis. (d) Is there evidence of non-linear association between any of the predictors and the response? To answer this question, for each predictor \(X\), fit a model of the form \(Y=\beta_0+\beta_1X+\beta_2X^2+\beta_3X^3+\epsilon\).</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Loop over <code>Boston.columns.drop('crim')</code> and store each simple slope and p-value in a dictionary. For (d), compare the linear and cubic fits of each predictor with <code>anova_lm</code>.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) Every predictor except <code>chas</code> (p = 0.21) is significant on its own; strongest: rad (\(R^2=0.39\)), tax (0.34), lstat (0.21). (b) \(R^2=0.45\); significant at 5%: zn, dis, rad, medv. (c) Many simple effects shrink or flip sign; nox goes from +31.2 to −10.0. (d) Yes for every predictor except the binary chas, strongest for medv, dis, nox, indus.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<div class="py" id="c-isl3-ex-29"><pre class="src">
+yb = Boston['crim']
+preds = Boston.columns.drop('crim')
+simple = {}
+for c in preds:
+    r = sm.OLS(yb, MS([c]).fit_transform(Boston)).fit()
+    simple[c] = (r.params[c], r.pvalues[c], r.rsquared)
+uni = pd.DataFrame(simple, index=['coef', 'p-value', 'R^2']).T
+uni.round(4)
+</pre><div class="pynote"><b>(a)</b> Every predictor except <b>chas</b> (p = 0.21) has a significant simple association with crime. The strongest by \(R^2\): <b>rad</b> (0.39; access to radial highways), <b>tax</b> (0.34), <b>lstat</b> (0.21), <b>nox</b> (0.18), <b>indus</b> (0.17). Signs: crime is higher where there is more industry, pollution, older housing, highway access, tax, pupil–teacher ratio and low-status households, and lower where there are more large residential lots (zn), more rooms (rm), greater distance to employment centres (dis) and higher house values (medv). <code>pd.DataFrame(dict, index=...).T</code> builds a table and transposes it so each predictor is a row.</div></div>
+<div class="py" id="c-isl3-ex-30"><pre class="src">
+fig, axes = subplots(1, 3, figsize=(10, 3.2))
+for ax, c in zip(axes, ['rad', 'lstat', 'chas']):
+    ax.scatter(Boston[c], yb, s=8, alpha=0.5)
+    b0, b1 = sm.OLS(yb, sm.add_constant(Boston[c])).fit().params
+    ax.axline((0, b0), slope=b1, c='r'); ax.set_xlabel(c); ax.set_ylim(-5, 90)
+axes[0].set_ylabel('crim'); plt.show()
+</pre><div class="pynote"><b>Read the plots:</b> high crime occurs almost only where rad = 24 (the maximum highway-access index), which drives that strong association. Crime rises with lstat but very unevenly. For chas (0 or 1) the two groups overlap completely. The skewed response (most suburbs near 0, a few above 50) also warns that a linear model will fit poorly.</div></div>
+<div class="py" id="c-isl3-ex-31"><pre class="src">
+res15 = sm.OLS(yb, MS(preds).fit_transform(Boston)).fit()
+print(summarize(res15))
+print(f"R^2 = {res15.rsquared:.3f}")
+</pre><div class="pynote"><b>(b)</b> Together the predictors explain 45% of the variance. At the 5% level we reject \(H_0:\beta_j=0\) for <b>zn</b> (p = 0.015), <b>dis</b> (p &lt; 0.001), <b>rad</b> (p &lt; 0.001) and <b>medv</b> (p &lt; 0.001). nox (0.06) and lstat (0.07) are borderline; the rest are not significant once the others are included.</div></div>
+<div class="py" id="c-isl3-ex-32"><pre class="src">
+multi = res15.params.drop('intercept')
+fig, ax = subplots(figsize=(6, 4.5))
+ax.scatter(uni['coef'], multi[uni.index])
+for c in uni.index:
+    ax.annotate(c, (uni.loc[c, 'coef'], multi[c]), fontsize=8)
+ax.axhline(0, c='grey', lw=0.8); ax.axvline(0, c='grey', lw=0.8)
+ax.set_xlabel('simple regression coefficient'); ax.set_ylabel('multiple regression coefficient'); plt.show()
+print("nox:", round(uni.loc['nox', 'coef'], 2), "->", round(multi['nox'], 2))
+</pre><div class="pynote"><b>(c)</b> Most points sit near the origin, but <b>nox</b> is far out: +31.2 on its own, −10.0 in the multiple model. Pollution is correlated with industry, highway access and older housing; alone it soaks up their association with crime, and once they are held fixed its coefficient even turns negative (and is not significant). Many other predictors shrink towards zero or lose significance: the simple regressions mix each variable's own association with that of its correlated companions. <code>ax.annotate(text, (x, y))</code> writes a label at a point.</div></div>
+<div class="py" id="c-isl3-ex-33"><pre class="src">
+rows = {}
+for c in preds:
+    if c == 'chas':                       # a 0/1 variable: x^2 = x^3 = x, no curve to fit
+        continue
+    lin = sm.OLS(yb, MS([c]).fit_transform(Boston)).fit()
+    cub = sm.OLS(yb, MS([poly(c, degree=3, raw=True)]).fit_transform(Boston)).fit()
+    a = anova_lm(lin, cub)
+    rows[c] = (a.loc[1, 'F'], a.loc[1, 'Pr(>F)'])
+pd.DataFrame(rows, index=['F', 'p-value']).T.sort_values('F', ascending=False)
+</pre><div class="pynote"><b>(d)</b> For each predictor we test whether the squared and cubic terms together improve on the straight line (an F-test with 2 extra coefficients). The evidence for non-linearity is strongest for <b>medv</b> (F = 117), <b>dis</b> (46), <b>nox</b> (43) and <b>indus</b> (32), and still significant at 5% for age, tax, ptratio, rm, zn, rad and lstat (the weakest, p ≈ 0.04). chas is skipped: a 0/1 variable equals its own square and cube, so a cubic adds nothing. Conclusion: the relationship between crime and most predictors is non-linear, which fits the very skewed response we saw in the plots; modelling \(\log(\text{crim})\) would be a natural next step.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Fitting a cubic for chas and reporting the error or a meaningless result.</li><li>Reading the change in sign of nox as a contradiction rather than as the effect of adjusting for correlated predictors.</li><li>Judging non-linearity from the cubic term's p-value alone; test the squared and cubic terms together.</li></ul></div></details>
+</div>
+
+<h3 id="isl3-ex-check">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="num" data-answer="137.1" data-tol="0.05"><p class="stem">Conceptual 3(b) again, without looking: salary (thousand $) of a college graduate with IQ 110 and GPA 4.0.</p><div class="why">\(50+80+7.7+35+4.4-40=137.1\).</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In Conceptual 4, the true relationship is linear. Which has the lower training RSS?</p><ol class="opts"><li>The linear fit</li><li>The cubic fit</li><li>They are always equal</li></ol><div class="why">The cubic contains every line, so its training RSS is lower or equal (almost always strictly lower).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">In Applied 11, how do the t-statistics for y on x and x on y (no intercept) compare?</p><ol class="opts"><li>One is the reciprocal of the other</li><li>They differ by a factor \(\sqrt{n-1}\)</li><li>They are identical</li></ol><div class="why">\(t=\sqrt{n-1}\sum x_iy_i/\sqrt{\sum x_i^2\sum y_i^2-(\sum x_iy_i)^2}\) is symmetric in \(x\) and \(y\).</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">In Applied 14(g), the new point in the x1-only model is…</p><ol class="opts"><li>an outlier with low leverage</li><li>a high-leverage point that is not an outlier</li><li>neither</li></ol><div class="why">\(x_1=0.1\) is ordinary but \(y=6\) is far above the line: studentized residual 4.2, leverage near the average.</div></div>
+<div class="q" data-type="open"><p class="stem">State in one sentence what Conceptual 5 tells you about all linear-regression fitted values.</p><div class="model">Each fitted value is a weighted sum of the observed responses, with weights that depend only on the predictors: \(\hat\by=\mathbf{H}\by\).</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">Conceptual 3: college minus high-school salary at fixed GPA, IQ</div><div class="b">\(35-10\times\text{GPA}\): high-school graduates earn more when GPA &gt; 3.5.</div></div>
+<div class="fc"><div class="f">Weights \(a_{i'}\) in \(\hat y_i=\sum a_{i'}y_{i'}\) (no intercept)</div><div class="b">\(a_{i'}=x_ix_{i'}/\sum_k x_k^2\)</div></div>
+<div class="fc"><div class="f">Key step proving \(R^2=r^2\) (zero means)</div><div class="b">\(\RSS=\sum y^2-(\sum xy)^2/\sum x^2\), so \(R^2=(\sum xy)^2/(\sum x^2\sum y^2)\).</div></div>
+<div class="fc"><div class="f">When do the no-intercept slopes of y~x and x~y agree?</div><div class="b">When \(\sum x_i^2=\sum y_i^2\).</div></div>
+<div class="fc"><div class="f">Slope t-statistic with an intercept, in terms of \(r\)</div><div class="b">\(t=r\sqrt{n-2}/\sqrt{1-r^2}\), symmetric in \(x\) and \(y\).</div></div>
+<div class="fc"><div class="f">NumPy: normal noise with variance 0.25</div><div class="b"><code>rng.normal(scale=0.5)</code>: scale is the standard deviation.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I solved Conceptual 1–7 on paper before opening the solutions.</label>
+<label><input type="checkbox"> I can prove \(R^2=r^2\) and the linear-combination result of Exercise 5 from memory.</label>
+<label><input type="checkbox"> I ran Applied 8–15 myself and can explain every number they print.</label>
+<label><input type="checkbox"> I can tell an outlier from a high-leverage point in a fitted model (Exercise 14g).</label>
+</div>
+</section>

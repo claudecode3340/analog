@@ -1,0 +1,6 @@
+{
+"euclidean-distance": {"term": "Euclidean distance", "def": "Straight-line distance: \\(\\sqrt{\\sum_j (a_j-b_j)^2}\\) for points \\(a\\) and \\(b\\) with \\(p\\) coordinates.", "at": "isl2-ex"},
+"binning": {"term": "binning (pd.cut)", "def": "Turning a quantitative variable into categories by intervals, e.g. <code>pd.cut(x, [0, 50, 100], labels=['No','Yes'])</code>; the edges must match the data's scale.", "at": "isl2-ex"},
+"dictionary": {"term": "dictionary", "def": "A Python object of key → value pairs, written <code>{'old': 'new'}</code>; used e.g. to rename columns.", "at": "isl2-ex"},
+"high-dimensional": {"term": "high-dimensional setting", "def": "The number of predictors \\(p\\) is large compared with the number of observations \\(n\\); flexible methods overfit easily.", "at": "isl2-ex"}
+}

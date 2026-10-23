@@ -1,5 +1,6 @@
 /* isl2-1 · reducible vs irreducible error; parametric vs flexible fits on Income1 */
 (function () {
+  function cap(html) { var d = G.el("div", "wcap", html || ""); d.style.cssText = "font-size:13.5px;line-height:1.5;color:var(--ink2);margin:4px 4px 10px"; return d; }
   function solve(A, b) { // Gaussian elimination with partial pivoting
     var n = b.length, M = A.map(function (r, i) { return r.slice().concat([b[i]]); });
     for (var c = 0; c < n; c++) {
@@ -39,7 +40,8 @@
     G.seg(ctl, [["line", "f̂ = straight line"], ["true", "f̂ = the true f"], ["flat", "f̂ = flat (mean)"]], st.kind, function (v) { st.kind = v; draw(); });
     G.slider(ctl, { label: "noise σ", min: 1, max: 15, step: 0.5, value: st.sigma, fmt: function (v) { return v.toFixed(1); }, onChange: function (v) { st.sigma = v; draw(); } });
     G.slider(ctl, { label: "x₀", min: 10, max: 22, step: 0.5, value: st.x0, fmt: function (v) { return v.toFixed(1); }, onChange: function (v) { st.x0 = v; draw(); } });
-    var pl = G.plot(body, { w: 680, h: 360, x: [9.5, 22.5], y: [-5, 105], xlabel: "years of education", ylabel: "income", label: "true f, fitted f-hat and the spread of Y at x0" });
+    var pl = G.plot(body, { w: 680, h: 330, x: [9.5, 22.5], y: [-5, 105], xlabel: "years of education", ylabel: "income", label: "true f, fitted f-hat and the spread of Y at x0" });
+    body.appendChild(cap("<span style='color:var(--accent)'><b>blue</b></span>: true f · <span style='color:var(--math)'><b>orange</b></span>: f̂ · <span style='color:var(--isl)'><b>green</b></span>: 200 possible values of Y at x₀ · <span style='color:var(--bad)'><b>red bar</b></span>: the gap f(x₀) − f̂(x₀) · grey: training points"));
     var info = G.el("div", "readout"); body.appendChild(info);
     function draw() {
       pl.clear();
@@ -57,7 +59,6 @@
       se /= zs.length;
       pl.line([[st.x0, fx], [st.x0, fhx]], { stroke: "var(--bad)", "stroke-width": 4 });
       pl.dot(st.x0, fx, { r: 5, fill: "var(--accent)" }); pl.dot(st.x0, fhx, { r: 5, fill: "var(--math)" });
-      pl.text(9.8, 99, "blue: true f · orange: f̂ · green: 200 possible Y at x₀ · red bar: f − f̂", { fill: "var(--muted)" });
       var red = (fx - fhx) * (fx - fhx), irr = st.sigma * st.sigma;
       info.innerHTML = "<div>f(x₀)<b>" + G.fmt(fx, 2) + "</b></div><div>f̂(x₀)<b>" + G.fmt(fhx, 2) + "</b></div><div>reducible [f−f̂]²<b>" + G.fmt(red, 2) + "</b></div><div>irreducible σ²<b>" + G.fmt(irr, 2) + "</b></div><div>total (formula)<b>" + G.fmt(red + irr, 2) + "</b></div><div>avg (Y−Ŷ)² over the 200 dots<b>" + G.fmt(se, 2) + "</b></div>";
     }
@@ -74,6 +75,7 @@
     G.seg(ctl, [["poly", "Polynomial (parametric)"], ["knn", "K-nearest average (non-parametric)"]], st.m, function (v) { st.m = v; draw(); });
     G.slider(ctl, { label: "flexibility", min: 1, max: 12, step: 1, value: 1, fmt: function (v) { return String(v); }, onChange: function (v) { st.lev = v; draw(); } });
     var pl = G.plot(body, { w: 680, h: 340, x: [9.6, 22.4], y: [5, 95], xlabel: "years of education", ylabel: "income", label: "Income data with a fitted curve and residuals" });
+    body.appendChild(cap("<span style='color:var(--accent)'><b>blue dots</b></span>: the 30 people · <span style='color:var(--math)'><b>orange</b></span>: the fitted curve · <span style='color:var(--bad)'><b>red</b></span>: residuals"));
     var info = G.el("div", "readout"); body.appendChild(info);
     function fitter(X, Y) { return st.m === "poly" ? polyfit(X, Y, st.lev, 16, 6) : knnfit(X, Y, Math.min(KS[st.lev - 1], X.length)); }
     function draw() {

@@ -1,0 +1,19 @@
+{
+"mse": {"term": "mean squared error (MSE)", "def": "\\(\\frac1n\\sum_i (y_i-\\hat f(x_i))^2\\): the average squared prediction error.", "at": "isl2-2"},
+"training-mse": {"term": "training MSE", "def": "The MSE computed on the same observations used to fit the model; it always falls as flexibility rises.", "at": "isl2-2"},
+"test-data": {"term": "test data", "def": "Observations not used to train the method, used to measure how well it predicts new data.", "at": "isl2-2"},
+"test-mse": {"term": "test MSE", "def": "\\(\\text{Ave}(y_0-\\hat f(x_0))^2\\) over previously unseen test observations; usually U-shaped in flexibility.", "at": "isl2-2"},
+"flexibility": {"term": "flexibility", "def": "How wide a range of shapes a method can fit; measured e.g. by degrees of freedom.", "at": "isl2-2"},
+"degrees-of-freedom": {"term": "degrees of freedom", "def": "A number summarising a fit's flexibility, roughly how many parameters it is free to choose (2 for a straight line).", "at": "isl2-2"},
+"overfit2": {"term": "overfitting (precise)", "def": "Small training MSE but large test MSE, where a less flexible model would have given a smaller test MSE.", "at": "isl2-2"},
+"variance-method": {"term": "variance (of a method)", "def": "How much \\(\\hat f\\) would change if estimated from a different training set; increases with flexibility.", "at": "isl2-2"},
+"bias": {"term": "bias (of a method)", "def": "Error from approximating a complicated real problem by a simpler model: \\(\\E\\hat f(x_0)-f(x_0)\\); decreases with flexibility.", "at": "isl2-2"},
+"bv-tradeoff": {"term": "bias–variance trade-off", "def": "Expected test MSE = variance + bias² + Var(ε); lowering one of the first two usually raises the other, so test error is minimised at intermediate flexibility.", "at": "isl2-2"},
+"error-rate": {"term": "error rate", "def": "The fraction of observations misclassified, \\(\\frac1n\\sum_i I(y_i\\ne\\hat y_i)\\).", "at": "isl2-2"},
+"indicator": {"term": "indicator variable", "def": "\\(I(\\text{statement})\\): 1 if the statement is true, 0 if false.", "at": "isl2-2"},
+"conditional-probability": {"term": "conditional probability", "def": "\\(\\Pr(Y=j\\mid X=x_0)\\): the probability that \\(Y=j\\) given that \\(X=x_0\\).", "at": "isl2-2"},
+"bayes-classifier": {"term": "Bayes classifier", "def": "Assigns each observation to the class with the largest \\(\\Pr(Y=j\\mid X=x_0)\\); has the lowest possible test error rate.", "at": "isl2-2"},
+"bayes-boundary": {"term": "Bayes decision boundary", "def": "The set of points where the two most likely classes are equally probable (50% for two classes).", "at": "isl2-2"},
+"bayes-error": {"term": "Bayes error rate", "def": "\\(1-\\E(\\max_j\\Pr(Y=j\\mid X))\\): the lowest achievable test error rate; the classification analogue of irreducible error.", "at": "isl2-2"},
+"knn": {"term": "K-nearest neighbours (KNN)", "def": "Classify \\(x_0\\) by a majority vote of the \\(K\\) training points closest to it; class probabilities are the fractions of neighbours in each class.", "at": "isl2-2"}
+}

@@ -1,0 +1,484 @@
+<section class="lesson" id="isl3-2" data-book="ISLP §3.2, pp. 80–90">
+<p class="lede">Real responses depend on many things at once. Multiple linear regression gives every predictor its own slope in one model, and in doing so it can reverse a conclusion that a one-predictor regression got wrong. This lesson shows you how the coefficients are computed with matrices, how to test whether any predictor matters at all, and how to put honest error bars on a prediction.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#isl3-1">ISLP 3.1</a> (least squares, SE, t, R²) · <a href="#m-linalg-design">The design matrix</a> · <a href="#m-linalg-matmul">Matrix multiplication</a> · <a href="#m-linalg-solve">Solving \(\mathbf{A}\bx=\mathbf{b}\)</a> · <a href="#m-linalg-proj">Least squares as projection</a> · <a href="#m-prob-many">The danger of many tests</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>write the multiple regression model and interpret each \(\beta_j\) “holding the other predictors fixed”;</li>
+<li>build a design matrix \(\bX\), compute \(\bX\T\bX\) and \(\bX\T\by\) cell by cell, and solve the normal equations by hand for a small example;</li>
+<li>reproduce Tables 3.3–3.6 for the Advertising data and explain the newspaper paradox with the correlation matrix;</li>
+<li>compute and interpret the F-statistic, and explain why we need it even when we have individual p-values;</li>
+<li>describe forward, backward and mixed selection, and tell a confidence interval from a prediction interval.</li></ul></div>
+
+<div class="callout book"><blockquote>Instead of fitting a separate simple linear regression model for each predictor, a better approach is to extend the simple linear regression model (3.5) so that it can directly accommodate multiple predictors.</blockquote><cite>ISLP p. 81</cite></div>
+
+<h3 id="isl3-2-why">Why not three separate simple regressions?</h3>
+<p>The Advertising data have three budgets: TV, radio and newspaper. Lesson 3.1 fitted sales on TV. We could do the same for the other two media. The book does exactly that in Table 3.3:</p>
+<div class="tw"><table class="t"><thead><tr><th colspan="5">Simple regression of sales on radio</th></tr><tr><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td>Intercept</td><td class="n">9.312</td><td class="n">0.563</td><td class="n">16.54</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>radio</td><td class="n">0.203</td><td class="n">0.020</td><td class="n">9.92</td><td class="n">&lt; 0.0001</td></tr>
+</tbody><thead><tr><th colspan="5">Simple regression of sales on newspaper</th></tr><tr><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td>Intercept</td><td class="n">12.351</td><td class="n">0.621</td><td class="n">19.88</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>newspaper</td><td class="n">0.055</td><td class="n">0.017</td><td class="n">3.30</td><td class="n">0.00115</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.3 (ISLP p. 80). More simple linear regression models for the Advertising data.</p>
+<p><b>Read it.</b> A $1,000 increase in radio spending is associated with about \(0.203\times1000=203\) extra units sold; a $1,000 increase in newspaper spending with about 55 extra units. Both slopes have tiny p-values, so on their own, both look related to sales.</p>
+<p>This approach has two problems. First, how would we make <i>one</i> prediction for a market that spends on all three media? We have three separate equations. Second, each simple regression <b>ignores the other two media</b>. If the budgets are correlated with each other, that can give very misleading answers, as we will see shortly.</p>
+
+<div class="py" id="c-isl3-2-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from scipy import stats
+
+Advertising = pd.read_csv('Advertising.csv', index_col=0)
+y = Advertising['sales']
+def simple_fit(col):
+    """Fit sales on one column; return the statsmodels results object."""
+    return sm.OLS(y, sm.add_constant(Advertising[col])).fit()
+for col in ['radio', 'newspaper']:
+    r = simple_fit(col)
+    print(col, '\n', pd.DataFrame({'coef': r.params, 'std err': r.bse, 't': r.tvalues, 'P>|t|': r.pvalues}).round(5), '\n')
+</pre><div class="pynote"><b>Read the output:</b> Table 3.3 reproduced (radio slope 0.2025, SE 0.0204, t 9.92; newspaper slope 0.0547, SE 0.0166, t 3.30, p 0.00115). We wrote a small function <code>simple_fit</code> so we did not have to type the same three lines twice. The text in triple quotes under <code>def</code> is a <i>docstring</i>: a note saying what the function does.</div></div>
+
+<h3 id="isl3-2-model">The multiple linear regression model</h3>
+<p>The fix: give every predictor its own slope, all in <b>one</b> model. With \(p\) predictors,</p>
+<div class="mathblock" data-sheet="Multiple linear regression model"><div class="eqlabel">Multiple linear regression (3.19)</div>
+\[Y=\beta_0+\beta_1X_1+\beta_2X_2+\dots+\beta_pX_p+\epsilon\]
+<p class="say">Read: “Y equals beta-nought plus beta-one X-one plus beta-two X-two, and so on up to beta-p X-p, plus epsilon.”</p></div>
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Advertising example</span></div>
+<div class="row"><span class="s">\(p\)</span><span>“p”: the number of predictors</span><span class="eg">\(p=3\)</span></div>
+<div class="row"><span class="s">\(X_j\)</span><span>“X-sub-j”: the \(j\)-th predictor</span><span class="eg">\(X_1=\) TV, \(X_2=\) radio, \(X_3=\) newspaper</span></div>
+<div class="row"><span class="s">\(\beta_j\)</span><span>“beta-j”: the average change in \(Y\) for a one-unit increase in \(X_j\), <b>holding all other predictors fixed</b></span><span class="eg">\(\beta_2\): extra sales per $1,000 of radio at fixed TV and newspaper</span></div>
+<div class="row"><span class="s">\(x_{ij}\)</span><span>“x-i-j”: the value of predictor \(j\) for observation \(i\)</span><span class="eg">\(x_{1,2}=37.8\): market 1's radio budget</span></div>
+</div>
+<p>For Advertising this becomes</p>
+<div class="mathblock"><div class="eqlabel">The Advertising model (3.20)</div>
+\[\text{sales}=\beta_0+\beta_1\times\text{TV}+\beta_2\times\text{radio}+\beta_3\times\text{newspaper}+\epsilon\]</div>
+<p>The phrase “holding all other predictors fixed” is the key to the whole lesson. In a simple regression, the newspaper slope answers: “in markets that spend more on newspapers, how much higher are sales?” In the multiple regression it answers a different, sharper question: “among markets with the <i>same</i> TV and radio budgets, how much higher are sales where newspaper spending is higher?”</p>
+
+<h3 id="isl3-2-estimate">Estimating the coefficients: least squares again</h3>
+<p>Given estimates \(\hat\beta_0,\dots,\hat\beta_p\), predictions are</p>
+<div class="mathblock" data-sheet="Multiple regression prediction"><div class="eqlabel">Prediction (3.21)</div>
+\[\hat y=\hat\beta_0+\hat\beta_1x_1+\hat\beta_2x_2+\dots+\hat\beta_px_p\]</div>
+<p>and we choose the coefficients exactly as before: to minimise the residual sum of squares,</p>
+<div class="mathblock" data-sheet="RSS, multiple regression"><div class="eqlabel">RSS for multiple regression (3.22)</div>
+\[\RSS=\sum_{i=1}^n(y_i-\hat y_i)^2=\sum_{i=1}^n\big(y_i-\hat\beta_0-\hat\beta_1x_{i1}-\hat\beta_2x_{i2}-\dots-\hat\beta_px_{ip}\big)^2\]</div>
+<p>With two predictors, the fitted “line” becomes a flat <b>plane</b> in 3-D, and the residuals are vertical sticks from each point to the plane.</p>
+<figure class="book" data-fig="islp-3.4"><figcaption>A toy data set with two predictors \(X_1\), \(X_2\) and a response \(Y\). The least-squares fit is now a <b>plane</b>. Each red point hangs above or below it on a black vertical segment: that segment is the point's residual. Least squares tilts and lifts the plane to make the sum of the squared segment lengths as small as possible, exactly as in Figure 3.1, just one dimension up.</figcaption></figure>
+
+<p>The book says the multiple-regression formulas are “most easily represented using matrix algebra” and leaves them out. You learnt the matrix tools in <a href="#m-linalg">Vectors and matrices</a>, so we can write them down. Here they are.</p>
+
+<h4>The design matrix</h4>
+<p>Stack the data into a matrix \(\bX\) with one <b>row per observation</b> and one <b>column per coefficient</b>. The first column is all 1s: it multiplies \(\beta_0\). (This is what <code>sm.add_constant</code> did in lesson 3.1.) Stack the responses into a column vector \(\by\) and the coefficients into \(\bbeta\):</p>
+\[\bX=\begin{pmatrix}1&x_{11}&x_{12}&\cdots&x_{1p}\\1&x_{21}&x_{22}&\cdots&x_{2p}\\\vdots&\vdots&\vdots&&\vdots\\1&x_{n1}&x_{n2}&\cdots&x_{np}\end{pmatrix},\qquad \by=\begin{pmatrix}y_1\\y_2\\\vdots\\y_n\end{pmatrix},\qquad \bbeta=\begin{pmatrix}\beta_0\\\beta_1\\\vdots\\\beta_p\end{pmatrix}.\]
+<p>Then all \(n\) predictions at once are the matrix–vector product \(\hat\by=\bX\hat\bbeta\) (row \(i\) of \(\bX\) dotted with \(\hat\bbeta\) gives \(\hat y_i\)), and \(\RSS=\|\by-\bX\hat\bbeta\|^2\), the squared length of the residual vector.</p>
+
+<h4>The normal equations</h4>
+<p>Setting the gradient of RSS to zero (one partial derivative per coefficient, exactly as in the derivation of lesson 3.1, but \(p+1\) of them) gives a set of linear equations called the <dfn data-g="normal-equations">normal equations</dfn>:</p>
+<div class="mathblock" data-sheet="Normal equations"><div class="eqlabel">Normal equations and the least-squares solution</div>
+\[\bX\T\bX\,\hat\bbeta=\bX\T\by\qquad\Longrightarrow\qquad\hat\bbeta=(\bX\T\bX)^{-1}\bX\T\by\]
+<p class="say">Read: “X-transpose X times beta-hat equals X-transpose y.” \(\bX\T\bX\) is a small \((p+1)\times(p+1)\) matrix; \(\bX\T\by\) is a vector of length \(p+1\). Solve the system and you have every coefficient.</p></div>
+<p>Why “normal”? Because the equations say \(\bX\T(\by-\bX\hat\bbeta)=\mathbf{0}\): the residual vector is <i>perpendicular</i> (normal) to every column of \(\bX\). Geometrically, \(\hat\by\) is the shadow (projection) of \(\by\) onto the space spanned by the columns; see <a href="#m-linalg-proj">least squares as a shadow</a>. With one predictor the first row of this system is exactly \(\sum e_i=0\) and the second is \(\sum x_ie_i=0\), the two facts we checked by hand in lesson 3.1.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>normal equations by hand: three points, two predictors</b></div>
+<div class="given">Three observations: \((x_1,x_2,y)=(0,1,4),\ (1,0,3),\ (2,2,11)\). Fit \(\hat y=\hat\beta_0+\hat\beta_1x_1+\hat\beta_2x_2\).</div>
+<ol class="steps">
+<li><div><b>Build \(\bX\) and \(\by\).</b> One row per observation; columns: the 1s, then \(x_1\), then \(x_2\).
+\[\bX=\begin{pmatrix}1&0&1\\1&1&0\\1&2&2\end{pmatrix},\qquad \by=\begin{pmatrix}4\\3\\11\end{pmatrix}.\]</div></li>
+<li><div><b>Transpose.</b> Rows become columns: \[\bX\T=\begin{pmatrix}1&1&1\\0&1&2\\1&0&2\end{pmatrix}.\]</div></li>
+<li><div><b>Compute \(\bX\T\bX\) cell by cell.</b> Cell \((j,k)\) is the dot product of column \(j\) of \(\bX\) with column \(k\). Example, the highlighted cell (row 2, column 3) is \((x_1\text{ column})\cdot(x_2\text{ column})\):
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>1</span><span>1</span><span>1</span><span class="h1">0</span><span class="h1">1</span><span class="h1">2</span><span>1</span><span>0</span><span>2</span></span><span class="lab">Xᵀ</span></span><span class="op">×</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>1</span><span>0</span><span class="h2">1</span><span>1</span><span>1</span><span class="h2">0</span><span>1</span><span>2</span><span class="h2">2</span></span><span class="lab">X</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(3,auto)"><span>3</span><span>3</span><span>3</span><span>3</span><span>5</span><span class="h3">4</span><span>3</span><span>4</span><span>5</span></span><span class="lab">XᵀX</span></span></div>
+\(0\cdot1+1\cdot0+2\cdot2=4\). All nine cells:
+\[\bX\T\bX=\begin{pmatrix}1+1+1 & 0+1+2 & 1+0+2\\ 0+1+2 & 0+1+4 & 0+0+4\\ 1+0+2 & 0+0+4 & 1+0+4\end{pmatrix}=\begin{pmatrix}3&3&3\\3&5&4\\3&4&5\end{pmatrix}.\]<span class="why">The top-left entry is \(n=3\); the rest of the first row are \(\sum x_{i1}\) and \(\sum x_{i2}\). The matrix is symmetric, so only six cells need computing.</span></div></li>
+<li><div><b>Compute \(\bX\T\by\).</b> Each entry is a column of \(\bX\) dotted with \(\by\):
+\[\bX\T\by=\begin{pmatrix}4+3+11\\0\cdot4+1\cdot3+2\cdot11\\1\cdot4+0\cdot3+2\cdot11\end{pmatrix}=\begin{pmatrix}18\\25\\26\end{pmatrix}.\]</div></li>
+<li><div><b>Write the normal equations.</b>
+\[\begin{aligned}3\hat\beta_0+3\hat\beta_1+3\hat\beta_2&=18\\3\hat\beta_0+5\hat\beta_1+4\hat\beta_2&=25\\3\hat\beta_0+4\hat\beta_1+5\hat\beta_2&=26\end{aligned}\]</div></li>
+<li><div><b>Eliminate \(\hat\beta_0\).</b> Divide the first equation by 3: \(\hat\beta_0+\hat\beta_1+\hat\beta_2=6\). Subtract 3 times this from the second and third:
+\[2\hat\beta_1+\hat\beta_2=7,\qquad \hat\beta_1+2\hat\beta_2=8.\]</div></li>
+<li><div><b>Solve the 2 × 2 system.</b> Double the first: \(4\hat\beta_1+2\hat\beta_2=14\). Subtract the second: \(3\hat\beta_1=6\), so \(\hat\beta_1=\mathbf{2}\). Then \(\hat\beta_2=7-2\times2=\mathbf{3}\), and \(\hat\beta_0=6-2-3=\mathbf{1}\).</div></li>
+<li><div><b>Check.</b> \(\hat y=1+2x_1+3x_2\): row 1: \(1+0+3=4\); row 2: \(1+2+0=3\); row 3: \(1+4+6=11\). <b>Every residual is zero.</b><span class="why">Three points, three coefficients: the plane can pass exactly through all of them, just as a line can always pass through two points. There are \(n-p-1=3-2-1=0\) degrees of freedom left, so we cannot estimate \(\sigma\) or any standard error. A perfect fit with no spare data tells you nothing about noise.</span></div></li>
+</ol>
+<div class="result">\(\hat\bbeta=(1,\ 2,\ 3)\): \(\hat y=1+2x_1+3x_2\), RSS = 0</div></div>
+
+<p>Now add a fourth market, \((x_1,x_2,y)=(1,1,5)\). The plane above would predict \(1+2+3=6\), so this point sits 1 below it, and no plane can pass through all four points any more. The code below redoes the computation with NumPy.</p>
+<div class="predict" data-correct="3"><p>After adding the fourth point \((1,1,5)\), what happens to the fitted coefficients?</p><ol class="opts"><li>They stay \((1,2,3)\); the new point just has a residual of −1</li><li>They all change a lot</li><li>The slopes stay 2 and 3 but the intercept drops a little, so all four points share the miss</li></ol><div class="why">Least squares spreads the miss over all points. Here the new point is “average” in both \(x_1\) and \(x_2\) (they equal their means of 1), so moving the plane straight down is the cheapest fix: the intercept falls from 1 to 0.75, the slopes are unchanged, and the residuals become 0.25, 0.25, 0.25 and −0.75. Option A would leave RSS = 1; option C gives RSS = 0.75, which is smaller.</div></div>
+<div class="py" id="c-isl3-2-02"><pre class="src">
+X3 = np.array([[1, 0, 1],
+               [1, 1, 0],
+               [1, 2, 2]], dtype=float)
+y3 = np.array([4, 3, 11], dtype=float)
+print("X^T X =\n", X3.T @ X3)
+print("X^T y =", X3.T @ y3)
+print("beta_hat (3 points):", np.linalg.solve(X3.T @ X3, X3.T @ y3))
+
+X4 = np.vstack([X3, [1, 1, 1]])          # add a 4th row
+y4 = np.append(y3, 5)
+b4 = np.linalg.solve(X4.T @ X4, X4.T @ y4)
+print("beta_hat (4 points):", b4)
+print("residuals:", y4 - X4 @ b4, " RSS =", np.sum((y4 - X4 @ b4) ** 2))
+</pre><div class="pynote"><b>Read the output:</b> the same \(\bX\T\bX\), \(\bX\T\by\) and \((1,2,3)\) as on paper, then \((0.75, 2, 3)\) with four points and RSS 0.75. <code>@</code> is matrix multiplication and <code>.T</code> the transpose. <code>np.linalg.solve(A, b)</code> solves \(\mathbf{A}\bx=\mathbf{b}\) directly; it is faster and more accurate than computing the inverse with <code>np.linalg.inv</code> and multiplying. <code>np.vstack</code> stacks a new row under a matrix.</div></div>
+
+<div class="callout ece"><p><b>Same maths, different name.</b> In signal processing, \(\bX\T\bX\hat\bbeta=\bX\T\by\) is the matrix form of the Wiener–Hopf equations: \(\bX\T\bX\) plays the autocorrelation matrix \(\mathbf{R}\), and \(\bX\T\by\) the cross-correlation vector \(\mathbf{p}\). A least-squares FIR filter design solves exactly this system.</p></div>
+
+<h3 id="isl3-2-adv">The Advertising multiple regression</h3>
+<p>Now the real thing: sales on TV, radio and newspaper together. First by the normal equations, then with statsmodels.</p>
+<div class="py" id="c-isl3-2-03"><pre class="src">
+X = sm.add_constant(Advertising[['TV', 'radio', 'newspaper']])
+print(X.head(3))
+XtX = X.T @ X
+Xty = X.T @ y
+print("\nX^T X =\n", XtX.round(1))
+beta = np.linalg.solve(XtX, Xty)
+print("\nbeta_hat by the normal equations:", beta.round(4))
+</pre><div class="pynote"><b>Read the output:</b> the design matrix has a <code>const</code> column of 1s, then the three budgets. \(\bX\T\bX\) is 4 × 4; its top-left entry is 200 (the number of markets), and the rest of its first row are the column sums of the budgets. Solving gives \(2.9389,\ 0.0458,\ 0.1885,\ -0.0010\): Table 3.4's coefficients.</div></div>
+<div class="py" id="c-isl3-2-04"><pre class="src">
+full = sm.OLS(y, X).fit()
+table34 = pd.DataFrame({'Coefficient': full.params, 'Std. error': full.bse,
+                        't-statistic': full.tvalues, 'p-value': full.pvalues})
+print(table34.round(4))
+</pre><div class="pynote"><b>Read the output:</b> Table 3.4 exactly. The p-value of newspaper is 0.8599.</div></div>
+<div class="tw"><table class="t"><thead><tr><th></th><th>Coefficient</th><th>Std. error</th><th>t-statistic</th><th>p-value</th></tr></thead><tbody>
+<tr><td>Intercept</td><td class="n">2.939</td><td class="n">0.3119</td><td class="n">9.42</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>TV</td><td class="n">0.046</td><td class="n">0.0014</td><td class="n">32.81</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>radio</td><td class="n">0.189</td><td class="n">0.0086</td><td class="n">21.89</td><td class="n">&lt; 0.0001</td></tr>
+<tr><td>newspaper</td><td class="n">−0.001</td><td class="n">0.0059</td><td class="n">−0.18</td><td class="n">0.8599</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.4 (ISLP p. 83). Least-squares coefficient estimates of the multiple linear regression of units sold on TV, radio and newspaper budgets.</p>
+
+<p><b>Interpret every row.</b></p>
+<ul>
+<li><b>radio 0.189:</b> for a given amount of TV and newspaper advertising, spending an extra $1,000 on radio is associated with about 189 extra units sold.</li>
+<li><b>TV 0.046:</b> for given radio and newspaper budgets, an extra $1,000 on TV is associated with about 46 extra units.</li>
+<li><b>newspaper −0.001, p = 0.86:</b> holding TV and radio fixed, there is no evidence that newspaper spending is associated with sales. The estimate is tiny and only 0.18 standard errors from zero.</li>
+<li><b>Intercept 2.939:</b> with zero spending on all three media, the predicted average sales are about 2,939 units.</li>
+</ul>
+<p>Compare with the simple regressions: TV (0.0475 → 0.046) and radio (0.203 → 0.189) barely change. But newspaper goes from a clearly significant 0.055 (p = 0.001) to essentially zero (p = 0.86). How can both be right?</p>
+
+<h3 id="isl3-2-paradox">The newspaper paradox</h3>
+<p>Look at the <dfn data-g="correlation-matrix">correlation matrix</dfn>: the correlation of every pair of variables, in a table. Table 3.5:</p>
+<div class="tw"><table class="t"><thead><tr><th></th><th>TV</th><th>radio</th><th>newspaper</th><th>sales</th></tr></thead><tbody>
+<tr><td>TV</td><td class="n">1.0000</td><td class="n">0.0548</td><td class="n">0.0567</td><td class="n">0.7822</td></tr>
+<tr><td>radio</td><td></td><td class="n">1.0000</td><td class="n"><b>0.3541</b></td><td class="n">0.5762</td></tr>
+<tr><td>newspaper</td><td></td><td></td><td class="n">1.0000</td><td class="n">0.2283</td></tr>
+<tr><td>sales</td><td></td><td></td><td></td><td class="n">1.0000</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.5 (ISLP p. 83). Correlation matrix for TV, radio, newspaper and sales. (The matrix is symmetric, so the book prints only the upper half.)</p>
+<p>The correlation between radio and newspaper is <b>0.35</b>: markets that spend a lot on newspapers tend also to spend a lot on radio. Now follow the chain:</p>
+<ol>
+<li>Radio really does boost sales.</li>
+<li>Markets with big radio budgets also tend to have big newspaper budgets.</li>
+<li>So markets with big newspaper budgets tend to have high sales, <i>because they also have big radio budgets</i>.</li>
+</ol>
+<p>A simple regression of sales on newspaper sees step 3 and credits newspaper. Newspaper is acting as a <b>surrogate</b> for radio: it “gets credit” for radio's effect. The multiple regression compares markets with the same radio budget, and then the newspaper effect disappears.</p>
+<div class="callout analogy"><p><b>The book's absurd example.</b> At a beach town, ice-cream sales and shark attacks rise and fall together, so a regression of shark attacks on ice-cream sales shows a positive slope. Nobody proposes banning ice cream. Hot weather drives both: more people go to the beach, so more ice cream is sold and more people swim with sharks. Add temperature to the regression and ice-cream sales stop being significant. Temperature is to ice cream what radio is to newspaper.</p></div>
+
+<div class="py" id="c-isl3-2-05"><pre class="src">
+print(Advertising.corr().round(4))
+</pre><div class="pynote"><b>Read the output:</b> Table 3.5. <code>.corr()</code> computes the correlation between every pair of columns. (Our TV–newspaper value prints as 0.0566; the book rounds it to 0.0567.)</div></div>
+
+<div class="widget" data-w="isl3-2-confound" data-title="Make the paradox happen: a coefficient explorer"><div class="wn">These are simulated markets where newspaper has <b>no</b> effect at all (true slope 0) and radio does. Start at correlation 0.35, like the real data: the red simple-regression slope is clearly positive, while the blue dashed multiple-regression slope is close to 0. Slide the correlation to 0: the red slope collapses too, because newspaper no longer “borrows” radio's effect. Slide it to 0.9: the red slope grows, but the blue one stays near the truth.</div></div>
+
+<div class="callout pitfall"><p><b>Pitfall: the multiple regression coefficient answers a different question.</b> Neither table is “wrong”. The simple slope answers “how do sales differ between markets with different newspaper budgets?”, and the answer really is “more newspaper, more sales”. The multiple slope answers “what is newspaper's association with sales <i>after accounting for TV and radio</i>?”. For deciding where to spend money, you want the second.</p></div>
+
+<h3 id="isl3-2-f">Question one: is there any relationship at all? The F-statistic</h3>
+<p>The book lists four questions for any multiple regression:</p>
+<ol><li>Is at least one of the predictors \(X_1,\dots,X_p\) useful in predicting the response?</li><li>Do all the predictors help to explain \(Y\), or only a subset?</li><li>How well does the model fit the data?</li><li>Given predictor values, what should we predict, and how accurate is that prediction?</li></ol>
+<p>For question 1, the null hypothesis is that <i>every</i> slope is zero:</p>
+\[H_0:\ \beta_1=\beta_2=\dots=\beta_p=0\qquad\text{versus}\qquad H_a:\ \text{at least one }\beta_j\text{ is non-zero.}\]
+<p>The test uses the <dfn data-g="f-statistic">F-statistic</dfn>:</p>
+<div class="mathblock" data-sheet="F-statistic (overall)"><div class="eqlabel">F-statistic (3.23)</div>
+\[F=\frac{(\text{TSS}-\RSS)/p}{\RSS/(n-p-1)}\]
+<p class="say">Read: “F equals TSS minus RSS over p, divided by RSS over n minus p minus 1.” Top: the variance explained, per predictor. Bottom: the leftover variance, per degree of freedom (this is \(\text{RSE}^2\)).</p></div>
+<p>Why does this work? If the model assumptions hold, the bottom always averages to \(\sigma^2\): \(\E\{\RSS/(n-p-1)\}=\sigma^2\). If \(H_0\) is true, the top <i>also</i> averages to \(\sigma^2\): \(\E\{(\text{TSS}-\RSS)/p\}=\sigma^2\), because with no real predictors the “explained” part is just noise that the fit happened to soak up. So under \(H_0\), \(F\) is near 1. If \(H_a\) is true, the top is bigger than \(\sigma^2\) and \(F\) is greater than 1.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>the F-statistic for sales on TV, radio and newspaper</b></div>
+<div class="given">\(n=200\), \(p=3\), \(\text{TSS}=5417.15\), \(\RSS=556.83\) (from the fit above).</div>
+<ol class="steps">
+<li><div><b>Explained sum of squares.</b> \(\text{TSS}-\RSS=5417.15-556.83=4860.32\).</div></li>
+<li><div><b>Per predictor.</b> \(4860.32/3=1620.11\).</div></li>
+<li><div><b>Leftover per degree of freedom.</b> \(n-p-1=200-3-1=196\). \(556.83/196=2.8410\). (Its square root, 1.686, is the RSE.)</div></li>
+<li><div><b>Divide.</b> \(F=1620.11/2.8410=570.3\).</div></li>
+<li><div><b>Interpret.</b> If no medium mattered, we would expect \(F\approx1\). We got 570. The p-value from the F-distribution with \((3,\,196)\) degrees of freedom is about \(10^{-96}\): overwhelming evidence that at least one medium is associated with sales.</div></li>
+</ol>
+<div class="result">\(F=570\): Table 3.6</div></div>
+<div class="tw"><table class="t"><thead><tr><th>Quantity</th><th>Value</th></tr></thead><tbody>
+<tr><td>Residual standard error</td><td class="n">1.69</td></tr>
+<tr><td>\(R^2\)</td><td class="n">0.897</td></tr>
+<tr><td>F-statistic</td><td class="n">570</td></tr>
+</tbody></table></div>
+<p style="font-size:14px;color:var(--muted)">Table 3.6 (ISLP p. 85). More information about the least-squares model for the regression of units sold on TV, newspaper and radio budgets.</p>
+
+<div class="py" id="c-isl3-2-06"><pre class="src">
+n, p = len(y), 3
+TSS = np.sum((y - y.mean()) ** 2)
+RSS = np.sum(full.resid ** 2)          # .resid holds the residuals e_i
+F = ((TSS - RSS) / p) / (RSS / (n - p - 1))
+pF = stats.f.sf(F, p, n - p - 1)       # upper-tail area of the F distribution
+print(f"TSS = {TSS:.2f}, RSS = {RSS:.2f}")
+print(f"F = {F:.1f}, p-value = {pF:.3g}")
+print(f"statsmodels: F = {full.fvalue:.1f}, RSE = {np.sqrt(full.scale):.3f}, R^2 = {full.rsquared:.4f}")
+</pre><div class="pynote"><b>Read the output:</b> Table 3.6 reproduced: RSE 1.686 (book 1.69), \(R^2=0.8972\), F 570.3. <code>stats.f.sf(F, p, n-p-1)</code> is the area to the right of our F under the F-distribution with \(p\) and \(n-p-1\) degrees of freedom: the p-value.</div></div>
+
+<p>How big must F be? It depends on \(n\) and \(p\). With large \(n\), an F only a little above 1 can already be strong evidence; with small \(n\), a larger F is needed. When the errors are normal (or \(n\) is large), F follows an <b>F-distribution</b> under \(H_0\), and software turns it into a p-value as above.</p>
+
+<h4>Testing a subset of coefficients</h4>
+<p>Sometimes we want to test only some of the coefficients, say the last \(q\): \(H_0:\beta_{p-q+1}=\dots=\beta_p=0\). Fit a second, smaller model without those \(q\) variables and call its residual sum of squares \(\RSS_0\). Then</p>
+<div class="mathblock" data-sheet="Partial F-statistic"><div class="eqlabel">F-statistic for \(q\) coefficients (3.24)</div>
+\[F=\frac{(\RSS_0-\RSS)/q}{\RSS/(n-p-1)}\]
+<p class="say">Read: “how much RSS goes up when we drop the q variables, per variable, relative to the leftover variance of the big model.”</p></div>
+<p><b>Example: drop newspaper (\(q=1\)).</b> The TV + radio model has \(\RSS_0=556.91\); the full model \(\RSS=556.83\). \(F=(556.91-556.83)/1\,/\,2.8410=0.0887/2.8410=0.031\). And the newspaper t-statistic in Table 3.4 was \(-0.1767\): \((-0.1767)^2=0.031\). That is no coincidence: <b>each t-test in Table 3.4 is exactly the F-test for dropping that one variable</b>, and \(t^2=F\). It measures the <i>partial</i> effect of adding that variable to a model that already has the others.</p>
+
+<h4>Why look at F when we already have the individual p-values?</h4>
+<p>It seems that if any individual p-value is small, at least one predictor must matter. This logic fails when \(p\) is large. Suppose \(p=100\) and \(H_0\) is true: no predictor matters at all. Each individual test still has a 5% chance of a p-value below 0.05 by luck, so we expect about \(100\times0.05=5\) small p-values, and the chance of at least one is \(1-0.95^{100}\approx0.994\). (You saw this in <a href="#m-prob-many">the danger of many tests</a>.) The F-statistic adjusts for the number of predictors: if \(H_0\) is true, there is only a 5% chance its p-value falls below 0.05, however many predictors there are.</p>
+<p>The F-test needs \(p\) to be small compared with \(n\). If \(p>n\), there are more coefficients than observations, least squares cannot even be fitted, and neither F nor most of this chapter applies. That <b>high-dimensional</b> setting is the subject of Chapter 6.</p>
+
+<div class="py" id="c-isl3-2-07"><pre class="src">
+rng = np.random.default_rng(1)
+n_sim, p_sim = 200, 100
+Xn = rng.normal(size=(n_sim, p_sim))     # 100 predictors of pure noise
+yn = rng.normal(size=n_sim)              # a response unrelated to all of them
+res_noise = sm.OLS(yn, sm.add_constant(Xn)).fit()
+print("individual p-values below 0.05:", np.sum(res_noise.pvalues[1:] < 0.05))
+print("overall F p-value:", round(res_noise.f_pvalue, 3))
+</pre><div class="pynote"><b>Read the output:</b> several of the 100 useless predictors look “significant” on their own (the exact count depends on the seed; around 5 is typical), yet the overall F-test correctly finds no evidence of any relationship. <code>res_noise.pvalues[1:]</code> skips the intercept's p-value.</div></div>
+
+<h3 id="isl3-2-select">Question two: which variables matter? Variable selection</h3>
+<p>Once F says “at least one predictor matters”, we want to know which. Choosing the subset of predictors to keep is called <dfn data-g="variable-selection">variable selection</dfn>. Chapter 6 treats it properly; here is the classical outline.</p>
+<p>Ideally we would fit every possible model and pick the best by a criterion that rewards fit but penalises size: Mallow's \(C_p\), the Akaike information criterion (AIC), the Bayesian information criterion (BIC) or adjusted \(R^2\) (all in Chapter 6). But with \(p\) predictors there are \(2^p\) subsets (each predictor is either in or out). For \(p=2\) that is 4 models; for \(p=30\) it is \(2^{30}=1{,}073{,}741{,}824\). Too many. So we use greedy shortcuts:</p>
+<div class="tw"><table class="t"><thead><tr><th>Method</th><th>How it works</th><th>Notes</th></tr></thead><tbody>
+<tr><td><b>Forward selection</b></td><td>Start with the <b>null model</b> (intercept only). Try adding each remaining variable; keep the one giving the lowest RSS. Repeat until a stopping rule says stop.</td><td>Can always be used, even if \(p>n\). Greedy: may add a variable early that later becomes redundant.</td></tr>
+<tr><td><b>Backward selection</b></td><td>Start with all variables. Remove the one with the largest p-value (least significant). Refit and repeat until, say, all remaining p-values are below a threshold.</td><td>Cannot be used if \(p>n\) (the full model cannot be fitted).</td></tr>
+<tr><td><b>Mixed selection</b></td><td>Start like forward selection, adding the best variable each step. But if a variable already in the model rises above a p-value threshold (which can happen as others are added), remove it. Continue until everything in the model is significant and nothing outside would be.</td><td>Repairs forward selection's greediness.</td></tr>
+</tbody></table></div>
+
+<div class="worked"><div class="wt">Worked example · <b>forward selection on Advertising</b></div>
+<div class="given">Candidates: TV, radio, newspaper. RSS values of the fitted models (from the code below).</div>
+<ol class="steps">
+<li><div><b>Step 1, one variable.</b> RSS with TV alone 2102.5, radio alone 3618.5, newspaper alone 5134.8. Lowest: <b>TV</b>. Model: {TV}.</div></li>
+<li><div><b>Step 2, add a second.</b> TV + radio: 556.9. TV + newspaper: 1918.6. Lowest: <b>radio</b>. Model: {TV, radio}.</div></li>
+<li><div><b>Step 3, add the third?</b> TV + radio + newspaper: 556.8, an improvement of only 0.09, and newspaper's p-value would be 0.86. A sensible stopping rule (for example “stop when the added variable's p-value exceeds 0.05”) stops here.</div></li>
+</ol>
+<div class="result">Forward selection chooses {TV, radio}. Backward selection agrees: it would remove newspaper first (largest p-value, 0.86), and then TV and radio both have p &lt; 0.0001.</div></div>
+
+<div class="py" id="c-isl3-2-08"><pre class="src">
+def rss_of(cols):
+    """RSS of the regression of sales on the given list of columns."""
+    return sm.OLS(y, sm.add_constant(Advertising[cols])).fit().ssr
+chosen, left = [], ['TV', 'radio', 'newspaper']
+for step in range(3):
+    scores = {c: rss_of(chosen + [c]) for c in left}
+    best = min(scores, key=scores.get)       # the key with the smallest value
+    print(f"step {step + 1}:", {k: round(v, 1) for k, v in scores.items()}, "-> add", best)
+    chosen.append(best); left.remove(best)
+</pre><div class="pynote"><b>Read the output:</b> the RSS table of the worked example, step by step. <code>.ssr</code> is statsmodels' name for RSS (“sum of squared residuals”). <code>{c: ... for c in left}</code> is a dictionary comprehension (from <a href="#py2">Python II</a>), and <code>min(scores, key=scores.get)</code> returns the key whose value is smallest. Here we let it run all three steps so you can see that step 3 barely reduces RSS.</div></div>
+
+<h3 id="isl3-2-fit">Question three: how well does the model fit?</h3>
+<p>We use the same two measures as in lesson 3.1: RSE and \(R^2\). In multiple regression, \(R^2\) equals \(\text{Cor}(Y,\hat Y)^2\), the squared correlation between the response and the fitted values. In fact the least-squares fit <i>maximises</i> this correlation among all linear models.</p>
+<p>Two comparisons from the book:</p>
+<ul>
+<li>All three media: \(R^2=0.8972\). TV and radio only: \(R^2=0.89719\). Adding newspaper raises \(R^2\) by a hair. <b>\(R^2\) always increases when you add a variable</b>, even a useless one, because adding a column can never increase the training RSS (the old fit is still available with the new coefficient set to 0). A tiny increase is extra evidence that newspaper can be dropped; keeping it would likely hurt on new data by <a href="#isl2-2">overfitting</a>.</li>
+<li>TV only: \(R^2=0.61\). Adding radio jumps to 0.897: a substantial improvement.</li>
+</ul>
+<p>For RSE, the general formula has \(n-p-1\) in the denominator:</p>
+<div class="mathblock" data-sheet="RSE, multiple regression"><div class="eqlabel">Residual standard error, \(p\) predictors (3.25)</div>
+\[\text{RSE}=\sqrt{\frac{1}{n-p-1}\RSS}\]
+<p class="say">With \(p=1\) this is the \(\sqrt{\RSS/(n-2)}\) of lesson 3.1.</p></div>
+<p>This explains a puzzle: TV + radio has RSE 1.681, but TV + radio + newspaper has RSE 1.686, <i>higher</i>, even though its RSS is lower. Adding newspaper cut RSS by only 0.09 while the denominator fell from 197 to 196: \(\sqrt{556.91/197}=1.6814\) versus \(\sqrt{556.83/196}=1.6855\). Models with more variables can have higher RSE when the RSS drop is small relative to the lost degree of freedom.</p>
+
+<div class="py" id="c-isl3-2-09"><pre class="src">
+two = sm.OLS(y, sm.add_constant(Advertising[['TV', 'radio']])).fit()
+for name, m in [('TV only', simple_fit('TV')), ('TV + radio', two), ('all three', full)]:
+    print(f"{name:12s} RSS = {m.ssr:8.2f}  R^2 = {m.rsquared:.5f}  RSE = {np.sqrt(m.scale):.4f}")
+print("Cor(y, yhat)^2 =", round(np.corrcoef(y, full.fittedvalues)[0, 1] ** 2, 5))
+</pre><div class="pynote"><b>Read the output:</b> the book's numbers: \(R^2\) 0.61188, 0.89719, 0.89721; RSE 3.2587, 1.6814, 1.6855. The last line confirms \(R^2=\text{Cor}(Y,\hat Y)^2\). In <code>{name:12s}</code>, <code>12s</code> pads the text to 12 characters so the columns line up.</div></div>
+
+<h4>Look at the residuals in 3-D</h4>
+<p>Numbers can hide problems that pictures reveal. Figure 3.5 plots the TV + radio fit as a plane:</p>
+<figure class="book" data-fig="islp-3.5"><figcaption>Sales against TV and radio with the least-squares plane. Points above the plane (positive residuals) are visible; most points below are hidden. <b>Look where the points above the plane lie:</b> along the diagonal where the budget is split between TV and radio. Where the money went almost all to one medium, the points fall below the plane. The flat plane cannot capture this, which hints at a <b>synergy</b> (interaction) between the media: combining them sells more than either alone. Lesson 3.3 adds an interaction term to model it.</figcaption></figure>
+<div class="widget" data-w="isl3-2-plane" data-title="Turn the regression plane"><div class="wn">Red points lie above the fitted surface, blue below; grey sticks are residuals. Turn the view until you look along the TV–radio diagonal and see that red points crowd the middle while blue points sit at the edges where one budget is near zero. Then switch to <b>+ TV×radio</b>: the plane bends into a curved surface, the residuals shrink and \(R^2\) jumps from 0.897 to 0.968.</div></div>
+
+<h3 id="isl3-2-predict">Question four: predictions and their uncertainty</h3>
+<p>Prediction itself is easy: plug the budgets into (3.21). But how accurate is it? Three sources of uncertainty:</p>
+<ol>
+<li><b>The coefficients are estimates.</b> The least-squares plane \(\hat Y=\hat\beta_0+\hat\beta_1X_1+\dots+\hat\beta_pX_p\) only estimates the population plane \(f(X)=\beta_0+\beta_1X_1+\dots+\beta_pX_p\). This is the <i>reducible</i> error of Chapter 2. A <dfn data-g="confidence-interval">confidence interval</dfn> tells us how close \(\hat Y\) is likely to be to \(f(X)\).</li>
+<li><b>Model bias.</b> The true \(f\) is probably not exactly linear, so we are really estimating the best linear approximation. The book sets this aside here.</li>
+<li><b>The irreducible error \(\epsilon\).</b> Even with the true coefficients, one market's sales vary around \(f(X)\). A <dfn data-g="prediction-interval">prediction interval</dfn> covers this too, so it is always wider.</li>
+</ol>
+<div class="callout key"><p><b>Which interval?</b> Use a <b>confidence interval</b> for the <i>average</i> sales over many cities with these budgets. Use a <b>prediction interval</b> for the sales of <i>one particular</i> city. The book's example, for $100,000 on TV and $20,000 on radio (TV + radio model): prediction 11,256 units; 95% confidence interval [10,985, 11,528]; 95% prediction interval [7,930, 14,580]. Same centre, very different widths.</p></div>
+
+<p>For simple regression the formulas are worth seeing (multiple regression uses the matrix version, which software handles). At a new point \(x_0\), with \(\hat y_0=\hat\beta_0+\hat\beta_1x_0\):</p>
+<div class="mathblock" data-sheet="Confidence and prediction intervals (simple regression)"><div class="eqlabel">Intervals at \(x_0\) (simple regression)</div>
+\[\text{CI: }\ \hat y_0\pm t_{0.975,n-2}\,\text{RSE}\sqrt{\frac1n+\frac{(x_0-\bar x)^2}{S_{xx}}},\qquad \text{PI: }\ \hat y_0\pm t_{0.975,n-2}\,\text{RSE}\sqrt{1+\frac1n+\frac{(x_0-\bar x)^2}{S_{xx}}}\]
+<p class="say">The prediction interval has an extra “1 +” under the root: that is the variance of the new observation's own \(\epsilon\), measured in units of \(\sigma^2\).</p></div>
+<p>The intervals are narrowest at \(x_0=\bar x\) and widen as you move away, because a small error in the slope matters more far from the centre of the data.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>the book's intervals at TV = 100, radio = 20</b></div>
+<div class="given">TV + radio model: \(\hat y_0=2.9211+0.04575\times100+0.18799\times20\). From statsmodels: standard error of the mean prediction \(\SE(\hat y_0)=0.1375\); RSE \(=1.6814\); \(n-p-1=197\), \(t_{0.975,197}=1.9721\).</div>
+<ol class="steps">
+<li><div><b>Prediction.</b> \(2.9211+4.5754+3.7598=11.2565\) thousand units: 11,256.</div></li>
+<li><div><b>Confidence interval.</b> Half-width \(1.9721\times0.1375=0.2712\). Interval \([11.2565-0.2712,\ 11.2565+0.2712]=[10.985,\ 11.528]\).</div></li>
+<li><div><b>Prediction interval.</b> The standard error for one new market combines both sources: \(\sqrt{\text{RSE}^2+\SE(\hat y_0)^2}=\sqrt{2.8271+0.0189}=\sqrt{2.8460}=1.6870\). Half-width \(1.9721\times1.6870=3.3269\). Interval \([7.930,\ 14.583]\).</div></li>
+<li><div><b>In words.</b> Over many cities spending these amounts, average sales are between about 10,985 and 11,528 units. A single such city will sell between about 7,930 and 14,580 units, 95% of the time.</div></li>
+</ol>
+<div class="result">CI [10,985, 11,528] and PI [7,930, 14,583], both centred on 11,256: the book's numbers.</div></div>
+
+<div class="py" id="c-isl3-2-10"><pre class="src">
+new = pd.DataFrame({'const': [1.0], 'TV': [100.0], 'radio': [20.0]})
+pred = two.get_prediction(new)
+frame = pred.summary_frame(alpha=0.05)
+print(frame.round(4).T)
+</pre><div class="pynote"><b>Read the output:</b> <code>mean</code> is the prediction 11.2565; <code>mean_se</code> is \(\SE(\hat y_0)=0.1375\); <code>mean_ci_lower/upper</code> is the confidence interval; <code>obs_ci_lower/upper</code> (“obs” for a new observation) is the prediction interval. The new data frame needs the same columns as the design matrix, including <code>const</code>. <code>.T</code> turns the one-row table on its side so it is easier to read.</div></div>
+
+<div class="widget" data-w="isl3-2-intervals" data-title="Confidence band versus prediction band"><div class="wn">Sales on TV alone. The dark band is the 95% confidence band for the average sales; the light band is the 95% prediction band for one market. Slide \(x_0\) from the middle (about 147) to an end: the confidence band widens noticeably, the prediction band only a little, because its width is dominated by the irreducible noise.</div></div>
+
+<div class="callout exam"><p><b>Interview classic:</b> “What is the difference between a confidence interval and a prediction interval for a regression?” The confidence interval is for the mean response \(f(x_0)\) and reflects only uncertainty in the coefficients; it shrinks to zero width as \(n\to\infty\). The prediction interval is for a single new \(y_0\) and adds the irreducible noise \(\sigma^2\), so it never shrinks below about \(\pm2\sigma\).</p></div>
+
+<h3 id="isl3-2-practice">Practice: write it yourself</h3>
+
+<div class="ex" id="x-isl3-2-01" data-title="least squares by the normal equations"><div class="task"><p>Write <code>ols_beta(X, y)</code> that returns \(\hat\bbeta\) by solving \(\bX\T\bX\hat\bbeta=\bX\T\by\) with <code>np.linalg.solve</code>. <code>X</code> already contains the column of 1s. Example: for the three-point example, <code>ols_beta(X3, y3)</code> is <code>[1, 2, 3]</code>.</p></div>
+<pre class="src">
+def ols_beta(X, y):
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float)
+    return ...   # solve the normal equations
+</pre>
+<pre class="check">
+b_ = ols_beta(X3, y3)
+assert b_ is not Ellipsis and np.allclose(b_, [1, 2, 3]), f"three points: expected [1, 2, 3], got {b_}"
+assert np.allclose(ols_beta(X4, y4), [0.75, 2, 3]), f"four points: expected [0.75, 2, 3], got {ols_beta(X4, y4)}"
+Xa_ = sm.add_constant(Advertising[['TV', 'radio', 'newspaper']])
+assert np.allclose(ols_beta(Xa_, y), sm.OLS(y, Xa_).fit().params, atol=1e-10), "Advertising: should match statsmodels"
+</pre>
+<div class="hint"><p>Compute the two pieces first: <code>A = X.T @ X</code> and <code>b = X.T @ y</code>.</p></div>
+<div class="hint"><p>Then <code>return np.linalg.solve(A, b)</code>.</p></div>
+<pre class="solution">
+def ols_beta(X, y):
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float)
+    return np.linalg.solve(X.T @ X, X.T @ y)
+</pre>
+<div class="explain"><p>Two matrix products build the normal equations; <code>solve</code> does the elimination you did by hand. <code>np.asarray</code> turns a pandas table into a plain array so <code>@</code> works the same way for both.</p></div></div>
+
+<div class="ex" id="x-isl3-2-02" data-title="the overall F-statistic"><div class="task"><p>Write <code>f_stat(y, yhat, p)</code> that returns the F-statistic (3.23), given the observed responses, the fitted values and the number of predictors \(p\). Example: for the full Advertising fit, <code>f_stat(y, full.fittedvalues, 3)</code> is about 570.27.</p></div>
+<pre class="src">
+def f_stat(y, yhat, p):
+    y = np.asarray(y, dtype=float)
+    yhat = np.asarray(yhat, dtype=float)
+    n = len(y)
+    # your code here
+    return None
+</pre>
+<pre class="check">
+F_ = f_stat(y, full.fittedvalues, 3)
+assert F_ is not None, "return a number"
+assert abs(F_ - full.fvalue) < 1e-6, f"expected {full.fvalue:.3f}, got {F_}"
+m1_ = simple_fit('TV')
+assert abs(f_stat(y, m1_.fittedvalues, 1) - m1_.tvalues.iloc[1] ** 2) < 1e-6, "with one predictor, F should equal t squared (312.1)"
+assert abs(f_stat([1, 2, 3, 4], [1.5, 1.5, 3.5, 3.5], 1) - 8.0) < 1e-9, "small check: TSS 5, RSS 1, n 4 gives F = 8"
+</pre>
+<div class="hint"><p>\(\text{TSS}=\sum(y_i-\bar y)^2\) and \(\RSS=\sum(y_i-\hat y_i)^2\).</p></div>
+<div class="hint"><pre style="overflow-x:auto;font-size:13px;white-space:pre-wrap">return ((TSS - RSS) / p) / (RSS / (n - p - 1))</pre></div>
+<pre class="solution">
+def f_stat(y, yhat, p):
+    y = np.asarray(y, dtype=float)
+    yhat = np.asarray(yhat, dtype=float)
+    n = len(y)
+    TSS = np.sum((y - y.mean()) ** 2)
+    RSS = np.sum((y - yhat) ** 2)
+    return ((TSS - RSS) / p) / (RSS / (n - p - 1))
+</pre>
+<div class="explain"><p>Formula (3.23) directly. The second check confirms the fact from lesson 3.1 that with one predictor \(F=t^2\). In the third, \(\text{TSS}=2.25+0.25+0.25+2.25=5\), \(\RSS=0.25\times4=1\), so \(F=(4/1)/(1/2)=8\).</p></div></div>
+
+<div class="ex" id="x-isl3-2-03" data-title="partial F-test for dropping variables"><div class="task"><p>Write <code>partial_f(rss0, rss, q, n, p)</code> implementing (3.24), where <code>rss0</code> is the RSS of the smaller model (with \(q\) variables dropped) and <code>rss</code>, <code>p</code> belong to the full model. Return the pair <code>(F, pvalue)</code>, using <code>stats.f.sf(F, q, n - p - 1)</code> for the p-value. For dropping newspaper: \(F\approx0.031\), p ≈ 0.86.</p></div>
+<pre class="src">
+def partial_f(rss0, rss, q, n, p):
+    F = ...
+    pval = ...
+    return F, pval
+</pre>
+<pre class="check">
+F_, p_ = partial_f(two.ssr, full.ssr, 1, 200, 3)
+assert abs(F_ - full.tvalues['newspaper'] ** 2) < 1e-8, f"dropping newspaper: F should equal t^2 = {full.tvalues['newspaper']**2:.4f}, got {F_}"
+assert abs(p_ - full.pvalues['newspaper']) < 1e-8, f"p-value should equal the t-test's {full.pvalues['newspaper']:.4f}, got {p_}"
+tv_only_ = simple_fit('TV')
+F2_, p2_ = partial_f(tv_only_.ssr, full.ssr, 2, 200, 3)
+assert 250 < F2_ < 300 and p2_ < 1e-40, f"dropping radio and newspaper together should give a huge F (about 272), got {F2_}"
+</pre>
+<div class="hint"><p>Top: \((\RSS_0-\RSS)/q\). Bottom: \(\RSS/(n-p-1)\).</p></div>
+<div class="hint"><pre style="overflow-x:auto;font-size:13px;white-space:pre-wrap">F = ((rss0 - rss) / q) / (rss / (n - p - 1))</pre><p>And <code>pval = stats.f.sf(F, q, n - p - 1)</code>.</p></div>
+<pre class="solution">
+def partial_f(rss0, rss, q, n, p):
+    F = ((rss0 - rss) / q) / (rss / (n - p - 1))
+    pval = stats.f.sf(F, q, n - p - 1)
+    return F, pval
+</pre>
+<div class="explain"><p>Dropping one variable gives exactly the square of its t-statistic and the same p-value, as the book's footnote says. Dropping radio and newspaper together raises RSS from 556.8 to 2102.5, a huge F: radio clearly matters.</p></div></div>
+
+<div class="ex" id="x-isl3-2-04" data-title="one step of forward selection"><div class="task"><p>Write a function <code>forward_step</code> with four inputs: a data frame <code>df</code>, the response name <code>ycol</code>, the list <code>chosen</code> of columns already in the model, and the list <code>candidates</code>. It returns the candidate whose addition to <code>chosen</code> gives the lowest RSS when regressing <code>df[ycol]</code> on them (with an intercept). Example: with <code>chosen = []</code> and the three Advertising media as candidates, it returns <code>'TV'</code>.</p></div>
+<pre class="src">
+def forward_step(df, ycol, chosen, candidates):
+    best, best_rss = None, np.inf
+    for c in candidates:
+        ...   # fit df[ycol] on chosen + [c]; keep the c with smallest RSS
+    return best
+</pre>
+<pre class="check">
+assert forward_step(Advertising, 'sales', [], ['TV', 'radio', 'newspaper']) == 'TV', "step 1 should pick TV"
+assert forward_step(Advertising, 'sales', ['TV'], ['radio', 'newspaper']) == 'radio', "step 2 should pick radio"
+assert forward_step(Advertising, 'sales', [], ['newspaper', 'radio']) == 'radio', "without TV available, radio beats newspaper"
+</pre>
+<div class="hint"><p>Inside the loop: </p><pre style="overflow-x:auto;font-size:13px;white-space:pre-wrap">r = sm.OLS(df[ycol], sm.add_constant(df[chosen + [c]])).fit().ssr</pre></div>
+<div class="hint"><p>Then </p><pre style="overflow-x:auto;font-size:13px;white-space:pre-wrap">if r &lt; best_rss: best, best_rss = c, r</pre></div>
+<pre class="solution">
+def forward_step(df, ycol, chosen, candidates):
+    best, best_rss = None, np.inf
+    for c in candidates:
+        r = sm.OLS(df[ycol], sm.add_constant(df[chosen + [c]])).fit().ssr
+        if r < best_rss:
+            best, best_rss = c, r
+    return best
+</pre>
+<div class="explain"><p>This is one greedy step: try each candidate, keep the best. <code>np.inf</code> (infinity) is a starting value that any real RSS beats. Calling it repeatedly, moving the winner from <code>candidates</code> to <code>chosen</code>, is forward selection.</p></div></div>
+
+<h3 id="isl3-2-quiz">Quiz</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In the multiple regression of sales on TV, radio and newspaper, \(\hat\beta_{\text{radio}}=0.189\). What does it mean?</p><ol class="opts"><li>Radio causes 189 extra units per $1,000</li><li>An extra $1,000 on radio is associated with about 189 more units, holding TV and newspaper fixed</li><li>Radio explains 18.9% of the variance in sales</li></ol><div class="why">Multiple regression coefficients are partial effects “holding the others fixed”. Regression on observational data shows association, not causation. 0.189 is a slope, not a share of variance.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Newspaper is significant in a simple regression (p = 0.001) but not in the multiple regression (p = 0.86). The best explanation is:</p><ol class="opts"><li>The multiple regression has a coding error</li><li>Newspaper has a negative effect that cancels a positive one</li><li>Newspaper is correlated with radio (0.35), so alone it picks up radio's effect</li></ol><div class="why">This is the surrogate effect: markets that spend on newspapers also spend on radio. Once radio is held fixed, newspaper adds nothing.</div></div>
+<div class="q" data-type="num" data-answer="10" data-tol="0.01"><p class="stem">A regression has \(n=24\), \(p=3\), TSS = 100 and RSS = 40. Compute the F-statistic.</p><div class="why">Top: \((\text{TSS}-\RSS)/p=(100-40)/3=60/3=20\). Bottom: \(\RSS/(n-p-1)=40/(24-3-1)=40/20=2\). \(F=20/2=10\).</div></div>
+<div class="q" data-type="num" data-answer="1.686" data-tol="0.002"><p class="stem">The full Advertising model has RSS = 556.83 with \(n=200\) and \(p=3\). Compute its RSE (3 decimals).</p><div class="why">\(\text{RSE}=\sqrt{556.83/(200-3-1)}=\sqrt{556.83/196}=\sqrt{2.8410}=1.686\). Dividing by 197 or 200 instead of 196 is the usual slip.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">You add a column of pure random noise to a regression. What happens to the training \(R^2\)?</p><ol class="opts"><li>It increases slightly (or stays the same)</li><li>It decreases</li><li>It can go either way</li></ol><div class="why">Adding a column can never increase the training RSS (setting its coefficient to zero recovers the old fit), so \(R^2=1-\RSS/\text{TSS}\) cannot fall. This is why \(R^2\) alone cannot choose between models of different sizes.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">With \(p=100\) useless predictors, why is looking for any individual p-value below 0.05 a bad test of “is anything related?”</p><ol class="opts"><li>Individual p-values cannot be computed when \(p\) is large</li><li>About 5 of them will fall below 0.05 by chance alone, so we would almost always wrongly say yes</li><li>The p-values would all be exactly 1</li></ol><div class="why">Each test has a 5% false-alarm rate, so with 100 tests about 5 false alarms are expected, and at least one is nearly certain. The F-test controls the overall false-alarm rate at 5%.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">You want a range for the sales of <i>one specific</i> new city with given budgets. Which interval?</p><ol class="opts"><li>Confidence interval for the coefficients</li><li>Confidence interval for the mean response</li><li>Prediction interval</li></ol><div class="why">One city's sales include its own random error \(\epsilon\), so you need the wider prediction interval. The confidence interval for the mean covers the average over many such cities.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Which variable-selection method cannot be used when \(p>n\)?</p><ol class="opts"><li>Backward selection</li><li>Forward selection</li><li>Both can always be used</li></ol><div class="why">Backward selection starts by fitting the model with all \(p\) predictors, which is impossible by least squares when there are more coefficients than observations. Forward selection starts from the intercept-only model and can stop before reaching \(n\) variables.</div></div>
+<div class="q" data-type="open"><p class="stem">Explain in your own words why the normal equations are called “normal”, and what the first equation says about the residuals.</p><div class="model">They can be written \(\bX\T(\by-\bX\hat\bbeta)=\mathbf{0}\): the residual vector \(\mathbf{e}=\by-\hat\by\) has zero dot product with every column of \(\bX\), so it is perpendicular (“normal”) to all of them; \(\hat\by\) is the projection of \(\by\) onto the column space. The first column of \(\bX\) is all 1s, so the first equation says \(\sum_i e_i=0\): the residuals add to zero.</div></div>
+</div>
+
+<h3 id="isl3-2-cards">Flashcards</h3>
+<div class="cards">
+<div class="fc"><div class="f">Multiple linear regression model</div><div class="b">\(Y=\beta_0+\beta_1X_1+\dots+\beta_pX_p+\epsilon\)</div></div>
+<div class="fc"><div class="f">Interpretation of \(\beta_j\) in multiple regression</div><div class="b">Average change in \(Y\) for a one-unit increase in \(X_j\), holding all other predictors fixed.</div></div>
+<div class="fc"><div class="f">Normal equations</div><div class="b">\(\bX\T\bX\hat\bbeta=\bX\T\by\), so \(\hat\bbeta=(\bX\T\bX)^{-1}\bX\T\by\).</div></div>
+<div class="fc"><div class="f">First column of the design matrix \(\bX\)</div><div class="b">All 1s: it multiplies the intercept \(\beta_0\).</div></div>
+<div class="fc"><div class="f">Overall F-statistic</div><div class="b">\(F=\dfrac{(\text{TSS}-\RSS)/p}{\RSS/(n-p-1)}\); near 1 under \(H_0\).</div></div>
+<div class="fc"><div class="f">Partial F-statistic for dropping \(q\) variables</div><div class="b">\(F=\dfrac{(\RSS_0-\RSS)/q}{\RSS/(n-p-1)}\); with \(q=1\) it equals \(t^2\).</div></div>
+<div class="fc"><div class="f">RSE with \(p\) predictors</div><div class="b">\(\sqrt{\RSS/(n-p-1)}\)</div></div>
+<div class="fc"><div class="f">\(R^2\) in multiple regression equals…</div><div class="b">\(\text{Cor}(Y,\hat Y)^2\)</div></div>
+<div class="fc"><div class="f">Forward vs backward selection</div><div class="b">Forward: start empty, add the variable with lowest RSS each step. Backward: start full, remove the largest p-value each step (needs \(n>p\)).</div></div>
+<div class="fc"><div class="f">Number of possible subsets of \(p\) predictors</div><div class="b">\(2^p\) (\(2^{30}\approx1.07\) billion)</div></div>
+<div class="fc"><div class="f">Confidence vs prediction interval</div><div class="b">CI: for the mean \(f(x_0)\) (coefficient uncertainty). PI: for one new \(y_0\) (adds \(\sigma^2\)); always wider.</div></div>
+<div class="fc"><div class="f">Advertising full model: \(R^2\), RSE, F</div><div class="b">0.897, 1.69, 570</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can build \(\bX\), compute \(\bX\T\bX\) and \(\bX\T\by\) cell by cell, and solve the normal equations for a 3-point example.</label>
+<label><input type="checkbox"> I reproduced Tables 3.3, 3.4, 3.5 and 3.6 in Python.</label>
+<label><input type="checkbox"> I can explain the newspaper paradox using the correlation matrix.</label>
+<label><input type="checkbox"> I can compute an F-statistic by hand and explain why it is needed alongside individual p-values.</label>
+<label><input type="checkbox"> I can describe forward, backward and mixed selection.</label>
+<label><input type="checkbox"> I can explain why RSE can rise when a variable is added even though RSS falls.</label>
+<label><input type="checkbox"> I can compute and tell apart a confidence interval and a prediction interval.</label>
+</div>
+</section>

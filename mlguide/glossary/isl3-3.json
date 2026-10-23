@@ -1,0 +1,20 @@
+{
+"qualitative-predictor": {"term": "qualitative predictor (factor)", "def": "A predictor whose values are categories (levels), such as region or student status; it enters a regression through dummy variables.", "at": "isl3-3"},
+"dummy-variable": {"term": "dummy variable", "def": "A 0/1 indicator column that is 1 for one level of a factor and 0 otherwise.", "at": "isl3-3"},
+"one-hot": {"term": "one-hot encoding", "def": "Machine-learning name for coding a categorical variable as 0/1 dummy columns, one per level (one is dropped when the model has an intercept).", "at": "isl3-3"},
+"baseline": {"term": "baseline level", "def": "The level of a factor that has no dummy variable; the intercept is its mean, and every dummy coefficient is a difference from it.", "at": "isl3-3"},
+"interaction": {"term": "interaction (synergy)", "def": "When the effect of one predictor depends on the value of another; modelled by adding the product \\(X_1X_2\\) as a predictor.", "at": "isl3-3"},
+"main-effect": {"term": "main effect", "def": "A predictor's own term (e.g. \\(\\beta_1X_1\\)) as opposed to an interaction term built from it.", "at": "isl3-3"},
+"residual-plot": {"term": "residual plot", "def": "Residuals plotted against fitted values (or a predictor, or time). A good model shows no pattern.", "at": "isl3-3"},
+"heteroscedasticity": {"term": "heteroscedasticity", "def": "Non-constant variance of the error terms; seen as a funnel shape in a residual plot.", "at": "isl3-3"},
+"wls": {"term": "weighted least squares", "def": "Least squares in which each squared residual is multiplied by a weight, usually the inverse of that observation's error variance.", "at": "isl3-3"},
+"outlier": {"term": "outlier", "def": "An observation whose response is far from the value predicted by the model (a large residual).", "at": "isl3-3"},
+"studentized-residual": {"term": "studentized residual", "def": "A residual divided by its estimated standard error; values beyond about ±3 suggest an outlier.", "at": "isl3-3"},
+"leverage": {"term": "leverage", "def": "How unusual an observation's predictor values are; in simple regression \\(h_i=\\frac1n+\\frac{(x_i-\\bar x)^2}{\\sum(x_{i'}-\\bar x)^2}\\). Average leverage is \\((p+1)/n\\).", "at": "isl3-3"},
+"collinearity": {"term": "collinearity", "def": "Two or more predictors closely related to each other; it inflates the standard errors of their coefficients.", "at": "isl3-3"},
+"multicollinearity": {"term": "multicollinearity", "def": "Collinearity among three or more predictors, possibly with no single pair highly correlated.", "at": "isl3-3"},
+"vif": {"term": "variance inflation factor (VIF)", "def": "\\(1/(1-R^2_{X_j|X_{-j}})\\): how much collinearity inflates the variance of \\(\\hat\\beta_j\\). 1 is the minimum; above 5–10 is a problem.", "at": "isl3-3"},
+"power": {"term": "power (of a test)", "def": "The probability that a test correctly rejects a false null hypothesis, e.g. detects a non-zero coefficient.", "at": "isl3-3"},
+"knn-regression": {"term": "KNN regression", "def": "Predict at \\(x_0\\) by averaging the responses of the K training points nearest to \\(x_0\\).", "at": "isl3-3"},
+"curse-dimensionality": {"term": "curse of dimensionality", "def": "In many dimensions a fixed number of observations becomes sparse, so the 'nearest' neighbours are far away and local methods like KNN perform poorly.", "at": "isl3-3"}
+}

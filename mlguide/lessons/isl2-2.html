@@ -1,0 +1,594 @@
+<section class="lesson" id="isl2-2" data-book="ISLP §2.2, pp. 27–39">
+<p class="lede">A model is only as good as its accuracy on data it has never seen. This lesson gives you the tools to measure that accuracy (MSE and the error rate), shows why the most flexible model is rarely the best one (the bias–variance trade-off), and introduces your first real classifier, K-nearest neighbours. Bias and variance are the single most asked-about idea in ML interviews.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#isl2-1">ISLP 2.1</a> <a href="#m-prob">Probability &amp; statistics</a> <a href="#np2">NumPy II</a> <a href="#plt1">Plotting</a> <a href="#m-linalg">Vectors &amp; matrices</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>compute the mean squared error (2.5) by hand and in code, and explain why <b>test</b> MSE, not training MSE, is what we care about;</li>
+<li>explain the U-shaped test error curve and reproduce it by simulation;</li>
+<li>derive the bias–variance decomposition (2.7) and estimate bias², variance and \(\Var(\varepsilon)\) by simulating many training sets;</li>
+<li>compute an error rate (2.8), describe the Bayes classifier (2.10) and the Bayes error rate (2.11);</li>
+<li>run K-nearest neighbours (2.12) by hand on a small example, code it, check it against scikit-learn, and choose \(K\).</li></ul></div>
+
+<div class="callout book"><blockquote>There is no free lunch in statistics: no one method dominates all others over all possible data sets.</blockquote><cite>ISLP p. 27</cite></div>
+
+<p>Why does ISLP teach so many methods instead of one best method? Because on one data set a particular method may work best, while on a similar but different data set another one wins. So a central skill is <b>deciding which method is best for the data in front of you</b>. That needs a way to measure quality. This lesson builds it.</p>
+
+<h3 id="isl2-2-mse">Measuring the quality of fit: the MSE</h3>
+<p>We need a number that says how close the predictions are to the true responses. In regression, the most common choice is the <dfn data-g="mse">mean squared error</dfn>: take each prediction error, square it, and average.</p>
+
+<div class="mathblock" data-sheet="Mean squared error"><div class="eqlabel">Mean squared error (ISLP 2.5)</div>
+\[\MSE = \frac{1}{n}\sum_{i=1}^{n}\big(y_i - \hat f(x_i)\big)^2\]
+<p class="say">Read: “MSE equals one over n times the sum, for i from 1 to n, of (y-i minus f-hat of x-i) squared.” \(\hat f(x_i)\) is the prediction for observation \(i\); \(y_i - \hat f(x_i)\) is its error (the <i>residual</i>). Small MSE: predictions close to the truth. Large MSE: at least some predictions far off.</p></div>
+
+<p>Why square the errors? Squaring makes every error positive, so a +3 and a −3 do not cancel out. It also punishes big errors much more than small ones: one error of 4 costs \(4^2 = 16\), while two errors of 2 (the same total size) cost only \(2^2 + 2^2 = 8\).</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>MSE of the TV line on five markets, by hand</b></div>
+<div class="given">The least-squares TV line from <a href="#isl2-1">ISLP 2.1</a>: \(\hat f(x) = 7.0326 + 0.047537\,x\). The first five markets have TV budgets \(x = 230.1, 44.5, 17.2, 151.5, 180.8\) and sales \(y = 22.1, 10.4, 9.3, 18.5, 12.9\).</div>
+<ol class="steps">
+<li><div>Predict market 1: \(\hat f(230.1) = 7.0326 + 0.047537 \times 230.1 = 7.0326 + 10.938 = \mathbf{17.971}\).<span class="why">Plug the budget into the line.</span></div></li>
+<li><div>Do the same for all five (table below), then the residual \(y_i - \hat f(x_i)\) and its square.
+<div class="tw"><table class="t"><thead><tr><th>\(i\)</th><th>\(x_i\) (TV)</th><th>\(y_i\)</th><th>\(\hat f(x_i)\)</th><th>\(y_i-\hat f(x_i)\)</th><th>\((y_i-\hat f(x_i))^2\)</th></tr></thead><tbody>
+<tr><td>1</td><td class="n">230.1</td><td class="n">22.1</td><td class="n">17.971</td><td class="n">4.129</td><td class="n">17.051</td></tr>
+<tr><td>2</td><td class="n">44.5</td><td class="n">10.4</td><td class="n">9.148</td><td class="n">1.252</td><td class="n">1.568</td></tr>
+<tr><td>3</td><td class="n">17.2</td><td class="n">9.3</td><td class="n">7.850</td><td class="n">1.450</td><td class="n">2.102</td></tr>
+<tr><td>4</td><td class="n">151.5</td><td class="n">18.5</td><td class="n">14.234</td><td class="n">4.266</td><td class="n">18.195</td></tr>
+<tr><td>5</td><td class="n">180.8</td><td class="n">12.9</td><td class="n">15.627</td><td class="n">−2.727</td><td class="n">7.438</td></tr>
+</tbody></table></div></div></li>
+<li><div>Sum of squares: \(17.051 + 1.568 + 2.102 + 18.195 + 7.438 = \mathbf{46.354}\).</div></li>
+<li><div>Divide by \(n = 5\): \(\MSE = 46.354 / 5 = \mathbf{9.271}\).<span class="why">The square root, \(\sqrt{9.271} \approx 3.04\), is in the units of sales: a “typical” error of about 3 thousand units.</span></div></li>
+</ol>
+<div class="result">\(\MSE \approx 9.27\) on these five markets</div></div>
+
+<p>The setup cell below loads the data and defines the helpers this lesson uses: three “true” functions like the ones behind the book's Figures 2.9–2.11, a function that simulates data from \(Y = f(X) + \varepsilon\), and a polynomial fitter. <code style="white-space:normal;overflow-wrap:anywhere">np.polynomial.legendre.legvander</code> builds the columns \(1, x, x^2, \dots\) in a numerically safer form (Legendre polynomials); you can think of it as “polynomial of degree \(d\)”.</p>
+
+<div class="py" id="c-isl2-2-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+ad = pd.read_csv('Advertising.csv', index_col=0)
+
+def f_curvy(x):  return 4 + 5.5 * np.sin(np.pi * x / 130) ** 2              # like Fig 2.9
+def f_linear(x): return 2.5 + 0.1 * x + 0.2 * np.sin(x / 15)                 # like Fig 2.10
+def f_wiggly(x): return 12 + 13 * np.exp(-x / 12) - 22 * (x / 100) ** 6 + 2 * np.exp(-((x - 50) / 12) ** 2)  # like Fig 2.11
+
+def simulate(f, n, rng, sigma=1.0):
+    x = rng.uniform(0, 100, n)
+    return x, f(x) + rng.normal(0, sigma, n)          # Y = f(X) + eps, Var(eps) = sigma^2
+
+def fit_poly(x, y, degree):
+    V = np.polynomial.legendre.legvander((x - 50) / 50, degree)
+    coef, *_ = np.linalg.lstsq(V, y, rcond=None)
+    return lambda z: np.polynomial.legendre.legvander((z - 50) / 50, degree) @ coef
+print("ready")
+</pre><div class="pynote"><code>fit_poly</code> returns a <i>function</i>: call it on any array of \(x\) values to get predictions. A function that returns a function is normal in Python; <code>lambda z: ...</code> builds the returned one (see <a href="#py2">Python II</a>).</div></div>
+
+<div class="predict" data-correct="2"><p>The next cell computes the MSE of the TV line on (a) the first five markets and (b) all 200 markets. Which is closer to the truth?</p><ol class="opts"><li>Both print exactly 9.27</li><li>(a) about 9.27, (b) a different number (about 10.5)</li><li>(b) must be smaller, because more data always means smaller error</li></ol>
+<div class="why">The MSE is an average over whichever observations you include. The five markets give 9.27; all 200 give about 10.51. More data does not shrink the average squared error of a fixed line; it only makes the average more reliable.</div></div>
+<div class="py" id="c-isl2-2-02"><pre class="src">
+b1, b0 = np.polyfit(ad['TV'], ad['sales'], 1)
+x, y = ad['TV'].to_numpy(), ad['sales'].to_numpy()
+pred = b0 + b1 * x
+print("first five markets:", round(np.mean((y[:5] - pred[:5]) ** 2), 3))
+print("all 200 markets   :", round(np.mean((y - pred) ** 2), 3))
+</pre><div class="pynote"><code>y[:5]</code> takes the first five entries (positions 0 to 4). The formula <code>np.mean((y - pred) ** 2)</code> is (2.5) in one line: subtract, square each entry, average.</div></div>
+
+<h3 id="isl2-2-test">Training MSE versus test MSE</h3>
+<p>The MSE above was computed on the same data used to fit the line. That is the <dfn data-g="training-mse">training MSE</dfn>. But we do not really care how well a method reproduces data it has already seen. The book's examples:</p>
+<ul>
+<li>A model trained on six months of stock returns: nobody cares how well it “predicts” last week's price. We care about tomorrow's.</li>
+<li>A diabetes-risk model trained on patients whose diagnosis we already know: we care about <i>future</i> patients.</li>
+</ul>
+<p>What we want is accuracy on previously unseen <dfn data-g="test-data">test data</dfn> \((x_0, y_0)\), observations not used to train the method. With many test observations we compute the <dfn data-g="test-mse">test MSE</dfn>:</p>
+<div class="mathblock" data-sheet="Test MSE"><div class="eqlabel">Test MSE (ISLP 2.6)</div>
+\[\text{Ave}\big(y_0 - \hat f(x_0)\big)^2\]
+<p class="say">Read: “the average, over the test observations, of (y-nought minus f-hat of x-nought) squared.” The subscript 0 marks a <i>test</i> point. Same recipe as (2.5), different data: data the method never saw.</p></div>
+<p>We want the method with the <b>lowest test MSE</b>, not the lowest training MSE. If we have a test set, we just compute (2.6). If we do not, it is tempting to pick the method with the lowest training MSE. <b>That is a trap</b>: many methods choose their parameters precisely to make the training MSE small, so their training MSE can be tiny while their test MSE is large.</p>
+
+<h4>Seeing the trap: Figures 2.9–2.11</h4>
+<p>The book simulates data from \(Y = f(X) + \varepsilon\) with a known \(f\) and fits three estimates of increasing <dfn data-g="flexibility">flexibility</dfn>: a straight line (orange), a moderately smooth spline (blue) and a very wiggly spline (green). Flexibility is measured by <dfn data-g="degrees-of-freedom">degrees of freedom</dfn>: roughly, the number of numbers the fit is free to choose. A straight line has 2 (intercept and slope); a polynomial of degree \(d\) has \(d+1\). The book uses smoothing splines (Chapter 7); we use polynomials, whose degree you can change with one number. The lesson is identical.</p>
+
+<figure class="book" data-fig="islp-2.9"><figcaption><b>Left:</b> data (circles) from the black true \(f\); a linear fit (orange), and two smoothing splines (blue, green). <b>Right:</b> training MSE (grey) and test MSE (red) against flexibility; the dashed line is \(\Var(\varepsilon) = 1\), the smallest test MSE any method can achieve. <b>Look at</b> the squares: green has the lowest training MSE but a high test MSE; blue has the lowest test MSE, close to the dashed line.</figcaption></figure>
+
+<div class="predict" data-correct="2"><p>We simulate 50 training points and 10,000 test points from the curvy \(f\) (with \(\Var(\varepsilon) = 1\)), then fit polynomials of degree 1, 4 and 15. Which degree has the lowest <b>test</b> MSE?</p><ol class="opts"><li>Degree 1: simplest is best</li><li>Degree 4</li><li>Degree 15: lowest training MSE</li></ol>
+<div class="why">Degree 4 (test MSE about 1.02, almost the floor of 1). Degree 1 cannot bend (test about 2.6); degree 15 has the smallest training MSE but chases noise, and its test MSE is more than double the best.</div></div>
+<div class="py" id="c-isl2-2-03"><pre class="src">
+rng = np.random.default_rng(1)
+x_tr, y_tr = simulate(f_curvy, 50, rng)          # training set
+x_te, y_te = simulate(f_curvy, 10_000, rng)      # a big test set
+rows = []
+for d in [1, 4, 15]:
+    fhat = fit_poly(x_tr, y_tr, d)
+    rows.append({'degree': d, 'parameters': d + 1,
+                 'train MSE': np.mean((y_tr - fhat(x_tr)) ** 2),
+                 'test MSE': np.mean((y_te - fhat(x_te)) ** 2)})
+pd.DataFrame(rows).round(3)
+</pre><div class="pynote"><b>Read the output:</b> training MSE falls with every step (2.36 → 0.66 → 0.45). Test MSE falls and then rises (2.59 → 1.02 → 2.24). Degree 15 is <b>overfitting</b>: a less flexible model (degree 4) would have given a smaller test MSE. Notice also that every training MSE is <i>below</i> 1 for the flexible fits, even though the noise variance is 1: the fit has partly memorised the noise.</div></div>
+
+<div class="py" id="c-isl2-2-04"><pre class="src">
+fig, axes = plt.subplots(2, 3, figsize=(12, 6.4))
+degrees = np.arange(1, 16)
+for j, (f, name) in enumerate([(f_curvy, 'curvy f (Fig 2.9)'), (f_linear, 'nearly linear f (Fig 2.10)'), (f_wiggly, 'very non-linear f (Fig 2.11)')]):
+    rng = np.random.default_rng(10 + j)
+    x_tr, y_tr = simulate(f, 50, rng); x_te, y_te = simulate(f, 10_000, rng)
+    tr, te = [], []
+    for d in degrees:
+        fh = fit_poly(x_tr, y_tr, d)
+        tr.append(np.mean((y_tr - fh(x_tr)) ** 2)); te.append(np.mean((y_te - fh(x_te)) ** 2))
+    best = degrees[np.argmin(te)]
+    grid = np.linspace(0, 100, 300)
+    axes[0, j].scatter(x_tr, y_tr, s=10, facecolors='none', edgecolors='k')
+    axes[0, j].plot(grid, f(grid), 'k', lw=2); axes[0, j].plot(grid, fit_poly(x_tr, y_tr, 1)(grid), 'C3')
+    axes[0, j].plot(grid, fit_poly(x_tr, y_tr, best)(grid), 'C0'); axes[0, j].plot(grid, fit_poly(x_tr, y_tr, 15)(grid), 'C2')
+    axes[0, j].set_title(name); axes[0, j].set_ylim(y_tr.min() - 2, y_tr.max() + 2)   # keep wild fits from squashing the plot
+    axes[1, j].plot(degrees + 1, tr, color='grey', label='training MSE'); axes[1, j].plot(degrees + 1, te, color='C1', label='test MSE')
+    axes[1, j].axhline(1, ls='--', color='k'); axes[1, j].set_ylim(0, max(4, min(te) * 4)); axes[1, j].set_xlabel('flexibility (parameters)')
+    print(f"{name:28s} best degree = {best}, test MSE there = {min(te):.3f}")
+axes[1, 0].legend(); fig.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> top row, black = true \(f\), red = straight line, blue = best degree, green = degree 15. Bottom row: grey training MSE always falls; orange test MSE is U-shaped and never goes below the dashed line at 1. The <i>position</i> of the bottom of the U differs: low for the nearly linear \(f\), higher for the wiggly one. That is exactly the message of Figures 2.9–2.11. <code>np.argmin(te)</code> gives the position of the smallest test MSE.</div></div>
+
+<figure class="book" data-fig="islp-2.10"><figcaption>The true \(f\) is close to linear. <b>Look at</b> the right panel: the test MSE barely falls before rising, so the inflexible orange line is already nearly optimal and the flexible green fit is clearly worse.</figcaption></figure>
+<figure class="book" data-fig="islp-2.11"><figcaption>The true \(f\) is far from linear. <b>Look at</b> the right panel: both MSE curves drop steeply at first (the line is hopeless here, test MSE near 19), and the test MSE rises only slowly at high flexibility.</figcaption></figure>
+
+<div class="widget" data-w="isl2-2-flex" data-title="Flexibility, training MSE and test MSE" data-args='{"seed":7}'><div class="wn">Drag the degree from 1 to 15 and watch both panels. The grey training curve only ever goes down. The red test curve goes down, bottoms out, then rises. Switch the true \(f\): for “nearly linear” the bottom of the U sits at degree 1–2; for “very non-linear” it moves right. Press “new training set” at degree 14: the fit changes wildly between draws (that is <b>variance</b>, next section).</div></div>
+
+<div class="callout key"><p><b>The fundamental pattern (true for every data set and every method):</b> as flexibility increases, the <b>training</b> MSE decreases steadily, but the <b>test</b> MSE is U-shaped. Small training MSE with large test MSE is <dfn data-g="overfit2">overfitting</dfn>: the method has found patterns that are only random chance in this training set. Strictly, overfitting means “a less flexible model would have had a smaller test MSE”. We almost always expect training MSE to be below test MSE, overfitting or not, because methods fit the training data on purpose.</p></div>
+
+<p>In practice we usually have no test set, so the test MSE must be <i>estimated</i> from the training data. The main tool is <b>cross-validation</b>, Chapter 5 (<a href="#isl5-1">ISLP 5.1</a>).</p>
+
+<h3 id="isl2-2-bv">The bias–variance trade-off</h3>
+<p>Why is the test MSE U-shaped? Because two different things go wrong, and flexibility pushes them in opposite directions.</p>
+<ul>
+<li><dfn data-g="variance-method">Variance</dfn> is how much \(\hat f\) would change if we fitted it on a different training set. Different training data give a different \(\hat f\); ideally it should not move much. Flexible methods follow every point, so moving one point can change \(\hat f\) a lot: <b>high variance</b>. The green wiggly curve in Figure 2.9 has high variance; the orange line has low variance.</li>
+<li><dfn data-g="bias">Bias</dfn> is the error from approximating a complicated real problem with a simpler model. Linear regression assumes a straight line; if the truth curves, the line is wrong <i>on average</i> however much data we have. Flexible methods have <b>low bias</b>.</li>
+</ul>
+
+<div class="mathblock" data-sheet="Bias–variance decomposition"><div class="eqlabel">The bias–variance decomposition (ISLP 2.7)</div>
+\[\E\big(y_0 - \hat f(x_0)\big)^2 = \Var\big(\hat f(x_0)\big) + \big[\text{Bias}\big(\hat f(x_0)\big)\big]^2 + \Var(\varepsilon)\]
+<p class="say">Read: “The expected test MSE at x-nought equals the variance of f-hat at x-nought, plus the squared bias of f-hat at x-nought, plus the variance of epsilon.” Here “expected” means averaged over many training sets (each giving its own \(\hat f\)) and over the noise in \(y_0\). The overall expected test MSE averages this over all test points \(x_0\).</p></div>
+
+<div class="symbols"><div class="row h"><span>Symbol</span><span>Say it as / meaning</span><span>Tiny example</span></div>
+<div class="row"><span class="s">\(\E\,\hat f(x_0)\)</span><span>“the expected value of f-hat at x-nought”: the average prediction at \(x_0\) over many training sets</span><span class="eg">fits gave 5, 7, 6, 6: average 6</span></div>
+<div class="row"><span class="s">\(\text{Bias}(\hat f(x_0))\)</span><span>\(\E\,\hat f(x_0) - f(x_0)\): how far the <i>average</i> fit is from the truth</span><span class="eg">\(6 - 5 = 1\)</span></div>
+<div class="row"><span class="s">\(\Var(\hat f(x_0))\)</span><span>\(\E\big[(\hat f(x_0) - \E\hat f(x_0))^2\big]\): how much the fit wobbles between training sets</span><span class="eg">\((1+1+0+0)/4 = 0.5\)</span></div>
+</div>
+
+<p>The book says the proof is beyond its scope. It needs nothing more than the three expectation rules from <a href="#isl2-1">ISLP 2.1</a>, so here it is.</p>
+
+<div class="worked"><div class="wt">Derivation · <b>why (2.7) holds</b></div>
+<div class="given">At a fixed test point \(x_0\): \(y_0 = f(x_0) + \varepsilon_0\), with \(\E\varepsilon_0 = 0\). \(\hat f\) is random because the training set is random, and the new noise \(\varepsilon_0\) is independent of the training set. Write \(m = \E\,\hat f(x_0)\) and drop the “\((x_0)\)” to save ink: \(f, \hat f\).</div>
+<ol class="steps">
+<li><div>Add and subtract \(m\) inside the error: \[y_0 - \hat f = \underbrace{(f - m)}_{B} + \underbrace{(m - \hat f)}_{D} + \varepsilon_0.\]<span class="why">\(B\) is a fixed number (the bias, with a minus sign); \(D\) is the random wobble of this fit around its average.</span></div></li>
+<li><div>Square, as \((B + D + \varepsilon_0)^2\): \[B^2 + D^2 + \varepsilon_0^2 + 2BD + 2B\varepsilon_0 + 2D\varepsilon_0.\]</div></li>
+<li><div>Take expectations term by term. \(\E B^2 = B^2\) (constant). \(\E D^2 = \E(\hat f - m)^2 = \Var(\hat f)\). \(\E\varepsilon_0^2 = \Var(\varepsilon)\).</div></li>
+<li><div>Cross terms: \(\E(2BD) = 2B\,\E(m - \hat f) = 2B(m - m) = 0\). \(\E(2B\varepsilon_0) = 2B\cdot 0 = 0\). \(\E(2D\varepsilon_0) = 2\,\E(D)\,\E(\varepsilon_0) = 0\), because \(D\) and \(\varepsilon_0\) are independent.<span class="why">Independent quantities: the expectation of a product is the product of expectations.</span></div></li>
+<li><div>Collect: \(\E(y_0 - \hat f)^2 = B^2 + \Var(\hat f) + \Var(\varepsilon)\), and \(B^2 = (f - m)^2 = (m - f)^2 = [\text{Bias}(\hat f)]^2\).</div></li>
+</ol>
+<div class="result">\(\E(y_0-\hat f(x_0))^2 = \Var(\hat f(x_0)) + [\text{Bias}(\hat f(x_0))]^2 + \Var(\varepsilon)\)</div></div>
+
+<p>Every term on the right is \(\ge 0\). So the expected test MSE can never fall below \(\Var(\varepsilon)\), the irreducible error. To make the test error small we need a method with <b>both</b> low variance and low bias.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>bias and variance from four training sets</b></div>
+<div class="given">The truth at \(x_0\) is \(f(x_0) = 5\), and \(\Var(\varepsilon) = 1\). We fit the same method on four different training sets and get \(\hat f(x_0) = 5, 7, 6, 6\).</div>
+<ol class="steps">
+<li><div>Average fit: \(m = \frac{5 + 7 + 6 + 6}{4} = \frac{24}{4} = \mathbf{6}\).</div></li>
+<li><div>Bias: \(m - f(x_0) = 6 - 5 = 1\), so \(\text{Bias}^2 = \mathbf{1}\).</div></li>
+<li><div>Variance: deviations from \(m\) are \(-1, 1, 0, 0\); squared \(1, 1, 0, 0\); average \(\frac{2}{4} = \mathbf{0.5}\).</div></li>
+<li><div>Expected test MSE by (2.7): \(0.5 + 1 + 1 = \mathbf{2.5}\).</div></li>
+<li><div>Check directly: the squared gaps to the truth, \((\hat f - f)^2\), are \(0, 4, 1, 1\), average \(1.5\) (that is bias² + variance). The noise adds \(\Var(\varepsilon) = 1\) on top: \(2.5\). ✓</div></li>
+</ol>
+<div class="result">variance 0.5 + bias² 1 + irreducible 1 = 2.5</div></div>
+
+<div class="py" id="c-isl2-2-05"><pre class="src">
+fits = np.array([5.0, 7.0, 6.0, 6.0]); f_x0 = 5.0; var_eps = 1.0
+bias2 = (fits.mean() - f_x0) ** 2
+var = fits.var()                       # divides by n, i.e. the average squared deviation
+print("bias^2 =", bias2, " variance =", var, " expected test MSE =", bias2 + var + var_eps)
+print("check: mean (fhat - f)^2 + Var(eps) =", np.mean((fits - f_x0) ** 2) + var_eps)
+</pre><div class="pynote"><code>fits.var()</code> divides by \(n\) (here 4), which matches the definition of variance as an average. (Your statistics lessons sometimes divide by \(n-1\) for a sample estimate; in the <a href="#isl2-lab">lab</a> you will see the <code>ddof</code> argument that switches between them.)</div></div>
+
+<p>Now let us do what the definition says: draw <b>many</b> training sets, fit each one, and measure bias² and variance directly, for each degree. This is exactly how the book made Figure 2.12.</p>
+
+<div class="predict" data-correct="3"><p>As the polynomial degree rises from 1 to 12, what happens to the squared bias and to the variance?</p><ol class="opts"><li>Both fall</li><li>Bias² rises, variance falls</li><li>Bias² falls, variance rises</li><li>Both stay roughly constant</li></ol>
+<div class="why">More flexibility means the <i>average</i> fit can follow the true curve (bias² falls, from about 1.5 to almost 0), but each individual fit follows its own training noise more (variance rises, slowly at first and then explosively). The test MSE is their sum plus 1.</div></div>
+<div class="py" id="c-isl2-2-06"><pre class="src">
+rng = np.random.default_rng(0)
+x0 = np.linspace(5, 95, 37)                     # test points where we measure
+rows = []
+for d in [1, 2, 3, 4, 6, 8, 10, 12]:
+    preds = np.array([fit_poly(*simulate(f_curvy, 50, rng), d)(x0) for _ in range(300)])   # 300 training sets
+    bias2 = np.mean((preds.mean(axis=0) - f_curvy(x0)) ** 2)   # average over x0 of squared bias
+    var = np.mean(preds.var(axis=0))                            # average over x0 of variance
+    rows.append({'degree': d, 'bias^2': bias2, 'variance': var, 'Var(eps)': 1.0, 'expected test MSE': bias2 + var + 1})
+bv = pd.DataFrame(rows).round(3); bv
+</pre><div class="pynote"><b>Read the output:</b> <code>preds</code> has one row per training set and one column per test point. <code>preds.mean(axis=0)</code> averages down the rows: the average fit at each \(x_0\). <code>preds.var(axis=0)</code> is the wobble at each \(x_0\). Bias² collapses between degree 1 and 3; variance creeps up and then explodes. The total is smallest at degree 3–4. <code>simulate(...)</code> returns two arrays; <code>*</code> unpacks them into the two arguments <code>x, y</code> of <code>fit_poly</code>.</div></div>
+
+<div class="py" id="c-isl2-2-07"><pre class="src">
+fig, ax = plt.subplots(figsize=(6, 3.6))
+ax.plot(bv['degree'], bv['bias^2'], 'o-', color='C5', label='squared bias')
+ax.plot(bv['degree'], bv['variance'], 'o-', color='C3', label='variance')
+ax.plot(bv['degree'], bv['expected test MSE'], 'o-', color='C1', label='test MSE')
+ax.axhline(1, ls='--', color='k', label='Var(eps)')
+ax.set_ylim(0, 3); ax.set_xlabel('degree'); ax.legend();
+</pre><div class="pynote">Our version of the left panel of Figure 2.12: bias² (teal) falling, variance (red) rising, their sum plus the dashed \(\Var(\varepsilon)\) giving the U-shaped test MSE.</div></div>
+
+<figure class="book" data-fig="islp-2.12"><figcaption>Bias² (blue), variance (orange), \(\Var(\varepsilon)\) (dashed) and test MSE (red) for the three data sets of Figures 2.9–2.11. <b>Look at</b> how the best flexibility (dotted vertical line) moves: <b>left panel</b>, bias drops fast so the minimum comes early; <b>middle</b> (nearly linear truth), bias is tiny from the start, so variance dominates and the minimum is at the far left; <b>right</b> (very non-linear truth), bias falls dramatically and variance barely grows, so a flexible fit is best.</figcaption></figure>
+
+<div class="widget" data-w="isl2-2-bv" data-title="Bias and variance: fit 40 training sets at once" data-args='{"seed":5}'><div class="wn">Each faint curve is a fit to a different training set; the thick orange curve is their average; black is the true \(f\). At degree 1 the faint curves agree with each other (low variance) but their average misses the truth (high bias). At degree 12 the average sits on the truth (low bias) but the faint curves fan out wildly, especially at the edges (high variance). The bars below show bias², variance and \(\Var(\varepsilon)\) adding up to the test MSE.</div></div>
+
+<div class="callout analogy"><p><b>Darts.</b> Bias is how far the centre of your cluster of darts is from the bullseye. Variance is how spread out the cluster is. A simple model throws a tight cluster in the wrong place; a very flexible model throws a cluster centred on the bullseye but scattered all over the board. You want a tight cluster on the bullseye.</p></div>
+
+<div class="callout ece"><p><b>You have met this in estimation theory.</b> For any estimator \(\hat\theta\) of a parameter \(\theta\) (a channel gain, a frequency offset), \(\E(\hat\theta - \theta)^2 = \Var(\hat\theta) + \text{Bias}(\hat\theta)^2\). An unbiased estimator is not automatically best: a slightly biased one with much smaller variance can have smaller mean squared error. (2.7) is the same identity applied to the function value \(\hat f(x_0)\), plus the noise in the new measurement.</p></div>
+
+<p>It is called a <dfn data-g="bv-tradeoff">trade-off</dfn> because getting one of the two small is easy: a curve through every training point has extremely low bias but huge variance; a horizontal line has zero variance but huge bias. The challenge is a method where both are low. In real life \(f\) is unknown, so we cannot compute bias and variance; but the trade-off still guides every choice. If the true \(f\) is linear, linear regression has no bias and is very hard to beat; if \(f\) is very non-linear and we have plenty of data, a flexible method can win (Figure 2.11).</p>
+
+<div class="callout exam"><p><b>Interview classic:</b> “Explain the bias–variance trade-off.” Say the formula (2.7), define both terms in one sentence each, say which way each moves with flexibility, sketch the U-shaped test error, and give a fix for each side: high variance → simpler model, more data, regularisation (ridge/lasso, Chapter 6); high bias → more flexible model or better features.</p></div>
+
+<h3 id="isl2-2-class">The classification setting: the error rate</h3>
+<p>When the response is qualitative, squared error makes no sense (“blue minus orange”?). Instead we count mistakes. The <dfn data-g="error-rate">training error rate</dfn> is the fraction of training observations classified wrongly:</p>
+<div class="mathblock" data-sheet="Error rate"><div class="eqlabel">Training error rate (ISLP 2.8)</div>
+\[\frac{1}{n}\sum_{i=1}^{n} I(y_i \ne \hat y_i)\]
+<p class="say">Read: “one over n times the sum of I of y-i not-equal-to y-i-hat.” \(\hat y_i\) is the predicted class. \(I(\cdot)\) is an <dfn data-g="indicator">indicator variable</dfn>: it equals 1 when the statement inside is true (a mistake) and 0 when it is false (correct). Adding up the 1s counts the mistakes; dividing by \(n\) gives the fraction.</p></div>
+<p>The <b>test error rate</b> is the same thing on test observations: \(\text{Ave}\big(I(y_0 \ne \hat y_0)\big)\) (ISLP 2.9). A good classifier is one whose test error rate is small.</p>
+
+<div class="worked"><div class="wt">Worked example · <b>an error rate by hand</b></div>
+<div class="given">True classes \(y = (A, A, B, B, A, B, A, B)\), predictions \(\hat y = (A, B, B, B, A, A, A, B)\).</div>
+<ol class="steps">
+<li><div>Compare position by position: \(I(y_i \ne \hat y_i) = 0, \mathbf{1}, 0, 0, 0, \mathbf{1}, 0, 0\).<span class="why">Positions 2 and 6 disagree.</span></div></li>
+<li><div>Sum: \(2\). Divide by \(n = 8\): \(2/8 = \mathbf{0.25}\).</div></li>
+</ol><div class="result">error rate = 0.25 (25% of the observations are misclassified); accuracy = 0.75</div></div>
+
+<div class="py" id="c-isl2-2-08"><pre class="src">
+y_true = np.array(['A', 'A', 'B', 'B', 'A', 'B', 'A', 'B'])
+y_hat  = np.array(['A', 'B', 'B', 'B', 'A', 'A', 'A', 'B'])
+mistakes = (y_true != y_hat)          # a Boolean array: True where they differ
+print(mistakes.astype(int))           # the indicator I(y != yhat) as 0/1
+print("error rate:", mistakes.mean())
+</pre><div class="pynote">Comparing two arrays with <code>!=</code> gives an array of <code>True</code>/<code>False</code>. NumPy treats <code>True</code> as 1 and <code>False</code> as 0, so <code>.mean()</code> of a Boolean array is the fraction of <code>True</code>s: exactly (2.8).</div></div>
+
+<h3 id="isl2-2-bayes">The Bayes classifier and the Bayes error rate</h3>
+<p>Which classifier has the smallest possible test error rate? One can prove (the book skips the proof) that it is the classifier that assigns each observation to its <b>most likely class</b>, given its predictor values:</p>
+<div class="mathblock" data-sheet="Bayes classifier"><div class="eqlabel">The Bayes classifier (ISLP 2.10)</div>
+\[\text{assign } x_0 \text{ to the class } j \text{ for which } \Pr(Y = j \mid X = x_0) \text{ is largest}\]
+<p class="say">Read: “the probability that Y equals j, given that X equals x-nought.” The bar \(\mid\) means “given”. This is a <dfn data-g="conditional-probability">conditional probability</dfn> (see <a href="#m-prob">Probability</a>). With two classes, the <dfn data-g="bayes-classifier">Bayes classifier</dfn> predicts class 1 if \(\Pr(Y = 1 \mid X = x_0) &gt; 0.5\), and class 2 otherwise.</p></div>
+
+<p>Figure 2.13 shows a simulated two-class problem in two dimensions. Because the data are simulated, the true conditional probabilities are known everywhere. The orange background marks where \(\Pr(Y = \text{orange} \mid X) &gt; 50\%\), the blue background where it is below. The purple dashed line, where the probability is exactly 50%, is the <dfn data-g="bayes-boundary">Bayes decision boundary</dfn>.</p>
+<figure class="book" data-fig="islp-2.13"><figcaption>100 orange and 100 blue training observations, the Bayes decision boundary (purple dashed) and the regions it creates. <b>Look at</b> the orange circles on the blue side and blue circles on the orange side: even the best possible classifier gets these wrong, because the classes genuinely overlap.</figcaption></figure>
+
+<p>At a point \(x_0\), the Bayes classifier picks the class with probability \(\max_j \Pr(Y = j \mid X = x_0)\), so it is wrong with probability \(1 - \max_j \Pr(Y = j \mid X = x_0)\). Averaging over all \(x\):</p>
+<div class="mathblock" data-sheet="Bayes error rate"><div class="eqlabel">Bayes error rate (ISLP 2.11)</div>
+\[1 - \E\Big(\max_j \Pr(Y = j \mid X)\Big)\]
+<p class="say">Read: “one minus the expected value of the largest class probability.” \(\max_j\) means “the largest over the classes \(j\)”. The expectation averages over the values of \(X\). This is the <dfn data-g="bayes-error">Bayes error rate</dfn>, the lowest test error rate any classifier can achieve: the classification version of the irreducible error.</p></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>a Bayes error rate you can compute by hand</b></div>
+<div class="given">\(X\) takes only three values: \(a\) (probability 0.5), \(b\) (0.3), \(c\) (0.2). The chance of orange at each: \(\Pr(\text{orange}\mid a) = 0.9\), \(\Pr(\text{orange}\mid b) = 0.5\), \(\Pr(\text{orange}\mid c) = 0.2\).</div>
+<ol class="steps">
+<li><div>Bayes decisions: at \(a\), orange (0.9 &gt; 0.5); at \(b\), a tie (either class, error 0.5 regardless); at \(c\), blue (\(\Pr(\text{blue}\mid c) = 0.8\)).</div></li>
+<li><div>Largest class probability at each value: \(0.9,\ 0.5,\ 0.8\).</div></li>
+<li><div>Average over \(X\): \(\E\max = 0.5 \times 0.9 + 0.3 \times 0.5 + 0.2 \times 0.8 = 0.45 + 0.15 + 0.16 = \mathbf{0.76}\).</div></li>
+<li><div>Bayes error rate: \(1 - 0.76 = \mathbf{0.24}\).<span class="why">Even knowing the true probabilities, we are wrong 24% of the time, because at each \(x\) the less likely class still happens sometimes.</span></div></li>
+</ol><div class="result">Bayes error rate = 0.24</div></div>
+
+<p>For the book's simulated data the Bayes error rate is about 0.13 (the text quotes 0.133 on p. 36 and 0.1304 on p. 37). It is above zero because the classes overlap in the population, so \(\max_j \Pr(Y = j \mid X = x_0) &lt; 1\) for some \(x_0\).</p>
+
+<div class="callout ece"><p><b>This is binary detection.</b> Suppose class 0 gives \(X \sim N(0, 1)\) and class 1 gives \(X \sim N(2, 1)\), equally likely. That is on–off keying with amplitude 2 in unit-variance Gaussian noise. The Bayes classifier is the maximum a posteriori detector: threshold at the midpoint, 1. Its error is \(Q(d/2\sigma) = Q(1) \approx 0.1587\), the familiar \(Q\)-function. The next cell checks it.</p></div>
+
+<div class="py" id="c-isl2-2-09"><pre class="src">
+from scipy.stats import norm
+rng = np.random.default_rng(3)
+n = 200_000
+y = rng.integers(0, 2, n)                    # class 0 or 1, equally likely
+x = rng.normal(2.0 * y, 1.0)                 # class 0 ~ N(0,1), class 1 ~ N(2,1)
+p1 = norm.pdf(x, 2, 1) / (norm.pdf(x, 0, 1) + norm.pdf(x, 2, 1))   # Pr(Y=1 | X=x)
+y_bayes = (p1 &gt; 0.5).astype(int)            # the Bayes classifier
+print("simulated Bayes error :", np.mean(y_bayes != y).round(4))
+print("formula 1 - E max_j   :", np.mean(1 - np.maximum(p1, 1 - p1)).round(4))
+print("Q(1) = Phi(-1)        :", norm.cdf(-1).round(4))
+</pre><div class="pynote">Three routes to the same number, about 0.159: counting the Bayes classifier's mistakes, averaging \(1 - \max_j\Pr(Y = j\mid X)\) as in (2.11), and the closed form \(\Phi(-1)\). <code>norm.pdf</code> is the normal density; the probability of class 1 given \(x\) is its density divided by the sum of both (Bayes' rule with equal priors).</div></div>
+
+<h3 id="isl2-2-knn">K-nearest neighbours</h3>
+<p>For real data we do not know \(\Pr(Y \mid X)\), so the Bayes classifier is an unattainable gold standard. Many methods estimate \(\Pr(Y \mid X)\) from the data and then pick the most probable class. The simplest is <dfn data-g="knn">K-nearest neighbours</dfn> (KNN). Given a positive integer \(K\) and a test point \(x_0\):</p>
+<ol>
+<li>find the \(K\) training points closest to \(x_0\); call this set \(\mathcal{N}_0\) (read “N-nought”, the neighbourhood);</li>
+<li>estimate the probability of each class as the fraction of those neighbours in that class;</li>
+<li>predict the class with the largest estimated probability (a majority vote).</li>
+</ol>
+<div class="mathblock" data-sheet="KNN class probability"><div class="eqlabel">KNN estimate of the class probability (ISLP 2.12)</div>
+\[\Pr(Y = j \mid X = x_0) = \frac{1}{K}\sum_{i \in \mathcal{N}_0} I(y_i = j)\]
+<p class="say">Read: “the probability that Y is j, given X is x-nought, is one over K times the number of neighbours in \(\mathcal{N}_0\) whose class is j.” The sum over \(i \in \mathcal{N}_0\) (“i in N-nought”) runs over the \(K\) neighbours only. Example: \(K = 3\) neighbours with classes blue, blue, orange give \(\Pr(\text{blue}) = 2/3\), \(\Pr(\text{orange}) = 1/3\).</p></div>
+<p>“Closest” means the ordinary <b>Euclidean distance</b>: for two points \(a = (a_1, a_2)\) and \(b = (b_1, b_2)\), \(\|a - b\| = \sqrt{(a_1-b_1)^2 + (a_2-b_2)^2}\), the straight-line distance (with \(p\) predictors, sum \(p\) squares).</p>
+
+<figure class="book" data-fig="islp-2.14"><figcaption><b>Left:</b> six blue and six orange training points and a test point (black cross). With \(K = 3\) the circle holds two blue and one orange point, so the estimated probabilities are 2/3 blue, 1/3 orange and the cross is classified blue. <b>Right:</b> the same rule applied at every location gives the KNN decision boundary (black).</figcaption></figure>
+
+<p>Let us do a case like Figure 2.14 with every number. Coordinates are whole numbers so the arithmetic stays clean.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>KNN by hand with \(K = 1, 3, 5\)</b></div>
+<div class="given">Test point \(x_0 = (3, 7)\). Blue training points: B1 (1, 7), B2 (4, 5), B3 (1, 4), B4 (3, 1), B5 (8, 9), B6 (9, 7). Orange: O1 (3, 8), O2 (5, 9), O3 (7, 8), O4 (8, 4), O5 (6, 3), O6 (7, 2).</div>
+<ol class="steps">
+<li><div>Squared distance for each point, \((a_1 - 3)^2 + (a_2 - 7)^2\). For B1: \((1-3)^2 + (7-7)^2 = 4 + 0 = 4\). For O1: \((3-3)^2 + (8-7)^2 = 0 + 1 = 1\). All twelve:
+<div class="tw"><table class="t"><thead><tr><th>point</th><th>class</th><th>\(\Delta_1^2\)</th><th>\(\Delta_2^2\)</th><th>squared distance</th><th>distance</th><th>rank</th></tr></thead><tbody>
+<tr><td>O1 (3, 8)</td><td>orange</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td class="n">1.000</td><td class="n"><span class="hlc">1</span></td></tr>
+<tr><td>B1 (1, 7)</td><td>blue</td><td class="n">4</td><td class="n">0</td><td class="n">4</td><td class="n">2.000</td><td class="n"><span class="hlb">2</span></td></tr>
+<tr><td>B2 (4, 5)</td><td>blue</td><td class="n">1</td><td class="n">4</td><td class="n">5</td><td class="n">2.236</td><td class="n"><span class="hlb">3</span></td></tr>
+<tr><td>O2 (5, 9)</td><td>orange</td><td class="n">4</td><td class="n">4</td><td class="n">8</td><td class="n">2.828</td><td class="n"><span class="hlg">4</span></td></tr>
+<tr><td>B3 (1, 4)</td><td>blue</td><td class="n">4</td><td class="n">9</td><td class="n">13</td><td class="n">3.606</td><td class="n"><span class="hlg">5</span></td></tr>
+<tr><td>O3 (7, 8)</td><td>orange</td><td class="n">16</td><td class="n">1</td><td class="n">17</td><td class="n">4.123</td><td class="n">6</td></tr>
+<tr><td>O5 (6, 3)</td><td>orange</td><td class="n">9</td><td class="n">16</td><td class="n">25</td><td class="n">5.000</td><td class="n">7</td></tr>
+<tr><td>B5 (8, 9)</td><td>blue</td><td class="n">25</td><td class="n">4</td><td class="n">29</td><td class="n">5.385</td><td class="n">8</td></tr>
+<tr><td>O4 (8, 4)</td><td>orange</td><td class="n">25</td><td class="n">9</td><td class="n">34</td><td class="n">5.831</td><td class="n">9</td></tr>
+<tr><td>B4 (3, 1)</td><td>blue</td><td class="n">0</td><td class="n">36</td><td class="n">36</td><td class="n">6.000</td><td class="n">10</td></tr>
+<tr><td>B6 (9, 7)</td><td>blue</td><td class="n">36</td><td class="n">0</td><td class="n">36</td><td class="n">6.000</td><td class="n">11</td></tr>
+<tr><td>O6 (7, 2)</td><td>orange</td><td class="n">16</td><td class="n">25</td><td class="n">41</td><td class="n">6.403</td><td class="n">12</td></tr>
+</tbody></table></div><span class="why">We only need the ranking, so we never actually need the square roots: the order of squared distances is the order of distances.</span></div></li>
+<li><div>\(K = 1\): the nearest point is <span class="hlc">O1</span>. \(\Pr(\text{orange}) = 1/1 = 1\). Prediction: <b>orange</b>.</div></li>
+<li><div>\(K = 3\): neighbours <span class="hlc">O1</span>, <span class="hlb">B1</span>, <span class="hlb">B2</span>. \(\Pr(\text{blue}) = 2/3 \approx 0.67\), \(\Pr(\text{orange}) = 1/3\). Prediction: <b>blue</b>.</div></li>
+<li><div>\(K = 5\): add <span class="hlg">O2</span> and <span class="hlg">B3</span>. Blue: B1, B2, B3 = 3; orange: O1, O2 = 2. \(\Pr(\text{blue}) = 3/5 = 0.6\). Prediction: <b>blue</b>.</div></li>
+<li><div>\(K = 4\) would give 2 blue and 2 orange: a <b>tie</b>. That is why people prefer odd \(K\) with two classes. (scikit-learn breaks ties by picking the class that comes first in sorted order.)</div></li>
+</ol><div class="result">K = 1: orange · K = 3: blue (2/3) · K = 5: blue (3/5)</div></div>
+
+<div class="widget" data-w="isl2-2-knn3" data-title="Drag the test point: KNN with a circle" data-args='{}'><div class="wn">Drag the black cross. The circle grows until it holds \(K\) training points, and the readout shows the vote. Start at \((3, 7)\) with \(K = 1\) (orange), then switch to \(K = 3\) (blue): the same point changes class. Find a place where \(K = 1\) and \(K = 5\) disagree.</div></div>
+
+<div class="predict" data-correct="2"><p>The next cell sorts the twelve points by distance and votes. What does it predict for \(K = 3\)?</p><ol class="opts"><li>orange</li><li>blue, with probability 2/3</li><li>a tie</li></ol>
+<div class="why">The three nearest are O1, B1, B2: two blue, one orange. Exactly the worked example.</div></div>
+<div class="py" id="c-isl2-2-10"><pre class="src">
+pts = pd.DataFrame({'x1': [1, 4, 1, 3, 8, 9, 3, 5, 7, 8, 6, 7],
+                    'x2': [7, 5, 4, 1, 9, 7, 8, 9, 8, 4, 3, 2],
+                    'cls': ['blue'] * 6 + ['orange'] * 6},
+                   index=['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'O1', 'O2', 'O3', 'O4', 'O5', 'O6'])
+x0 = np.array([3, 7])
+pts['dist'] = np.sqrt((pts['x1'] - x0[0]) ** 2 + (pts['x2'] - x0[1]) ** 2)
+ranked = pts.sort_values('dist', kind='stable')
+for K in [1, 3, 5]:
+    votes = ranked['cls'].iloc[:K].value_counts()
+    print(f"K={K}: neighbours {list(ranked.index[:K])} -> {votes.idxmax()} ({votes.max()}/{K})")
+ranked.head(5).round(3)
+</pre><div class="pynote"><code>sort_values('dist')</code> orders the rows from nearest to farthest; <code>.iloc[:K]</code> keeps the first \(K\) rows; <code>.value_counts()</code> counts each class; <code>.idxmax()</code> gives the class with the most votes (see <a href="#pd1">pandas</a>).</div></div>
+
+<div class="py" id="c-isl2-2-11"><pre class="src">
+from sklearn.neighbors import KNeighborsClassifier
+Xp, yp = pts[['x1', 'x2']].to_numpy(), pts['cls'].to_numpy()
+for K in [1, 3, 5]:
+    knn = KNeighborsClassifier(n_neighbors=K).fit(Xp, yp)
+    print(f"K={K}: sklearn says {knn.predict([x0])[0]}, probabilities {knn.predict_proba([x0])[0].round(3)} for {knn.classes_}")
+</pre><div class="pynote">scikit-learn agrees with our hand calculation. Every scikit-learn model follows the same pattern: create it with its settings (<code>n_neighbors=K</code>), <code>.fit(X, y)</code> on training data, then <code>.predict(...)</code> on new points. <code>predict_proba</code> returns (2.12) itself: the fractions of neighbours in each class.</div></div>
+
+<h4>KNN on the book's kind of data: the effect of \(K\)</h4>
+<p>KNN is very simple, yet it can come surprisingly close to the Bayes classifier. In the book, KNN with \(K = 10\) has test error rate 0.1363 against the Bayes error rate 0.1304 (Figure 2.15). The choice of \(K\) matters enormously:</p>
+<ul>
+<li><b>\(K = 1\)</b>: the boundary is extremely flexible. It wraps around individual points and finds patterns that are not in the Bayes boundary. <b>Low bias, very high variance.</b> The training error is exactly 0 (every training point is its own nearest neighbour), but the test error is high (0.1695 in the book).</li>
+<li><b>\(K = 100\)</b>: the boundary becomes nearly straight. <b>Low variance, high bias.</b> Test error 0.1925 in the book.</li>
+<li>Somewhere in between (about \(K = 10\) in the book) the test error is smallest.</li>
+</ul>
+<figure class="book" data-fig="islp-2.15"><figcaption>KNN with \(K = 10\) (black) on the data of Figure 2.13, with the Bayes boundary (purple dashed). <b>Look at</b> how closely the two boundaries track each other, even though KNN never knew the true probabilities.</figcaption></figure>
+<figure class="book" data-fig="islp-2.16"><figcaption><b>Left, \(K = 1\):</b> a jagged boundary with islands around single points: overfitting. <b>Right, \(K = 100\):</b> an almost straight line that ignores the bend in the Bayes boundary: underfitting. Neither predicts well.</figcaption></figure>
+
+<p>We now simulate data of the same kind as the book's (two classes, each a mixture of 10 small Gaussian blobs, like the example in the book's big sibling, ESL), so we also know the true probabilities and the Bayes error rate.</p>
+
+<div class="py" id="c-isl2-2-12"><pre class="src">
+rng = np.random.default_rng(2)
+centres = {0: rng.normal([1, 0], 1, (10, 2)), 1: rng.normal([0, 1], 1, (10, 2))}   # 0 = blue, 1 = orange
+def sample_mix(n):
+    y = np.repeat([0, 1], n // 2)
+    X = np.array([centres[c][rng.integers(10)] + rng.normal(0, np.sqrt(0.2), 2) for c in y])
+    return X, y
+def p_orange(X):                       # the TRUE Pr(Y = orange | X), known because we simulated
+    dens = lambda C: np.exp(-((X[:, None, :] - C[None]) ** 2).sum(axis=2) / (2 * 0.2)).mean(axis=1)
+    a, b = dens(centres[1]), dens(centres[0])
+    return a / (a + b)
+X_tr, y_tr = sample_mix(200); X_te, y_te = sample_mix(5000)
+pt = p_orange(X_te)
+print("Bayes error rate (2.11), estimated:", np.mean(1 - np.maximum(pt, 1 - pt)).round(4))
+print("Bayes classifier test error      :", np.mean((pt &gt; 0.5) != y_te).round(4))
+</pre><div class="pynote">Our simulated world has a Bayes error rate of about 0.10 (the book's world: 0.13). No classifier can beat it on average. <code>X[:, None, :] - C[None]</code> uses broadcasting (see <a href="#np2">NumPy II</a>) to subtract every centre from every point at once.</div></div>
+
+<div class="predict" data-correct="2"><p>We fit KNN with \(K = 1, 10, 100\) on the 200 training points. Which has the lowest <b>test</b> error rate?</p><ol class="opts"><li>\(K = 1\), it has zero training error</li><li>\(K = 10\)</li><li>\(K = 100\), it is the most stable</li></ol>
+<div class="why">\(K = 10\) (about 0.10, right at the Bayes rate). \(K = 1\) is overfitted (about 0.15); \(K = 100\) is too rigid (about 0.12). Same story as the regression U-shape.</div></div>
+<div class="py" id="c-isl2-2-13"><pre class="src">
+rows = []
+for K in [1, 10, 100]:
+    knn = KNeighborsClassifier(n_neighbors=K).fit(X_tr, y_tr)
+    rows.append({'K': K, 'train error': np.mean(knn.predict(X_tr) != y_tr),
+                 'test error': np.mean(knn.predict(X_te) != y_te)})
+pd.DataFrame(rows).round(4)
+</pre><div class="pynote"><b>Read the output:</b> training error rises with \(K\) (0 at \(K = 1\)); test error is smallest in the middle. As in regression, there is no strong link between training error and test error.</div></div>
+
+<div class="py" id="c-isl2-2-14"><pre class="src">
+g1, g2 = np.meshgrid(np.linspace(-2.6, 3.6, 120), np.linspace(-2.4, 3.4, 120))
+grid = np.column_stack([g1.ravel(), g2.ravel()])
+bayes = p_orange(grid).reshape(g1.shape)
+fig, axes = plt.subplots(1, 3, figsize=(12, 4), sharey=True)
+for ax, K in zip(axes, [1, 10, 100]):
+    pred = KNeighborsClassifier(n_neighbors=K).fit(X_tr, y_tr).predict(grid).reshape(g1.shape)
+    ax.contourf(g1, g2, pred, levels=[-0.5, 0.5, 1.5], colors=['#cfd8f7', '#fbe2c4'])
+    ax.contour(g1, g2, pred, levels=[0.5], colors='k', linewidths=1.2)
+    ax.contour(g1, g2, bayes, levels=[0.5], colors='purple', linestyles='--', linewidths=1.6)
+    ax.scatter(X_tr[:, 0], X_tr[:, 1], c=np.where(y_tr == 1, 'darkorange', 'mediumblue'), s=10)
+    ax.set_title(f"KNN: K={K}")
+fig.tight_layout()
+</pre><div class="pynote">Our versions of Figures 2.15 and 2.16: shaded regions are KNN's predictions, black is its boundary, purple dashed is the true Bayes boundary. \(K = 1\) makes islands; \(K = 10\) follows the purple line; \(K = 100\) smooths the bends away. <code>contourf</code> fills the regions; <code>contour(..., levels=[0.5])</code> draws only the line where the value crosses 0.5.</div></div>
+
+<div class="py" id="c-isl2-2-15"><pre class="src">
+Ks = [1, 2, 3, 4, 5, 7, 10, 15, 20, 30, 50, 70, 100]
+tr_err, te_err = [], []
+for K in Ks:
+    knn = KNeighborsClassifier(n_neighbors=K).fit(X_tr, y_tr)
+    tr_err.append(np.mean(knn.predict(X_tr) != y_tr)); te_err.append(np.mean(knn.predict(X_te) != y_te))
+fig, ax = plt.subplots(figsize=(6.5, 3.8))
+ax.plot(1 / np.array(Ks), tr_err, 'o-', color='C5', label='training errors')
+ax.plot(1 / np.array(Ks), te_err, 'o-', color='C3', label='test errors')
+ax.axhline(np.mean(1 - np.maximum(pt, 1 - pt)), ls='--', color='k', label='Bayes error rate')
+ax.set_xscale('log'); ax.set_xlabel('1/K  (more flexible to the right)'); ax.set_ylabel('error rate'); ax.legend();
+print("best K on the test set:", Ks[int(np.argmin(te_err))])
+</pre><div class="pynote">Our Figure 2.17. Flexibility is plotted as \(1/K\) on a log scale, so moving right means smaller \(K\) and a more flexible boundary. Training error falls steadily to 0 at \(K = 1\); test error is U-shaped and its bottom sits just above the Bayes line. The curves are jumpy because 200 training points is a small sample.</div></div>
+
+<figure class="book" data-fig="islp-2.17"><figcaption>The book's training (blue) and test (orange) error rates against \(1/K\), with the Bayes error rate dashed. <b>Look at</b> the test curve: it falls to a minimum near \(K = 10\) (\(1/K = 0.1\)) and rises again as \(K\) shrinks towards 1, while the training curve keeps falling to 0.</figcaption></figure>
+
+<div class="widget" data-w="isl2-2-knn" data-title="KNN decision boundary: choose K" data-args='{"seed":3}'><div class="wn">The background shows KNN's prediction everywhere; purple dots trace the true Bayes boundary. Slide \(K\) from 1 to 100. At \(K = 1\) the training error is 0, the boundary is full of islands and the test error is 0.23. Around \(K = 9\) the boundary follows the purple curve and the test error is lowest (0.171, against a Bayes rate of 0.153). At \(K = 100\) the boundary is nearly straight and the test error is back up to 0.236. The small chart is our Figure 2.17 with your current \(K\) marked.</div></div>
+
+<div class="callout pitfall"><p><b>KNN uses distances, so units matter.</b> If one predictor is in rupees (thousands) and another in years (tens), the rupee column dominates every distance and the other is ignored. Standardise predictors (subtract the mean, divide by the standard deviation) before KNN. You will do this in the Chapter 4 lab.</p></div>
+
+<p>In both regression and classification, choosing the right level of flexibility is critical, and the bias–variance trade-off makes it hard. Chapter 5 gives the methods for estimating test error and choosing that level.</p>
+
+<h3 id="isl2-2-practice">Practice</h3>
+
+<div class="ex" id="x-isl2-2-01" data-title="implement MSE"><div class="task"><p>Write <code>mse(y, yhat)</code> returning (2.5). Example: <code>mse([1, 2, 3], [1, 2, 5])</code> → 4/3 ≈ 1.333.</p></div>
+<pre class="src">
+def mse(y, yhat):
+    y = np.asarray(y, dtype=float); yhat = np.asarray(yhat, dtype=float)
+    return np.mean(y - yhat)
+</pre>
+<pre class="check">
+from sklearn.metrics import mean_squared_error
+assert np.isclose(mse([1, 2, 3], [1, 2, 5]), 4/3), f"mse([1,2,3],[1,2,5]) should be 1.3333, got {mse([1,2,3],[1,2,5])}"
+assert np.isclose(mse([1, -1], [-1, 1]), 4.0), "errors of +2 and -2 must not cancel: expected 4.0"
+rng_c = np.random.default_rng(0); a, b = rng_c.normal(size=50), rng_c.normal(size=50)
+assert np.isclose(mse(a, b), mean_squared_error(a, b)), "should agree with sklearn.metrics.mean_squared_error"
+assert mse([7, 7], [7, 7]) == 0, "perfect predictions should give 0"
+</pre>
+<div class="hint"><p>The starter forgets one operation from the formula. Which one makes +2 and −2 count the same?</p></div>
+<div class="hint"><p>Square the differences: <code>(y - yhat) ** 2</code>, then take the mean.</p></div>
+<pre class="solution">
+def mse(y, yhat):
+    y = np.asarray(y, dtype=float); yhat = np.asarray(yhat, dtype=float)
+    return np.mean((y - yhat) ** 2)
+</pre><div class="explain"><p>Without squaring, positive and negative errors cancel, so a terrible model could score 0. The checks catch exactly that, and compare with scikit-learn's own implementation.</p></div></div>
+
+<div class="ex" id="x-isl2-2-02" data-title="implement the error rate"><div class="task"><p>Write <code>error_rate(y, yhat)</code> returning (2.8), the fraction of positions where the labels differ. It must work for strings and numbers. Example: the eight labels of the worked example give 0.25.</p></div>
+<pre class="src">
+def error_rate(y, yhat):
+    y = np.asarray(y); yhat = np.asarray(yhat)
+    return np.sum(y != yhat)
+</pre>
+<pre class="check">
+assert np.isclose(error_rate(list('AABBABAB'), list('ABBBAAAB')), 0.25), f"expected 0.25, got {error_rate(list('AABBABAB'), list('ABBBAAAB'))}"
+assert error_rate([1, 0, 1], [1, 0, 1]) == 0, "no mistakes should give 0"
+assert np.isclose(error_rate([0, 0, 0, 0], [1, 1, 1, 0]), 0.75), "3 mistakes out of 4 should give 0.75"
+</pre>
+<div class="hint"><p>The starter counts the mistakes. The formula has one more step.</p></div>
+<div class="hint"><p>Divide by \(n\), or simply use <code>np.mean(y != yhat)</code>.</p></div>
+<pre class="solution">
+def error_rate(y, yhat):
+    y = np.asarray(y); yhat = np.asarray(yhat)
+    return np.mean(y != yhat)
+</pre><div class="explain"><p><code>y != yhat</code> is the indicator \(I(y_i \ne \hat y_i)\) for every \(i\); its mean is the fraction of mistakes.</p></div></div>
+
+<div class="ex" id="x-isl2-2-03" data-title="bias, variance and expected test MSE"><div class="task"><p>Write a function <code>bias_variance</code> with inputs <code>preds</code>, <code>f_x0</code> and <code>var_eps</code>. <code>preds</code> holds \(\hat f(x_0)\) from many training sets. Return <code>(bias2, variance, total)</code> using (2.7), with the variance dividing by the number of fits. Example: <code>preds = [5, 7, 6, 6]</code>, <code>f_x0 = 5</code>, <code>var_eps = 1</code> → <code>(1, 0.5, 2.5)</code>.</p></div>
+<pre class="src">
+def bias_variance(preds, f_x0, var_eps):
+    preds = np.asarray(preds, dtype=float)
+    bias2 = ...
+    variance = ...
+    return bias2, variance, bias2 + variance + var_eps
+</pre>
+<pre class="check">
+r = bias_variance([5, 7, 6, 6], 5, 1)
+assert np.allclose(r, (1, 0.5, 2.5)), f"expected (1, 0.5, 2.5), got {r}"
+r = bias_variance([3, 3, 3], 3, 0.25)
+assert np.allclose(r, (0, 0, 0.25)), f"a perfect, stable method leaves only Var(eps): expected (0, 0, 0.25), got {r}"
+p = np.array([1.0, 2.0, 4.0, 9.0])
+r = bias_variance(p, 2.0, 0.0)
+assert np.isclose(r[0] + r[1], np.mean((p - 2.0) ** 2)), "bias^2 + variance must equal the mean squared distance to the truth"
+</pre>
+<div class="hint"><p>Bias is (average prediction − truth). Variance is the average squared distance of the predictions from <i>their own</i> average.</p></div>
+<div class="hint"><p><code style="white-space:normal;overflow-wrap:anywhere">bias2 = (preds.mean() - f_x0) ** 2</code>; <code>variance = preds.var()</code>.</p></div>
+<pre class="solution">
+def bias_variance(preds, f_x0, var_eps):
+    preds = np.asarray(preds, dtype=float)
+    bias2 = (preds.mean() - f_x0) ** 2
+    variance = preds.var()
+    return bias2, variance, bias2 + variance + var_eps
+</pre><div class="explain"><p>The third check is the identity from step 5 of the derivation without noise: average \((\hat f - f)^2\) = bias² + variance, for any set of numbers.</p></div></div>
+
+<div class="ex" id="x-isl2-2-04" data-title="KNN classify one point"><div class="task"><p>Write <code>knn_predict(X, y, x0, K)</code>: compute Euclidean distances from <code>x0</code> to every row of <code>X</code>, take the <code>K</code> nearest, and return the most common class among their labels <code>y</code>. (Use odd \(K\) with two classes; the checks avoid ties.) The checks compare with scikit-learn on our 12-point example and on random data.</p></div>
+<pre class="src">
+def knn_predict(X, y, x0, K):
+    X = np.asarray(X, dtype=float); y = np.asarray(y); x0 = np.asarray(x0, dtype=float)
+    d = ...                          # distance from x0 to every row of X
+    nearest = ...                    # indices of the K smallest distances
+    labels, counts = np.unique(y[nearest], return_counts=True)
+    return labels[np.argmax(counts)]
+</pre>
+<pre class="check">
+for K, want in [(1, 'orange'), (3, 'blue'), (5, 'blue')]:
+    got = knn_predict(Xp, yp, [3, 7], K)
+    assert got == want, f"for x0=(3,7) and K={K} expected {want}, got {got}"
+rng_c = np.random.default_rng(5)
+Xr = rng_c.normal(size=(60, 3)); yr = (Xr[:, 0] + rng_c.normal(0, 0.7, 60) &gt; 0).astype(int)
+for K in [1, 3, 7, 15]:
+    sk = KNeighborsClassifier(n_neighbors=K).fit(Xr, yr)
+    for x0r in rng_c.normal(size=(8, 3)):
+        assert knn_predict(Xr, yr, x0r, K) == sk.predict([x0r])[0], f"disagrees with sklearn for K={K} at {x0r.round(2)}"
+</pre>
+<div class="hint"><p>Distances: subtract <code>x0</code> from every row (broadcasting), square, sum across columns (<code>axis=1</code>), square root.</p></div>
+<div class="hint"><p><code style="white-space:normal;overflow-wrap:anywhere">d = np.sqrt(((X - x0) ** 2).sum(axis=1))</code> and <code style="white-space:normal;overflow-wrap:anywhere">nearest = np.argsort(d, kind='stable')[:K]</code>.</p></div>
+<pre class="solution">
+def knn_predict(X, y, x0, K):
+    X = np.asarray(X, dtype=float); y = np.asarray(y); x0 = np.asarray(x0, dtype=float)
+    d = np.sqrt(((X - x0) ** 2).sum(axis=1))
+    nearest = np.argsort(d, kind='stable')[:K]
+    labels, counts = np.unique(y[nearest], return_counts=True)
+    return labels[np.argmax(counts)]
+</pre><div class="explain"><p><code>np.argsort(d)</code> returns the row positions ordered from nearest to farthest; the first \(K\) are \(\mathcal{N}_0\). <code style="white-space:normal;overflow-wrap:anywhere">np.unique(..., return_counts=True)</code> counts each label among them, and <code>argmax</code> picks the majority. This is (2.12) followed by “choose the largest probability”. You will build a fully vectorised version for images in <a href="#cs-knn">Images I</a>.</p></div></div>
+
+<div class="ex" id="x-isl2-2-05" data-title="training and test MSE for a degree"><div class="task"><p>Write a function <code>train_test_mse</code> with inputs <code>x_tr, y_tr</code> (training data), <code>x_te, y_te</code> (test data) and <code>degree</code>. It fits <code>fit_poly</code> (from the setup cell) on the training data and returns <code>(train_mse, test_mse)</code>.</p></div>
+<pre class="src">
+def train_test_mse(x_tr, y_tr, x_te, y_te, degree):
+    fhat = fit_poly(x_tr, y_tr, degree)
+    return 0.0, 0.0
+</pre>
+<pre class="check">
+rng_c = np.random.default_rng(1)
+a, b = simulate(f_curvy, 50, rng_c); c, d = simulate(f_curvy, 10_000, rng_c)
+tr1, te1 = train_test_mse(a, b, c, d, 1); tr4, te4 = train_test_mse(a, b, c, d, 4); tr15, te15 = train_test_mse(a, b, c, d, 15)
+assert np.isclose(tr1, 2.364, atol=0.01) and np.isclose(te1, 2.588, atol=0.01), f"degree 1 should give about (2.364, 2.588), got ({tr1:.3f}, {te1:.3f})"
+assert tr15 &lt; tr4 &lt; tr1, "training MSE must fall as the degree rises"
+assert te4 &lt; te1 and te4 &lt; te15, "test MSE should be lowest at degree 4 here"
+</pre>
+<div class="hint"><p>Predictions on the training inputs are <code>fhat(x_tr)</code>; on the test inputs, <code>fhat(x_te)</code>.</p></div>
+<div class="hint"><p><code style="white-space:normal;overflow-wrap:anywhere">return np.mean((y_tr - fhat(x_tr)) ** 2), np.mean((y_te - fhat(x_te)) ** 2)</code></p></div>
+<pre class="solution">
+def train_test_mse(x_tr, y_tr, x_te, y_te, degree):
+    fhat = fit_poly(x_tr, y_tr, degree)
+    return np.mean((y_tr - fhat(x_tr)) ** 2), np.mean((y_te - fhat(x_te)) ** 2)
+</pre><div class="explain"><p>The checks reproduce the earlier table: training MSE falls monotonically with degree; test MSE is U-shaped. Same formula, different data: that is the whole difference between (2.5) and (2.6).</p></div></div>
+
+
+<h3 id="isl2-2-quiz">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="num" data-answer="3.333" data-tol="0.01"><p class="stem">True values \(y = (2, 4, 6)\), predictions \(\hat y = (3, 4, 3)\). What is the MSE?</p><div class="why">Errors \(-1, 0, 3\); squares \(1, 0, 9\); sum \(10\); divide by \(n = 3\): \(3.333\).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">As a method becomes more flexible, the training MSE…</p><ol class="opts"><li>is U-shaped</li><li>increases</li><li>decreases (or stays the same)</li><li>is unrelated to flexibility</li></ol><div class="why">A more flexible method can always do at least as well on the data it was fitted to, so training MSE keeps falling. It is the <i>test</i> MSE that is U-shaped.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Model A has training MSE 0.3 and test MSE 2.1. Model B (less flexible) has training MSE 0.9 and test MSE 1.1. Which statement is right?</p><ol class="opts"><li>A is better because its training MSE is lower</li><li>A is overfitting: a less flexible model has smaller test MSE</li><li>B is overfitting because its training MSE is higher</li></ol><div class="why">Overfitting means a less flexible model would have given lower test MSE, which is exactly the case. Training MSE alone says nothing about which is better.</div></div>
+<div class="q" data-type="num" data-answer="2.51" data-tol="0.005"><p class="stem">At \(x_0\): \(\Var(\hat f(x_0)) = 0.7\), \(\text{Bias}(\hat f(x_0)) = 0.9\), \(\Var(\varepsilon) = 1\). Expected test MSE at \(x_0\)?</p><div class="why">\(0.7 + 0.9^2 + 1 = 0.7 + 0.81 + 1 = 2.51\). Remember to square the bias.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">Which change would most likely <b>reduce variance</b> of a KNN classifier?</p><ol class="opts"><li>Decrease \(K\) from 10 to 1</li><li>Remove half of the training data</li><li>Add more noisy predictors</li><li>Increase \(K\) from 1 to 15</li></ol><div class="why">Larger \(K\) averages over more neighbours, so the prediction depends less on any single training point: lower variance (and more bias). Options 1–3 all increase variance.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Why can the expected test MSE never be below \(\Var(\varepsilon)\)?</p><ol class="opts"><li>Because the other two terms in (2.7), variance and squared bias, are never negative</li><li>Because training MSE is always smaller than test MSE</li><li>Because \(\varepsilon\) has mean zero</li></ol><div class="why">\(\Var(\hat f) \ge 0\) and \(\text{Bias}^2 \ge 0\), so their sum with \(\Var(\varepsilon)\) is at least \(\Var(\varepsilon)\).</div></div>
+<div class="q" data-type="num" data-answer="0.2" data-tol="0.001"><p class="stem">At a point \(x_0\), \(\Pr(\text{orange}\mid x_0) = 0.8\). What is the Bayes classifier's probability of error at \(x_0\)?</p><div class="why">It predicts orange (0.8 &gt; 0.5) and is wrong when the true class is blue: \(1 - 0.8 = 0.2\).</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">KNN with \(K = 5\): among the 5 nearest neighbours, 2 are red and 3 are green. The estimated \(\Pr(\text{red}\mid x_0)\) and the prediction are…</p><ol class="opts"><li>0.4, red</li><li>0.4, green</li><li>0.6, green</li></ol><div class="why">\(\Pr(\text{red}) = 2/5 = 0.4\), \(\Pr(\text{green}) = 0.6\); predict the larger: green.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">KNN with \(K = 1\) always has training error rate…</p><ol class="opts"><li>equal to the Bayes error rate</li><li>0.5</li><li>0 (if no two training points share coordinates with different labels)</li></ol><div class="why">Each training point is its own nearest neighbour (distance 0), so it is always classified correctly. This says nothing about test error.</div></div>
+<div class="q" data-type="open"><p class="stem">A colleague picks the polynomial degree that gives the lowest training MSE. Explain to them, using bias and variance, why this is a mistake and what they should do instead.</p><div class="model">Training MSE always falls as degree rises, so they will always pick the most flexible model. That model has low bias but high variance: it fits the noise of this particular training set, so its predictions on new data swing widely and its test MSE is high. Test MSE = variance + bias² + Var(ε) is minimised at an intermediate flexibility. They should estimate test error on data not used for fitting: a held-out test set or cross-validation (Chapter 5), and pick the degree with the lowest estimated test error.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">MSE (ISLP 2.5)</div><div class="b">\(\frac{1}{n}\sum_{i=1}^n (y_i - \hat f(x_i))^2\)</div></div>
+<div class="fc"><div class="f">Training MSE vs test MSE</div><div class="b">Same formula; training MSE uses the data the model was fitted on, test MSE uses previously unseen observations. We care about test MSE.</div></div>
+<div class="fc"><div class="f">Shape of training and test MSE as flexibility rises</div><div class="b">Training MSE decreases monotonically; test MSE is U-shaped.</div></div>
+<div class="fc"><div class="f">Definition of overfitting (ISLP)</div><div class="b">A method has small training MSE but large test MSE, and a less flexible method would have given a smaller test MSE.</div></div>
+<div class="fc"><div class="f">Bias–variance decomposition (2.7)</div><div class="b">\(\E(y_0-\hat f(x_0))^2 = \Var(\hat f(x_0)) + [\text{Bias}(\hat f(x_0))]^2 + \Var(\varepsilon)\)</div></div>
+<div class="fc"><div class="f">Variance of a method</div><div class="b">How much \(\hat f\) would change if fitted on a different training set. Rises with flexibility.</div></div>
+<div class="fc"><div class="f">Bias of a method</div><div class="b">Error from approximating a complicated truth by a simpler model: \(\E\hat f(x_0) - f(x_0)\). Falls with flexibility.</div></div>
+<div class="fc"><div class="f">Error rate (2.8)</div><div class="b">\(\frac{1}{n}\sum_i I(y_i \ne \hat y_i)\): the fraction misclassified.</div></div>
+<div class="fc"><div class="f">Bayes classifier (2.10)</div><div class="b">Assign \(x_0\) to the class \(j\) with the largest \(\Pr(Y=j\mid X=x_0)\). Lowest possible test error rate.</div></div>
+<div class="fc"><div class="f">Bayes error rate (2.11)</div><div class="b">\(1 - \E\big(\max_j \Pr(Y=j\mid X)\big)\); the classification analogue of irreducible error.</div></div>
+<div class="fc"><div class="f">KNN probability estimate (2.12)</div><div class="b">\(\Pr(Y=j\mid X=x_0) = \frac{1}{K}\sum_{i\in\mathcal N_0} I(y_i=j)\): the fraction of the \(K\) nearest neighbours in class \(j\).</div></div>
+<div class="fc"><div class="f">KNN: small K vs large K</div><div class="b">Small \(K\): flexible, low bias, high variance (K=1 has zero training error). Large \(K\): smooth, nearly linear boundary, low variance, high bias.</div></div>
+<div class="fc"><div class="f">Why use odd K with two classes?</div><div class="b">To avoid tied votes.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can compute an MSE by hand and with NumPy, and say why test MSE matters more than training MSE.</label>
+<label><input type="checkbox"> I can sketch training and test MSE against flexibility and explain the U-shape.</label>
+<label><input type="checkbox"> I can derive (2.7) and estimate bias², variance and Var(ε) from simulated training sets.</label>
+<label><input type="checkbox"> I can compute an error rate and a Bayes error rate for a small example.</label>
+<label><input type="checkbox"> I can classify a point with KNN by hand, write the code, and check it against scikit-learn.</label>
+<label><input type="checkbox"> I can explain how K controls the bias–variance trade-off in KNN and read Figures 2.15–2.17.</label>
+</div>
+</section>

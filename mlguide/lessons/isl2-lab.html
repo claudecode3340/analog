@@ -1,0 +1,691 @@
+<section class="lesson" id="isl2-lab" data-book="ISLP §2.3, pp. 40–62">
+<p class="lede">This is the book's first lab, run cell by cell inside this page, with every line explained. You have met most of these tools already in the Python, NumPy, plotting and pandas lessons; here you use them the way ISLP does, on the book's own Auto data, so that every later lab feels familiar. Type the cells yourself rather than only pressing Run: that is how the syntax sticks.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#py1">Python I</a> <a href="#py2">Python II</a> <a href="#np1">NumPy I</a> <a href="#np2">NumPy II</a> <a href="#plt1">Plotting</a> <a href="#pd1">pandas</a> <a href="#s0-setup">Mac setup</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>call functions and methods, build lists and NumPy arrays, and read attributes such as <code>shape</code>, <code>ndim</code> and <code>dtype</code>;</li>
+<li>make reproducible random numbers with <code>np.random.default_rng</code> and compute means, variances and standard deviations along an axis;</li>
+<li>draw line plots, scatterplots, multi-panel figures, contour plots and heatmaps with <code>subplots</code>;</li>
+<li>use slice notation and index arrays by position, by lists, with <code>np.ix_</code> and with Booleans, and know the trap in <code>A[[1,3],[0,2]]</code>;</li>
+<li>load <code>Auto.csv</code>/<code>Auto.data</code>, fix missing values with <code>na_values</code> and <code>dropna</code>, and select rows and columns with <code>[]</code>, <code>loc</code>, <code>iloc</code> and lambdas;</li>
+<li>write <code>for</code> loops with <code>zip</code> and string formatting, and summarise data with boxplots, histograms, scatterplot matrices and <code>describe</code>.</li></ul></div>
+
+<div class="callout book"><blockquote>In this lab, we will introduce some simple Python commands.</blockquote><cite>ISLP p. 40</cite></div>
+
+<h3 id="isl2-lab-start">2.3.1 Getting started</h3>
+<p>The book asks for two things: Python 3 and Jupyter, an interface that runs code in a <b>notebook</b> (a file of cells, exactly like the cells on this page). It also asks you to install the book's own package, <code>ISLP</code>, which contains the data sets and some helper functions.</p>
+<div class="callout mac"><p><b>On your Mac</b> (after <a href="#s0-setup">Set up your Mac</a>): open Terminal, activate your environment, and type <code>pip install ISLP</code>. That also installs NumPy, pandas, matplotlib, scikit-learn and statsmodels. Download <code>Ch2-statlearn-lab.ipynb</code> from the Python resources page at statlearning.com and start it with <code style="white-space:normal;overflow-wrap:anywhere">jupyter lab Ch2-statlearn-lab.ipynb</code>. Or use the <b>Download as a Jupyter notebook</b> button at the bottom of this lesson, which gives you every cell below. In this page, Python, ISLP and the data files are already there: just press Run.</p></div>
+
+<div class="callout key"><p><b>One difference between Jupyter and this page.</b> In Jupyter a figure object stays “open” and you can show it again in a later cell by typing <code>fig</code>. Here, every figure is drawn and then closed at the end of the cell that made it. So where the book changes a figure in a later cell and redisplays it, this lab does the change in the same cell. The code is otherwise the book's.</p></div>
+
+<h3 id="isl2-lab-basic">2.3.2 Basic commands</h3>
+<p>Python does things with <b>functions</b>. To run a function called <code>fun</code> you type <code>fun(input1, input2)</code>; the inputs are called <dfn data-g="argument">arguments</dfn>. A function can take any number of them. <code>print()</code> writes a text version of all its arguments, separated by spaces (see <a href="#py1">Python I</a>).</p>
+
+<div class="py" id="c-isl2-lab-01" data-mode="setup"><pre class="src">
+print('fit a model with', 11, 'variables')
+</pre><div class="pynote">Three arguments: a string, a number, a string. <code>print</code> puts one space between them. (This first cell is also marked as the lesson's setup cell, so running it is a safe way to start.)</div></div>
+
+<p>In Jupyter, <code>print?</code> shows the documentation of <code>print</code>. That question-mark trick is a Jupyter feature, not Python. Plain Python gives you the same text through the function's <code>__doc__</code> attribute (or <code>help(print)</code>):</p>
+<div class="py" id="c-isl2-lab-02"><pre class="src">
+print(print.__doc__)
+</pre><div class="pynote">The first line is the <b>signature</b>: <code style="white-space:normal;overflow-wrap:anywhere">print(*args, sep=' ', end='\n', file=None, flush=False)</code>. Arguments with <code>=</code> have defaults. Try <code>print(1, 2, 3, sep=' | ')</code>.</div></div>
+
+<p>Adding two integers works as you expect, and text is handled with <b>strings</b>, in single or double quotes. <code>+</code> joins (concatenates) strings.</p>
+<div class="py" id="c-isl2-lab-03"><pre class="src">
+print(3 + 5)
+"hello" + " " + "world"
+</pre></div>
+
+<p>A string is one kind of <b>sequence</b>: an ordered collection. The three most important sequences are lists, tuples and strings. A <b>list</b> is made with square brackets.</p>
+<div class="predict" data-correct="3"><p>We make <code>x = [3, 4, 5]</code> and <code>y = [4, 9, 7]</code>. What does <code>x + y</code> give?</p><ol class="opts"><li><code>[7, 13, 12]</code></li><li>an error</li><li><code>[3, 4, 5, 4, 9, 7]</code></li></ol>
+<div class="why">For lists, <code>+</code> means “join”, exactly as for strings. Lists can hold anything (numbers, words, other lists), so Python does not assume you want arithmetic. Element-by-element addition needs NumPy, next section.</div></div>
+<div class="py" id="c-isl2-lab-04"><pre class="src">
+x = [3, 4, 5]
+y = [4, 9, 7]
+x + y
+</pre><div class="pynote">The result is one longer list. This reflects that Python is a general-purpose language; its data-analysis powers come from packages, chiefly <code>numpy</code> and <code>pandas</code>.</div></div>
+
+<div class="ex" id="x-isl2-lab-01" data-title="your turn: strings and lists"><div class="task"><p>Write <code>shout(word, n)</code> that returns a <b>list</b> of length <code>n</code> whose every entry is the word followed by an exclamation mark. Example: <code>shout('hi', 3)</code> → <code>['hi!', 'hi!', 'hi!']</code>.</p></div>
+<pre class="src">
+def shout(word, n):
+    return [word]
+</pre>
+<pre class="check">
+assert shout('hi', 3) == ['hi!', 'hi!', 'hi!'], f"expected ['hi!', 'hi!', 'hi!'], got {shout('hi', 3)}"
+assert shout('ML', 1) == ['ML!'], f"expected ['ML!'], got {shout('ML', 1)}"
+assert shout('x', 0) == [], "n = 0 should give an empty list"
+</pre>
+<div class="hint"><p><code>word + '!'</code> makes one entry. A list times a whole number repeats it: <code>['a'] * 3</code> is <code>['a', 'a', 'a']</code>.</p></div>
+<div class="hint"><p><code>return [word + '!'] * n</code></p></div>
+<pre class="solution">
+def shout(word, n):
+    return [word + '!'] * n
+</pre><div class="explain"><p>Both strings and lists support <code>+</code> (join) and lists support <code>*</code> with an integer (repeat). Neither does arithmetic on the contents: that is NumPy's job.</p></div></div>
+
+<h3 id="isl2-lab-numpy">2.3.3 Introduction to numerical Python</h3>
+<p>A <b>package</b> is a collection of code that does not come with base Python. <code>numpy</code> (numerical Python) is the one everything else is built on. We <b>import</b> it and give it the short name <code>np</code>.</p>
+<div class="py" id="c-isl2-lab-05"><pre class="src">
+import numpy as np
+x = np.array([3, 4, 5])
+y = np.array([4, 9, 7])
+x + y
+</pre><div class="pynote">Now <code>+</code> adds element by element: \(3+4, 4+9, 5+7\). <code>np.array(...)</code> means “the function <code>array</code> from the package we called <code>np</code>”. If you forget <code>import numpy as np</code>, Python says <code style="white-space:normal;overflow-wrap:anywhere">NameError: name 'np' is not defined</code>.</div></div>
+
+<p>In NumPy, an <b>array</b> is a set of numbers in any number of dimensions. A vector is a one-dimensional array; a matrix is a two-dimensional array, given as a list of rows:</p>
+\[x = \begin{pmatrix}1 & 2\\ 3 & 4\end{pmatrix}\]
+<div class="py" id="c-isl2-lab-06"><pre class="src">
+x = np.array([[1, 2], [3, 4]])
+print(x)
+print("ndim :", x.ndim)      # number of dimensions
+print("dtype:", x.dtype)     # data type of the entries
+print("shape:", x.shape)     # (rows, columns)
+</pre><div class="pynote">An object's <dfn data-g="attribute">attributes</dfn> are values attached to it, read with a dot: <code>x.ndim</code> is 2 (two-dimensional); <code>x.dtype</code> is <code>int64</code> (64-bit integers, because we typed only whole numbers); <code>x.shape</code> is <code>(2, 2)</code>.</div></div>
+
+<div class="predict" data-correct="2"><p>What is the dtype of <code style="white-space:normal;overflow-wrap:anywhere">np.array([[1, 2], [3.0, 4]])</code>?</p><ol class="opts"><li><code>int64</code>, because most entries are whole numbers</li><li><code>float64</code></li><li>a mixture: some int, some float</li></ol>
+<div class="why">An array has <i>one</i> dtype for all entries. A single decimal (<code>3.0</code>) forces every entry to become a floating-point number. You can also ask for floats directly by passing <code>float</code> as the dtype.</div></div>
+<div class="py" id="c-isl2-lab-07"><pre class="src">
+print(np.array([[1, 2], [3.0, 4]]).dtype)
+print(np.array([[1, 2], [3, 4]], float).dtype)   # second argument: the dtype
+print(np.array.__doc__[:300])                     # the start of the help text (np.array? in Jupyter)
+</pre></div>
+
+<p>A <dfn data-g="method">method</dfn> is a function attached to an object. <code>x.sum()</code> calls the <code>sum</code> method of <code>x</code>, which automatically receives <code>x</code> as its first argument. The function <code>np.sum(x)</code> does the same thing.</p>
+<div class="py" id="c-isl2-lab-08"><pre class="src">
+x = np.array([1, 2, 3, 4])
+print(x.sum(), np.sum(x))
+</pre></div>
+
+<p>The <code>reshape</code> method returns the same numbers in a new shape. We pass the new shape as a <dfn data-g="tuple">tuple</dfn>, <code>(2, 3)</code>: a sequence in round brackets that, unlike a list, cannot be changed. <code>\n</code> inside a string means “new line”.</p>
+<div class="py" id="c-isl2-lab-09"><pre class="src">
+x = np.array([1, 2, 3, 4, 5, 6])
+print('beginning x:\n', x)
+x_reshape = x.reshape((2, 3))
+print('reshaped x:\n', x_reshape)
+print(x_reshape[0, 0], x_reshape[1, 2])
+</pre><div class="pynote">The numbers fill the new shape <b>row by row</b> (row-major order):
+\(\begin{pmatrix}1&2&3\\4&5&6\end{pmatrix}\). Python counts from 0, so the top-left entry is <code>x_reshape[0, 0]</code> = 1, and <code>x_reshape[1, 2]</code> (second row, third column) = 6.</div></div>
+
+<div class="predict" data-correct="2"><p>Now we change the top-left entry of <code>x_reshape</code> to 5. What happens to the original <code>x</code>?</p><ol class="opts"><li>Nothing: <code>x_reshape</code> is a separate copy</li><li><code>x</code> changes too: its first entry becomes 5</li><li>Python raises an error</li></ol>
+<div class="why">To the book's own surprise, <code>x</code> changes. <code>reshape</code> usually returns a <b>view</b>: a new way of looking at the same numbers in memory, not a copy. Change one, the other sees it. If you need an independent copy, use <code>x.reshape((2, 3)).copy()</code>.</div></div>
+<div class="py" id="c-isl2-lab-10"><pre class="src">
+print('x before we modify x_reshape:\n', x)
+x_reshape[0, 0] = 5
+print('x_reshape after we modify its top left element:\n', x_reshape)
+print('x after we modify top left element of x_reshape:\n', x)
+</pre></div>
+
+<p>Tuples, unlike arrays and lists, cannot be modified. Trying raises an <b>exception</b> (error). This cell fails on purpose:</p>
+<div class="py" id="c-isl2-lab-11" data-mode="expect-error" data-error="TypeError"><pre class="src">
+my_tuple = (3, 4, 5)
+my_tuple[0] = 2
+</pre><div class="pynote">Read the last line: <code style="white-space:normal;overflow-wrap:anywhere">'tuple' object does not support item assignment</code>. That is why shapes are tuples: a shape should not change by accident.</div></div>
+
+<p>Three attributes come up constantly: <code>shape</code>, <code>ndim</code> and <code>T</code> (the transpose: rows become columns, see <a href="#m-linalg">Vectors &amp; matrices</a>). Asking for several things separated by commas returns them together as a tuple.</p>
+<div class="py" id="c-isl2-lab-12"><pre class="src">
+x_reshape.shape, x_reshape.ndim, x_reshape.T
+</pre><div class="pynote">\(\begin{pmatrix}5&2&3\\4&5&6\end{pmatrix}^T = \begin{pmatrix}5&4\\2&5\\3&6\end{pmatrix}\).</div></div>
+
+<p>Functions such as <code>np.sqrt</code> act on every entry. Powers use <code>**</code>, and a power of 0.5 is a square root.</p>
+<div class="py" id="c-isl2-lab-13"><pre class="src">
+print(np.sqrt(x))
+print(x ** 2)
+print(x ** 0.5)
+</pre><div class="pynote">Remember <code>x</code> is now <code>[5, 2, 3, 4, 5, 6]</code> because of the reshape surprise: \(\sqrt5 \approx 2.24\), \(\sqrt2 \approx 1.41\), and so on.</div></div>
+
+<h4>Random numbers</h4>
+<p><code>np.random.normal</code> draws normally distributed random numbers. Its signature is <code style="white-space:normal;overflow-wrap:anywhere">normal(loc=0.0, scale=1.0, size=None)</code>: <code>loc</code> is the mean, <code>scale</code> the standard deviation, <code>size</code> how many. These are <b>keyword arguments</b>: you pass them by name, in any order. (Arguments passed by position, like the array in <code>np.sum(x)</code>, are <b>positional arguments</b>.)</p>
+<div class="py" id="c-isl2-lab-14"><pre class="src">
+x = np.random.normal(size=50)                       # 50 draws from N(0, 1)
+y = x + np.random.normal(loc=50, scale=1, size=50)  # add independent N(50, 1) noise
+print(np.round(x[:6], 2))
+np.corrcoef(x, y)
+</pre><div class="pynote"><code>np.corrcoef(x, y)</code> is the 2×2 correlation matrix; the off-diagonal entry (about 0.7) is the correlation between <code>x</code> and <code>y</code>. Run this cell twice: <b>the numbers change every time</b>. The reference output above will not match yours.</div></div>
+
+<p>To get the same random numbers every time (so results can be checked and reproduced), create a random generator with a <dfn data-g="random-seed">seed</dfn>: <code style="white-space:normal;overflow-wrap:anywhere">rng = np.random.default_rng(1303)</code>. Any whole number works as the seed; the same seed always gives the same sequence. The book uses this in every lab.</p>
+<div class="predict" data-correct="1"><p>Two generators are created with the same seed, 1303, and each draws two numbers. What will print?</p><ol class="opts"><li>the same two numbers twice</li><li>two different pairs</li><li>an error, because the seed is already used</li></ol>
+<div class="why">Same seed, same sequence. You should see <code>[ 4.09 -1.07]</code> twice, the same numbers as in the book (small differences can appear across NumPy versions).</div></div>
+<div class="py" id="c-isl2-lab-15"><pre class="src">
+rng = np.random.default_rng(1303)
+print(rng.normal(scale=5, size=2))
+rng2 = np.random.default_rng(1303)
+print(rng2.normal(scale=5, size=2))
+</pre></div>
+
+<p><code>np.mean</code>, <code>np.var</code> and <code>np.std</code> compute the mean, variance and standard deviation; they also exist as methods. Note that <code>np.var</code> divides by \(n\), not \(n-1\); pass <code>ddof=1</code> for the \(n-1\) version (see <a href="#m-prob">Probability</a>).</p>
+<div class="py" id="c-isl2-lab-16"><pre class="src">
+rng = np.random.default_rng(3)
+y = rng.standard_normal(10)
+print(np.mean(y), y.mean())
+print(np.var(y), y.var(), np.mean((y - y.mean()) ** 2))
+print(np.sqrt(np.var(y)), np.std(y))
+print("with ddof=1:", np.var(y, ddof=1))
+</pre><div class="pynote">The three variance numbers agree, because the variance <i>is</i> the mean squared distance from the mean. The standard deviation is its square root. The book prints these rounded (mean −0.11, variance 2.72, sd 1.65).</div></div>
+
+<p>On a matrix, these functions can work along rows or columns. Arrays are stored row by row, so the first axis, <code>axis=0</code>, runs <b>down the rows</b>: <code>X.mean(axis=0)</code> averages each <b>column</b> (see <a href="#np2">NumPy II</a>).</p>
+<div class="predict" data-correct="3"><p><code>X</code> has shape <code>(10, 3)</code>. What shape is <code>X.mean(axis=0)</code>?</p><ol class="opts"><li><code>(10,)</code></li><li><code>(10, 3)</code></li><li><code>(3,)</code></li></ol>
+<div class="why">Averaging along axis 0 collapses the 10 rows, leaving one number per column: shape <code>(3,)</code>. <code>axis=1</code> would give one number per row, shape <code>(10,)</code>.</div></div>
+<div class="py" id="c-isl2-lab-17"><pre class="src">
+X = rng.standard_normal((10, 3))
+print(np.round(X, 2))
+print("column means:", X.mean(axis=0).round(2))
+print("same thing  :", X.mean(0).round(2))
+</pre></div>
+
+<div class="ex" id="x-isl2-lab-02" data-title="your turn: row means and a seeded draw"><div class="task"><p>(a) Write <code>row_means(X)</code> returning the mean of each <b>row</b> of a 2-D array. (b) Write <code>seeded_draws(seed, n)</code> that makes <code style="white-space:normal;overflow-wrap:anywhere">np.random.default_rng(seed)</code> and returns <code>n</code> standard normal numbers, so that calling it twice with the same seed gives identical arrays.</p></div>
+<pre class="src">
+def row_means(X):
+    return np.asarray(X).mean(axis=0)
+
+def seeded_draws(seed, n):
+    return np.random.normal(size=n)
+</pre>
+<pre class="check">
+M = np.array([[1, 2, 3], [4, 5, 9]])
+assert np.allclose(row_means(M), [2, 6]), f"row means of [[1,2,3],[4,5,9]] are [2, 6], got {row_means(M)}"
+assert row_means(np.ones((4, 7))).shape == (4,), "one mean per row: shape (4,) for a 4 x 7 array"
+a, b = seeded_draws(42, 5), seeded_draws(42, 5)
+assert np.array_equal(a, b), "the same seed must give the same numbers"
+assert np.allclose(a, np.random.default_rng(42).standard_normal(5)), "use np.random.default_rng(seed).standard_normal(n)"
+assert not np.array_equal(seeded_draws(1, 5), seeded_draws(2, 5)), "different seeds should give different numbers"
+</pre>
+<div class="hint"><p>Which axis do you collapse to get one number per row? And the generator must be created <i>inside</i> the function from <code>seed</code>.</p></div>
+<div class="hint"><p><code>.mean(axis=1)</code>; <code style="white-space:normal;overflow-wrap:anywhere">return np.random.default_rng(seed).standard_normal(n)</code>.</p></div>
+<pre class="solution">
+def row_means(X):
+    return np.asarray(X).mean(axis=1)
+
+def seeded_draws(seed, n):
+    return np.random.default_rng(seed).standard_normal(n)
+</pre><div class="explain"><p><code>axis=1</code> runs across the columns, collapsing them, so each row gets one number. A fresh generator with a fixed seed is the reproducible way to make random numbers; the old <code>np.random.normal</code> gives new numbers each call.</p></div></div>
+
+<h3 id="isl2-lab-graphics">2.3.4 Graphics</h3>
+<p>Python plots with <b>matplotlib</b>. A plot has a <b>figure</b> (the blank canvas, the whole window) and one or more <b>axes</b> (each individual plot, with its own x- and y-axis, labels and title). Note: in matplotlib, “axes” is not the plural of “axis”. The function <code>subplots()</code> returns a tuple of two things, the figure and the axes, which we <b>unpack</b> into two names (see <a href="#plt1">Plotting</a>).</p>
+<div class="py" id="c-isl2-lab-18"><pre class="src">
+from matplotlib.pyplot import subplots
+fig, ax = subplots(figsize=(5, 5))
+x = rng.standard_normal(100)
+y = rng.standard_normal(100)
+ax.plot(x, y);
+</pre><div class="pynote">The default of <code>ax.plot</code> is a <b>line</b> joining the points in order, which for random points is a tangle. The book uses <code>figsize=(8, 8)</code>; smaller sizes fit this page better. The final semicolon stops the cell from also printing a line of text about the plot object.</div></div>
+
+<p>Unpacking, <code>fig, ax = subplots(...)</code>, is shorthand for <code>output = subplots(...)</code>, <code>fig = output[0]</code>, <code>ax = output[1]</code>. To get a scatterplot, add <code>'o'</code> (circles) to <code>ax.plot</code>, or use <code>ax.scatter</code>.</p>
+<div class="py" id="c-isl2-lab-19"><pre class="src">
+fig, axes = subplots(1, 2, figsize=(9, 4))
+axes[0].plot(x, y, 'o')                 # 'o': circles, no line
+axes[1].scatter(x, y, marker='o')       # the same picture with scatter
+print(type(axes[1].scatter(x[:1], y[:1])))   # what ax.scatter returns, if not silenced by ;
+</pre><div class="pynote">Without the trailing semicolon, a cell whose last line is a plotting call shows text like <code style="white-space:normal;overflow-wrap:anywhere">&lt;matplotlib.collections.PathCollection at 0x...&gt;</code>. The plot is drawn either way; the semicolon only hides that text.</div></div>
+
+<p>Label the plot with the methods <code>set_xlabel</code>, <code>set_ylabel</code> and <code>set_title</code> of <code>ax</code>. Having the figure object lets you change it afterwards, for example its size with <code>fig.set_size_inches</code>.</p>
+<div class="py" id="c-isl2-lab-20"><pre class="src">
+fig, ax = subplots(figsize=(8, 8))
+ax.scatter(x, y, marker='o')
+ax.set_xlabel("this is the x-axis")
+ax.set_ylabel("this is the y-axis")
+ax.set_title("Plot of X vs Y")
+fig.set_size_inches(12, 3);       # the book does this in a later cell, then types fig
+</pre></div>
+
+<p>Several plots in one figure: pass <code>nrows</code> and <code>ncols</code>. Now <code>axes</code> is an array of axes, indexed <code>[row, column]</code>.</p>
+<div class="py" id="c-isl2-lab-21"><pre class="src">
+fig, axes = subplots(nrows=2, ncols=3, figsize=(15, 5))
+axes[0, 1].plot(x, y, 'o')              # first row, second column
+axes[1, 2].scatter(x, y, marker='+')    # second row, third column
+fig.savefig("Figure.png", dpi=400)      # save to a file (dots per inch sets the pixel size)
+fig.savefig("Figure.pdf", dpi=200)
+axes[0, 1].set_xlim([-1, 1])            # change the x-range of one panel...
+fig.savefig("Figure_updated.jpg")       # ...and save again
+import os; print([f for f in os.listdir('.') if f.startswith('Figure')])
+</pre><div class="pynote">Two of the six panels have data; the top-middle one shows only \(x\) between −1 and 1 after <code>set_xlim</code>. The figure shown is the final, updated one. <code>savefig</code> wrote three files into the working folder (in this page, a temporary folder inside your browser; on your Mac, next to your notebook). <code>os.listdir('.')</code> lists the files in the current folder.</div></div>
+
+<p>Two more plot types show three-dimensional data on a flat page. A <b>contour plot</b> (<code>ax.contour</code>) draws lines of equal height, like a map; it needs a vector of x values, a vector of y values, and a matrix of heights, one for each (x, y) pair. <code>np.linspace(a, b, n)</code> makes <code>n</code> evenly spaced numbers from <code>a</code> to <code>b</code>. <code>np.multiply.outer(u, v)</code> makes the matrix of all products \(u_i v_j\).</p>
+<div class="py" id="c-isl2-lab-22"><pre class="src">
+x = np.linspace(-np.pi, np.pi, 50)
+y = x
+f = np.multiply.outer(np.cos(y), 1 / (1 + x ** 2))   # f[i, j] = cos(y_i) / (1 + x_j^2)
+print(f.shape)
+fig, axes = subplots(1, 3, figsize=(13, 4))
+axes[0].contour(x, y, f)
+axes[1].contour(x, y, f, levels=45)     # more contour lines: finer detail
+axes[2].imshow(f);                      # a heatmap: colour shows height
+</pre><div class="pynote">\(f\) is a 50×50 matrix. The contours show a hill at the centre (where \(\cos y = 1\) and \(1/(1+x^2) = 1\)) and valleys at the top and bottom edges (where \(\cos y = -1\)). <code>imshow</code> paints each matrix entry as a coloured square; this is a <b>heatmap</b>. Note that <code>imshow</code> labels its axes by row and column number, not by the x and y values.</div></div>
+
+<div class="ex" id="x-isl2-lab-03" data-title="your turn: a labelled scatterplot"><div class="task"><p>Write <code style="white-space:normal;overflow-wrap:anywhere">labelled_scatter(x, y, title)</code> that creates <code>fig, ax = subplots()</code>, draws a scatterplot of <code>y</code> against <code>x</code>, labels the axes <code>'x'</code> and <code>'y'</code>, sets the title, and <b>returns</b> <code>fig, ax</code>.</p></div>
+<pre class="src">
+def labelled_scatter(x, y, title):
+    fig, ax = subplots()
+    ax.plot(x, y)
+    return fig, ax
+</pre>
+<pre class="check">
+import matplotlib.pyplot as plt
+fg, a = labelled_scatter([1, 2, 3], [3, 1, 2], 'my plot')
+assert a.get_xlabel() == 'x' and a.get_ylabel() == 'y', f"labels should be 'x' and 'y', got {a.get_xlabel()!r} and {a.get_ylabel()!r}"
+assert a.get_title() == 'my plot', f"title should be 'my plot', got {a.get_title()!r}"
+assert len(a.collections) == 1 and len(a.collections[0].get_offsets()) == 3, "draw the points with ax.scatter (one collection of 3 points)"
+plt.close('all')
+</pre>
+<div class="hint"><p><code>ax.scatter(x, y)</code> draws points; <code>ax.set_xlabel('x')</code> sets a label.</p></div>
+<div class="hint"><p>Add <code>ax.set_ylabel('y')</code> and <code>ax.set_title(title)</code> before returning.</p></div>
+<pre class="solution">
+def labelled_scatter(x, y, title):
+    fig, ax = subplots()
+    ax.scatter(x, y)
+    ax.set_xlabel('x'); ax.set_ylabel('y'); ax.set_title(title)
+    return fig, ax
+</pre><div class="explain"><p>The check reads the labels back from the axes object, and counts the scatter “collection” and its points. Returning <code>fig, ax</code> lets the caller change the plot later, as the book does with <code>set_size_inches</code>.</p></div></div>
+
+<h3 id="isl2-lab-slice">2.3.5 Sequences and slice notation</h3>
+<p><code>np.linspace(0, 10, 11)</code> makes 11 numbers from 0 to 10 <b>including</b> both ends. <code>np.arange(0, 10)</code> counts from 0 in steps of 1 (or a step you give) and <b>stops before</b> 10.</p>
+<div class="predict" data-correct="2"><p>How many numbers does <code>np.arange(0, 10)</code> contain?</p><ol class="opts"><li>11 (0 to 10)</li><li>10 (0 to 9)</li><li>9</li></ol>
+<div class="why">The end is excluded: 0, 1, …, 9 is ten numbers. This is the same rule as slice notation, below.</div></div>
+<div class="py" id="c-isl2-lab-23"><pre class="src">
+seq1 = np.linspace(0, 10, 11)
+seq2 = np.arange(0, 10)
+print(seq1)
+print(seq2, len(seq2))
+</pre></div>
+
+<p><dfn data-g="slice">Slice notation</dfn> <code>[start:stop]</code> takes the items from position <code>start</code> up to but <b>not including</b> <code>stop</code>. It works on strings, lists, tuples and arrays. <code>3:6</code> inside square brackets is shorthand for <code>slice(3, 6)</code>.</p>
+<div class="worked"><div class="wt">Worked example · <b><code>"hello world"[3:6]</code></b></div>
+<div class="given">Number the characters from 0: h=0, e=1, l=2, l=3, o=4, (space)=5, w=6, …</div>
+<ol class="steps"><li><div>Start at position 3: the second <b>l</b>.</div></li><li><div>Take positions 3, 4, 5 and stop <i>before</i> 6: <b>l</b>, <b>o</b>, (space).</div></li></ol>
+<div class="result"><code>'lo '</code>: the 4th to 6th characters, 3 of them (\(6 - 3 = 3\))</div></div>
+<div class="py" id="c-isl2-lab-24"><pre class="src">
+print(repr("hello world"[3:6]))
+print(repr("hello world"[slice(3, 6)]))
+print("hello world"[::2], "hello world"[-5:])   # every 2nd character; the last 5
+</pre><div class="pynote"><code>repr</code> shows the quotes so you can see the trailing space. A third number in a slice is the <b>step</b>: <code>[::2]</code> takes every second item. A negative start counts from the end.</div></div>
+
+<div class="widget" data-w="isl2-lab-slice" data-title="Slice a string: start, stop, step" data-args='{}'><div class="wn">Move start, stop and step. Highlighted letters are the ones the slice keeps. Notice that the character at position <b>stop</b> is never included, and that <code>stop − start</code> is the number of characters when the step is 1.</div></div>
+
+<div class="ex" id="x-isl2-lab-04" data-title="your turn: slices"><div class="task"><p>Write <code>middle(seq)</code> returning everything except the first and last items, and <code>evens(seq)</code> returning the items at positions 0, 2, 4, …. Both must work for strings, lists and arrays. Example: <code>middle('python')</code> → <code>'ytho'</code>, <code style="white-space:normal;overflow-wrap:anywhere">evens([10, 11, 12, 13, 14])</code> → <code>[10, 12, 14]</code>.</p></div>
+<pre class="src">
+def middle(seq):
+    return seq[1:]
+
+def evens(seq):
+    return seq
+</pre>
+<pre class="check">
+assert middle('python') == 'ytho', f"middle('python') should be 'ytho', got {middle('python')!r}"
+assert middle([1, 2, 3]) == [2], f"middle([1,2,3]) should be [2], got {middle([1, 2, 3])}"
+assert evens([10, 11, 12, 13, 14]) == [10, 12, 14], f"got {evens([10, 11, 12, 13, 14])}"
+assert np.array_equal(evens(np.arange(7)), [0, 2, 4, 6]), "evens should work on arrays"
+assert evens('abcdef') == 'ace', f"evens('abcdef') should be 'ace', got {evens('abcdef')!r}"
+</pre>
+<div class="hint"><p>A negative stop counts from the end: <code>seq[1:-1]</code>. A step goes in the third slot.</p></div>
+<div class="hint"><p><code>return seq[1:-1]</code> and <code>return seq[::2]</code>.</p></div>
+<pre class="solution">
+def middle(seq):
+    return seq[1:-1]
+
+def evens(seq):
+    return seq[::2]
+</pre><div class="explain"><p><code>[1:-1]</code> starts after the first item and stops before the last. <code>[::2]</code> leaves start and stop at their defaults (the whole sequence) and takes every second item.</p></div></div>
+
+<h3 id="isl2-lab-index">2.3.6 Indexing data</h3>
+<p>We build a 4×4 matrix of the numbers 0 to 15:</p>
+\[A = \begin{pmatrix} 0 & 1 & 2 & 3\\ 4 & 5 & 6 & 7\\ 8 & 9 & 10 & 11\\ 12 & 13 & 14 & 15\end{pmatrix}\]
+<div class="py" id="c-isl2-lab-25"><pre class="src">
+A = np.array(np.arange(16)).reshape((4, 4))
+print(A)
+A[1, 2]
+</pre><div class="pynote">Inside the square brackets, the first number picks the row and the second the column, both counted from 0. <code>A[1, 2]</code> is row 2, column 3: <b>6</b>.</div></div>
+
+<h4>Rows, columns and submatrices</h4>
+<p>A <b>list</b> of positions picks several rows: <code>A[[1, 3]]</code> is rows 2 and 4. To pick columns, put <code>:</code> (meaning “all rows”) first: <code>A[:, [0, 2]]</code> is columns 1 and 3.</p>
+<div class="py" id="c-isl2-lab-26"><pre class="src">
+print(A[[1, 3]])
+print(A[:, [0, 2]])
+</pre></div>
+
+<p>Now the trap. We want the submatrix of rows 2 and 4 <i>and</i> columns 1 and 3, that is \(\begin{pmatrix}4 & 6\\ 12 & 14\end{pmatrix}\). The natural attempt is <code>A[[1, 3], [0, 2]]</code>.</p>
+<div class="predict" data-correct="3"><p>What does <code>A[[1, 3], [0, 2]]</code> return?</p><ol class="opts"><li>the 2×2 submatrix [[4, 6], [12, 14]]</li><li>an error</li><li>the 1-D array [4, 14]</li></ol>
+<div class="why">Two lists are read as <b>pairs of coordinates</b>: (1, 0) and (3, 2). So you get the two single entries <code>A[1, 0] = 4</code> and <code>A[3, 2] = 14</code>, not a submatrix. That is why the two lists must have the same length.</div></div>
+<div class="py" id="c-isl2-lab-27"><pre class="src">
+print(A[[1, 3], [0, 2]])
+print(np.array([A[1, 0], A[3, 2]]))      # the same two entries
+</pre></div>
+
+<div class="widget" data-w="isl2-lab-index" data-title="Which entries does this index pick?" data-args='{}'><div class="wn">Click each expression. The highlighted cells are the ones it selects; the result is shown underneath. Compare <code>A[[1,3],[0,2]]</code> (two single cells, paired up) with <code>A[np.ix_([1,3],[0,2])]</code> and <code>A[1:4:2, 0:3:2]</code> (a 2×2 block).</div></div>
+
+<p>With lists of different lengths, the pairing fails. This cell fails on purpose:</p>
+<div class="py" id="c-isl2-lab-28" data-mode="expect-error" data-error="IndexError"><pre class="src">
+A[[1, 3], [0, 2, 3]]
+</pre><div class="pynote">“shape mismatch: indexing arrays could not be broadcast together with shapes (2,) (3,)”: NumPy tried to pair 2 row numbers with 3 column numbers.</div></div>
+
+<p>Three correct ways to get a true submatrix:</p>
+<div class="py" id="c-isl2-lab-29"><pre class="src">
+print(A[[1, 3]][:, [0, 2]])           # 1) pick rows, then from that pick columns
+idx = np.ix_([1, 3], [0, 2, 3])       # 2) np.ix_ builds a 'mesh' of every row with every column
+print(A[idx])
+print(A[1:4:2, 0:3:2])                # 3) slices: rows 1,3 and columns 0,2
+</pre><div class="pynote">The slice <code>1:4:2</code> means start 1, stop before 4, step 2: positions 1 and 3. <code>0:3:2</code> gives 0 and 2. Slices are a different Python type from lists, and NumPy always treats two slices as “rows × columns”, which is why method 3 works directly.</div></div>
+
+<h4>Boolean indexing</h4>
+<p>A <dfn data-g="boolean-index">Boolean</dfn> is <code>True</code> or <code>False</code> (also treated as 1 and 0). An array of Booleans can select rows: the rows marked <code>True</code> are kept.</p>
+<div class="py" id="c-isl2-lab-30"><pre class="src">
+keep_rows = np.zeros(A.shape[0], bool)    # [False, False, False, False]
+keep_rows[[1, 3]] = True                  # mark rows 1 and 3
+print(keep_rows)
+print(np.all(keep_rows == np.array([0, 1, 0, 1])))   # equal as numbers...
+</pre><div class="pynote"><code>==</code> compares element by element; <code>np.all</code> checks every comparison is <code>True</code> (<code>np.any</code> checks whether at least one is).</div></div>
+
+<div class="predict" data-correct="2"><p><code>keep_rows</code> and <code>np.array([0, 1, 0, 1])</code> are “equal”. Do <code>A[keep_rows]</code> and <code>A[np.array([0, 1, 0, 1])]</code> give the same rows?</p><ol class="opts"><li>Yes, they are equal</li><li>No: the Boolean array keeps rows 1 and 3; the integer array fetches rows 0, 1, 0, 1</li></ol>
+<div class="why">Integers are positions: fetch row 0, then row 1, then row 0 again, then row 1. Booleans are a keep/drop mask. NumPy treats the two types differently even when they compare equal.</div></div>
+<div class="py" id="c-isl2-lab-31"><pre class="src">
+print(A[np.array([0, 1, 0, 1])])
+print(A[keep_rows])
+</pre></div>
+
+<div class="py" id="c-isl2-lab-32"><pre class="src">
+keep_cols = np.zeros(A.shape[1], bool)
+keep_cols[[0, 2, 3]] = True
+print(A[np.ix_(keep_rows, keep_cols)])    # np.ix_ also accepts Booleans
+print(A[np.ix_([1, 3], keep_cols)])       # or a mix of a list and Booleans
+</pre></div>
+
+<div class="ex" id="x-isl2-lab-05" data-title="your turn: a submatrix"><div class="task"><p>Write <code>submatrix(M, rows, cols)</code> that returns the block of <code>M</code> made of the given rows and the given columns (lists of positions), in that order. Example: with <code>A</code> above, rows <code>[1, 3]</code> and columns <code>[0, 2]</code> give <code>[[4, 6], [12, 14]]</code>.</p></div>
+<pre class="src">
+def submatrix(M, rows, cols):
+    return M[rows, cols]
+</pre>
+<pre class="check">
+got = submatrix(A, [1, 3], [0, 2])
+assert np.array_equal(got, [[4, 6], [12, 14]]), f"expected [[4, 6], [12, 14]], got {got}"
+got = submatrix(A, [0, 2], [1, 2, 3])
+assert np.array_equal(got, [[1, 2, 3], [9, 10, 11]]), f"rows [0,2], cols [1,2,3] should give [[1,2,3],[9,10,11]], got {got}"
+got = submatrix(A, [3], [3, 0])
+assert np.array_equal(got, [[15, 12]]), "order matters: rows [3], cols [3, 0] give [[15, 12]]"
+</pre>
+<div class="hint"><p>The starter has exactly the trap from this section. Which helper builds a mesh of every row with every column?</p></div>
+<div class="hint"><p><code style="white-space:normal;overflow-wrap:anywhere">return M[np.ix_(rows, cols)]</code></p></div>
+<pre class="solution">
+def submatrix(M, rows, cols):
+    return M[np.ix_(rows, cols)]
+</pre><div class="explain"><p><code>np.ix_</code> turns the two lists into a column of row numbers and a row of column numbers, which broadcast against each other to give every (row, column) combination. The starter fails the first check with the wrong shape, or the second with an IndexError.</p></div></div>
+
+<h3 id="isl2-lab-load">2.3.7 Loading data</h3>
+<p>Real data sets mix types (numbers, text) and have names for rows and columns, so they live in a <dfn data-g="data-frame">data frame</dfn>: a table whose columns are arrays of equal length. The <b>pandas</b> library provides data frames (see <a href="#pd1">pandas</a>). The first step of almost every analysis is reading a file. Python looks for the file in the current folder; on your Mac, if the file is elsewhere, <code>import os</code> and <code>os.chdir('path/to/folder')</code> changes folder. Here <code>Auto.csv</code> and <code>Auto.data</code> are already in the working folder.</p>
+<div class="py" id="c-isl2-lab-33"><pre class="src">
+import pandas as pd
+Auto = pd.read_csv('Auto.csv')
+Auto
+</pre><div class="pynote">397 cars, 9 columns: miles per gallon, number of cylinders, engine displacement, horsepower, weight, acceleration, model year, origin (1 American, 2 European, 3 Japanese) and name. pandas shows the first and last rows.</div></div>
+
+<p>The same data also comes as <code>Auto.data</code>, where columns are separated by spaces instead of commas. The book reads it with <code>delim_whitespace=True</code>; that option is now deprecated in pandas, so we write the modern equivalent <code>sep=r'\s+'</code> (“the separator is one or more whitespace characters”). Before loading any file it is a good idea to open it in a text editor and look.</p>
+<div class="py" id="c-isl2-lab-34"><pre class="src">
+Auto = pd.read_csv('Auto.data', sep=r'\s+')
+Auto['horsepower']
+</pre><div class="pynote">Look at the last line: <code>dtype: object</code>. Horsepower should be numbers, but pandas has read the column as <b>strings</b>. Something in it is not a number.</div></div>
+
+<div class="predict" data-correct="1"><p>Why would a column of horsepower values be read as text?</p><ol class="opts"><li>At least one entry is not a number, such as a symbol used for “missing”</li><li>Horsepower values are too large for a number</li><li>Space-separated files always give text</li></ol>
+<div class="why">One non-numeric entry is enough to turn the whole column into strings. <code>np.unique</code> on the column shows the culprit: <code>'?'</code>, used in this file to mean “missing”.</div></div>
+<div class="py" id="c-isl2-lab-35"><pre class="src">
+print(np.unique(Auto['horsepower'])[-5:])     # the book omits this long output; we show the last 5
+</pre><div class="pynote">The unique values are sorted as text, so <code>'?'</code> comes last. Text is sorted character by character, so <code>'98.00'</code> comes <i>after</i> <code>'100.0'</code> (because 9 &gt; 1). Another reason we want real numbers.</div></div>
+
+<p>We tell <code>read_csv</code> that <code>?</code> means missing with <code>na_values=['?']</code>. Each <code>?</code> becomes <dfn data-g="na-values"><code>np.nan</code></dfn> (“not a number”), and the column becomes numeric.</p>
+<div class="py" id="c-isl2-lab-36"><pre class="src">
+Auto = pd.read_csv('Auto.data', na_values=['?'], sep=r'\s+')
+print(Auto['horsepower'].sum())     # sum skips the missing values
+print(Auto.shape)
+</pre><div class="pynote">The sum is 40952.0, matching the book. <code>Auto.shape</code> is <code>(397, 9)</code>: 397 observations (rows) and 9 variables (columns).</div></div>
+
+<p>Only five rows contain missing values, so the book simply removes them with the <code>dropna()</code> method.</p>
+<div class="predict" data-correct="2"><p>What is the shape after <code>dropna()</code>?</p><ol class="opts"><li>(397, 9)</li><li>(392, 9)</li><li>(397, 8)</li></ol>
+<div class="why">Five rows with a missing value are dropped: \(397 - 5 = 392\). The columns are untouched.</div></div>
+<div class="py" id="c-isl2-lab-37"><pre class="src">
+Auto_new = Auto.dropna()
+print(Auto_new.shape)
+Auto = Auto_new        # overwrite the previous value
+Auto.columns
+</pre></div>
+
+<h4>Basics of selecting rows and columns</h4>
+<p>Data frames are indexed like arrays, but not identically. A <b>slice</b> in <code>[]</code> selects rows; a <b>Boolean array</b> selects rows; a <b>list of column names</b> selects columns.</p>
+<div class="py" id="c-isl2-lab-38"><pre class="src">
+print(Auto[:3])                         # first three rows
+idx_80 = Auto['year'] &gt; 80              # a Boolean Series: True for cars after 1980
+print(idx_80.sum(), "cars from after 1980")
+Auto[['mpg', 'horsepower']]             # a list of names: those two columns
+</pre><div class="pynote"><code>Auto['year'] &gt; 80</code> compares every entry with 80, giving <code>True</code>/<code>False</code> for each row; <code>.sum()</code> counts the <code>True</code>s. <code>Auto[idx_80]</code> would keep just those rows.</div></div>
+
+<p>We loaded without saying which column names the rows, so pandas numbered them 0 to 396. After <code>dropna</code> five numbers are missing from that sequence. The <code>set_index</code> method uses a column as row labels instead.</p>
+<div class="py" id="c-isl2-lab-39"><pre class="src">
+print(Auto.index)
+Auto_re = Auto.set_index('name')
+print(Auto_re.columns)                  # 'name' is no longer a column
+Auto_re[:4]
+</pre></div>
+
+<p>Now rows can be fetched by name with <code>loc[]</code>, or by position with <code>iloc[]</code>. Both take <code>[rows, columns]</code>.</p>
+<div class="py" id="c-isl2-lab-40"><pre class="src">
+rows = ['amc rebel sst', 'ford torino']
+print(Auto_re.loc[rows])                       # by label
+print(Auto_re.iloc[[3, 4]])                    # by position: 4th and 5th rows
+print(Auto_re.iloc[:, [0, 2, 3]].head(3))      # 1st, 3rd and 4th columns
+Auto_re.iloc[[3, 4], [0, 2, 3]]                # both at once
+</pre></div>
+
+<p>Index labels need not be unique: there are three cars called <code>ford galaxie 500</code>, and <code>loc</code> returns all of them.</p>
+<div class="py" id="c-isl2-lab-41"><pre class="src">
+Auto_re.loc['ford galaxie 500', ['mpg', 'origin']]
+</pre></div>
+
+<h4>More on selecting rows and columns</h4>
+<p><code>loc</code> also accepts a Boolean array for the rows. Weight and origin of the cars built after 1980:</p>
+<div class="py" id="c-isl2-lab-42"><pre class="src">
+idx_80 = Auto_re['year'] &gt; 80
+Auto_re.loc[idx_80, ['weight', 'origin']]
+</pre></div>
+
+<p>More concisely, use a <dfn data-g="lambda">lambda</dfn>: a small unnamed function written in one line. <code style="white-space:normal;overflow-wrap:anywhere">lambda df: df['year'] &gt; 80</code> means “a function that takes a data frame <code>df</code> and returns <code>df['year'] &gt; 80</code>”. Inside <code>loc</code>, pandas calls it with the data frame itself.</p>
+<div class="py" id="c-isl2-lab-43"><pre class="src">
+print(Auto_re.loc[lambda df: df['year'] &gt; 80, ['weight', 'origin']].shape)
+Auto_re.loc[lambda df: (df['year'] &gt; 80) &amp; (df['mpg'] &gt; 30),
+            ['weight', 'origin']]
+</pre><div class="pynote"><code>&amp;</code> is element-wise “and”: both conditions must hold. The brackets around each condition are required, because <code>&amp;</code> binds more tightly than <code>&gt;</code>. 34 cars were built after 1980 <i>and</i> do better than 30 mpg.</div></div>
+
+<p>Finally, all Ford and Datsun cars with displacement below 300. <code style="white-space:normal;overflow-wrap:anywhere">df.index.str.contains('ford')</code> checks whether each name contains the text “ford”; <code>|</code> is element-wise “or”.</p>
+<div class="py" id="c-isl2-lab-44"><pre class="src">
+Auto_re.loc[lambda df: (df['displacement'] &lt; 300)
+                       &amp; (df.index.str.contains('ford')
+                          | df.index.str.contains('datsun')),
+            ['weight', 'origin']]
+</pre></div>
+
+<div class="callout key"><p><b>Summary of selection.</b> Integer positions: <code>iloc[]</code>. Labels and Booleans: <code>loc[]</code>. Filtering rows with a condition: <code>loc[]</code> with a lambda in the rows slot.</p></div>
+
+<div class="ex" id="x-isl2-lab-06" data-title="your turn: load, clean, filter"><div class="task"><p>Write <code>economical(path, min_mpg)</code>. It reads <code>Auto.csv</code> from <code>path</code> with <code>'?'</code> treated as missing, drops rows with missing values, sets <code>name</code> as the index, and returns the data frame of cars with <code>mpg</code> strictly above <code>min_mpg</code>, keeping only the columns <code>mpg</code> and <code>horsepower</code>.</p></div>
+<pre class="src">
+def economical(path, min_mpg):
+    df = pd.read_csv(path)
+    return df
+</pre>
+<pre class="check">
+out = economical('Auto.csv', 40)
+assert list(out.columns) == ['mpg', 'horsepower'], f"columns should be ['mpg', 'horsepower'], got {list(out.columns)}"
+assert out.index.name == 'name', "the index should be the car names"
+assert len(out) == 8 and (out["mpg"] &gt; 40).all(), f"there are 8 cars above 40 mpg, got {len(out)}"
+assert out['horsepower'].dtype.kind == 'f', "horsepower must be numeric: use na_values=['?']"
+assert len(economical('Auto.csv', 0)) == 392, "with min_mpg=0 every complete car (392) is kept"
+</pre>
+<div class="hint"><p>Four steps: <code style="white-space:normal;overflow-wrap:anywhere">pd.read_csv(path, na_values=['?'])</code>, <code>.dropna()</code>, <code>.set_index('name')</code>, then <code>.loc[condition, columns]</code>.</p></div>
+<div class="hint"><p><code style="white-space:normal;overflow-wrap:anywhere">return df.loc[lambda d: d['mpg'] &gt; min_mpg, ['mpg', 'horsepower']]</code> after the cleaning lines.</p></div>
+<pre class="solution">
+def economical(path, min_mpg):
+    df = pd.read_csv(path, na_values=['?']).dropna().set_index('name')
+    return df.loc[lambda d: d['mpg'] &gt; min_mpg, ['mpg', 'horsepower']]
+</pre><div class="explain"><p>Methods can be <b>chained</b>: each returns a new data frame, and the next method acts on it. Without <code>na_values</code> the horsepower column stays as text, which the dtype check catches (<code>kind == 'f'</code> means floating point).</p></div></div>
+
+<h3 id="isl2-lab-loops">2.3.8 For loops</h3>
+<p>A <code>for</code> loop runs the indented block once for each item of a sequence (see <a href="#py2">Python II</a>). The loop ends where the indentation returns to the level of the <code>for</code>. <code>total += value</code> is shorthand for <code>total = total + value</code>.</p>
+<div class="py" id="c-isl2-lab-45"><pre class="src">
+total = 0
+for value in [3, 2, 19]:
+    total += value
+print('Total is: {0}'.format(total))
+</pre><div class="pynote">\(0 + 3 = 3\), \(3 + 2 = 5\), \(5 + 19 = 24\). The <code>print</code> is not indented, so it runs once, after the loop. <code>'{0}'.format(total)</code> puts the value of <code>total</code> where <code>{0}</code> is.</div></div>
+
+<div class="predict" data-correct="3"><p>Two nested loops: for each value in [2, 3, 19] and each weight in [3, 2, 1], add value × weight. What is the total?</p><ol class="opts"><li>24</li><li>48</li><li>144</li></ol>
+<div class="why">Each value meets every weight: \(\text{value}\times(3+2+1) = 6\times\text{value}\). So the total is \(6\times(2+3+19) = 6\times24 = 144\).</div></div>
+<div class="py" id="c-isl2-lab-46"><pre class="src">
+total = 0
+for value in [2, 3, 19]:
+    for weight in [3, 2, 1]:
+        total += value * weight
+print('Total is: {0}'.format(total))
+</pre></div>
+
+<p>Usually we want to walk through <b>pairs</b>, (value, weight), rather than every combination. <code>zip</code> pairs up the items of two sequences. Example: a random variable takes the values 2, 3, 19 with probabilities 0.2, 0.3, 0.5; its average (expected) value is the weighted sum \(2(0.2) + 3(0.3) + 19(0.5) = 0.4 + 0.9 + 9.5 = 10.8\).</p>
+<div class="py" id="c-isl2-lab-47"><pre class="src">
+total = 0
+for value, weight in zip([2, 3, 19], [0.2, 0.3, 0.5]):
+    total += weight * value
+print('Weighted average is: {0}'.format(total))
+</pre><div class="pynote">\(0.4 + 0.9 + 9.5 = 10.8\). Here it prints exactly 10.8, but decimals like 0.2 cannot be stored exactly in binary, so sums of decimals often print as something like 10.799999999999999. That is a tiny rounding error, not a bug: compare such numbers with <code>np.isclose</code>, never with <code>==</code>.</div></div>
+
+<h4>String formatting</h4>
+<p>Building strings from values is a daily task, for example reporting the percentage of missing values in each column. First the book makes a data frame <code>D</code> with about 20% of entries set to <code>np.nan</code>: <code style="white-space:normal;overflow-wrap:anywhere">rng.choice([0, np.nan], p=[0.8, 0.2], size=A.shape)</code> picks 0 with probability 0.8 and <code>nan</code> with probability 0.2 for every entry, and adding <code>nan</code> to a number gives <code>nan</code>.</p>
+<div class="py" id="c-isl2-lab-48"><pre class="src">
+rng = np.random.default_rng(1)
+A = rng.standard_normal((127, 5))
+M = rng.choice([0, np.nan], p=[0.8, 0.2], size=A.shape)
+A += M
+D = pd.DataFrame(A, columns=['food', 'bar', 'pickle', 'snack', 'popcorn'])
+D[:3]
+</pre></div>
+
+<div class="py" id="c-isl2-lab-49"><pre class="src">
+for col in D.columns:
+    template = 'Column "{0}" has {1:.2%} missing values'
+    print(template.format(col, np.isnan(D[col]).mean()))
+</pre><div class="pynote"><code>{0}</code> is replaced by the first argument of <code>format</code> (the column name). <code>{1:.2%}</code> takes the second argument and writes it as a <b>percentage with 2 decimals</b>: 0.1654 becomes 16.54%. <code>np.isnan(D[col])</code> is <code>True</code> where a value is missing, and its mean is the fraction missing. The numbers match the book (16.54%, 25.98%, 29.13%, 21.26%, 22.83%) because the seed is the same.</div></div>
+
+<div class="ex" id="x-isl2-lab-07" data-title="your turn: a weighted average with zip"><div class="task"><p>Write <code style="white-space:normal;overflow-wrap:anywhere">weighted_average(values, weights)</code> using a <code>for</code> loop and <code>zip</code>: return \(\sum_i w_i v_i / \sum_i w_i\) (dividing by the total weight, so the weights need not add to 1). Example: values [2, 3, 19], weights [0.2, 0.3, 0.5] → 10.8.</p></div>
+<pre class="src">
+def weighted_average(values, weights):
+    total = 0
+    for v in values:
+        total += v
+    return total
+</pre>
+<pre class="check">
+assert np.isclose(weighted_average([2, 3, 19], [0.2, 0.3, 0.5]), 10.8), f"expected 10.8, got {weighted_average([2, 3, 19], [0.2, 0.3, 0.5])}"
+assert np.isclose(weighted_average([1, 2, 3], [1, 1, 1]), 2.0), "equal weights give the ordinary mean, 2.0"
+assert np.isclose(weighted_average([10, 20], [3, 1]), np.average([10, 20], weights=[3, 1])), "should match np.average(..., weights=...) = 12.5"
+</pre>
+<div class="hint"><p>Loop with <code style="white-space:normal;overflow-wrap:anywhere">for v, w in zip(values, weights):</code> and keep two running totals: one of <code>w * v</code>, one of <code>w</code>.</p></div>
+<div class="hint"><p>Return <code>total / wsum</code> after the loop.</p></div>
+<pre class="solution">
+def weighted_average(values, weights):
+    total, wsum = 0, 0
+    for v, w in zip(values, weights):
+        total += w * v
+        wsum += w
+    return total / wsum
+</pre><div class="explain"><p><code>zip</code> hands you one (value, weight) pair per loop round. Dividing by the total weight makes the function correct for any positive weights; NumPy's <code>np.average</code> does the same.</p></div></div>
+
+<h3 id="isl2-lab-summ">2.3.9 Additional graphical and numerical summaries</h3>
+<p>Typing a column name on its own fails, because Python does not know to look inside <code>Auto</code>. This cell fails on purpose:</p>
+<div class="py" id="c-isl2-lab-50" data-mode="expect-error" data-error="NameError"><pre class="src">
+fig, ax = subplots(figsize=(8, 8))
+ax.plot(horsepower, mpg, 'o')
+</pre><div class="pynote"><code style="white-space:normal;overflow-wrap:anywhere">NameError: name 'horsepower' is not defined</code>. The fix is to take the columns from the data frame.</div></div>
+
+<div class="py" id="c-isl2-lab-51"><pre class="src">
+fig, axes = subplots(1, 2, figsize=(11, 4))
+axes[0].plot(Auto['horsepower'], Auto['mpg'], 'o')       # columns taken from the data frame
+Auto.plot.scatter('horsepower', 'mpg', ax=axes[1])        # or let pandas plot by column name
+axes[1].set_title('Horsepower vs. MPG')
+fig.savefig('horsepower_mpg.png');
+</pre><div class="pynote">Both panels show the same strong curved, decreasing relationship: more powerful cars do fewer miles per gallon. <code>Auto.plot.scatter</code> returns an axes object; passing <code>ax=axes[1]</code> tells pandas which panel to draw in. If you only have an axes <code>ax</code>, <code>ax.figure</code> gets its figure (the book saves it that way). Columns can also be read as attributes: <code>Auto.horsepower</code> is the same as <code>Auto['horsepower']</code>.</div></div>
+
+<p><code>cylinders</code> is stored as a number, but it only takes a few values (3, 4, 5, 6, 8), so it is better treated as <b>qualitative</b>. We replace it with a categorical version. (<code>pd.Series</code> is pandas' one-column type; the name comes from time series.)</p>
+<div class="py" id="c-isl2-lab-52"><pre class="src">
+print(Auto.cylinders.dtype)
+Auto.cylinders = pd.Series(Auto.cylinders, dtype='category')
+print(Auto.cylinders.dtype, list(Auto.cylinders.cat.categories))
+</pre></div>
+
+<p>A qualitative variable on the x-axis calls for side-by-side <dfn data-g="boxplot">boxplots</dfn>: one box per category, showing the median (middle line), the quartiles (box edges), the range of typical values (whiskers) and outliers (circles). A <b>histogram</b> shows how one quantitative variable is distributed; <code>bins</code> sets the number of bars.</p>
+<div class="py" id="c-isl2-lab-53"><pre class="src">
+fig, axes = subplots(1, 3, figsize=(14, 4))
+Auto.boxplot('mpg', by='cylinders', ax=axes[0])
+Auto.hist('mpg', ax=axes[1])
+Auto.hist('mpg', color='red', bins=12, ax=axes[2]);
+</pre><div class="pynote"><b>Read the boxplots:</b> 4-cylinder cars have the highest mpg (median about 28), 8-cylinder cars the lowest (about 14). There are very few 3- and 5-cylinder cars. <b>Histograms:</b> mpg is skewed to the right: many cars between 13 and 20, a long tail up to 46.</div></div>
+
+<p>A <dfn data-g="scatter-matrix">scatterplot matrix</dfn> shows every pair of quantitative columns at once (the \(p(p-1)/2\) plots of <a href="#isl2-1">ISLP 2.1</a>, each drawn twice), with histograms on the diagonal.</p>
+<div class="py" id="c-isl2-lab-54"><pre class="src">
+pd.plotting.scatter_matrix(Auto[['mpg', 'displacement', 'weight']], figsize=(7, 7));
+</pre><div class="pynote">Displacement and weight rise together almost along a line (big engines go in heavy cars), and both fall with mpg along a curve. <code style="white-space:normal;overflow-wrap:anywhere">pd.plotting.scatter_matrix(Auto)</code> on the whole data frame works too: try it, it draws all 7 numeric columns (49 panels), which is slow and small on a phone.</div></div>
+
+<p><code>describe()</code> gives a numerical summary of each column: count, mean, standard deviation, minimum, quartiles and maximum. For a categorical column it gives the count, the number of categories, the most common one (<code>top</code>) and how often it occurs (<code>freq</code>).</p>
+<div class="py" id="c-isl2-lab-55"><pre class="src">
+print(Auto['cylinders'].describe())
+Auto[['mpg', 'weight']].describe()
+</pre><div class="pynote">392 cars, mean mpg 23.4 (standard deviation 7.8), ranging from 9 to 46.6. The most common number of cylinders is 4 (199 cars). The book's last cell also runs <code>Auto['mpg'].describe()</code> for one column on its own. To leave Jupyter, the book says: File, Close and Halt.</div></div>
+
+<div class="ex" id="x-isl2-lab-08" data-title="your turn: mean mpg by cylinders"><div class="task"><p>Write <code>mean_mpg_by(df, col)</code> returning a pandas Series with the mean <code>mpg</code> for each value of column <code>col</code>. New tool: <code style="white-space:normal;overflow-wrap:anywhere">df.groupby(col)['mpg'].mean()</code> splits the rows into groups by <code>col</code>, takes the <code>mpg</code> column in each group, and averages it. For categorical columns pass <code>observed=True</code> so that only categories that occur are listed.</p></div>
+<pre class="src">
+def mean_mpg_by(df, col):
+    return df['mpg'].mean()
+</pre>
+<pre class="check">
+r = mean_mpg_by(Auto, 'cylinders')
+assert hasattr(r, 'index') and len(r) == 5, f"one mean per number of cylinders (5 groups), got {r}"
+assert np.isclose(r.loc[4], Auto.loc[Auto['cylinders'] == 4, 'mpg'].mean()), "the 4-cylinder mean is wrong"
+assert r.loc[4] &gt; r.loc[8], "4-cylinder cars should average more mpg than 8-cylinder cars"
+r2 = mean_mpg_by(Auto, 'origin')
+assert np.isclose(r2.loc[3], 30.450632911392404), f"Japanese cars (origin 3) average 30.45 mpg, got {r2.loc[3]}"
+</pre>
+<div class="hint"><p>The starter averages all cars together. Group first.</p></div>
+<div class="hint"><p><code style="white-space:normal;overflow-wrap:anywhere">return df.groupby(col, observed=True)['mpg'].mean()</code></p></div>
+<pre class="solution">
+def mean_mpg_by(df, col):
+    return df.groupby(col, observed=True)['mpg'].mean()
+</pre><div class="explain"><p><code>groupby</code> is the numeric twin of the boxplot above: the same groups, summarised by one number each. 4-cylinder cars average about 29 mpg; Japanese cars (origin 3) about 30.5, American cars (origin 1) about 20.</p></div></div>
+
+<h3 id="isl2-lab-quiz">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">What does <code>np.arange(2, 11, 3)</code> contain?</p><ol class="opts"><li>[2, 5, 8, 11]</li><li>[2, 5, 8]</li><li>[3, 6, 9]</li></ol><div class="why">Start at 2, step 3, stop <i>before</i> 11: 2, 5, 8. The next value, 11, is excluded.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">For the 4×4 matrix <code>A</code> of the lab, what is <code>A[[0, 2], [1, 3]]</code>?</p><ol class="opts"><li>[[1, 3], [9, 11]]</li><li>an IndexError</li><li>[1, 11]</li></ol><div class="why">Two lists of equal length are paired: entries (0, 1) = 1 and (2, 3) = 11. For the 2×2 block, use <code>A[np.ix_([0, 2], [1, 3])]</code>.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem"><code>X</code> has shape (100, 4). Which gives the mean of each column?</p><ol class="opts"><li><code>X.mean(axis=0)</code></li><li><code>X.mean(axis=1)</code></li><li><code>X.mean()</code></li></ol><div class="why"><code>axis=0</code> collapses the 100 rows: 4 column means. <code>axis=1</code> gives 100 row means; no axis gives one overall mean.</div></div>
+<div class="q" data-type="num" data-answer="392" data-tol="0.0001"><p class="stem">How many rows does Auto have after <code>na_values=['?']</code> and <code>dropna()</code>?</p><div class="why">397 rows minus the 5 with a missing horsepower.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Which selects the rows of <code>Auto_re</code> labelled 'ford torino' and the columns 'mpg' and 'weight'?</p><ol class="opts"><li><code style="white-space:normal;overflow-wrap:anywhere">Auto_re.iloc['ford torino', ['mpg', 'weight']]</code></li><li><code style="white-space:normal;overflow-wrap:anywhere">Auto_re.loc['ford torino', ['mpg', 'weight']]</code></li><li><code style="white-space:normal;overflow-wrap:anywhere">Auto_re[['ford torino'], ['mpg', 'weight']]</code></li></ol><div class="why">Labels go with <code>loc</code>; <code>iloc</code> takes integer positions only. Plain <code>[]</code> with two lists is not valid for a data frame.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Why does the lab use <code style="white-space:normal;overflow-wrap:anywhere">np.random.default_rng(1303)</code>?</p><ol class="opts"><li>To make the numbers more random</li><li>Because <code>np.random.normal</code> no longer works</li><li>So that the same code always produces the same random numbers</li></ol><div class="why">A seeded generator makes results reproducible: you, the book and the guide all see the same numbers.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">After <code style="white-space:normal;overflow-wrap:anywhere">x_reshape = x.reshape((2, 3))</code>, you set <code>x_reshape[0, 0] = 5</code>. What happens to <code>x</code>?</p><ol class="opts"><li>Its first entry also becomes 5, because the reshape is a view of the same memory</li><li>Nothing</li><li>It becomes 2-D</li></ol><div class="why"><code>reshape</code> returns a view where possible. Use <code>.copy()</code> to get an independent array.</div></div>
+<div class="q" data-type="open"><p class="stem">The Auto horsepower column loaded as text. Explain why, how you diagnosed it, and the two lines of code that fixed it.</p><div class="model">The file uses '?' for missing horsepower values, and a single non-numeric entry makes pandas read the whole column as strings (dtype object). <code style="white-space:normal;overflow-wrap:anywhere">np.unique(Auto['horsepower'])</code> revealed '?'. Fix: <code style="white-space:normal;overflow-wrap:anywhere">Auto = pd.read_csv('Auto.data', na_values=['?'], sep=r'\s+')</code> so '?' becomes NaN and the column is numeric, then <code>Auto = Auto.dropna()</code> to remove the five incomplete rows.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">List <code>+</code> vs NumPy array <code>+</code></div><div class="b">Lists: concatenation (join). Arrays: element-wise addition.</div></div>
+<div class="fc"><div class="f">Three attributes of a NumPy array</div><div class="b"><code>shape</code> (tuple of sizes), <code>ndim</code> (number of dimensions), <code>dtype</code> (type of entries); also <code>T</code> (transpose).</div></div>
+<div class="fc"><div class="f">Reproducible random numbers in NumPy</div><div class="b"><code style="white-space:normal;overflow-wrap:anywhere">rng = np.random.default_rng(seed)</code>, then <code>rng.normal(...)</code>, <code>rng.standard_normal(...)</code>, <code>rng.choice(...)</code>.</div></div>
+<div class="fc"><div class="f"><code>np.var</code> divides by…</div><div class="b">\(n\) by default; pass <code>ddof=1</code> to divide by \(n-1\).</div></div>
+<div class="fc"><div class="f"><code>X.mean(axis=0)</code> on an (n, p) array</div><div class="b">The p column means (axis 0, the rows, is collapsed).</div></div>
+<div class="fc"><div class="f">Figure vs axes in matplotlib</div><div class="b">Figure: the whole canvas. Axes: one plot inside it, with its own labels and title. <code>fig, ax = subplots()</code>.</div></div>
+<div class="fc"><div class="f">Slice <code>[start:stop:step]</code></div><div class="b">From <code>start</code> up to but not including <code>stop</code>, every <code>step</code>-th item.</div></div>
+<div class="fc"><div class="f"><code>A[[1,3],[0,2]]</code> vs <code>A[np.ix_([1,3],[0,2])]</code></div><div class="b">The first gives the two entries A[1,0], A[3,2]; the second gives the 2×2 submatrix.</div></div>
+<div class="fc"><div class="f">Integer array vs Boolean array as an index</div><div class="b">Integers: fetch these positions (repeats allowed). Booleans: keep rows marked True.</div></div>
+<div class="fc"><div class="f">Turn '?' into missing values when loading</div><div class="b"><code style="white-space:normal;overflow-wrap:anywhere">pd.read_csv(file, na_values=['?'])</code>, then <code>.dropna()</code> to remove incomplete rows.</div></div>
+<div class="fc"><div class="f"><code>loc</code> vs <code>iloc</code></div><div class="b"><code>loc</code>: labels and Booleans (and lambdas). <code>iloc</code>: integer positions.</div></div>
+<div class="fc"><div class="f">Element-wise and / or in pandas conditions</div><div class="b"><code>&amp;</code> and <code>|</code>, with brackets around each condition.</div></div>
+<div class="fc"><div class="f"><code>'{1:.2%}'.format(a, b)</code></div><div class="b">Writes the second argument <code>b</code> as a percentage with 2 decimals (0.1654 → 16.54%).</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I ran every cell of the lab and could explain each line to a friend.</label>
+<label><input type="checkbox"> I can create arrays, read their shape/ndim/dtype, reshape them and know when a change affects the original.</label>
+<label><input type="checkbox"> I can make reproducible random numbers and compute means and variances along an axis.</label>
+<label><input type="checkbox"> I can draw scatterplots, multi-panel figures, contour plots and heatmaps, and label them.</label>
+<label><input type="checkbox"> I can slice sequences and index arrays by position, list, <code>np.ix_</code> and Boolean mask.</label>
+<label><input type="checkbox"> I can load Auto, fix the '?' values, and select rows and columns with <code>[]</code>, <code>loc</code>, <code>iloc</code> and a lambda.</label>
+<label><input type="checkbox"> I can write loops with <code>zip</code>, format strings, and summarise data with boxplots, histograms, scatter matrices and <code>describe</code>.</label>
+<label><input type="checkbox"> I solved all eight “your turn” exercises.</label>
+</div>
+</section>

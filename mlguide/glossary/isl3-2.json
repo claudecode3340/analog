@@ -1,0 +1,7 @@
+{
+"normal-equations": {"term": "normal equations", "def": "\\(\\bX\\T\\bX\\hat\\bbeta=\\bX\\T\\by\\): the linear system whose solution is the least-squares estimate; it says the residual vector is perpendicular to every column of \\(\\bX\\).", "at": "isl3-2"},
+"correlation-matrix": {"term": "correlation matrix", "def": "A table of the correlations between every pair of variables; symmetric with 1s on the diagonal.", "at": "isl3-2"},
+"f-statistic": {"term": "F-statistic", "def": "\\(\\frac{(\\text{TSS}-\\RSS)/p}{\\RSS/(n-p-1)}\\): tests whether at least one predictor is related to the response; about 1 if none is.", "at": "isl3-2"},
+"variable-selection": {"term": "variable selection", "def": "Choosing which subset of the predictors to keep in a model, e.g. by forward, backward or mixed selection.", "at": "isl3-2"},
+"prediction-interval": {"term": "prediction interval", "def": "A range for a single new response \\(y_0\\) at given predictor values; wider than the confidence interval for the mean because it includes the irreducible error \\(\\epsilon\\).", "at": "isl3-2"}
+}

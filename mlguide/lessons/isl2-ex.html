@@ -1,0 +1,513 @@
+<section class="lesson" id="isl2-ex" data-book="ISLP §2.4, pp. 63–67">
+<p class="lede">Every exercise at the end of ISLP Chapter 2, solved: seven conceptual questions and three applied data analyses (College, Auto, Boston). Doing them yourself is how the ideas of the last three lessons turn into skill, and the applied ones are exactly the first hour of any real data-science job: load, clean, summarise, plot, and say what you see.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#isl2-1">ISLP 2.1</a> <a href="#isl2-2">ISLP 2.2</a> <a href="#isl2-lab">ISLP 2.3 Lab</a> <a href="#pd1">pandas</a> <a href="#plt1">Plotting</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>reason about when flexible methods win or lose, and justify it with bias and variance;</li>
+<li>classify problems as regression or classification, inference or prediction, and read off \(n\) and \(p\);</li>
+<li>compute Euclidean distances and KNN predictions by hand for a three-predictor example;</li>
+<li>explore a new data set in pandas: summaries, ranges, subsets, boxplots, histograms, scatterplot matrices, and a written summary of findings.</li></ul></div>
+
+<div class="callout key"><p><b>How to use this page.</b> For each exercise: read the statement, write your answer on paper (or in your own notebook for the applied ones), and only then open the layers one at a time: <b>Hint</b>, <b>Final answer</b>, <b>Full solution</b>, <b>Common mistakes</b>. For the applied exercises the full solution contains real code cells; run them, then change them. Press <b>Mark solved</b> only when you could do it without the solution.</p></div>
+
+<div class="py" id="c-isl2-ex-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from ISLP import load_data
+pd.set_option('display.max_columns', 20)
+print("ready")
+</pre><div class="pynote">The setup cell for this lesson. Run it first if you jump straight to an applied exercise.</div></div>
+
+<h3 id="isl2-ex-conceptual">Conceptual exercises</h3>
+
+<div class="prob" id="p-isl2-ex-01" data-src="ISLP 2.4 · Conceptual 1" data-title="Flexible or not?">
+<div class="stmt"><p>For each of parts (a) through (d), indicate whether we would generally expect the performance of a flexible statistical learning method to be better or worse than an inflexible method. Justify your answer.</p>
+<p>(a) The sample size \(n\) is extremely large, and the number of predictors \(p\) is small.<br>
+(b) The number of predictors \(p\) is extremely large, and the number of observations \(n\) is small.<br>
+(c) The relationship between the predictors and response is highly non-linear.<br>
+(d) The variance of the error terms, i.e. \(\sigma^2 = \Var(\varepsilon)\), is extremely high.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>For each case ask two questions. Will a flexible method's <b>variance</b> be a problem (is there enough data to pin it down, or a lot of noise to chase)? Will an inflexible method's <b>bias</b> be a problem (is the truth far from simple)? Then use test MSE = variance + bias² + Var(ε).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) Flexible <b>better</b>. (b) Flexible <b>worse</b>. (c) Flexible <b>better</b>. (d) Flexible <b>worse</b>.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<ol class="steps">
+<li><div><b>(a) Large \(n\), small \(p\): flexible is better.</b> Variance comes from fitting the noise of a particular training set. With an enormous number of observations and few predictors, each region of predictor space contains lots of data, so even a flexible fit is pinned down: its variance is small. Its bias is low too. An inflexible method keeps its bias however much data it gets (a line cannot bend no matter how many points you give it). So the flexible method can take advantage of the data and should have lower test error.<span class="why">Think of the green curve in Figure 2.9: with thousands of points instead of 50, it would stop wiggling.</span></div></li>
+<li><div><b>(b) Huge \(p\), small \(n\): flexible is worse.</b> With few observations spread over many dimensions, a flexible method has too much freedom: it can fit the training data perfectly while learning mostly noise, so its variance is very high and it overfits. An inflexible method (e.g. linear regression with few parameters, or the lasso) has more bias but far less variance, and with so little data that trade usually wins.<span class="why">This is the <dfn data-g="high-dimensional">high-dimensional</dfn> setting of ISLP §6.4.</span></div></li>
+<li><div><b>(c) Highly non-linear truth: flexible is better.</b> An inflexible method such as a straight line has large bias here, which no amount of data removes (Figure 2.11: the linear fit has test MSE near 19 against a floor of 1). A flexible method can follow the curvature, cutting bias dramatically, as in the right panel of Figure 2.12.</div></li>
+<li><div><b>(d) Very high \(\Var(\varepsilon)\): flexible is worse.</b> When the noise is large, a flexible method chases it: each training set gives a very different fit, so variance is high. An inflexible method averages the noise away. Since the irreducible error is already large, the extra variance from flexibility costs more than the small reduction in bias gains.<span class="why">Signal processing view: in a low-SNR channel you use a long averaging (low-bandwidth) filter, not a wide-band one that lets the noise through.</span></div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Answering (a) “flexible is worse because it overfits”: overfitting needs too little data for the flexibility; with very large \(n\) the variance shrinks.</li><li>Saying in (d) that the irreducible error itself grows with flexibility. \(\Var(\varepsilon)\) is the same for every method; what grows is the <i>variance of \(\hat f\)</i>, because the flexible fit follows that noise.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl2-ex-02" data-src="ISLP 2.4 · Conceptual 2" data-title="Type, goal, n and p">
+<div class="stmt"><p>Explain whether each scenario is a classification or regression problem, and indicate whether we are most interested in inference or prediction. Finally, provide \(n\) and \(p\).</p>
+<p>(a) We collect a set of data on the top 500 firms in the US. For each firm we record profit, number of employees, industry and the CEO salary. We are interested in understanding which factors affect CEO salary.<br>
+(b) We are considering launching a new product and wish to know whether it will be a success or a failure. We collect data on 20 similar products that were previously launched. For each product we have recorded whether it was a success or failure, price charged for the product, marketing budget, competition price, and ten other variables.<br>
+(c) We are interested in predicting the % change in the USD/Euro exchange rate in relation to the weekly changes in the world stock markets. Hence we collect weekly data for all of 2012. For each week we record the % change in the USD/Euro, the % change in the US market, the % change in the British market, and the % change in the German market.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>First find the response: is it a number or a category? Then read the goal sentence (“understanding which factors…”, “wish to know whether…”, “predicting…”). \(n\) counts observations (rows); \(p\) counts predictors, <i>not</i> including the response.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div>
+<div class="tw"><table class="t"><thead><tr><th></th><th>Type</th><th>Goal</th><th>\(n\)</th><th>\(p\)</th></tr></thead><tbody>
+<tr><td>(a)</td><td>regression</td><td>inference</td><td class="n">500</td><td class="n">3</td></tr>
+<tr><td>(b)</td><td>classification</td><td>prediction</td><td class="n">20</td><td class="n">13</td></tr>
+<tr><td>(c)</td><td>regression</td><td>prediction</td><td class="n">52</td><td class="n">3</td></tr>
+</tbody></table></div></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<ol class="steps">
+<li><div><b>(a)</b> Response: CEO salary, a number, so <b>regression</b>. “Understanding which factors affect CEO salary” is about the relationship, so <b>inference</b>. Observations: \(n = 500\) firms. Predictors: profit, number of employees, industry, so \(p = 3\) (industry is a qualitative predictor; that is fine).</div></li>
+<li><div><b>(b)</b> Response: success or failure, two categories, so <b>classification</b>. We want to know whether <i>this</i> new product will succeed: <b>prediction</b>. \(n = 20\) previous products. Predictors: price, marketing budget, competition price and ten others: \(p = 3 + 10 = 13\).<span class="why">Note \(p = 13\) with only \(n = 20\): exactly the situation of Conceptual 1(b), where a flexible method would be a bad idea.</span></div></li>
+<li><div><b>(c)</b> Response: % change in USD/Euro, a number, so <b>regression</b>. The goal says “predicting”: <b>prediction</b>. Weekly data for one year: \(n = 52\) weeks. Predictors: % changes in the US, British and German markets: \(p = 3\).</div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Counting the response as a predictor: in (a) CEO salary is \(Y\), so \(p = 3\), not 4; in (c) the USD/Euro change is \(Y\).</li><li>Answering (b) as regression because some predictors are numbers. The response decides.</li><li>Writing \(n = 12\) (months) or \(n = 365\) (days) in (c): the data are weekly.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl2-ex-03" data-src="ISLP 2.4 · Conceptual 3" data-title="Five curves">
+<div class="stmt"><p>We now revisit the bias-variance decomposition.</p>
+<p>(a) Provide a sketch of typical (squared) bias, variance, training error, test error, and Bayes (or irreducible) error curves, on a single plot, as we go from less flexible statistical learning methods towards more flexible approaches. The x-axis should represent the amount of flexibility in the method, and the y-axis should represent the values for each curve. There should be five curves. Make sure to label each one.<br>
+(b) Explain why each of the five curves has the shape displayed in part (a).</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Two curves go down, one goes up, one is flat, and one is U-shaped. The U-shaped one is the sum of three of the others. Figure 2.12 shows four of the five.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Squared bias: decreasing. Variance: increasing. Training error: decreasing steadily (towards 0 for very flexible methods, below the Bayes line). Test error: U-shaped, always above the Bayes line. Bayes (irreducible) error: a flat horizontal line. Test error = bias² + variance + irreducible error.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<p>Rather than draw the curves by hand, we <b>simulate</b> them, so every curve is real data: polynomial fits of increasing degree to data from a curvy \(f\) with \(\Var(\varepsilon) = 1\), 300 training sets of 50 points.</p>
+<div class="py" id="c-isl2-ex-02"><pre class="src">
+f = lambda x: 4 + 5.5 * np.sin(np.pi * x / 130) ** 2
+def fit_poly(x, y, d):
+    V = np.polynomial.legendre.legvander((x - 50) / 50, d)
+    c, *_ = np.linalg.lstsq(V, y, rcond=None)
+    return lambda z: np.polynomial.legendre.legvander((z - 50) / 50, d) @ c
+rng = np.random.default_rng(0)
+x0 = np.linspace(5, 95, 37); degrees = range(1, 11)
+res = {k: [] for k in ['bias2', 'var', 'train', 'test']}
+for d in degrees:
+    preds, tr = [], []
+    for _ in range(300):
+        x = rng.uniform(0, 100, 50); y = f(x) + rng.normal(0, 1, 50)
+        fh = fit_poly(x, y, d); preds.append(fh(x0)); tr.append(np.mean((y - fh(x)) ** 2))
+    P = np.array(preds)
+    res['bias2'].append(np.mean((P.mean(0) - f(x0)) ** 2)); res['var'].append(np.mean(P.var(0)))
+    res['train'].append(np.mean(tr)); res['test'].append(res['bias2'][-1] + res['var'][-1] + 1)
+pd.DataFrame(res, index=pd.Index(degrees, name='degree')).round(3)
+</pre><div class="pynote">Each row is one flexibility level. Read down the columns: <code>bias2</code> falls, <code>var</code> rises, <code>train</code> falls (below 1 once the fit can bend), <code>test</code> falls then rises, and the Bayes error is 1 throughout.</div></div>
+<div class="py" id="c-isl2-ex-03"><pre class="src">
+fig, ax = plt.subplots(figsize=(7, 4.2))
+d = list(degrees)
+ax.plot(d, res['bias2'], 'o-', label='squared bias')
+ax.plot(d, res['var'], 'o-', label='variance')
+ax.plot(d, res['train'], 'o-', label='training error')
+ax.plot(d, res['test'], 'o-', label='test error')
+ax.axhline(1, ls='--', color='k', label='Bayes (irreducible) error')
+ax.set_ylim(0, 2.8); ax.set_xlabel('flexibility (polynomial degree)'); ax.set_ylabel('error'); ax.legend();
+</pre><div class="pynote">This is the sketch the exercise asks for, made from data. In an exam you draw the same five shapes and label them.</div></div>
+<p><b>(b) Why each curve has its shape.</b></p>
+<ol class="steps">
+<li><div><b>Squared bias decreases.</b> Bias is the error from forcing a simple shape on a complicated truth. More flexible methods can take more shapes, so their average fit gets closer to \(f\). It flattens out near 0 once the method is flexible enough to represent \(f\).</div></li>
+<li><div><b>Variance increases.</b> A flexible method follows the individual training points, noise included, so a different training set gives a noticeably different \(\hat f\). An inflexible method barely moves. Variance grows slowly at first, then fast.</div></li>
+<li><div><b>Training error decreases monotonically.</b> A more flexible method can always fit the training data at least as well (it contains the simpler fits as special cases). Eventually it interpolates the data and the training error approaches 0, falling <i>below</i> the irreducible error: a sign that it is fitting noise.</div></li>
+<li><div><b>Test error is U-shaped.</b> It equals bias² + variance + Var(ε) (2.7). At first bias falls faster than variance rises, so the test error drops; later bias is already small and variance takes over, so it rises. The bottom of the U is the best flexibility.</div></li>
+<li><div><b>Bayes (irreducible) error is flat.</b> \(\Var(\varepsilon)\) is a property of the data, not of the method, so it does not depend on flexibility. The test error can never fall below it; the training error can, because it is measured on the data the method was fitted to.</div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Drawing the test error dipping below the Bayes error line. It cannot: the other two terms of (2.7) are never negative.</li><li>Drawing the training error U-shaped like the test error.</li><li>Forgetting that the training error can go below the irreducible error.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl2-ex-04" data-src="ISLP 2.4 · Conceptual 4" data-title="Applications">
+<div class="stmt"><p>You will now think of some real-life applications for statistical learning.</p>
+<p>(a) Describe three real-life applications in which classification might be useful. Describe the response, as well as the predictors. Is the goal of each application inference or prediction? Explain your answer.<br>
+(b) Describe three real-life applications in which regression might be useful. Describe the response, as well as the predictors. Is the goal of each application inference or prediction? Explain your answer.<br>
+(c) Describe three real-life applications in which cluster analysis might be useful.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Think of things you know: telecom networks, chip manufacturing, hospitals, phones, cameras. For each, name a concrete response and three or four concrete predictors, then ask “do we want the answer for a new case, or do we want to understand the relationship?”</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Many answers are correct. A good answer names a specific response, specific predictors, and justifies prediction vs inference from the goal. Model answers are in the full solution.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<p><b>(a) Classification</b></p>
+<div class="tw"><table class="t"><thead><tr><th>Application</th><th>Response (classes)</th><th>Predictors</th><th>Goal and why</th></tr></thead><tbody>
+<tr><td>Spam filter</td><td>spam / not spam</td><td>word counts, sender domain, number of links, time sent</td><td><b>Prediction</b>: we only need each new email routed correctly.</td></tr>
+<tr><td>Wafer defect inspection in a fab</td><td>pass / fail for each die</td><td>test currents and voltages, wafer position, process temperature, lot number</td><td><b>Both</b>: predict which dies to discard (prediction), and find which process steps cause failures (inference) so engineers can fix them.</td></tr>
+<tr><td>Heart-disease study</td><td>disease / no disease</td><td>age, blood pressure, cholesterol, smoking, family history</td><td><b>Inference</b>: doctors want to know which risk factors matter and how much, to advise patients.</td></tr>
+</tbody></table></div>
+<p><b>(b) Regression</b></p>
+<div class="tw"><table class="t"><thead><tr><th>Application</th><th>Response (number)</th><th>Predictors</th><th>Goal and why</th></tr></thead><tbody>
+<tr><td>Mobile data throughput</td><td>download speed (Mbit/s)</td><td>SNR, distance to tower, number of active users, band</td><td><b>Prediction</b>: schedule users and pick a modulation scheme for the next frame.</td></tr>
+<tr><td>Crop yield study</td><td>yield (tonnes per hectare)</td><td>rainfall, fertiliser amount, soil type, seed variety</td><td><b>Inference</b>: how much extra yield does each kilogram of fertiliser bring?</td></tr>
+<tr><td>House prices</td><td>sale price</td><td>area, number of rooms, locality, age, distance to metro</td><td><b>Both</b>: value one flat (prediction); what is a metro station worth (inference).</td></tr>
+</tbody></table></div>
+<p><b>(c) Cluster analysis</b></p>
+<ol>
+<li><b>Customer segmentation</b> for a phone operator: group subscribers by call minutes, data use, recharge pattern and roaming, to design plans for each group.</li>
+<li><b>Gene expression</b>: group tumour samples by the expression levels of thousands of genes, to discover cancer subtypes that respond differently to treatment.</li>
+<li><b>Colour quantisation of images</b>: cluster the RGB values of all pixels into \(K\) groups and replace each pixel by its cluster's average colour, compressing the image to \(K\) colours (K-means does exactly this).</li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Giving a regression example whose response is really a category (e.g. “predict the grade A/B/C”).</li><li>Saying “prediction” for everything. Ask whether someone needs to <i>understand</i> the relationship.</li><li>For clustering, giving an example where the groups are already labelled: that is classification.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl2-ex-05" data-src="ISLP 2.4 · Conceptual 5" data-title="Flexibility: pros, cons">
+<div class="stmt"><p>What are the advantages and disadvantages of a very flexible (versus a less flexible) approach for regression or classification? Under what circumstances might a more flexible approach be preferred to a less flexible approach? When might a less flexible approach be preferred?</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Use the three ideas of the chapter: bias, variance and interpretability. Then connect to the four cases of Conceptual 1.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Flexible: + low bias, can fit complicated \(f\), often better predictions with lots of data. − high variance (overfitting), needs more data, harder to interpret, more computation. Prefer flexible when \(f\) is very non-linear, \(n\) is large relative to \(p\), noise is low, and the goal is prediction. Prefer less flexible when the goal is inference, \(n\) is small or \(p\) large, noise is high, or the truth is close to simple.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<ol class="steps">
+<li><div><b>Advantages of a very flexible approach.</b> It can represent a much wider range of shapes for \(f\), so its <b>bias is low</b>. If the true relationship is complicated (Figure 2.11), it can predict far more accurately than a linear method.</div></li>
+<li><div><b>Disadvantages.</b> (i) <b>High variance</b>: it follows the noise, so it may overfit, giving low training error but high test error. (ii) It needs <b>more data</b> to estimate many parameters reliably. (iii) It is <b>harder to interpret</b> (Figure 2.7): you cannot easily say how each predictor affects the response. (iv) It is usually slower to fit and needs tuning (how flexible?).</div></li>
+<li><div><b>When flexible is preferred:</b> the goal is <b>prediction</b>, not explanation; the true \(f\) is clearly non-linear; there are many observations compared with predictors; the noise level is modest. Example: image recognition with millions of labelled images.</div></li>
+<li><div><b>When less flexible is preferred:</b> the goal is <b>inference</b> (we need interpretable coefficients); data are scarce or high-dimensional; the noise is high; or there is reason to believe \(f\) is roughly linear (Figure 2.10). Example: a medical study with 80 patients and 20 measurements.</div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Claiming flexible methods always predict better. Figures 2.10 and 2.17 show otherwise.</li><li>Forgetting interpretability, which is often the deciding factor in practice.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl2-ex-06" data-src="ISLP 2.4 · Conceptual 6" data-title="Parametric or not">
+<div class="stmt"><p>Describe the differences between a parametric and a non-parametric statistical learning approach. What are the advantages of a parametric approach to regression or classification (as opposed to a non-parametric approach)? What are its disadvantages?</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>A parametric method makes an assumption first. What is it, and what does it buy you? Recall the two steps on p. 20 of ISLP.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Parametric: assume a functional form for \(f\) with a fixed, small number of parameters, then estimate them. Non-parametric: no fixed form; let the data determine the shape, subject to smoothness. Parametric advantages: estimating \(f\) reduces to estimating a few numbers, so it needs fewer observations, is fast and interpretable. Disadvantage: if the assumed form is far from the true \(f\), the estimate is poor (high bias), whatever the sample size.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<ol class="steps">
+<li><div><b>Parametric</b>: two steps. (1) Assume a form for \(f\), e.g. linear: \(f(X) = \beta_0 + \beta_1X_1 + \cdots + \beta_pX_p\). (2) Use the training data to estimate the \(p + 1\) parameters, e.g. by least squares. The problem of estimating a whole function is reduced to estimating a few numbers.</div></li>
+<li><div><b>Non-parametric</b>: no explicit form is assumed. The method looks for an \(\hat f\) as close to the data as possible while staying smooth (thin-plate splines, KNN). The number of effective parameters grows with the data.</div></li>
+<li><div><b>Advantages of parametric</b>: (i) needs far fewer observations; (ii) estimates are stable (low variance); (iii) the parameters are interpretable (\(\beta_j\) is the effect of \(X_j\)), ideal for inference; (iv) fast to fit and to use.</div></li>
+<li><div><b>Disadvantages of parametric</b>: the assumed form usually does not match the true \(f\) exactly; if it is far off, the fit is poor (high bias) and more data will not fix it. Trying to fix this with more flexible parametric forms adds parameters and risks overfitting.</div></li>
+<li><div>Example from the chapter: on the Income data, the linear plane (parametric, 3 parameters) missed the S-shape; the smooth thin-plate spline (non-parametric) captured it, but needed a choice of smoothness, and the rough spline overfitted.</div></li>
+</ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Saying non-parametric methods have no parameters at all. They usually have tuning parameters (like \(K\) or the smoothness); what they lack is a fixed functional form.</li><li>Saying parametric methods are always less accurate. When the assumed form is close to the truth, they are often the most accurate choice.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl2-ex-07" data-src="ISLP 2.4 · Conceptual 7" data-title="KNN by hand">
+<div class="stmt"><p>The table below provides a training data set containing six observations, three predictors, and one qualitative response variable.</p>
+<div class="tw"><table class="t"><thead><tr><th>Obs.</th><th>\(X_1\)</th><th>\(X_2\)</th><th>\(X_3\)</th><th>\(Y\)</th></tr></thead><tbody>
+<tr><td>1</td><td class="n">0</td><td class="n">3</td><td class="n">0</td><td>Red</td></tr>
+<tr><td>2</td><td class="n">2</td><td class="n">0</td><td class="n">0</td><td>Red</td></tr>
+<tr><td>3</td><td class="n">0</td><td class="n">1</td><td class="n">3</td><td>Red</td></tr>
+<tr><td>4</td><td class="n">0</td><td class="n">1</td><td class="n">2</td><td>Green</td></tr>
+<tr><td>5</td><td class="n">−1</td><td class="n">0</td><td class="n">1</td><td>Green</td></tr>
+<tr><td>6</td><td class="n">1</td><td class="n">1</td><td class="n">1</td><td>Red</td></tr>
+</tbody></table></div>
+<p>Suppose we wish to use this data set to make a prediction for \(Y\) when \(X_1 = X_2 = X_3 = 0\) using K-nearest neighbors.</p>
+<p>(a) Compute the Euclidean distance between each observation and the test point, \(X_1 = X_2 = X_3 = 0\).<br>
+(b) What is our prediction with \(K = 1\)? Why?<br>
+(c) What is our prediction with \(K = 3\)? Why?<br>
+(d) If the Bayes decision boundary in this problem is highly non-linear, then would we expect the best value for \(K\) to be large or small? Why?</p></div>
+<div class="ansin" data-answer="3.162" data-tol="0.002" data-unit="distance of observation 3"></div>
+<details class="hintd"><summary>Hint</summary><div><p><dfn data-g="euclidean-distance">Euclidean distance</dfn> in three dimensions: \(d = \sqrt{(x_1-0)^2 + (x_2-0)^2 + (x_3-0)^2}\). Because the test point is the origin, each distance is just \(\sqrt{x_1^2 + x_2^2 + x_3^2}\). The box above checks your distance for observation 3.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) \(3,\ 2,\ \sqrt{10}\approx3.162,\ \sqrt5\approx2.236,\ \sqrt2\approx1.414,\ \sqrt3\approx1.732\). (b) <b>Green</b> (nearest is observation 5). (c) <b>Red</b> (neighbours 5 Green, 6 Red, 2 Red: Red 2/3). (d) <b>Small</b> \(K\).</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<p>Write the six training points as the rows of a matrix and the test point as \(x_0\):</p>
+\[X = \begin{pmatrix} 0 & 3 & 0\\ 2 & 0 & 0\\ 0 & 1 & 3\\ 0 & 1 & 2\\ -1 & 0 & 1\\ 1 & 1 & 1\end{pmatrix}, \qquad x_0 = \begin{pmatrix}0 & 0 & 0\end{pmatrix}\]
+<ol class="steps">
+<li><div><b>(a)</b> For each observation, subtract \(x_0\), square each coordinate, add, take the square root. Since \(x_0\) is the origin, \(x_j - 0 = x_j\), so the columns below are just \(x_1^2, x_2^2, x_3^2\).
+<div class="tw"><table class="t"><thead><tr><th>Obs.</th><th>\(x_1^2\)</th><th>\(x_2^2\)</th><th>\(x_3^2\)</th><th>sum</th><th>distance</th><th>\(Y\)</th></tr></thead><tbody>
+<tr><td>1</td><td class="n">\(0^2=0\)</td><td class="n">\(3^2=9\)</td><td class="n">\(0^2=0\)</td><td class="n">9</td><td class="n">\(\sqrt9 = 3\)</td><td>Red</td></tr>
+<tr><td>2</td><td class="n">\(2^2=4\)</td><td class="n">\(0\)</td><td class="n">\(0\)</td><td class="n">4</td><td class="n">\(\sqrt4 = 2\)</td><td>Red</td></tr>
+<tr><td>3</td><td class="n">\(0\)</td><td class="n">\(1^2=1\)</td><td class="n">\(3^2=9\)</td><td class="n">10</td><td class="n">\(\sqrt{10} \approx 3.162\)</td><td>Red</td></tr>
+<tr><td>4</td><td class="n">\(0\)</td><td class="n">\(1\)</td><td class="n">\(2^2=4\)</td><td class="n">5</td><td class="n">\(\sqrt5 \approx 2.236\)</td><td>Green</td></tr>
+<tr><td>5</td><td class="n">\((-1)^2=1\)</td><td class="n">\(0\)</td><td class="n">\(1\)</td><td class="n">2</td><td class="n"><span class="hlg">\(\sqrt2 \approx 1.414\)</span></td><td>Green</td></tr>
+<tr><td>6</td><td class="n">\(1\)</td><td class="n">\(1\)</td><td class="n">\(1\)</td><td class="n">3</td><td class="n"><span class="hlc">\(\sqrt3 \approx 1.732\)</span></td><td>Red</td></tr>
+</tbody></table></div><span class="why">Note \((-1)^2 = +1\): squaring removes the sign, so distance never depends on direction.</span></div></li>
+<li><div>Sort from nearest to farthest: obs 5 (<span class="hlg">1.414</span>, Green), obs 6 (<span class="hlc">1.732</span>, Red), obs 2 (<span class="hlc">2.000</span>, Red), obs 4 (2.236, Green), obs 1 (3.000, Red), obs 3 (3.162, Red).</div></li>
+<li><div><b>(b) \(K = 1\).</b> \(\mathcal N_0 = \{5\}\). \(\Pr(\text{Green}\mid x_0) = 1/1 = 1\). Prediction: <b>Green</b>, because the single nearest neighbour is green.</div></li>
+<li><div><b>(c) \(K = 3\).</b> \(\mathcal N_0 = \{5, 6, 2\}\): Green, Red, Red. Using (2.12): \(\Pr(\text{Red}\mid x_0) = \frac13(0 + 1 + 1) = \frac23\), \(\Pr(\text{Green}\mid x_0) = \frac13\). Prediction: <b>Red</b>, the class with the larger estimated probability.</div></li>
+<li><div><b>(d)</b> A highly non-linear Bayes boundary needs a flexible classifier to follow its bends. In KNN, flexibility increases as \(K\) decreases (Figures 2.16–2.17): a large \(K\) averages over a wide neighbourhood and gives a smooth, nearly linear boundary (high bias). So we expect the best \(K\) to be <b>small</b>, though not so small that variance dominates (\(K = 1\) is usually too noisy).</div></li>
+</ol>
+<div class="py" id="c-isl2-ex-04"><pre class="src">
+from sklearn.neighbors import KNeighborsClassifier
+X7 = np.array([[0, 3, 0], [2, 0, 0], [0, 1, 3], [0, 1, 2], [-1, 0, 1], [1, 1, 1]])
+y7 = np.array(['Red', 'Red', 'Red', 'Green', 'Green', 'Red'])
+x0 = np.zeros(3)
+d = np.sqrt(((X7 - x0) ** 2).sum(axis=1))
+print("distances:", d.round(3))
+print("order of observations (1-based):", np.argsort(d) + 1)
+for K in [1, 3]:
+    print(f"K={K}:", KNeighborsClassifier(n_neighbors=K).fit(X7, y7).predict([x0])[0])
+</pre><div class="pynote">Code confirms every number: distances 3, 2, 3.162, 2.236, 1.414, 1.732; nearest-first order 5, 6, 2, 4, 1, 3; predictions Green for \(K = 1\) and Red for \(K = 3\). <code>np.argsort(d) + 1</code> converts Python's 0-based positions to the book's observation numbers.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Writing \(-1\) for the squared first coordinate of observation 5; it is \((-1)^2 = 1\).</li><li>Forgetting the square root. For ranking it does not matter, but part (a) asks for the distances.</li><li>In (c), choosing Green because the <i>nearest</i> neighbour is green. With \(K = 3\) all three vote equally.</li><li>In (d), answering “large \(K\)” because large \(K\) is “more powerful”. Large \(K\) is <i>less</i> flexible.</li></ul></div></details>
+</div>
+
+<h3 id="isl2-ex-applied">Applied exercises</h3>
+<p>The applied exercises are solved with real code. Each part of the solution is a cell: run it, read the output, then read the interpretation underneath. All the cells share one namespace, top to bottom, so run them in order.</p>
+
+<div class="prob" id="p-isl2-ex-08" data-src="ISLP 2.4 · Applied 8" data-title="College data">
+<div class="stmt"><p>This exercise relates to the <code>College</code> data set, which can be found in the file <code>College.csv</code> on the book website. It contains a number of variables for 777 different universities and colleges in the US. The variables are</p>
+<div class="tw"><table class="t"><tbody>
+<tr><td><code>Private</code></td><td>Public/private indicator</td><td><code>Outstate</code></td><td>Out-of-state tuition</td></tr>
+<tr><td><code>Apps</code></td><td>Number of applications received</td><td><code>Room.Board</code></td><td>Room and board costs</td></tr>
+<tr><td><code>Accept</code></td><td>Number of applicants accepted</td><td><code>Books</code></td><td>Estimated book costs</td></tr>
+<tr><td><code>Enroll</code></td><td>Number of new students enrolled</td><td><code>Personal</code></td><td>Estimated personal spending</td></tr>
+<tr><td><code>Top10perc</code></td><td>New students from top 10% of high school class</td><td><code>PhD</code></td><td>Percent of faculty with Ph.D.s</td></tr>
+<tr><td><code>Top25perc</code></td><td>New students from top 25% of high school class</td><td><code>Terminal</code></td><td>Percent of faculty with terminal degree</td></tr>
+<tr><td><code>F.Undergrad</code></td><td>Number of full-time undergraduates</td><td><code>S.F.Ratio</code></td><td>Student/faculty ratio</td></tr>
+<tr><td><code>P.Undergrad</code></td><td>Number of part-time undergraduates</td><td><code>perc.alumni</code></td><td>Percent of alumni who donate</td></tr>
+<tr><td></td><td></td><td><code>Expend</code></td><td>Instructional expenditure per student</td></tr>
+<tr><td></td><td></td><td><code>Grad.Rate</code></td><td>Graduation rate</td></tr>
+</tbody></table></div>
+<p>Before reading the data into Python, it can be viewed in Excel or a text editor.</p>
+<p>(a) Use the <code>pd.read_csv()</code> function to read the data into Python. Call the loaded data <code>college</code>. Make sure that you have the directory set to the correct location for the data.<br>
+(b) Look at the data used in the notebook by creating and running a new cell with just the code <code>college</code> in it. You should notice that the first column is just the name of each university in a column named something like <code>Unnamed: 0</code>. We don't really want pandas to treat this as data. However, it may be handy to have these names for later. Try the following commands and similarly look at the resulting data frames:</p>
+<pre style="overflow-x:auto">college2 = pd.read_csv('College.csv', index_col=0)
+college3 = college.rename({'Unnamed: 0': 'College'},
+                          axis=1)
+college3 = college3.set_index('College')</pre>
+<p>This has used the first column in the file as an index for the data frame. This means that pandas has given each row a name corresponding to the appropriate university. Now you should see that the first data column is <code>Private</code>. Note that the names of the colleges appear on the left of the table. We also introduced a new python object above: a dictionary, which is specified by (key, value) pairs. Keep your modified version of the data with the following: <code>college = college3</code><br>
+(c) Use the <code>describe()</code> method of to produce a numerical summary of the variables in the data set.<br>
+(d) Use the <code style="white-space:normal;overflow-wrap:anywhere">pd.plotting.scatter_matrix()</code> function to produce a scatterplot matrix of the first columns <code>[Top10perc, Apps, Enroll]</code>. Recall that you can reference a list C of columns of a data frame A using <code>A[C]</code>.<br>
+(e) Use the <code>boxplot()</code> method of <code>college</code> to produce side-by-side boxplots of <code>Outstate</code> versus <code>Private</code>.<br>
+(f) Create a new qualitative variable, called <code>Elite</code>, by binning the <code>Top10perc</code> variable into two groups based on whether or not the proportion of students coming from the top 10% of their high school classes exceeds 50%.</p>
+<pre style="overflow-x:auto">college['Elite'] = pd.cut(college['Top10perc'],
+                          [0,0.5,1],
+                          labels=['No', 'Yes'])</pre>
+<p>Use the <code>value_counts()</code> method of <code>college['Elite']</code> to see how many elite universities there are. Finally, use the <code>boxplot()</code> method again to produce side-by-side boxplots of <code>Outstate</code> versus <code>Elite</code>.<br>
+(g) Use the <code>plot.hist()</code> method of <code>college</code> to produce some histograms with differing numbers of bins for a few of the quantitative variables. The command <code>plt.subplots(2, 2)</code> may be useful: it will divide the plot window into four regions so that four plots can be made simultaneously. By changing the arguments you can divide the screen up in other combinations.<br>
+(h) Continue exploring the data, and provide a brief summary of what you discover.</p></div>
+<details class="hintd"><summary>Hint</summary><div><p>Everything here was in the <a href="#isl2-lab">lab</a>: <code>read_csv</code>, <code>set_index</code>, <code>describe</code>, <code>scatter_matrix</code>, <code style="white-space:normal;overflow-wrap:anywhere">boxplot(column, by=..., ax=...)</code>, <code>value_counts</code>, <code>hist</code>. For (f), look at the actual values of <code>Top10perc</code> before trusting the bins in the book's code: are they proportions (0 to 1) or percentages (0 to 100)?</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>777 colleges, 18 variables (17 numeric plus <code>Private</code>). Private colleges charge much higher out-of-state tuition (median $11,200 vs $6,609). <code>Top10perc</code> is a percentage, so the book's bins <code>[0, 0.5, 1]</code> are wrong (they leave 774 colleges as NaN); with bins <code>[0, 50, 100]</code> there are <b>78 elite</b> colleges, whose median out-of-state tuition is $16,950 vs $9,556. Data issues: one graduation rate of 118% and one PhD percentage of 103%, which are impossible.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<p><b>(a)</b> Read the file. In this page <code>College.csv</code> is already in the working folder.</p>
+<div class="py" id="c-isl2-ex-05"><pre class="src">
+college = pd.read_csv('College.csv')
+print(college.shape)
+college.iloc[:3, :6]
+</pre><div class="pynote">777 rows and 19 columns. The first column is called <code>Unnamed: 0</code>: the file's header has an empty name there, so pandas invented one. It holds the college names.</div></div>
+<p><b>(b)</b> Two ways to turn the names into the row index. <code>{'Unnamed: 0': 'College'}</code> is a <dfn data-g="dictionary">dictionary</dfn>: a set of key → value pairs, here “old name → new name” (see <a href="#py2">Python II</a>). <code>axis=1</code> tells <code>rename</code> to rename columns, not rows.</p>
+<div class="py" id="c-isl2-ex-06"><pre class="src">
+college2 = pd.read_csv('College.csv', index_col=0)
+college3 = college.rename({'Unnamed: 0': 'College'}, axis=1)
+college3 = college3.set_index('College')
+print(college2.shape, college3.shape, college2.equals(college3.rename_axis(None)))
+college = college3
+college.iloc[:3, :6]
+</pre><div class="pynote">Both versions have 777 rows and 18 columns, with the names on the left and <code>Private</code> as the first data column. They hold identical data (<code>equals</code> is <code>True</code> once we drop the index name “College” that only <code>college3</code> has).</div></div>
+<p><b>(c)</b> Numerical summary. <code>.T</code> transposes the summary table so each variable is a row, which fits the screen better.</p>
+<div class="py" id="c-isl2-ex-07"><pre class="src">
+college.describe().T.round(1)
+</pre><div class="pynote"><b>Read it:</b> applications range from 81 to 48,094 (mean 3,002, but the median, 50%, is far lower: a few huge universities pull the mean up). Out-of-state tuition averages $10,441 (from $2,340 to $21,700). Look at the maxima: <code>PhD</code> reaches 103 and <code>Grad.Rate</code> 118. Both are percentages, so values above 100 are data errors. <code>describe</code> skips <code>Private</code> because it is text.</div></div>
+<p><b>(d)</b> Scatterplot matrix of three columns.</p>
+<div class="py" id="c-isl2-ex-08"><pre class="src">
+pd.plotting.scatter_matrix(college[['Top10perc', 'Apps', 'Enroll']], figsize=(7, 7));
+</pre><div class="pynote"><code>Apps</code> and <code>Enroll</code> rise together almost along a line (more applications, more new students). Both are strongly right-skewed (histograms on the diagonal): most colleges are small, a few are enormous. <code>Top10perc</code> has only a weak relationship with size.</div></div>
+<p><b>(e)</b> Boxplots of out-of-state tuition for private and public colleges.</p>
+<div class="py" id="c-isl2-ex-09"><pre class="src">
+fig, ax = plt.subplots(figsize=(6, 4))
+college.boxplot('Outstate', by='Private', ax=ax)
+print(college.groupby('Private')['Outstate'].median())
+</pre><div class="pynote">Private colleges (Yes) charge far more: median $11,200 against $6,609 for public ones, and almost the whole private box sits above the public median. Public colleges have lower in-state fees, so their out-of-state fee is also lower.</div></div>
+<p><b>(f)</b> First, run the book's code exactly as printed and see what happens.</p>
+<div class="predict" data-correct="3"><p>The book bins <code>Top10perc</code> with edges <code>[0, 0.5, 1]</code>. <code>Top10perc</code> ranges from 1 to 96. How many colleges will be labelled “Yes”?</p><ol class="opts"><li>78</li><li>0</li><li>3, and the other 774 get no label at all (NaN)</li></ol>
+<div class="why">The bins only cover values from 0 to 1. A value of 1 falls in the bin (0.5, 1] and becomes “Yes”; every value above 1 falls outside both bins and becomes NaN. <code>Top10perc</code> is a <i>percentage</i>, not a proportion. This is a known erratum in the book.</div></div>
+<div class="py" id="c-isl2-ex-10"><pre class="src">
+wrong = pd.cut(college['Top10perc'], [0, 0.5, 1], labels=['No', 'Yes'])
+print("book's bins:", wrong.value_counts(dropna=False).to_dict())
+college['Elite'] = pd.cut(college['Top10perc'], [0, 50, 100], labels=['No', 'Yes'])
+print(college['Elite'].value_counts())
+</pre><div class="pynote"><dfn data-g="binning"><code style="white-space:normal;overflow-wrap:anywhere">pd.cut(values, edges, labels=...)</code></dfn> puts each value into the interval it falls in: here \((0, 50]\) is “No” and \((50, 100]\) is “Yes”. With the corrected edges, <b>78 colleges are elite</b> and 699 are not. <code>dropna=False</code> makes <code>value_counts</code> also count the NaNs, which is how we spotted the problem.</div></div>
+<div class="py" id="c-isl2-ex-11"><pre class="src">
+fig, ax = plt.subplots(figsize=(6, 4))
+college.boxplot('Outstate', by='Elite', ax=ax)
+print(college.groupby('Elite', observed=True)['Outstate'].median())
+</pre><div class="pynote">Elite colleges charge much more out-of-state tuition: median $16,950 against $9,556. Selective colleges are expensive.</div></div>
+<p><b>(g)</b> Histograms with different numbers of bins. <code>plt.subplots(2, 2)</code> gives a 2×2 array of axes.</p>
+<div class="py" id="c-isl2-ex-12"><pre class="src">
+fig, axes = plt.subplots(2, 2, figsize=(10, 7))
+college.plot.hist(column='Apps', bins=50, ax=axes[0, 0], legend=False, title='Apps (50 bins)')
+college.plot.hist(column='Outstate', bins=20, ax=axes[0, 1], legend=False, title='Outstate (20 bins)')
+college.plot.hist(column='Grad.Rate', bins=10, ax=axes[1, 0], legend=False, title='Grad.Rate (10 bins)')
+college.plot.hist(column='S.F.Ratio', bins=30, ax=axes[1, 1], legend=False, title='S.F.Ratio (30 bins)')
+fig.tight_layout()
+</pre><div class="pynote">Applications are extremely right-skewed. Out-of-state tuition is spread fairly evenly with a broad peak around $9,000–$12,000. Graduation rate is roughly bell-shaped around 65% (note the bar beyond 100). Student/faculty ratio centres near 13–14. More bins show more detail but more noise; fewer bins smooth too much. Try changing them.</div></div>
+<p><b>(h)</b> Further exploration: acceptance rate, the impossible values, and what goes with graduation rate.</p>
+<div class="py" id="c-isl2-ex-13"><pre class="src">
+college['AcceptRate'] = college['Accept'] / college['Apps']
+print("acceptance rate:", college['AcceptRate'].describe().round(3).to_dict())
+print("most selective:", college['AcceptRate'].idxmin(), round(college['AcceptRate'].min(), 3))
+print("impossible values:\n", college.loc[(college['Grad.Rate'] &gt; 100) | (college['PhD'] &gt; 100), ['Grad.Rate', 'PhD']])
+college[['Grad.Rate', 'Outstate', 'Top10perc', 'perc.alumni', 'Expend', 'S.F.Ratio']].corr()['Grad.Rate'].round(2)
+</pre><div class="pynote"><b>Summary of findings.</b> (1) The median college accepts about 78% of applicants; the most selective accepts about 15%. (2) Two records are impossible (Cazenovia College with a 118% graduation rate; Texas A&amp;M Galveston with 103% PhD faculty): in a real analysis you would correct or remove them. (3) Graduation rate goes with out-of-state tuition (correlation 0.57), the share of top-10% students (0.49) and alumni giving (0.49), and falls with the student/faculty ratio (−0.31). Expensive, selective colleges with small classes graduate more of their students. These are associations, not causes.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Copying <code>pd.cut(..., [0, 0.5, 1])</code> from the book without checking: almost every college becomes NaN. Always look at <code>value_counts(dropna=False)</code> after binning.</li><li>Forgetting <code>index_col=0</code> (or <code>set_index</code>), so the college names are treated as a data column and <code>describe</code> or <code>scatter_matrix</code> behave oddly.</li><li>Reading the mean of a skewed variable such as <code>Apps</code> as “typical”: use the median.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl2-ex-09" data-src="ISLP 2.4 · Applied 9" data-title="Auto data">
+<div class="stmt"><p>This exercise involves the <code>Auto</code> data set studied in the lab. Make sure that the missing values have been removed from the data.</p>
+<p>(a) Which of the predictors are quantitative, and which are qualitative?<br>
+(b) What is the range of each quantitative predictor? You can answer this using the <code>min()</code> and <code>max()</code> methods in <code>numpy</code>.<br>
+(c) What is the mean and standard deviation of each quantitative predictor?<br>
+(d) Now remove the 10th through 85th observations. What is the range, mean, and standard deviation of each predictor in the subset of the data that remains?<br>
+(e) Using the full data set, investigate the predictors graphically, using scatterplots or other tools of your choice. Create some plots highlighting the relationships among the predictors. Comment on your findings.<br>
+(f) Suppose that we wish to predict gas mileage (<code>mpg</code>) on the basis of the other variables. Do your plots suggest that any of the other variables might be useful in predicting <code>mpg</code>? Justify your answer.</p></div>
+<div class="ansin" data-answer="316" data-tol="0.0001" data-unit="rows left after part (d)"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Load with <code>na_values=['?']</code> and <code>dropna()</code>: 392 cars. The 10th to 85th observations are positions 9 to 84 in Python (0-based), i.e. the slice <code>9:85</code>. How many rows is that, and how many remain?</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) Quantitative: mpg, cylinders, displacement, horsepower, weight, acceleration, year. Qualitative: origin, name (cylinders can also be treated as qualitative). (b)–(c) e.g. mpg ranges 9–46.6, mean 23.45, sd 7.81; full table in the solution. (d) 316 rows remain; e.g. mpg range 11–46.6, mean 24.40, sd 7.87. (e)–(f) mpg falls strongly with weight (\(r = -0.83\)), displacement (−0.81), horsepower (−0.78) and cylinders (−0.78), rises with year (0.58), and differs by origin (Japanese 30.5, European 27.6, American 20.0): all useful predictors.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<div class="py" id="c-isl2-ex-14"><pre class="src">
+Auto = pd.read_csv('Auto.csv', na_values=['?']).dropna()
+print(Auto.shape)
+Auto.dtypes
+</pre><div class="pynote">392 cars, 9 columns, all numeric except <code>name</code>.</div></div>
+<p><b>(a)</b> Ask of each column: does arithmetic make sense on it?</p>
+<ul>
+<li><b>Quantitative:</b> <code>mpg</code>, <code>displacement</code>, <code>horsepower</code>, <code>weight</code>, <code>acceleration</code>, <code>year</code>. <code>cylinders</code> is a count (3, 4, 5, 6, 8) and can be treated as quantitative; with so few values it is also reasonable to treat it as qualitative, as the lab did.</li>
+<li><b>Qualitative:</b> <code>origin</code> (1 = American, 2 = European, 3 = Japanese: numbers used as codes, “3 − 1” means nothing) and <code>name</code>.</li>
+</ul>
+<p><b>(b) and (c)</b> Range, mean and standard deviation of each quantitative predictor.</p>
+<div class="py" id="c-isl2-ex-15"><pre class="src">
+quant = ['mpg', 'cylinders', 'displacement', 'horsepower', 'weight', 'acceleration', 'year']
+def summary(df):
+    return pd.DataFrame({'min': df[quant].min(), 'max': df[quant].max(),
+                         'range': df[quant].max() - df[quant].min(),
+                         'mean': df[quant].mean(), 'std': df[quant].std()}).round(2)
+summary(Auto)
+</pre><div class="pynote"><b>Read the table:</b> mpg from 9 to 46.6 (range 37.6), mean 23.45, sd 7.81. Horsepower 46–230, mean 104.5. Weight 1,613–5,140 lb, mean 2,978. Model years 70–82 (1970–1982). pandas' <code>std()</code> divides by \(n-1\); <code>np.std</code> divides by \(n\) and would give slightly smaller numbers (7.80 instead of 7.81 for mpg). With \(n = 392\) the difference is tiny.</div></div>
+<p><b>(d)</b> The 10th through 85th observations are positions 9, 10, …, 84 in Python's 0-based counting: that is \(85 - 9 = 76\) rows, leaving \(392 - 76 = 316\).</p>
+<div class="py" id="c-isl2-ex-16"><pre class="src">
+Auto_sub = Auto.drop(Auto.index[9:85])
+print(Auto_sub.shape)
+summary(Auto_sub)
+</pre><div class="pynote"><code>Auto.index[9:85]</code> gives the row labels at positions 9 to 84, and <code>drop</code> removes those rows. 316 cars remain. The removed rows are mostly early-1970s cars (rows are ordered by year), many of them heavy V8s, so the subset has a higher mean mpg (24.40 vs 23.45), a later mean year (77.2 vs 76.0) and lower mean weight (2,936 vs 2,978). The minimum mpg rises from 9 to 11.</div></div>
+<p><b>(e)</b> Plots of the relationships.</p>
+<div class="py" id="c-isl2-ex-17"><pre class="src">
+pd.plotting.scatter_matrix(Auto[['mpg', 'displacement', 'horsepower', 'weight', 'acceleration', 'year']],
+                           figsize=(10, 10), s=8);
+</pre><div class="pynote">Displacement, horsepower and weight are strongly related to <i>each other</i> (big engines, powerful, heavy cars): nearly straight bands. Each of them has a curved, decreasing relationship with mpg. Acceleration (time to reach 60 mph) is longer for low-horsepower cars. mpg drifts upwards with year.</div></div>
+<div class="py" id="c-isl2-ex-18"><pre class="src">
+fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
+axes[0].scatter(Auto['weight'], Auto['mpg'], s=8); axes[0].set_xlabel('weight'); axes[0].set_ylabel('mpg')
+Auto.boxplot('mpg', by='year', ax=axes[1], grid=False)
+Auto.boxplot('mpg', by='origin', ax=axes[2], grid=False)
+fig.suptitle('')
+print(Auto[quant].corr()['mpg'].round(3))
+print(Auto.groupby('origin')['mpg'].mean().round(2))
+</pre><div class="pynote">Heavier cars do fewer miles per gallon. Median mpg climbs from about 16 in 1970–73 to over 30 by 1980–82 (the oil crises pushed manufacturers to efficiency). Japanese cars (origin 3) average 30.45 mpg, European 27.60, American 20.03. The correlations with mpg: weight −0.832, displacement −0.805, horsepower −0.778, cylinders −0.778, year +0.581, acceleration +0.423.</div></div>
+<p><b>(f)</b> Yes. Weight, displacement, horsepower and cylinders each have a strong (negative, somewhat curved) relationship with mpg, so any of them would be useful; because they are so strongly related to each other, they carry much of the same information, and a model may not need all of them. Year adds information they do not (newer cars of the same weight are more efficient), and origin separates American cars from the rest. Acceleration is weaker and mostly reflects horsepower. A curved relationship (e.g. with horsepower) suggests that a straight line may not be enough; you will fit exactly this in the <a href="#isl3-lab">Chapter 3 lab</a>.</p>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Treating <code>origin</code> as quantitative because it is stored as a number.</li><li>Off-by-one in (d): <code>Auto.iloc[10:86]</code> removes the 11th to 86th. The 10th observation is position 9.</li><li>Using <code>Auto.drop(range(9, 85))</code>: that drops by <i>label</i>, and after <code>dropna</code> the labels have gaps, so you remove the wrong rows. Use positions via <code>Auto.index[9:85]</code>.</li></ul></div></details>
+</div>
+
+<div class="prob" id="p-isl2-ex-10" data-src="ISLP 2.4 · Applied 10" data-title="Boston data">
+<div class="stmt"><p>This exercise involves the <code>Boston</code> housing data set.</p>
+<p>(a) To begin, load in the <code>Boston</code> data set, which is part of the <code>ISLP</code> library.<br>
+(b) How many rows are in this data set? How many columns? What do the rows and columns represent?<br>
+(c) Make some pairwise scatterplots of the predictors (columns) in this data set. Describe your findings.<br>
+(d) Are any of the predictors associated with per capita crime rate? If so, explain the relationship.<br>
+(e) Do any of the suburbs of Boston appear to have particularly high crime rates? Tax rates? Pupil-teacher ratios? Comment on the range of each predictor.<br>
+(f) How many of the suburbs in this data set bound the Charles river?<br>
+(g) What is the median pupil-teacher ratio among the towns in this data set?<br>
+(h) Which suburb of Boston has lowest median value of owner-occupied homes? What are the values of the other predictors for that suburb, and how do those values compare to the overall ranges for those predictors? Comment on your findings.<br>
+(i) In this data set, how many of the suburbs average more than seven rooms per dwelling? More than eight rooms per dwelling? Comment on the suburbs that average more than eight rooms per dwelling.</p></div>
+<div class="ansin" data-answer="35" data-tol="0.0001" data-unit="suburbs bounding the Charles river, part (f)"></div>
+<details class="hintd"><summary>Hint</summary><div><p><code>from ISLP import load_data</code>; <code style="white-space:normal;overflow-wrap:anywhere">Boston = load_data('Boston')</code>. <code>chas</code> is 1 for a tract bounding the river, so its sum counts them. <code>.median()</code>, <code>.idxmin()</code> and a Boolean mask like <code>Boston['rm'] &gt; 7</code> answer (g)–(i).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(b) 506 rows (suburbs/census tracts), 13 columns. (d) Crime is higher where <code>rad</code> (r = 0.63), <code>tax</code> (0.58), <code>lstat</code> (0.46), <code>nox</code> (0.42) and <code>indus</code> (0.41) are high, and lower where <code>medv</code> (−0.39) and <code>dis</code> (−0.38) are high. (e) Crime ranges 0.006 to 89 (median 0.26; 18 suburbs above 20); tax 187–711 with 132 suburbs at 666; pupil-teacher ratio 12.6–22. (f) <b>35</b>. (g) <b>19.05</b>. (h) Rows 398 and 405 (both medv = 5): very high crime, industry, pollution, 100% old houses, close to employment centres, max highway access, high tax. (i) 64 with more than 7 rooms; 13 with more than 8, which are wealthy, low-crime, low-lstat suburbs with median value 44.2.</p></div></details>
+<details class="sol"><summary>Full solution, step by step</summary><div>
+<p><b>(a) and (b)</b></p>
+<div class="py" id="c-isl2-ex-19"><pre class="src">
+Boston = load_data('Boston')
+print(Boston.shape)
+Boston.head()
+</pre><div class="pynote"><b>506 rows, 13 columns.</b> Each row is a suburb (census tract) of Boston. The columns: <code>crim</code> per capita crime rate; <code>zn</code> proportion of residential land zoned for lots over 25,000 sq ft; <code>indus</code> proportion of non-retail business acres; <code>chas</code> 1 if the tract bounds the Charles River, else 0; <code>nox</code> nitrogen oxides concentration (parts per 10 million); <code>rm</code> average number of rooms per dwelling; <code>age</code> proportion of owner-occupied units built before 1940; <code>dis</code> weighted mean distance to five Boston employment centres; <code>rad</code> index of accessibility to radial highways; <code>tax</code> full-value property-tax rate per $10,000; <code>ptratio</code> pupil-teacher ratio; <code>lstat</code> percentage of lower-status population; <code>medv</code> median value of owner-occupied homes in $1000s. (The ISLP version omits one column of the original 1978 data.)</div></div>
+<p><b>(c)</b> Pairwise scatterplots of some of the columns.</p>
+<div class="py" id="c-isl2-ex-20"><pre class="src">
+pd.plotting.scatter_matrix(Boston[['crim', 'nox', 'rm', 'dis', 'lstat', 'medv']], figsize=(10, 10), s=6);
+</pre><div class="pynote"><b>Findings:</b> <code>medv</code> rises with <code>rm</code> (more rooms, more valuable) and falls steeply, in a curve, with <code>lstat</code>. <code>nox</code> (pollution) is high close to the employment centres (small <code>dis</code>) and falls with distance. <code>lstat</code> and <code>rm</code> are negatively related. Crime is near zero for most suburbs, with large values only in a few, which are polluted, close to the centre and have low home values.</div></div>
+<p><b>(d)</b> Association with per capita crime rate.</p>
+<div class="py" id="c-isl2-ex-21"><pre class="src">
+print(Boston.corr()['crim'].drop('crim').sort_values().round(3))
+fig, axes = plt.subplots(1, 3, figsize=(12, 3.6), sharey=True)
+for ax, col in zip(axes, ['rad', 'lstat', 'medv']):
+    ax.scatter(Boston[col], Boston['crim'], s=8); ax.set_xlabel(col)
+axes[0].set_ylabel('crim');
+</pre><div class="pynote">Crime is <b>positively</b> associated with highway accessibility <code>rad</code> (0.626), <code>tax</code> (0.583), <code>lstat</code> (0.456), <code>nox</code> (0.421), <code>indus</code> (0.407) and <code>age</code> (0.353), and <b>negatively</b> with <code>medv</code> (−0.388) and <code>dis</code> (−0.380). The plots show the shape: almost all high-crime suburbs have <code>rad</code> = 24 (the maximum); crime is low unless <code>lstat</code> is high; high crime occurs only where home values are low. These are associations: highways do not cause crime; both reflect dense, poorer inner-city areas.</div></div>
+<p><b>(e)</b> Extremes and ranges.</p>
+<div class="py" id="c-isl2-ex-22"><pre class="src">
+print(Boston[['crim', 'tax', 'ptratio']].describe().round(2))
+print("suburbs with crim &gt; 20:", (Boston['crim'] &gt; 20).sum())
+print("suburbs with tax == 666:", (Boston['tax'] == 666).sum(), "  with ptratio == 20.2:", (Boston['ptratio'] == 20.2).sum())
+print("range of every column:\n", (Boston.max() - Boston.min()).round(2).to_dict())
+</pre><div class="pynote"><b>Crime</b> is extremely skewed: median 0.26, mean 3.61, maximum 88.98. 18 suburbs exceed 20: yes, some have particularly high crime. <b>Tax</b> ranges 187 to 711; there is a big cluster of 132 suburbs at exactly 666, far above the median 330. <b>Pupil-teacher ratio</b> ranges 12.6 to 22 (median 19.05); 140 suburbs share the value 20.2, again a single large district. Ranges of the others: <code>zn</code> 0–100, <code>indus</code> 0.46–27.7, <code>nox</code> 0.385–0.871, <code>rm</code> 3.56–8.78, <code>age</code> 2.9–100, <code>dis</code> 1.13–12.13, <code>rad</code> 1–24, <code>lstat</code> 1.73–37.97, <code>medv</code> 5–50 (50 looks like a cap: values were truncated).</div></div>
+<p><b>(f) and (g)</b></p>
+<div class="py" id="c-isl2-ex-23"><pre class="src">
+print("suburbs bounding the Charles:", Boston['chas'].sum())
+print("median pupil-teacher ratio  :", Boston['ptratio'].median())
+</pre><div class="pynote"><b>35</b> suburbs bound the river (<code>chas</code> is 0/1, so the sum counts the 1s). The median pupil-teacher ratio is <b>19.05</b>.</div></div>
+<p><b>(h)</b> The lowest median home value.</p>
+<div class="py" id="c-isl2-ex-24"><pre class="src">
+low = Boston[Boston['medv'] == Boston['medv'].min()]
+pct = pd.DataFrame({c: [(Boston[c] &lt;= v).mean() * 100 for v in low[c]] for c in Boston.columns}, index=low.index).round(0)
+print(low.T)
+print("\npercentile of each value within its column (100 = largest in the data):")
+pct.T
+</pre><div class="pynote">Two suburbs (rows <b>398</b> and <b>405</b>) tie for the lowest median value, $5,000. Compared with the ranges: crime 38.4 and 67.9 (top 1% of all suburbs); <code>zn</code> 0 (no large residential lots); <code>indus</code> 18.1 (high, 89th percentile); <code>nox</code> 0.693 (high); <code>rm</code> about 5.5 (few rooms, bottom 15%); <code>age</code> 100 (every house built before 1940, the maximum); <code>dis</code> about 1.45 (very close to the employment centres); <code>rad</code> 24 and <code>tax</code> 666 (the maxima); <code>ptratio</code> 20.2 (high); <code>lstat</code> 30.6 and 23.0 (high). These are old, crowded, polluted, industrial inner-city tracts: every predictor sits at the “unfavourable” end of its range.</div></div>
+<p><b>(i)</b> Large dwellings.</p>
+<div class="py" id="c-isl2-ex-25"><pre class="src">
+print("more than 7 rooms:", (Boston['rm'] &gt; 7).sum(), "   more than 8 rooms:", (Boston['rm'] &gt; 8).sum())
+pd.DataFrame({'rm &gt; 8': Boston[Boston['rm'] &gt; 8].mean(), 'all suburbs': Boston.mean()}).round(2)
+</pre><div class="pynote"><b>64</b> suburbs average more than seven rooms per dwelling and <b>13</b> more than eight. The 13 have, on average, very low crime (0.72 vs 3.61), a low share of lower-status residents (<code>lstat</code> 4.31 vs 12.65), lower tax (325 vs 408) and pupil-teacher ratio (16.4 vs 18.5), and roughly double the median home value (44.2 vs 22.5 thousand dollars). They are the wealthy suburbs.</div></div>
+</div></details>
+<details class="mist"><summary>Common mistakes</summary><div><ul><li>Reading the correlation with <code>chas</code> (a 0/1 code) as if it were a quantitative relationship.</li><li>Reporting only the mean crime rate (3.61): the median (0.26) shows that crime is concentrated in a few suburbs.</li><li>In (h), reporting one suburb when two tie for the minimum: <code>idxmin()</code> returns only the first.</li></ul></div></details>
+</div>
+
+<h3 id="isl2-ex-code">Two code drills</h3>
+
+<div class="ex" id="x-isl2-ex-01" data-title="distances to a test point"><div class="task"><p>Write <code>distances(X, x0)</code> returning the Euclidean distance from <code>x0</code> to every row of <code>X</code>, in one line, without a loop. With the data of Conceptual 7 and the origin, the answer is <code style="white-space:normal;overflow-wrap:anywhere">[3, 2, 3.162, 2.236, 1.414, 1.732]</code>.</p></div>
+<pre class="src">
+def distances(X, x0):
+    X = np.asarray(X, dtype=float); x0 = np.asarray(x0, dtype=float)
+    return ((X - x0) ** 2).sum(axis=1)
+</pre>
+<pre class="check">
+got = distances(X7, np.zeros(3))
+assert np.allclose(got, [3, 2, np.sqrt(10), np.sqrt(5), np.sqrt(2), np.sqrt(3)]), f"expected [3, 2, 3.162, 2.236, 1.414, 1.732], got {np.round(got, 3)}"
+from scipy.spatial.distance import cdist
+rng_c = np.random.default_rng(0); A, b = rng_c.normal(size=(20, 4)), rng_c.normal(size=4)
+assert np.allclose(distances(A, b), cdist(A, b[None, :]).ravel()), "should match scipy's cdist"
+assert np.allclose(distances([[1, 1]], [1, 1]), [0]), "a point is at distance 0 from itself"
+</pre>
+<div class="hint"><p>The starter returns the <i>squared</i> distances. One function call is missing.</p></div>
+<div class="hint"><p>Wrap it in <code>np.sqrt(...)</code>.</p></div>
+<pre class="solution">
+def distances(X, x0):
+    X = np.asarray(X, dtype=float); x0 = np.asarray(x0, dtype=float)
+    return np.sqrt(((X - x0) ** 2).sum(axis=1))
+</pre><div class="explain"><p><code>X - x0</code> broadcasts the test point against every row; squaring and summing across columns (<code>axis=1</code>) gives one squared distance per row; the square root makes it a distance. Squared distances rank the points identically, which is why KNN code often skips the root, but the question asked for distances.</p></div></div>
+
+<div class="ex" id="x-isl2-ex-02" data-title="bin a percentage column correctly"><div class="task"><p>Write <code>elite_flag(top10)</code> that takes a pandas Series of percentages (0–100) and returns a categorical Series with labels <code>'No'</code> for values up to 50 and <code>'Yes'</code> above 50, using <code>pd.cut</code>. On the College data it must give 78 “Yes”.</p></div>
+<pre class="src">
+def elite_flag(top10):
+    return pd.cut(top10, [0, 0.5, 1], labels=['No', 'Yes'])
+</pre>
+<pre class="check">
+e = elite_flag(college['Top10perc'])
+assert e.isna().sum() == 0, f"no college should be left unlabelled (NaN); got {e.isna().sum()} NaNs"
+assert (e == 'Yes').sum() == 78, f"there are 78 elite colleges, got {(e == 'Yes').sum()}"
+t = elite_flag(pd.Series([50, 51, 1, 100]))
+assert list(t) == ['No', 'Yes', 'No', 'Yes'], f"50 is not above 50: expected ['No','Yes','No','Yes'], got {list(t)}"
+</pre>
+<div class="hint"><p>The edges must be on the same scale as the data: percentages.</p></div>
+<div class="hint"><p><code style="white-space:normal;overflow-wrap:anywhere">pd.cut(top10, [0, 50, 100], labels=['No', 'Yes'])</code>. The intervals are \((0, 50]\) and \((50, 100]\).</p></div>
+<pre class="solution">
+def elite_flag(top10):
+    return pd.cut(top10, [0, 50, 100], labels=['No', 'Yes'])
+</pre><div class="explain"><p><code>pd.cut</code> uses right-closed intervals by default, so 50 goes into \((0, 50]\) (“No”) and 51 into \((50, 100]\) (“Yes”), matching “exceeds 50%”. The starter is the book's code, which assumes proportions.</p></div></div>
+
+<h3 id="isl2-ex-quiz">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">\(n = 30\) patients, \(p = 2{,}000\) gene measurements. A flexible or an inflexible method?</p><ol class="opts"><li>Flexible, because there are many predictors to use</li><li>Inflexible, because a flexible method would have enormous variance</li></ol><div class="why">This is Conceptual 1(b): huge \(p\), tiny \(n\). A flexible method can fit the 30 patients perfectly while learning noise.</div></div>
+<div class="q" data-type="num" data-answer="13" data-tol="0.0001"><p class="stem">In Conceptual 2(b), what is \(p\)?</p><div class="why">Price, marketing budget, competition price and ten other variables: \(3 + 10 = 13\). Success/failure is the response.</div></div>
+<div class="q" data-type="num" data-answer="1.732" data-tol="0.002"><p class="stem">Distance from \((1, 1, 1)\) to the origin?</p><div class="why">\(\sqrt{1 + 1 + 1} = \sqrt3 \approx 1.732\).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">In Conceptual 7, with \(K = 5\) what is the prediction?</p><ol class="opts"><li>Green</li><li>a tie</li><li>Red</li></ol><div class="why">The five nearest are obs 5 (G), 6 (R), 2 (R), 4 (G), 1 (R): Red 3/5.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Which curve in the Conceptual 3 sketch can fall <b>below</b> the irreducible error?</p><ol class="opts"><li>training error</li><li>test error</li><li>squared bias plus irreducible error</li></ol><div class="why">Training error is measured on the data the model was fitted to and can go below \(\Var(\varepsilon)\) (even to 0). Test error is variance + bias² + \(\Var(\varepsilon)\) and never can.</div></div>
+<div class="q" data-type="open"><p class="stem">You bin a column with <code>pd.cut</code> and most rows come out as NaN. What is the most likely cause, and how do you check?</p><div class="model">The bin edges do not cover the data's values, typically a scale mismatch (proportions 0–1 vs percentages 0–100, as in College's Top10perc). Check with <code>column.describe()</code> (min/max) and with <code>value_counts(dropna=False)</code> after binning, then set edges that span the actual range.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">Flexible method better or worse: large \(n\), small \(p\)?</div><div class="b">Better: lots of data keeps the variance low, and flexibility reduces bias.</div></div>
+<div class="fc"><div class="f">Flexible method better or worse: very noisy data (large \(\Var(\varepsilon)\))?</div><div class="b">Worse: it chases the noise, so its variance is high.</div></div>
+<div class="fc"><div class="f">KNN: highly non-linear Bayes boundary, so the best K is…</div><div class="b">Small (more flexible), but usually not 1.</div></div>
+<div class="fc"><div class="f">ISLP Ex 2.7: predictions at the origin for K = 1 and K = 3</div><div class="b">K = 1: Green (obs 5 at \(\sqrt2\)). K = 3: Red (obs 5 G, 6 R, 2 R).</div></div>
+<div class="fc"><div class="f">Book erratum in Applied 8(f)</div><div class="b"><code>Top10perc</code> is a percentage, so bins must be <code>[0, 50, 100]</code>, not <code>[0, 0.5, 1]</code>; 78 elite colleges.</div></div>
+<div class="fc"><div class="f">Remove the 10th–85th rows of a data frame by position</div><div class="b"><code>df.drop(df.index[9:85])</code> (positions 9 to 84; 76 rows).</div></div>
+<div class="fc"><div class="f">Boston: what are the rows?</div><div class="b">506 suburbs (census tracts) of Boston; 13 columns such as crim, rm, lstat, medv.</div></div>
+<div class="fc"><div class="f">Strongest correlates of mpg in Auto</div><div class="b">weight (−0.83), displacement (−0.81), horsepower and cylinders (−0.78); year (+0.58).</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I answered Conceptual 1–6 in my own words before reading the solutions.</label>
+<label><input type="checkbox"> I can compute every distance and prediction of Conceptual 7 by hand.</label>
+<label><input type="checkbox"> I can draw and explain the five curves of Conceptual 3.</label>
+<label><input type="checkbox"> I did Applied 8 (College), including spotting the binning problem in (f).</label>
+<label><input type="checkbox"> I did Applied 9 (Auto) and can explain which variables help predict mpg.</label>
+<label><input type="checkbox"> I did Applied 10 (Boston) and can describe the suburbs with the lowest home values and with the most rooms.</label>
+</div>
+</section>

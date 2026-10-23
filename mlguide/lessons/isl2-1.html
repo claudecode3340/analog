@@ -425,7 +425,7 @@ for col in people.columns:
 
 <h3 id="isl2-1-practice">Practice</h3>
 
-<div class="ex" id="x-isl2-1-01" data-title="split the expected error"><div class="task"><p>Write <code>decompose(f_x, fhat_x, sigma)</code> that returns a tuple <code>(reducible, irreducible, total)</code> from equation (2.3), where <code>sigma</code> is the standard deviation of \(\varepsilon\). Example: <code>decompose(50, 47, 5)</code> → <code>(9, 25, 34)</code>.</p></div>
+<div class="ex" id="x-isl2-1-01" data-title="split the expected error"><div class="task"><p>Write <code style="white-space:normal;overflow-wrap:anywhere">decompose(f_x, fhat_x, sigma)</code> that returns a tuple <code style="white-space:normal;overflow-wrap:anywhere">(reducible, irreducible, total)</code> from equation (2.3), where <code>sigma</code> is the standard deviation of \(\varepsilon\). Example: <code>decompose(50, 47, 5)</code> → <code>(9, 25, 34)</code>.</p></div>
 <pre class="src">
 def decompose(f_x, fhat_x, sigma):
     reducible = ...
@@ -441,7 +441,7 @@ r = decompose(3, 3, 2)
 assert np.allclose(r, (0, 4, 4)), f"a perfect estimate leaves only Var(eps) = 4: expected (0, 4, 4), got {r}"
 </pre>
 <div class="hint"><p>Reducible is the squared gap between truth and estimate. Irreducible is the <i>variance</i> of the noise, not its standard deviation.</p></div>
-<div class="hint"><p><code>reducible = (f_x - fhat_x) ** 2</code> and <code>irreducible = sigma ** 2</code>.</p></div>
+<div class="hint"><p><code style="white-space:normal;overflow-wrap:anywhere">reducible = (f_x - fhat_x) ** 2</code> and <code>irreducible = sigma ** 2</code>.</p></div>
 <pre class="solution">
 def decompose(f_x, fhat_x, sigma):
     reducible = (f_x - fhat_x) ** 2
@@ -449,7 +449,7 @@ def decompose(f_x, fhat_x, sigma):
     return reducible, irreducible, reducible + irreducible
 </pre><div class="explain"><p>This is (2.3) as code. The checks include a noise-free case (only the reducible part) and a perfect estimate (only the irreducible part). A common slip is returning <code>sigma</code> instead of <code>sigma ** 2</code>.</p></div></div>
 
-<div class="ex" id="x-isl2-1-02" data-title="Monte Carlo check of (2.3)"><div class="task"><p>Write <code>mc_error(a, sigma, n, seed)</code>: draw <code>n</code> values of \(\varepsilon \sim N(0, \sigma^2)\) with <code>np.random.default_rng(seed)</code>, and return the average of \((a + \varepsilon)^2\), where \(a = f(X) - \hat f(X)\). For large <code>n</code> it should be close to \(a^2 + \sigma^2\).</p></div>
+<div class="ex" id="x-isl2-1-02" data-title="Monte Carlo check of (2.3)"><div class="task"><p>Write <code style="white-space:normal;overflow-wrap:anywhere">mc_error(a, sigma, n, seed)</code>: draw <code>n</code> values of \(\varepsilon \sim N(0, \sigma^2)\) with <code style="white-space:normal;overflow-wrap:anywhere">np.random.default_rng(seed)</code>, and return the average of \((a + \varepsilon)^2\), where \(a = f(X) - \hat f(X)\). For large <code>n</code> it should be close to \(a^2 + \sigma^2\).</p></div>
 <pre class="src">
 def mc_error(a, sigma, n, seed):
     rng = np.random.default_rng(seed)
@@ -464,7 +464,7 @@ assert abs(v - 4) &lt; 0.1, f"with a=0, sigma=2 the average should be close to 4
 v = mc_error(2, 0.0, 10, 2)
 assert abs(v - 4) &lt; 1e-12, f"with no noise every squared error is a^2 = 4, got {v}"
 </pre>
-<div class="hint"><p><code>rng.normal(0, sigma, size=n)</code> draws the noise.</p></div>
+<div class="hint"><p><code style="white-space:normal;overflow-wrap:anywhere">rng.normal(0, sigma, size=n)</code> draws the noise.</p></div>
 <div class="hint"><p>Then <code>np.mean((a + eps) ** 2)</code>.</p></div>
 <pre class="solution">
 def mc_error(a, sigma, n, seed):
@@ -491,7 +491,7 @@ b0, b1 = ols_line([0, 1, 2, 3], [5, 5, 5, 5])
 assert np.isclose(b1, 0) and np.isclose(b0, 5), f"a flat line y=5 should give (5, 0), got ({b0}, {b1})"
 </pre>
 <div class="hint"><p>Compute <code>x.mean()</code> and <code>y.mean()</code> first, then the two sums with <code>np.sum</code>.</p></div>
-<div class="hint"><p>The slope is a ratio of two sums:</p><pre>b1 = (np.sum((x - x.mean()) * (y - y.mean()))
+<div class="hint"><p>The slope is a ratio of two sums:</p><pre style="overflow-x:auto">b1 = (np.sum((x - x.mean()) * (y - y.mean()))
       / np.sum((x - x.mean()) ** 2))</pre></div>
 <pre class="solution">
 def ols_line(x, y):

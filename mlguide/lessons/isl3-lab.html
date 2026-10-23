@@ -1,0 +1,411 @@
+<section class="lesson" id="isl3-lab" data-book="ISLP §3.6, pp. 116–127">
+<p class="lede">This is the book's lab, run cell by cell, with every line and every number explained. You will fit regressions the way the book does for the rest of its chapters: statsmodels for the fitting, ISLP's <code>ModelSpec</code> to build design matrices, <code>summarize</code> to read the results. Take your time with the summary table: you will read hundreds of them in your career.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#isl3-1">ISLP 3.1</a> · <a href="#isl3-2">ISLP 3.2</a> · <a href="#isl3-3">ISLP 3.3</a> · <a href="#py2">Python II</a> (functions, comprehensions) · <a href="#pd1">pandas</a> · <a href="#plt1">matplotlib</a></div>
+
+<div class="goals"><h4>By the end of this lab you can</h4><ul>
+<li>fit a linear regression with <code>sm.OLS</code>, either from a hand-made design matrix or from <code>ModelSpec</code>;</li>
+<li>read every column of <code>summarize()</code> and every line of the full <code>summary()</code> table;</li>
+<li>get predictions with confidence and prediction intervals, residual plots and leverage values;</li>
+<li>add interactions, polynomial terms and qualitative predictors, compare nested models with <code>anova_lm</code>, and compute VIFs.</li></ul></div>
+
+<div class="callout mac"><p><b>On your Mac.</b> Every cell here also runs in Jupyter or VS Code after <code>pip install ISLP statsmodels</code> (see <a href="#s0-setup">Set up your Mac</a>). The notebook button at the bottom of the lesson downloads this lab as a notebook.</p></div>
+
+<h3 id="isl3-lab-imports">3.6.1 Importing packages</h3>
+<p>The book starts every lab by importing its standard libraries, then the new ones, at the top. Scanning the first cell tells a reader what tools the notebook uses.</p>
+<div class="py" id="c-isl3-lab-01" data-mode="setup"><pre class="src">
+import numpy as np
+import pandas as pd
+from matplotlib.pyplot import subplots
+import statsmodels.api as sm
+from statsmodels.stats.outliers_influence \
+     import variance_inflation_factor as VIF
+from statsmodels.stats.anova import anova_lm
+from ISLP import load_data
+from ISLP.models import (ModelSpec as MS,
+                         summarize,
+                         poly)
+from functools import partial
+MS = partial(MS, intercept=True)   # ours: always add the intercept column, stated explicitly
+print("imports done")
+</pre><div class="pynote"><b>Line by line.</b>
+<ul>
+<li><code>from matplotlib.pyplot import subplots</code> imports just one function, <code>subplots</code>, instead of the whole module. The book draws every figure with it.</li>
+<li><code>import statsmodels.api as sm</code>: the regression library. <code>sm.OLS</code> lives here.</li>
+<li>The backslash <code>\</code> at the end of a line means “this statement continues on the next line”. It only makes a long line easier to read.</li>
+<li><code>import variance_inflation_factor as VIF</code> gives the function a short nickname.</li>
+<li><code>anova_lm</code> compares nested models with an F-test (lesson <a href="#isl3-2">3.2</a>).</li>
+<li><code>load_data</code> loads the book's data sets; <code>ModelSpec</code> (nicknamed <code>MS</code>) builds design matrices; <code>summarize</code> prints a compact coefficient table; <code>poly</code> makes polynomial columns. Brackets let one <code>import</code> span several lines without backslashes.</li>
+<li>The last two import lines are ours, not the book's. Newer ISLP versions warn that <code>ModelSpec</code> will one day stop adding an intercept column by default. <code>partial(MS, intercept=True)</code> makes a version of <code>MS</code> that always passes <code>intercept=True</code>, which keeps the book's behaviour and silences the warning. Everywhere below, <code>MS(...)</code> works exactly as in the book.</li>
+</ul></div></div>
+
+<h4>Inspecting objects and namespaces</h4>
+<p>A <dfn data-g="namespace">namespace</dfn> is the set of names Python currently knows. <code>dir()</code> lists them.</p>
+<div class="py" id="c-isl3-lab-02"><pre class="src">
+names = dir()
+print([n for n in names if not n.startswith('_')])
+</pre><div class="pynote"><b>Read the output:</b> the names we just imported (<code>MS</code>, <code>VIF</code>, <code>anova_lm</code>, <code>load_data</code>, <code>np</code>, <code>pd</code>, <code>poly</code>, <code>sm</code>, <code>subplots</code>, <code>summarize</code>, plus our <code>partial</code>). The book prints the full <code>dir()</code>; we hide names that start with an underscore, which are Python's internal bookkeeping (such as <code>__builtins__</code>, which holds built-in functions like <code>print</code>).</div></div>
+<p>Every object has its own namespace too: its <b>attributes</b> (data) and <b>methods</b> (functions attached to it).</p>
+<div class="py" id="c-isl3-lab-03"><pre class="src">
+A = np.array([3, 5, 11])
+print('sum' in dir(A))       # does the array have something called sum?
+A.sum()
+</pre><div class="pynote"><b>Read the output:</b> <code>True</code>, then <code>19</code>. <code>dir(A)</code> lists everything an array can do; <code>A.sum()</code> calls the method <code>sum</code> on <code>A</code>: \(3+5+11=19\). In Jupyter, typing <code>A.sum?</code> shows its help page.</div></div>
+
+<h3 id="isl3-lab-simple">3.6.2 Simple linear regression on the Boston data</h3>
+<p>The <b>Boston</b> data record <code>medv</code>, the median house value (in $1000s), for 506 neighbourhoods around Boston, with 12 predictors such as <code>rm</code> (average rooms per house), <code>age</code> (share of homes built before 1940) and <code>lstat</code> (percentage of households with low socioeconomic status).</p>
+<div class="py" id="c-isl3-lab-04"><pre class="src">
+Boston = load_data("Boston")
+print(Boston.shape)
+Boston.columns
+</pre><div class="pynote"><b>Read the output:</b> 506 rows, 13 columns: 12 predictors plus <code>medv</code>. (The book's printed output also lists a <code>black</code> column, but its later code and outputs use these 12 predictors, as here.) In Jupyter, <code>Boston?</code> would show a description.</div></div>
+
+<p>First the book builds the design matrix by hand: a column of ones for the intercept and the <code>lstat</code> column.</p>
+<div class="py" id="c-isl3-lab-05"><pre class="src">
+X = pd.DataFrame({'intercept': np.ones(Boston.shape[0]),
+                  'lstat': Boston['lstat']})
+X[:4]
+</pre><div class="pynote"><b>Line by line.</b> <code>Boston.shape[0]</code> is the number of rows (506); <code>np.ones(506)</code> is 506 ones. The dictionary <code>{'intercept': ..., 'lstat': ...}</code> becomes a two-column DataFrame. <code>X[:4]</code> shows the first four rows: this is exactly \(\bX\) from <a href="#isl3-2">lesson 3.2</a>, \(\begin{pmatrix}1&amp;4.98\\1&amp;9.14\\1&amp;4.03\\1&amp;2.94\\\vdots&amp;\vdots\end{pmatrix}\).</div></div>
+
+<div class="py" id="c-isl3-lab-06"><pre class="src">
+y = Boston['medv']
+model = sm.OLS(y, X)
+results = model.fit()
+summarize(results)
+</pre><div class="pynote"><b>Line by line.</b> <code>sm.OLS(y, X)</code> <i>specifies</i> the model: response <code>y</code>, design matrix <code>X</code>. It does not fit anything yet. <code>model.fit()</code> does the least-squares fitting and returns a <i>results</i> object. <code>summarize(results)</code> (from ISLP) makes the four-column table.</div></div>
+
+<div class="callout key"><div class="ct">How to read the summarize() table</div>
+<div class="tw"><table class="t"><thead><tr><th>Column</th><th>Meaning</th><th>Here, for lstat</th></tr></thead><tbody>
+<tr><td><code>coef</code></td><td>the estimate \(\hat\beta_j\)</td><td>−0.9500: each extra percentage point of low-status households is associated with a median value $950 lower</td></tr>
+<tr><td><code>std err</code></td><td>\(\SE(\hat\beta_j)\)</td><td>0.039: the typical sampling error of that estimate</td></tr>
+<tr><td><code>t</code></td><td>\(\hat\beta_j/\SE(\hat\beta_j)\)</td><td>\(-0.9500/0.0387=-24.5\): about 25 standard errors below zero</td></tr>
+<tr><td><code>P&gt;|t|</code></td><td>two-sided p-value for \(H_0:\beta_j=0\)</td><td>0.0: smaller than 0.0005, so it rounds to zero</td></tr>
+</tbody></table></div>
+<p>The intercept, 34.55, is the predicted median value ($34,550) for a neighbourhood with lstat = 0, which is at the edge of the data, so do not over-interpret it.</p></div>
+
+<h4>Using transformations: fit and transform</h4>
+<p>Building \(\bX\) by hand is fine for one predictor, but tedious with many predictors, interactions or polynomials. ISLP borrows an idea from scikit-learn: a <dfn data-g="transform">transform</dfn>. A transform is an object created with some settings. It has two main methods: <code>fit()</code>, which looks at the data and does any preliminary computation (for example, checking that the columns exist, or computing means for centring), and <code>transform()</code>, which applies it to produce the model matrix.</p>
+<div class="py" id="c-isl3-lab-07"><pre class="src">
+design = MS(['lstat'])
+design = design.fit(Boston)
+X = design.transform(Boston)
+X[:4]
+</pre><div class="pynote"><b>Read the output:</b> the same matrix as our hand-made one, with the intercept column added automatically. <code>MS(['lstat'])</code> says “the model uses the column lstat”. <code>fit(Boston)</code> checks that <code>lstat</code> exists in <code>Boston</code>. <code>transform(Boston)</code> builds the matrix.</div></div>
+<div class="py" id="c-isl3-lab-08"><pre class="src">
+design = MS(['lstat'])
+X = design.fit_transform(Boston)
+X[:4]
+</pre><div class="pynote"><b>Read the output:</b> identical. <code>fit_transform</code> does both steps in one call. Note that <code>design</code> itself has changed: it now remembers what it learnt in <code>fit</code>, so we can later call <code>design.transform(new_data)</code> on new data.</div></div>
+
+<h4>The full summary table</h4>
+<p>The book shows <code>results.summary()</code> without its output. Here it is, because reading it is a core skill.</p>
+<div class="py" id="c-isl3-lab-09"><pre class="src">
+print(results.summary())
+</pre><div class="pynote"><b>Read the output, top block:</b>
+<ul>
+<li><b>Dep. Variable: medv</b>, the response. <b>No. Observations: 506</b>, \(n\).</li>
+<li><b>Df Model: 1</b> is \(p\), the number of predictors; <b>Df Residuals: 504</b> is \(n-p-1\).</li>
+<li><b>R-squared: 0.544</b>: lstat explains 54.4% of the variance in medv. <b>Adj. R-squared: 0.543</b> is a version that penalises extra predictors (Chapter 6).</li>
+<li><b>F-statistic: 601.6</b> and <b>Prob (F-statistic): 5.08e-88</b>: the overall F-test of lesson 3.2. With one predictor \(F=t^2=(-24.528)^2=601.6\).</li>
+<li><b>Log-Likelihood, AIC, BIC</b>: model-comparison criteria (Chapter 6). Date and Time just record when you ran it.</li>
+</ul>
+<b>Middle block:</b> the summarize() columns again, plus <b>[0.025, 0.975]</b>: the 95% confidence interval for each coefficient. For lstat, \([-1.026, -0.874]\): \(-0.9500\pm1.965\times0.0387\).<br>
+<b>Bottom block</b> (checks of the error assumptions): <b>Omnibus</b> and <b>Jarque-Bera</b> test whether the residuals are normal (tiny p-values here: they are not quite normal; <b>Skew 1.45</b> says the residuals have a long right tail). <b>Durbin-Watson: 0.892</b> checks correlated errors: about 2 means none; well below 2 suggests positive correlation between neighbouring rows (here neighbouring rows are nearby suburbs). <b>Cond. No.</b> (condition number) flags numerical collinearity when it is very large (thousands or more).</div></div>
+
+<div class="py" id="c-isl3-lab-10"><pre class="src">
+results.params
+</pre><div class="pynote"><b>Read the output:</b> just the coefficients, as a pandas Series with names: intercept 34.553841, lstat −0.950049. Other useful attributes: <code>results.bse</code> (standard errors), <code>results.tvalues</code>, <code>results.pvalues</code>, <code>results.rsquared</code>, <code>results.resid</code>, <code>results.fittedvalues</code>.</div></div>
+
+<h4>Predictions with confidence and prediction intervals</h4>
+<p>To predict at new values, make a data frame with the same predictor column, and let <code>design</code> turn it into a model matrix (adding the intercept column).</p>
+<div class="py" id="c-isl3-lab-11"><pre class="src">
+new_df = pd.DataFrame({'lstat': [5, 10, 15]})
+newX = design.transform(new_df)
+newX
+</pre><div class="pynote"><b>Read the output:</b> three rows \((1, 5), (1, 10), (1, 15)\). This is why we kept the fitted <code>design</code>: it builds new matrices the same way it built the training one.</div></div>
+<div class="py" id="c-isl3-lab-12"><pre class="src">
+new_predictions = results.get_prediction(newX)
+print(new_predictions.predicted_mean)
+print(new_predictions.conf_int(alpha=0.05))
+print(new_predictions.conf_int(obs=True, alpha=0.05))
+</pre><div class="pynote"><b>Read the output:</b>
+<ul><li><code>predicted_mean</code>: \(34.5538-0.9500\times5=29.80\), then 25.05 and 20.30.</li>
+<li><code>conf_int(alpha=0.05)</code>: 95% confidence intervals for the <b>mean</b> medv: at lstat = 10, (24.47, 25.63).</li>
+<li><code>conf_int(obs=True, ...)</code>: 95% <b>prediction</b> intervals for one neighbourhood: at lstat = 10, (12.83, 37.28).</li></ul>
+Same centre (25.05), but the prediction interval is about 21 times wider, because it includes the irreducible error of a single neighbourhood (RSE ≈ 6.2) while the confidence interval only reflects uncertainty in the line. <code>alpha=0.05</code> means 95% (1 − alpha).</div></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>the interval at lstat = 10 by hand</b></div>
+<div class="given">From the fit: \(n=506\), RSE \(=6.2158\), \(\bar x=12.653\), \(S_{xx}=25{,}752.4\), \(t_{0.975,504}=1.9647\), \(\hat y_0=25.0533\).</div>
+<ol class="steps">
+<li><div>\((x_0-\bar x)^2/S_{xx}=(10-12.653)^2/25{,}752.4=7.039/25{,}752.4=0.000273\). Plus \(1/n=0.001976\): total 0.002250.</div></li>
+<li><div><b>CI:</b> SE \(=6.2158\times\sqrt{0.002250}=6.2158\times0.04743=0.2948\). Half-width \(1.9647\times0.2948=0.579\). Interval \([24.47,\ 25.63]\).</div></li>
+<li><div><b>PI:</b> SE \(=6.2158\times\sqrt{1.002250}=6.2228\). Half-width \(1.9647\times6.2228=12.226\). Interval \([12.83,\ 37.28]\).</div></li>
+</ol>
+<div class="result">The formulas of lesson 3.2 reproduce statsmodels' intervals exactly.</div></div>
+<div class="py" id="c-isl3-lab-13"><pre class="src">
+x, n = Boston['lstat'], len(Boston)
+rse = np.sqrt(results.scale)
+Sxx = np.sum((x - x.mean()) ** 2)
+tq = 1.9647                                   # t quantile with 504 df
+base = 1 / n + (10 - x.mean()) ** 2 / Sxx
+print(f"RSE = {rse:.4f}, xbar = {x.mean():.3f}, Sxx = {Sxx:.1f}")
+print("CI half-width:", round(tq * rse * np.sqrt(base), 3))
+print("PI half-width:", round(tq * rse * np.sqrt(1 + base), 3))
+</pre><div class="pynote"><b>Read the output:</b> half-widths 0.579 and 12.226: add and subtract them from 25.053 and you get the intervals above. <code>results.scale</code> is \(\text{RSE}^2\).</div></div>
+
+<h4>Defining functions: drawing the regression line</h4>
+<p>The book now writes its first function, <code>abline</code>, to add a line with a given intercept and slope to a plot.</p>
+<div class="py" id="c-isl3-lab-14"><pre class="src">
+def abline(ax, b, m, *args, **kwargs):
+    "Add a line with slope m and intercept b to ax"
+    xlim = ax.get_xlim()
+    ylim = [m * xlim[0] + b, m * xlim[1] + b]
+    ax.plot(xlim, ylim, *args, **kwargs)
+</pre><div class="pynote"><b>Line by line.</b>
+<ul><li><code>def abline(ax, b, m, ...)</code>: <code>ax</code> is an existing plot's axes, <code>b</code> the intercept, <code>m</code> the slope.</li>
+<li>The string on the next line is the docstring: a description of the function.</li>
+<li><code>ax.get_xlim()</code> returns the left and right ends of the x-axis.</li>
+<li><code>ylim</code> computes the line's height at both ends: \(m x + b\).</li>
+<li><code>*args</code> collects any extra unnamed arguments (like <code>'r--'</code>) and <code>**kwargs</code> any extra named ones (like <code>linewidth=3</code>); both are passed straight on to <code>ax.plot</code>. That lets the caller style the line without <code>abline</code> knowing about styles.</li></ul>
+Defining a function prints nothing; it just teaches Python a new word.</div></div>
+<div class="py" id="c-isl3-lab-15"><pre class="src">
+ax = Boston.plot.scatter('lstat', 'medv')
+abline(ax,
+       results.params.iloc[0],
+       results.params.iloc[1],
+       'r--',
+       linewidth=3)
+</pre><div class="pynote"><b>Read the output:</b> the scatter of medv against lstat with the red dashed least-squares line. <code>Boston.plot.scatter</code> is pandas' quick scatter plot, which returns the axes. The call ends up as <code>ax.plot(xlim, ylim, 'r--', linewidth=3)</code>: <code>'r--'</code> means red and dashed. The book writes <code>results.params[0]</code>; current pandas wants <code>.iloc[0]</code> (“position 0”) for positional access, so we use that. <b>Look at the picture:</b> the points curve (high values at small lstat lie above the line, middle values below it): evidence of non-linearity. (matplotlib's built-in <code>ax.axline()</code> could also draw the line, but writing your own function is a skill worth having.)</div></div>
+
+<h4>Diagnostic plots</h4>
+<div class="py" id="c-isl3-lab-16"><pre class="src">
+ax = subplots(figsize=(6, 4))[1]
+ax.scatter(results.fittedvalues, results.resid)
+ax.set_xlabel('Fitted value')
+ax.set_ylabel('Residual')
+ax.axhline(0, c='k', ls='--');
+</pre><div class="pynote"><b>Line by line.</b> <code>subplots()</code> returns two things, a figure and an axes; <code>[1]</code> keeps only the axes. <code>results.fittedvalues</code> and <code>results.resid</code> are \(\hat y_i\) and \(e_i\). <code>ax.axhline(0, c='k', ls='--')</code> draws a black dashed horizontal line at 0. The trailing semicolon stops Jupyter printing the line object. (The book uses an 8 × 8 inch figure; we use 6 × 4 to fit the page.) <b>Read the plot:</b> a U-shaped pattern, which is the non-linearity of <a href="#isl3-3-nonlin">lesson 3.3</a>.</div></div>
+
+<div class="py" id="c-isl3-lab-17"><pre class="src">
+infl = results.get_influence()
+ax = subplots(figsize=(6, 4))[1]
+ax.scatter(np.arange(X.shape[0]), infl.hat_matrix_diag)
+ax.set_xlabel('Index')
+ax.set_ylabel('Leverage')
+np.argmax(infl.hat_matrix_diag)
+</pre><div class="pynote"><b>Read the output:</b> leverage \(h_i\) for every neighbourhood, and the answer <code>374</code>: observation 374 has the largest leverage. <code>get_influence()</code> computes per-observation diagnostics; <code>hat_matrix_diag</code> holds the leverages (the diagonal of the hat matrix); <code>np.arange(506)</code> is 0, 1, …, 505 for the x-axis; <code>np.argmax</code> returns the <i>position</i> of the largest value.</div></div>
+<div class="py" id="c-isl3-lab-18"><pre class="src">
+h = infl.hat_matrix_diag
+print("largest leverage:", h.max().round(4), " average (p+1)/n:", round(2 / 506, 4))
+print("lstat of obs 374:", Boston['lstat'][374], " mean lstat:", round(Boston['lstat'].mean(), 2))
+</pre><div class="pynote"><b>Read the output:</b> observation 374 has leverage about 0.027, almost 7 times the average 0.004, because its lstat (37.97) is the most extreme value in the data, far above the mean 12.65. Exactly what formula (3.37) predicts.</div></div>
+
+<h3 id="isl3-lab-multiple">3.6.3 Multiple linear regression</h3>
+<div class="py" id="c-isl3-lab-19"><pre class="src">
+X = MS(['lstat', 'age']).fit_transform(Boston)
+model1 = sm.OLS(y, X)
+results1 = model1.fit()
+summarize(results1)
+</pre><div class="pynote"><b>Read the output:</b> medv on lstat and age. lstat: −1.0321 (t = −21.4): holding age fixed, each point of lstat lowers the median value by about $1,032. age: 0.0345 (p = 0.005): holding lstat fixed, older housing stock is associated with slightly <i>higher</i> values. Note how the whole design-matrix step fits on one line now.</div></div>
+<div class="py" id="c-isl3-lab-20"><pre class="src">
+terms = Boston.columns.drop('medv')
+terms
+</pre><div class="pynote"><b>Read the output:</b> all 12 column names except <code>medv</code>. <code>.columns.drop(...)</code> returns the column names with the given ones removed: a short way to say “use everything else”.</div></div>
+<div class="py" id="c-isl3-lab-21"><pre class="src">
+X = MS(terms).fit_transform(Boston)
+model = sm.OLS(y, X)
+results = model.fit()
+summarize(results)
+</pre><div class="pynote"><b>Read the output, row by row (each holding the other 11 fixed):</b>
+<ul>
+<li><b>rm 3.66</b> (t = 8.7): one extra room on average is associated with a $3,660 higher median value.</li>
+<li><b>nox −18.76</b> (t = −4.9): more nitric-oxide pollution, lower values (nox is in parts per 10 million, so a 0.1 increase means −$1,876).</li>
+<li><b>chas 2.84</b>: a dummy variable, 1 if the tract bounds the Charles River: about $2,840 higher.</li>
+<li><b>dis −1.49, ptratio −0.94, crim −0.12, tax −0.013, lstat −0.55</b>: all significantly negative.</li>
+<li><b>zn 0.047, rad 0.29</b>: significantly positive.</li>
+<li><b>indus</b> (p = 0.829) and <b>age</b> (p = 0.787): no evidence of an effect once the others are included. Note that age was significant (p = 0.005) with only lstat: the newspaper story of <a href="#isl3-2-paradox">lesson 3.2</a> again.</li>
+</ul></div></div>
+<p>Age has a large p-value, so the book refits without it (the book does not show the output).</p>
+<div class="py" id="c-isl3-lab-22"><pre class="src">
+minus_age = Boston.columns.drop(['medv', 'age'])
+Xma = MS(minus_age).fit_transform(Boston)
+model1 = sm.OLS(y, Xma)
+summarize(model1.fit())
+</pre><div class="pynote"><b>Read the output:</b> 11 predictors. The other coefficients barely move (rm 3.68, lstat −0.547), confirming that age added little. <code>drop</code> accepts a list to remove several names at once.</div></div>
+
+<h3 id="isl3-lab-gof">3.6.4 Multivariate goodness of fit</h3>
+<div class="py" id="c-isl3-lab-23"><pre class="src">
+print("R^2 =", round(results.rsquared, 4))
+print("RSE =", round(np.sqrt(results.scale), 4))
+print([a for a in dir(results) if not a.startswith('_')][:25])
+</pre><div class="pynote"><b>Read the output:</b> the 12-predictor model has \(R^2=0.734\) and RSE 4.80 (thousand dollars), against 0.544 and 6.22 with lstat alone. The last line lists the first 25 public attributes of a results object, which is how you discover names like <code>rsquared</code>, <code>scale</code> or <code>conf_int</code>.</div></div>
+
+<h4>Variance inflation factors and list comprehensions</h4>
+<p>A <dfn data-g="list-comprehension">list comprehension</dfn> builds a list from a loop in one expression: <code>[expression for item in sequence]</code>. The book uses one to compute the VIF of every column.</p>
+<div class="py" id="c-isl3-lab-24"><pre class="src">
+vals = [VIF(X, i)
+        for i in range(1, X.shape[1])]
+vif = pd.DataFrame({'vif': vals},
+                   index=X.columns[1:])
+vif
+</pre><div class="pynote"><b>Line by line.</b> <code>X.shape[1]</code> is the number of columns (13: intercept + 12). <code>range(1, 13)</code> gives 1, …, 12, skipping column 0, the intercept, whose VIF is not of interest. For each <code>i</code>, <code>VIF(X, i)</code> regresses column <code>i</code> on all the other columns and returns \(1/(1-R^2)\). The data frame puts the 12 values next to their names. <b>Read the output:</b> the largest are tax (9.00) and rad (7.45), near the rule-of-thumb limit of 10: property tax and highway access are strongly related. The rest are below 5. The book calls these VIFs “not that exciting”.</div></div>
+<div class="py" id="c-isl3-lab-25"><pre class="src">
+vals = []
+for i in range(1, X.values.shape[1]):
+    vals.append(VIF(X.values, i))
+print(np.round(vals, 3))
+</pre><div class="pynote"><b>Read the output:</b> the same 12 numbers, computed with an ordinary <code>for</code> loop and <code>.append</code>. The comprehension is just a more compact way to write this. <code>X.values</code> is the plain NumPy array inside the DataFrame.</div></div>
+
+<h3 id="isl3-lab-inter">3.6.5 Interaction terms</h3>
+<p>In <code>ModelSpec</code>, a tuple of two names such as <code>('lstat', 'age')</code> means “include their product as an interaction column”.</p>
+<div class="py" id="c-isl3-lab-26"><pre class="src">
+X = MS(['lstat',
+        'age',
+        ('lstat', 'age')]).fit_transform(Boston)
+model2 = sm.OLS(y, X)
+summarize(model2.fit())
+</pre><div class="pynote"><b>Read the output:</b> the interaction <code>lstat:age</code> has coefficient 0.0042 and p = 0.025: some evidence that the effect of lstat depends on age. The slope of lstat is \(-1.3921+0.0042\times\text{age}\): about −1.39 in a new neighbourhood (age 0) but about \(-1.39+0.42=-0.97\) where age is 100. age's own p-value is 0.971, but by the <a href="#isl3-3-interact">hierarchical principle</a> we keep it.</div></div>
+
+<h3 id="isl3-lab-poly">3.6.6 Non-linear transformations of the predictors</h3>
+<div class="py" id="c-isl3-lab-27"><pre class="src">
+X = MS([poly('lstat', degree=2), 'age']).fit_transform(Boston)
+model3 = sm.OLS(y, X)
+results3 = model3.fit()
+summarize(results3)
+</pre><div class="pynote"><b>Read the output:</b> two polynomial columns for lstat plus age. The quadratic term, <code>poly(lstat, degree=2)[1]</code>, has t = 13.3 and p ≈ 0: the curve is real. Do not try to interpret −179.2 and 73.0 as slopes: by default <code>poly()</code> builds <dfn data-g="orthogonal-polynomial">orthogonal polynomials</dfn>, combinations of lstat and lstat² rescaled so the columns are uncorrelated, which makes least squares numerically stable. With <code>raw=True</code> the columns would be plain lstat and lstat²: different coefficients, identical fitted values. <code>poly()</code> adds no intercept column of its own; <code>MS</code> adds one.</div></div>
+<div class="py" id="c-isl3-lab-28"><pre class="src">
+anova_lm(results1, results3)
+</pre><div class="pynote"><b>Read the output.</b> <code>anova_lm</code> compares nested models with the F-test (3.24). Row 0 is <code>results1</code> (lstat + age, linear); row 1 is <code>results3</code> (adds the quadratic term).
+<ul>
+<li><code>df_resid</code>: \(n-p-1\): 503 and 502.</li>
+<li><code>ssr</code>: each model's RSS: 19,168.13 and 14,165.61.</li>
+<li><code>df_diff</code>: 1 extra coefficient; <code>ss_diff</code>: the drop in RSS, 5,002.52.</li>
+<li><code>F</code> \(=\frac{5002.52/1}{14165.61/502}=\frac{5002.52}{28.218}=177.28\), and <code>Pr(&gt;F)</code> \(=7.5\times10^{-35}\).</li>
+</ul>
+The null hypothesis “the quadratic term is not needed” is firmly rejected. Because the models differ by one coefficient, F equals the square of that term's t: \(13.315^2=177.3\). Row 0 shows NaN (“not a number”) because there is no earlier model to compare it with.</div></div>
+<div class="py" id="c-isl3-lab-29"><pre class="src">
+ax = subplots(figsize=(6, 4))[1]
+ax.scatter(results3.fittedvalues, results3.resid)
+ax.set_xlabel('Fitted value')
+ax.set_ylabel('Residual')
+ax.axhline(0, c='k', ls='--');
+</pre><div class="pynote"><b>Read the plot:</b> compared with the linear fit, the U-shape has largely gone. For a cubic or higher fit, change <code>degree</code> in <code>poly()</code>.</div></div>
+
+<h3 id="isl3-lab-qual">3.6.7 Qualitative predictors</h3>
+<p>The <b>Carseats</b> data: sales of child car seats (in thousands) at 400 stores, with predictors such as price, the competitor's price, local income, advertising budget and <code>ShelveLoc</code>, the quality of the shelf location (Bad, Medium, Good).</p>
+<div class="py" id="c-isl3-lab-30"><pre class="src">
+Carseats = load_data('Carseats')
+print(Carseats['ShelveLoc'].value_counts())
+Carseats.columns
+</pre><div class="pynote"><b>Read the output:</b> 96 Bad, 219 Medium, 85 Good shelf locations, and the 11 columns. <code>value_counts()</code> counts each level.</div></div>
+<div class="py" id="c-isl3-lab-31"><pre class="src">
+allvars = list(Carseats.columns.drop('Sales'))
+y = Carseats['Sales']
+final = allvars + [('Income', 'Advertising'),
+                   ('Price', 'Age')]
+X = MS(final).fit_transform(Carseats)
+print(list(X.columns))
+model = sm.OLS(y, X)
+summarize(model.fit())
+</pre><div class="pynote"><b>Line by line.</b> <code>list(...)</code> turns the column index into an ordinary list so that <code>+</code> can append the two interaction tuples. <code>MS</code> sees that <code>ShelveLoc</code>, <code>Urban</code> and <code>US</code> are categorical and <b>creates dummy variables automatically</b> (one-hot encoding), dropping the first level of each (Bad, No, No) to avoid the dummy trap. That is why the columns include <code>ShelveLoc[Good]</code> and <code>ShelveLoc[Medium]</code> but no <code>ShelveLoc[Bad]</code>.<br>
+<b>Read the output:</b>
+<ul>
+<li><b>ShelveLoc[Good] 4.85</b>: compared with a <i>bad</i> shelf location, a good one is associated with about 4,850 more seats sold, other things equal. <b>ShelveLoc[Medium] 1.95</b>: medium beats bad by about 1,950 seats, but trails good.</li>
+<li><b>Price −0.1008</b>: each extra dollar of price, about 101 fewer seats. <b>CompPrice 0.0929</b>: a pricier competitor helps.</li>
+<li><b>Income:Advertising 0.0008</b> (p = 0.007): advertising works a little better in richer areas. <b>Price:Age</b> (p = 0.42): no evidence of that interaction.</li>
+<li><b>Urban[Yes], US[Yes], Education, Population</b>: large p-values.</li>
+</ul></div></div>
+
+<div class="callout pitfall"><p><b>Pitfall: forgetting the baseline.</b> “ShelveLoc[Medium] = 1.95” compares Medium with <b>Bad</b>, not with the average. To compare Good with Medium, subtract: \(4.85-1.95=2.90\).</p></div>
+
+<h3 id="isl3-lab-practice">Practice</h3>
+<div class="ex" id="x-isl3-lab-01" data-title="fit with ModelSpec and report the R²"><div class="task"><p>Using <code>MS</code> and <code>sm.OLS</code>, fit <code>medv</code> on <code>rm</code> and <code>lstat</code> (Boston) and store the results object in <code>res_rm</code>. Then set <code>r2_rm</code> to its \(R^2\).</p></div>
+<pre class="src">
+res_rm = None   # your code here
+r2_rm = None
+</pre>
+<pre class="check">
+assert res_rm is not None, "fit the model and store the results in res_rm"
+assert list(res_rm.params.index) == ['intercept', 'rm', 'lstat'], f"the model should use intercept, rm, lstat; got {list(res_rm.params.index)}"
+assert abs(res_rm.params['rm'] - 5.0948) < 1e-3, f"rm coefficient should be about 5.0948, got {res_rm.params['rm']}"
+assert r2_rm is not None and abs(r2_rm - 0.6386) < 1e-3, f"R^2 should be about 0.6386, got {r2_rm}"
+</pre>
+<div class="hint"><p>Build the matrix with <code>MS(['rm', 'lstat']).fit_transform(Boston)</code>.</p></div>
+<div class="hint"><p>Then <code>res_rm = sm.OLS(Boston['medv'], X2).fit()</code> and <code>r2_rm = res_rm.rsquared</code>.</p></div>
+<pre class="solution">
+X2 = MS(['rm', 'lstat']).fit_transform(Boston)
+res_rm = sm.OLS(Boston['medv'], X2).fit()
+r2_rm = res_rm.rsquared
+</pre>
+<div class="explain"><p>Two predictors explain 63.9% of the variance. Holding lstat fixed, one extra room is associated with about $5,095 more in median value.</p></div></div>
+
+<div class="ex" id="x-isl3-lab-02" data-title="a prediction interval with get_prediction"><div class="task"><p>Using the <code>res_rm</code> model from the previous exercise, compute the 95% <b>prediction</b> interval for a neighbourhood with <code>rm = 6</code> and <code>lstat = 10</code>. Store the lower and upper ends in <code>lo</code> and <code>hi</code>.</p></div>
+<pre class="src">
+lo, hi = None, None
+</pre>
+<pre class="check">
+assert lo is not None, "compute the interval"
+assert abs(lo - 11.88) < 0.05 and abs(hi - 33.69) < 0.05, f"expected about (11.88, 33.69), got ({lo}, {hi})"
+</pre>
+<div class="hint"><p>Make a data frame <code>pd.DataFrame({'rm': [6], 'lstat': [10]})</code> and turn it into a matrix with a fitted <code>MS(['rm', 'lstat'])</code> design's <code>transform</code>.</p></div>
+<div class="hint"><p><code>res_rm.get_prediction(newX2).conf_int(obs=True, alpha=0.05)</code> returns a 1 × 2 array; take <code>[0, 0]</code> and <code>[0, 1]</code>.</p></div>
+<pre class="solution">
+d2 = MS(['rm', 'lstat']).fit(Boston)
+newX2 = d2.transform(pd.DataFrame({'rm': [6], 'lstat': [10]}))
+ci = res_rm.get_prediction(newX2).conf_int(obs=True, alpha=0.05)
+lo, hi = ci[0, 0], ci[0, 1]
+</pre>
+<div class="explain"><p><code>obs=True</code> asks for the interval for a single new observation. The point prediction is about 22.8, and one such neighbourhood's median value lies between about $11,900 and $33,700 in 95% of cases like this.</p></div></div>
+
+<div class="ex" id="x-isl3-lab-03" data-title="anova_lm for a cubic term"><div class="task"><p>Fit <code>medv</code> on <code>poly('lstat', degree=3)</code> and <code>age</code>, store it as <code>results_cubic</code>, then compare it with <code>results3</code> (the quadratic model) using <code>anova_lm</code>. Store the F-statistic of the comparison in <code>F_cubic</code>.</p></div>
+<pre class="src">
+results_cubic = None
+F_cubic = None
+</pre>
+<pre class="check">
+assert results_cubic is not None, "fit the cubic model"
+assert results_cubic.df_model == 4, f"the cubic model has 4 predictors (3 poly columns + age), got {results_cubic.df_model}"
+assert F_cubic is not None and abs(F_cubic - 21.04) < 0.05, f"F should be about 21.04, got {F_cubic}"
+</pre>
+<div class="hint"><p>Same as cell 27, with <code>degree=3</code>.</p></div>
+<div class="hint"><p><code>anova_lm(results3, results_cubic)</code> is a DataFrame; the F is in row 1 of the column <code>'F'</code>: <code>.loc[1, 'F']</code>.</p></div>
+<pre class="solution">
+Xc = MS([poly('lstat', degree=3), 'age']).fit_transform(Boston)
+results_cubic = sm.OLS(Boston['medv'], Xc).fit()
+F_cubic = anova_lm(results3, results_cubic).loc[1, 'F']
+</pre>
+<div class="explain"><p>F ≈ 21 with a tiny p-value: the cubic term also improves the fit significantly. Whether it improves predictions on <i>new</i> data is a question for cross-validation (Chapter 5).</p></div></div>
+
+<h3 id="isl3-lab-quiz">Quiz</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">What does <code>sm.OLS(y, X)</code> do on its own?</p><ol class="opts"><li>Fits the model and prints a summary</li><li>Specifies the model; nothing is fitted until <code>.fit()</code></li><li>Adds an intercept column to X</li></ol><div class="why">OLS only stores the specification; <code>.fit()</code> computes the estimates. It never adds an intercept: you must include a column of ones (by hand or via <code>MS</code>).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Why does <code>MS</code> create <code>ShelveLoc[Good]</code> and <code>ShelveLoc[Medium]</code> but not <code>ShelveLoc[Bad]</code>?</p><ol class="opts"><li>Bad has too few stores</li><li>Bad is not significant</li><li>Three dummies would add up to the intercept column (perfect collinearity), so the first level becomes the baseline</li></ol><div class="why">With an intercept, a factor with \(L\) levels needs \(L-1\) dummies. Bad is first alphabetically, so it is the baseline.</div></div>
+<div class="q" data-type="num" data-answer="25.05" data-tol="0.02"><p class="stem">With medv \(=34.5538-0.9500\times\)lstat, what is the predicted medv at lstat = 10?</p><div class="why">\(34.5538-9.500=25.05\) (thousand dollars).</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">In <code>conf_int(obs=True, alpha=0.05)</code>, what does <code>obs=True</code> change?</p><ol class="opts"><li>It gives a prediction interval for one new observation instead of a confidence interval for the mean</li><li>It switches from 95% to 99%</li><li>It removes outliers</li></ol><div class="why">“obs” refers to a new observation, whose interval includes the irreducible error. The level is set by <code>alpha</code>.</div></div>
+<div class="q" data-type="num" data-answer="177.28" data-tol="0.1"><p class="stem">anova_lm reports RSS 19,168.13 (503 df) and 14,165.61 (502 df). Compute F.</p><div class="why">\(F=\frac{(19168.13-14165.61)/1}{14165.61/502}=\frac{5002.52}{28.218}=177.28\).</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">A summary shows Durbin-Watson = 0.89. What does that suggest?</p><ol class="opts"><li>Strong collinearity</li><li>Positive correlation between neighbouring residuals</li><li>A perfect fit</li></ol><div class="why">Durbin-Watson near 2 means uncorrelated errors; well below 2 means positive correlation between consecutive residuals (lesson 3.3, problem 2).</div></div>
+<div class="q" data-type="open"><p class="stem">Why do the coefficients of <code>poly('lstat', degree=2)</code> differ from those of a model with lstat and lstat², while the fitted values are identical?</p><div class="model">Both sets of columns span the same space of quadratic functions of lstat, so least squares finds the same best curve and the same fitted values. <code>poly()</code> uses orthogonal combinations of lstat and lstat² (for numerical stability), so the coefficients are weights on different basis columns and cannot be read as the slope on lstat and the coefficient on lstat².</div></div>
+</div>
+
+<h3 id="isl3-lab-cards">Flashcards</h3>
+<div class="cards">
+<div class="fc"><div class="f">Fit a statsmodels OLS model (two steps)</div><div class="b"><code>results = sm.OLS(y, X).fit()</code>: specify, then fit.</div></div>
+<div class="fc"><div class="f">What does <code>MS(['a','b']).fit_transform(df)</code> return?</div><div class="b">The design matrix: an intercept column plus columns a and b (dummies for categorical columns).</div></div>
+<div class="fc"><div class="f">Interaction in ModelSpec</div><div class="b">A tuple: <code>('lstat', 'age')</code> adds the column <code>lstat:age</code>.</div></div>
+<div class="fc"><div class="f">Columns of <code>summarize(results)</code></div><div class="b">coef, std err, t, P&gt;|t|.</div></div>
+<div class="fc"><div class="f">CI vs PI in statsmodels</div><div class="b"><code>get_prediction(newX).conf_int(alpha=0.05)</code> vs <code>.conf_int(obs=True, alpha=0.05)</code>.</div></div>
+<div class="fc"><div class="f">Leverage values in statsmodels</div><div class="b"><code>results.get_influence().hat_matrix_diag</code></div></div>
+<div class="fc"><div class="f">RSE and \(R^2\) from a results object</div><div class="b"><code>np.sqrt(results.scale)</code>, <code>results.rsquared</code></div></div>
+<div class="fc"><div class="f">Compare nested models</div><div class="b"><code>anova_lm(small, big)</code>: F-test of whether the extra terms are needed.</div></div>
+<div class="fc"><div class="f">VIF of column i of design matrix X</div><div class="b"><code>variance_inflation_factor(X, i)</code>, skipping i = 0 (the intercept).</div></div>
+<div class="fc"><div class="f">Default basis of <code>poly()</code></div><div class="b">Orthogonal polynomials; <code>raw=True</code> gives plain powers. Same fitted values.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I ran every cell of the lab and can explain each line.</label>
+<label><input type="checkbox"> I can read every line of <code>results.summary()</code>.</label>
+<label><input type="checkbox"> I can get predictions with confidence and prediction intervals, and compute them by hand for simple regression.</label>
+<label><input type="checkbox"> I can add interactions, polynomial terms and qualitative predictors with ModelSpec.</label>
+<label><input type="checkbox"> I can compute VIFs with a list comprehension and compare nested models with anova_lm.</label>
+</div>
+</section>
