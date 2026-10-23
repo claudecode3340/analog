@@ -1,0 +1,77 @@
+{
+"random-variable": {
+"term": "random variable",
+"def": "A quantity whose value is uncertain until observed; ISLP writes it as a capital letter, \\(X\\).",
+"at": "m-prob"
+},
+"pmf": {
+"term": "probability mass function (PMF)",
+"def": "For a discrete variable, \\(p(k)=\\Pr(X=k)\\); the values add to 1.",
+"at": "m-prob"
+},
+"pdf": {
+"term": "probability density function (PDF)",
+"def": "For a continuous variable, the curve whose area between \\(a\\) and \\(b\\) is \\(\\Pr(a\\le X\\le b)\\); total area 1.",
+"at": "m-prob"
+},
+"expectation": {
+"term": "expected value",
+"def": "\\(\\mathbb{E}[X]=\\sum_k k\\,p(k)\\) (or \\(\\int x\\,p(x)dx\\)): the long-run average.",
+"at": "m-prob"
+},
+"variance": {
+"term": "variance",
+"def": "\\(\\operatorname{Var}(X)=\\mathbb{E}[(X-\\mu)^2]=\\mathbb{E}[X^2]-\\mu^2\\); its square root is the standard deviation.",
+"at": "m-prob"
+},
+"covariance": {
+"term": "covariance",
+"def": "\\(\\operatorname{Cov}(X,Y)=\\mathbb{E}[(X-\\mu_X)(Y-\\mu_Y)]\\); divided by both SDs it gives the correlation.",
+"at": "m-prob"
+},
+"normal-distribution": {
+"term": "normal distribution",
+"def": "The bell curve \\(N(\\mu,\\sigma^2)\\); 68%, 95%, 99.7% of the area within 1, 2, 3 SDs.",
+"at": "m-prob"
+},
+"independence": {
+"term": "independence",
+"def": "\\(\\Pr(A,B)=\\Pr(A)\\Pr(B)\\): knowing one tells you nothing about the other.",
+"at": "m-prob"
+},
+"bayes-rule": {
+"term": "Bayes' rule",
+"def": "\\(\\Pr(A\\mid B)=\\Pr(B\\mid A)\\Pr(A)/\\Pr(B)\\): posterior = likelihood × prior / evidence.",
+"at": "m-prob"
+},
+"likelihood": {
+"term": "likelihood",
+"def": "The probability of the observed data, viewed as a function of the parameters.",
+"at": "m-prob"
+},
+"mle": {
+"term": "maximum likelihood estimate (MLE)",
+"def": "The parameter value that makes the observed data most probable: \\(\\operatorname*{argmax}_\\theta \\log L(\\theta)\\).",
+"at": "m-prob"
+},
+"standard-error": {
+"term": "standard error (SE)",
+"def": "The standard deviation of an estimate across repeated samples; for a mean, \\(\\sigma/\\sqrt n\\).",
+"at": "m-prob"
+},
+"clt": {
+"term": "central limit theorem",
+"def": "The mean of \\(n\\) iid draws is approximately normal with mean \\(\\mu\\) and SD \\(\\sigma/\\sqrt n\\) for large \\(n\\).",
+"at": "m-prob"
+},
+"confidence-interval": {
+"term": "confidence interval",
+"def": "A range built so that, over repeated samples, it contains the true value a stated fraction (e.g. 95%) of the time.",
+"at": "m-prob"
+},
+"hypothesis-test": {
+"term": "hypothesis test",
+"def": "Assume a null hypothesis, compute a test statistic, and reject the null if the p-value is below \\(\\alpha\\).",
+"at": "m-prob"
+}
+}

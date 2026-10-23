@@ -1,0 +1,604 @@
+<section class="lesson" id="m-calc" data-book="Prince pp. 441, 448 · prepares ISLP 3 and Prince 6–7">
+<p class="lede">Training a model means walking downhill on a loss surface, and derivatives are what tell you which way is downhill. This lesson rebuilds derivatives from the slope of a line, then adds partial derivatives, gradients, gradient descent and the chain rule, with every number shown, so that least squares in ISLP Chapter 3 and backpropagation in Prince Chapter 7 feel like old friends.</p>
+<div class="uses"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> <a href="#m-linalg">Vectors and matrices</a> <a href="#np2">NumPy II</a> <a href="#plt1">matplotlib</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>explain a derivative as the limit of secant slopes, and estimate one numerically;</li>
+<li>differentiate with the power, sum, product, quotient, chain, exp and log rules, including the sigmoid;</li>
+<li>find a minimum by setting the derivative to zero, and prove that the mean minimises squared error and the median minimises absolute error;</li>
+<li>compute partial derivatives and the gradient, and say why the negative gradient points downhill;</li>
+<li>run gradient descent by hand for a few steps, and in NumPy;</li>
+<li>push numbers forwards and derivatives backwards through a computational graph (backpropagation in miniature);</li>
+<li>derive \(\frac{\partial}{\partial\bbeta}\|\by-\bX\bbeta\|^2=-2\bX\T(\by-\bX\bbeta)\) and check any gradient with finite differences.</li></ul></div>
+
+<div class="callout book"><blockquote>Most readers of this book will be accustomed to the idea that if we have a function y = f[x], we can compute the derivative ∂y/∂x, and this represents how y changes when we make a small change in x.</blockquote><cite>Prince, Appendix 23.5, p. 448</cite></div>
+
+<div class="py" id="c-m-calc-01" data-mode="setup"><pre class="src">
+import numpy as np
+import matplotlib.pyplot as plt
+np.set_printoptions(precision=4, suppress=True)
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+print("ready")
+</pre><div class="pynote">The setup cell: run it first. It also defines <code>sigmoid</code>, which several later cells use.</div></div>
+
+<h3 id="m-calc-slope">The derivative is a slope</h3>
+<p>For a straight line \(y=mx+c\), the slope \(m\) says how much \(y\) rises for each unit step in \(x\): rise over run. A curve has no single slope, but if you zoom in far enough on any smooth curve it looks straight, and that local slope is the <dfn data-g="derivative">derivative</dfn>.</p>
+<p>To measure it, pick two points on the curve, \(x=a\) and \(x=a+h\), and compute the slope of the straight line through them (a <b>secant</b> line). Then slide the second point towards the first by shrinking \(h\). The secant turns into the <b>tangent</b>, the line that just touches the curve at \(a\), and its slope is the derivative:</p>
+<div class="mathblock" data-sheet="Derivative (definition)"><div class="eqlabel">Definition of the derivative</div>
+\[f'(a)=\frac{df}{dx}\Big|_{x=a}=\lim_{h\to0}\frac{f(a+h)-f(a)}{h}\]
+<p class="say">Read: “f-prime of a”, or “d-f by d-x at a”, equals the limit, as h goes to zero, of f of a-plus-h minus f of a, all over h. The fraction is rise over run between two nearby points.</p></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>the slope of \(f(x)=x^2\) at \(x=3\)</b></div>
+<div class="given">\(f(x)=x^2\), \(a=3\), so \(f(3)=9\).</div>
+<ol class="steps">
+<li><div>\(h=1\): \(\dfrac{f(4)-f(3)}{1}=\dfrac{16-9}{1}=7\).</div></li>
+<li><div>\(h=0.1\): \(\dfrac{f(3.1)-f(3)}{0.1}=\dfrac{9.61-9}{0.1}=6.1\).</div></li>
+<li><div>\(h=0.01\): \(\dfrac{9.0601-9}{0.01}=6.01\).<span class="why">The secant slopes are 7, 6.1, 6.01, … closing in on 6.</span></div></li>
+<li><div><b>Exactly, with algebra:</b> \(\dfrac{(3+h)^2-9}{h}=\dfrac{9+6h+h^2-9}{h}=\dfrac{6h+h^2}{h}=6+h\). As \(h\to0\), this goes to \(6\).</div></li>
+<li><div><b>For any \(a\):</b> \(\dfrac{(a+h)^2-a^2}{h}=2a+h\to2a\). So \(f'(x)=2x\), and at \(x=3\), \(f'(3)=6\).</div></li>
+</ol>
+<div class="result">\(\frac{d}{dx}x^2=2x\); at \(x=3\) the slope is 6: near \(x=3\), \(y\) rises about 6 times as fast as \(x\).</div></div>
+<div class="widget" data-w="m-calc-secant" data-title="From secant to tangent"><div class="wn">Move the point \(a\) and shrink \(h\). The orange line passes through the two points; its slope is printed next to the true derivative. As \(h\) gets small the orange line becomes the tangent (dashed). Try \(x^3-3x\) at \(a=1\): the tangent is flat, slope 0, because \(a=1\) is the bottom of a valley.</div></div>
+<p>Three ways to write the same thing, all of which you will meet: \(f'(x)\) (Lagrange's prime), \(\frac{df}{dx}\) or \(\frac{d}{dx}f(x)\) (Leibniz's “d-f by d-x”), and in Prince \(\frac{\partial y}{\partial x}\) even for one variable. A derivative is itself a function: \(f'(x)=2x\) gives the slope at every \(x\).</p>
+<div class="callout intuition"><p><b>Read the derivative as a sensitivity.</b> \(f'(a)=6\) means: “nudge \(x\) by a tiny amount \(\delta\), and \(f\) changes by about \(6\delta\)”. So \(f(3.001)\approx9+6\times0.001=9.006\) (true value 9.006001). This “small change in, proportional change out” reading is exactly how gradients are used in training.</p></div>
+<div class="callout ece"><p>You already know derivatives as rates: current \(i=C\,dv/dt\) through a capacitor, instantaneous frequency as the derivative of phase. And the finite difference \(\frac{f(a+h)-f(a)}{h}\) is the first-difference filter \(y[n]=x[n]-x[n-1]\) divided by the sample spacing: a crude differentiator, a high-pass filter. That is why numerical derivatives amplify noise.</p></div>
+
+<h3 id="m-calc-rules">The rules, each with a worked example</h3>
+<p>Nobody computes limits every time. A handful of rules, each proved once from the definition, lets you differentiate everything in months 1–3. Here they are, with \(c\) a constant and \(f,g\) functions of \(x\).</p>
+<div class="tw"><table class="t"><thead><tr><th>Rule</th><th>Formula</th><th>Example</th></tr></thead><tbody>
+<tr><td>constant</td><td>\(\frac{d}{dx}c=0\)</td><td>\(\frac{d}{dx}7=0\)</td></tr>
+<tr><td>power</td><td>\(\frac{d}{dx}x^n=nx^{n-1}\)</td><td>\(\frac{d}{dx}x^3=3x^2\); \(\frac{d}{dx}\sqrt x=\frac{d}{dx}x^{1/2}=\frac{1}{2\sqrt x}\)</td></tr>
+<tr><td>constant multiple</td><td>\((cf)'=cf'\)</td><td>\(\frac{d}{dx}5x^3=15x^2\)</td></tr>
+<tr><td>sum</td><td>\((f+g)'=f'+g'\)</td><td>\(\frac{d}{dx}(x^2+4x)=2x+4\)</td></tr>
+<tr><td>product</td><td>\((fg)'=f'g+fg'\)</td><td>\(\frac{d}{dx}x^2e^x=2xe^x+x^2e^x\)</td></tr>
+<tr><td>quotient</td><td>\(\left(\frac fg\right)'=\frac{f'g-fg'}{g^2}\)</td><td>\(\frac{d}{dx}\frac{x}{1+x^2}=\frac{(1+x^2)-x\cdot2x}{(1+x^2)^2}=\frac{1-x^2}{(1+x^2)^2}\)</td></tr>
+<tr><td>chain</td><td>\(\frac{d}{dx}f(g(x))=f'(g(x))\,g'(x)\)</td><td>\(\frac{d}{dx}(3x+1)^4=4(3x+1)^3\cdot3\)</td></tr>
+<tr><td>exponential</td><td>\(\frac{d}{dx}e^x=e^x\)</td><td>\(\frac{d}{dx}e^{2x}=2e^{2x}\) (chain rule)</td></tr>
+<tr><td>logarithm</td><td>\(\frac{d}{dx}\log x=\frac1x\)</td><td>\(\frac{d}{dx}\log(1+x^2)=\frac{2x}{1+x^2}\) (chain rule)</td></tr>
+</tbody></table></div>
+
+<div class="worked"><div class="wt">Worked example · <b>one example per rule, with a number at the end</b></div>
+<div class="given">Differentiate, then evaluate at the given point.</div>
+<ol class="steps">
+<li><div><b>Power and sum:</b> \(f(x)=5x^3-2x+7\). Term by term: \(15x^2-2+0\). At \(x=2\): \(15\times4-2=58\).<span class="why">The sum rule lets you differentiate each term separately; the constant 7 does not change, so its slope is 0.</span></div></li>
+<li><div><b>Product:</b> \(f(x)=x^2e^x\). With \(u=x^2\) (\(u'=2x\)) and \(v=e^x\) (\(v'=e^x\)): \(f'=2xe^x+x^2e^x=e^x(2x+x^2)\). At \(x=1\): \(e(2+1)=3e=8.155\).</div></li>
+<li><div><b>Quotient:</b> \(f(x)=\frac{x}{1+x^2}\). Top \(u=x\), \(u'=1\); bottom \(v=1+x^2\), \(v'=2x\). \(f'=\frac{1\cdot(1+x^2)-x\cdot2x}{(1+x^2)^2}=\frac{1-x^2}{(1+x^2)^2}\). At \(x=0\): \(1\); at \(x=1\): \(0\).</div></li>
+<li><div><b>Chain:</b> \(f(x)=(3x+1)^4\). Outside function “something to the 4th”, inside \(g=3x+1\). Derivative of the outside, evaluated at the inside, times derivative of the inside: \(4(3x+1)^3\times3=12(3x+1)^3\). At \(x=0\): \(12\).<span class="why">Check without the chain rule at \(x=0\) using a tiny step: \(\frac{(1.003)^4-1}{0.001}=12.05\approx12\).</span></div></li>
+<li><div><b>Exp:</b> \(f(x)=e^{-x^2/2}\) (the shape of the bell curve). Chain rule with inside \(-x^2/2\), whose derivative is \(-x\): \(f'=-x\,e^{-x^2/2}\). At \(x=1\): \(-e^{-0.5}=-0.6065\).</div></li>
+<li><div><b>Log:</b> \(f(x)=\log(1+x^2)\). Outside \(\log\), derivative \(1/(\text{inside})\); inside \(1+x^2\), derivative \(2x\): \(f'=\frac{2x}{1+x^2}\). At \(x=1\): \(1\).</div></li>
+</ol>
+<div class="result">\(58,\quad 3e\approx8.155,\quad 0,\quad 12,\quad -0.6065,\quad 1\)</div></div>
+
+<h4>The derivative of the sigmoid (you will use this constantly)</h4>
+<p>The <dfn data-g="sigmoid">sigmoid</dfn> or logistic function \(\sigma(z)=\frac{1}{1+e^{-z}}\) squashes any number into \((0,1)\). It is ISLP's logistic regression (<a href="#isl4-1">ISLP 4.1</a>) and an activation function in neural networks. Its derivative has a beautiful form.</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>\(\sigma'(z)=\sigma(z)(1-\sigma(z))\)</b></div>
+<div class="given">\(\sigma(z)=(1+e^{-z})^{-1}\).</div>
+<ol class="steps">
+<li><div><b>Chain rule</b>, outside \(u^{-1}\) (derivative \(-u^{-2}\)), inside \(u=1+e^{-z}\) (derivative \(-e^{-z}\)): \[\sigma'(z)=-(1+e^{-z})^{-2}\cdot(-e^{-z})=\frac{e^{-z}}{(1+e^{-z})^2}.\]</div></li>
+<li><div><b>Split the fraction:</b> \(\dfrac{1}{1+e^{-z}}\cdot\dfrac{e^{-z}}{1+e^{-z}}\). The first factor is \(\sigma(z)\).</div></li>
+<li><div><b>Rewrite the second:</b> \(\dfrac{e^{-z}}{1+e^{-z}}=\dfrac{(1+e^{-z})-1}{1+e^{-z}}=1-\dfrac{1}{1+e^{-z}}=1-\sigma(z)\).</div></li>
+<li><div><b>So</b> \(\sigma'(z)=\sigma(z)\,(1-\sigma(z))\). At \(z=0\): \(\sigma=0.5\), slope \(0.5\times0.5=0.25\), the steepest point. At \(z=5\): \(\sigma=0.9933\), slope \(0.0066\): almost flat.<span class="why">Flat tails mean tiny gradients: the “vanishing gradient” problem that pushed deep learning towards ReLU (<a href="#udl3">UDL 3</a>, <a href="#udl7">UDL 7</a>).</span></div></li>
+</ol>
+<div class="result">\(\sigma'(z)=\sigma(z)(1-\sigma(z))\), at most 0.25</div></div>
+<p>And the <b>ReLU</b>, \(\ReLU(z)=\max(0,z)\), Prince's favourite activation: slope 0 for \(z\lt0\), slope 1 for \(z\gt0\), and at exactly 0 it has a corner (no single slope; software picks 0).</p>
+
+<h4>Log and exp rules (worth memorising)</h4>
+<div class="mathblock" data-sheet="Log and exp rules"><div class="eqlabel">Rules for logarithms and exponentials</div>
+\[\log(ab)=\log a+\log b,\quad \log\frac ab=\log a-\log b,\quad \log a^k=k\log a,\quad e^{a+b}=e^ae^b,\quad \log e^a=a,\quad e^{\log a}=a\]
+<p class="say">Logs turn products into sums, quotients into differences and powers into multipliers. Exps do the reverse.</p></div>
+<p>Example: the log of a likelihood (<a href="#m-prob">Probability</a>) \(\log\big(p^k(1-p)^{n-k}\big)=k\log p+(n-k)\log(1-p)\). A product of powers has become a sum, and sums are easy to differentiate term by term. With \(k=7,n=10,p=0.5\): \(7\log0.5+3\log0.5=10\times(-0.6931)=-6.931\), and indeed \(\log(0.5^{10})=\log(0.000977)=-6.931\).</p>
+
+<div class="py" id="c-m-calc-02"><pre class="src">
+def num_deriv(f, a, h=1e-5):
+    return (f(a + h) - f(a - h)) / (2 * h)     # central difference (explained later)
+
+checks = [
+    ("5x^3-2x+7 at 2",  lambda x: 5*x**3 - 2*x + 7,       2.0, 58),
+    ("x^2 e^x at 1",    lambda x: x**2 * np.exp(x),       1.0, 3*np.e),
+    ("x/(1+x^2) at 1",  lambda x: x / (1 + x**2),         1.0, 0),
+    ("(3x+1)^4 at 0",   lambda x: (3*x + 1)**4,           0.0, 12),
+    ("exp(-x^2/2) at 1",lambda x: np.exp(-x**2 / 2),      1.0, -np.exp(-0.5)),
+    ("log(1+x^2) at 1", lambda x: np.log(1 + x**2),       1.0, 1),
+    ("sigmoid at 0",    sigmoid,                          0.0, 0.25),
+]
+for name, f, a, exact in checks:
+    print(f"{name:18s} numeric {num_deriv(f, a):9.5f}   by the rules {exact:9.5f}")
+</pre><div class="pynote"><b>Read the output:</b> each row compares a numerical slope (rise over run with a tiny step) with the answer from the rules. They agree to about 5 decimals. The <code>lambda x: ...</code> syntax makes a small unnamed function; <code>f"{name:18s}"</code> pads text to 18 characters so the columns line up.</div></div>
+
+<h3 id="m-calc-min">Finding a minimum: set the derivative to zero</h3>
+<p>At the bottom of a smooth valley the tangent is flat, so the derivative is zero. That gives a recipe for minimising: <b>differentiate, set equal to zero, solve</b>. Then check it is a minimum and not a maximum or a flat shoulder: the slope should go from negative (downhill) to positive (uphill), which is the same as the <b>second derivative</b> \(f''(x)\) (the derivative of the derivative) being positive.</p>
+<div class="worked"><div class="wt">Worked example · <b>minimise \(f(x)=(x-3)^2+1\)</b></div>
+<div class="given">\(f(x)=(x-3)^2+1\).</div>
+<ol class="steps">
+<li><div>\(f'(x)=2(x-3)\) (chain rule; the \(+1\) has slope 0).</div></li>
+<li><div>Set to zero: \(2(x-3)=0\Rightarrow x=3\).</div></li>
+<li><div>Check: \(f''(x)=2\gt0\), so the curve bends upwards: a minimum. \(f(3)=1\).</div></li>
+</ol>
+<div class="result">\(\argmin_x f=3\), \(\min_x f=1\)</div></div>
+
+<h4>The mean minimises squared error</h4>
+<p>Suppose you must summarise the numbers \(x_1,\dots,x_n\) by one number \(c\), and you are charged the squared distance \((x_i-c)^2\) for each. Which \(c\) is cheapest? This is the simplest least-squares problem there is, and its answer explains why the mean is everywhere in ISLP.</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>\(\argmin_c\sum_i(x_i-c)^2=\bar x\)</b></div>
+<div class="given">\(L(c)=\sum_{i=1}^n(x_i-c)^2\). Data for the numbers: \(x=(1,2,6)\).</div>
+<ol class="steps">
+<li><div><b>Differentiate</b> each term with the chain rule (inside \(x_i-c\) has derivative \(-1\) with respect to \(c\)): \[\frac{dL}{dc}=\sum_{i=1}^n2(x_i-c)(-1)=-2\sum_{i=1}^n(x_i-c).\]</div></li>
+<li><div><b>Set to zero:</b> \(\sum_i(x_i-c)=0\Rightarrow\sum_ix_i-nc=0\Rightarrow c=\frac1n\sum_ix_i=\bar x\).<span class="why">\(\sum_i c=nc\), the sum rule from <a href="#s0-maths">How to read the maths</a>.</span></div></li>
+<li><div><b>Check:</b> \(\frac{d^2L}{dc^2}=2n\gt0\): a minimum.</div></li>
+<li><div><b>Numbers:</b> \(\bar x=(1+2+6)/3=3\). \(L(3)=4+1+9=14\). Neighbours: \(L(2)=1+0+16=17\), \(L(4)=9+4+4=17\). Both worse.</div></li>
+</ol>
+<div class="result">The mean \(\bar x\) is the least-squares summary: \(L(\bar x)=14\) for \((1,2,6)\).</div></div>
+
+<h4>The median minimises absolute error</h4>
+<p>Now charge \(|x_i-c|\) instead. The slope of \(|x_i-c|\) as a function of \(c\) is \(-1\) when \(c\lt x_i\) (moving \(c\) up brings it closer) and \(+1\) when \(c\gt x_i\). So</p>
+\[\frac{d}{dc}\sum_i|x_i-c|=(\text{number of }x_i\text{ below }c)-(\text{number of }x_i\text{ above }c).\]
+<p>This is zero (or changes sign) when as many points lie below \(c\) as above: at the <b>median</b>. For \((1,2,6)\), the median is 2: \(\sum|x_i-2|=1+0+4=5\), while at the mean, \(\sum|x_i-3|=2+1+3=6\). Note that the derivative does not exist at the data points themselves (each \(|x_i-c|\) has a corner there), which is why the median is found by sorting, not by setting a formula to zero.</p>
+<div class="callout key"><p><b>Why this matters.</b> Squared error punishes big misses heavily, so the mean is pulled towards outliers: change 6 to 60 and the mean jumps from 3 to 21, while the median stays at 2. The choice of loss <i>is</i> the choice of what “best” means. Prince Chapter 5 (<a href="#udl5">UDL 5</a>) shows that squared error corresponds to assuming normal noise, and absolute error to assuming heavier-tailed (Laplace) noise.</p></div>
+<div class="widget" data-w="m-calc-meanmed" data-title="Squared versus absolute loss" data-args='{"x":[1,2,6]}'><div class="wn">Drag the data points along the line. The top curve is \(\sum(x_i-c)^2\), the bottom one \(\sum|x_i-c|\); their lowest points are marked. The squared loss is a smooth bowl with its bottom at the mean; the absolute loss is made of straight pieces with its bottom at the median. Drag the right-hand point far to the right and watch which minimum follows it.</div></div>
+
+<h3 id="m-calc-partial">Partial derivatives: one input at a time</h3>
+<p>A loss depends on many parameters at once: \(L(\beta_0,\beta_1)\), or millions of weights in a network. A <dfn data-g="partial-derivative">partial derivative</dfn> asks a one-variable question of a many-variable function: how fast does \(f\) change if I move <b>only</b> \(x_1\) and hold every other input fixed?</p>
+<div class="mathblock" data-sheet="Partial derivative"><div class="eqlabel">Partial derivative</div>
+\[\frac{\partial f}{\partial x_1}=\lim_{h\to0}\frac{f(x_1+h,x_2)-f(x_1,x_2)}{h}\]
+<p class="say">Read: “partial f by partial x-one”. The curly \(\partial\) (say <i>partial</i> or <i>del</i>) warns you that other variables exist and are being held still.</p></div>
+<p>In practice: treat every other variable as a constant and use the ordinary rules.</p>
+<div class="worked"><div class="wt">Worked example · <b>partial derivatives of \(f(x,y)=x^2+3xy+y^2\)</b></div>
+<div class="given">\(f(x,y)=x^2+3xy+y^2\); evaluate at \((x,y)=(1,2)\), where \(f=1+6+4=11\).</div>
+<ol class="steps">
+<li><div><b>With respect to \(x\)</b> (treat \(y\) as a number like 5): \(x^2\to2x\); \(3xy\to3y\) (a constant times \(x\)); \(y^2\to0\) (a constant). So \(\frac{\partial f}{\partial x}=2x+3y\). At \((1,2)\): \(2+6=8\).</div></li>
+<li><div><b>With respect to \(y\)</b> (treat \(x\) as a constant): \(x^2\to0\); \(3xy\to3x\); \(y^2\to2y\). So \(\frac{\partial f}{\partial y}=3x+2y\). At \((1,2)\): \(3+4=7\).</div></li>
+<li><div><b>Check with numbers:</b> \(f(1.01,2)=1.0201+6.06+4=11.0801\), a rise of \(0.0801\) for a step of 0.01: slope \(\approx8.01\) ✓. \(f(1,2.01)=1+6.03+4.0401=11.0701\): slope \(\approx7.01\) ✓.</div></li>
+</ol>
+<div class="result">\(\frac{\partial f}{\partial x}(1,2)=8,\quad\frac{\partial f}{\partial y}(1,2)=7\)</div></div>
+<p>Picture a function of two inputs as a landscape: \(x\) and \(y\) are east and north, \(f\) is height. \(\frac{\partial f}{\partial x}\) is the slope you feel walking due east; \(\frac{\partial f}{\partial y}\), walking due north. A <b>contour plot</b> draws the landscape from above, with lines joining points of equal height, exactly like a hiking map.</p>
+<div class="py" id="c-m-calc-03"><pre class="src">
+x = np.linspace(-3, 3, 200)
+y = np.linspace(-3, 3, 200)
+Xg, Yg = np.meshgrid(x, y)                # every (x, y) pair on a 200 x 200 grid
+F = Xg**2 + 0.5 * Xg * Yg + 2 * Yg**2      # a tilted bowl
+fig = plt.figure(figsize=(9, 3.8))
+ax1 = fig.add_subplot(1, 2, 1, projection="3d")
+ax1.plot_surface(Xg, Yg, F, cmap="viridis", linewidth=0)
+ax1.set_title("surface: height = f(x, y)")
+ax2 = fig.add_subplot(1, 2, 2)
+cs = ax2.contour(Xg, Yg, F, levels=12, cmap="viridis")
+ax2.clabel(cs, fontsize=7); ax2.set_aspect("equal")
+ax2.set_title("contours: lines of equal height")
+plt.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> left, the bowl as a 3-D surface; right, the same bowl seen from above. Each ellipse is one height. Where contours are close together the ground is steep. <code>np.meshgrid</code> builds the grid of all \((x,y)\) pairs so <code>F</code> can be computed for all of them at once.</div></div>
+
+<h3 id="m-calc-grad">The gradient: the uphill arrow</h3>
+<p>Stack all the partial derivatives into a vector and you get the <dfn data-g="gradient">gradient</dfn>:</p>
+<div class="mathblock" data-sheet="Gradient"><div class="eqlabel">Gradient</div>
+\[\nabla f(\bx)=\begin{pmatrix}\dfrac{\partial f}{\partial x_1}\\[4pt]\vdots\\[2pt]\dfrac{\partial f}{\partial x_D}\end{pmatrix}\]
+<p class="say">Read: “grad f” or “del f”, the vector of all partial derivatives. Prince writes it \(\frac{\partial f}{\partial\bx}\) (Appendix 23.5): a vector the same size as \(\bx\).</p></div>
+<p>For our example, \(\nabla f(1,2)=(8,7)\). The gradient has three properties that make it the hero of machine learning:</p>
+<ol>
+<li><b>It points in the direction of steepest ascent.</b> Of all directions you could step in, the gradient direction increases \(f\) fastest. So \(-\nabla f\) is the direction of steepest <b>descent</b>.</li>
+<li><b>Its length is the steepness</b>: the rate of increase in that best direction, \(\|\nabla f\|=\sqrt{8^2+7^2}=10.63\).</li>
+<li><b>It is perpendicular to the contour line</b> through the point (moving along a contour keeps the height the same, so it has zero slope).</li>
+</ol>
+<p>Why the first property holds: for a small step \(\boldsymbol\delta\), \(f(\bx+\boldsymbol\delta)\approx f(\bx)+\nabla f\T\boldsymbol\delta\) (each partial derivative times its share of the step, added up). Among steps of fixed length, the dot product \(\nabla f\T\boldsymbol\delta=\|\nabla f\|\|\boldsymbol\delta\|\cos\theta\) is largest when \(\theta=0\), i.e. when \(\boldsymbol\delta\) points along \(\nabla f\) (<a href="#m-linalg">Vectors and matrices</a>), and most negative when it points the opposite way.</p>
+<div class="worked"><div class="wt">Worked example · <b>using the gradient to predict a change</b></div>
+<div class="given">\(f(x,y)=x^2+3xy+y^2\) at \((1,2)\): \(f=11\), \(\nabla f=(8,7)\). Step \(\boldsymbol\delta=(0.01,-0.02)\).</div>
+<ol class="steps">
+<li><div>Predicted change: \(\nabla f\T\boldsymbol\delta=8(0.01)+7(-0.02)=0.08-0.14=-0.06\).</div></li>
+<li><div>Actual: \(f(1.01,1.98)=1.0201+3(1.01)(1.98)+3.9204=1.0201+5.9994+3.9204=10.9399\), a change of \(-0.0601\).<span class="why">The linear prediction is excellent for small steps; the tiny mismatch comes from the curvature.</span></div></li>
+</ol>
+<div class="result">Predicted \(-0.06\), actual \(-0.0601\)</div></div>
+
+<h3 id="m-calc-gd">Gradient descent</h3>
+<p>If you cannot solve \(\nabla f=\mathbf{0}\) with algebra (true for every neural network), you can still walk downhill: start somewhere, take a small step in the direction \(-\nabla f\), and repeat. This is <dfn data-g="gradient-descent">gradient descent</dfn>:</p>
+<div class="mathblock" data-sheet="Gradient descent"><div class="eqlabel">Gradient descent update (Prince eq. 6.3)</div>
+\[\bphi\leftarrow\bphi-\alpha\,\frac{\partial L}{\partial\bphi}\]
+<p class="say">Read: “phi becomes phi minus alpha times the gradient of the loss”. \(\alpha\) (alpha) is the <b>learning rate</b> or step size, a small positive number you choose.</p></div>
+<div class="worked"><div class="wt">Worked example · <b>gradient descent on \(f(x)=x^2\), by hand</b></div>
+<div class="given">\(f(x)=x^2\), \(f'(x)=2x\), start \(x_0=4\), learning rate \(\alpha=0.1\).</div>
+<ol class="steps">
+<li><div>\(x_1=4-0.1\times(2\times4)=4-0.8=3.2\).</div></li>
+<li><div>\(x_2=3.2-0.1\times6.4=3.2-0.64=2.56\).</div></li>
+<li><div>\(x_3=2.56-0.1\times5.12=2.048\).<span class="why">Each step multiplies \(x\) by \(1-2\alpha=0.8\), so \(x_t=4\times0.8^t\to0\), the minimum. With \(\alpha=1.1\) the factor is \(-1.2\): each step overshoots further, and the iterates explode.</span></div></li>
+</ol>
+<div class="result">\(4\to3.2\to2.56\to2.048\to\dots\to0\)</div></div>
+
+<p>Now the real thing: fitting the line to our three points \((1,2),(2,3),(3,5)\) by gradient descent instead of the normal equations. The loss and its two partial derivatives (derived properly in the matrix section below) are</p>
+\[L(\beta_0,\beta_1)=\sum_i e_i^2,\quad e_i=y_i-\beta_0-\beta_1x_i,\qquad\frac{\partial L}{\partial\beta_0}=-2\sum_ie_i,\qquad\frac{\partial L}{\partial\beta_1}=-2\sum_ix_ie_i.\]
+<p>Start at \((\beta_0,\beta_1)=(0,0)\) with \(\alpha=0.02\):</p>
+<div class="tw"><table class="t"><thead><tr><th>step</th><th>\((\beta_0,\beta_1)\)</th><th>residuals \(e\)</th><th>\(L\)</th><th>\(\frac{\partial L}{\partial\beta_0}=-2\sum e_i\)</th><th>\(\frac{\partial L}{\partial\beta_1}=-2\sum x_ie_i\)</th></tr></thead><tbody>
+<tr><td>0</td><td class="n">(0, 0)</td><td class="n">(2, 3, 5)</td><td class="n">38</td><td class="n">\(-2(10)=-20\)</td><td class="n">\(-2(2+6+15)=-46\)</td></tr>
+<tr><td>1</td><td class="n">(0.4, 0.92)</td><td class="n">(0.68, 0.76, 1.84)</td><td class="n">4.4256</td><td class="n">−6.56</td><td class="n">−15.44</td></tr>
+<tr><td>2</td><td class="n">(0.5312, 1.2288)</td><td class="n">(0.24, 0.0112, 0.7824)</td><td class="n">0.6699</td><td class="n">−2.0672</td><td class="n">−5.2192</td></tr>
+<tr><td>3</td><td class="n">(0.5725, 1.3332)</td><td class="n">(0.0943, −0.2389, 0.4279)</td><td class="n">0.2491</td><td class="n">−0.5665</td><td class="n">−1.8003</td></tr>
+</tbody></table></div>
+<p>Step 0 to 1 in full: \(\beta_0\leftarrow0-0.02\times(-20)=0.4\) and \(\beta_1\leftarrow0-0.02\times(-46)=0.92\). Both gradients were negative (increasing either parameter reduces the loss), so both parameters went up. The loss falls 38 → 4.43 → 0.67 → 0.25, heading for the minimum 0.1667 at \((1/3,1.5)\) found by the normal equations in <a href="#m-linalg">Vectors and matrices</a>.</p>
+<div class="widget" data-w="m-calc-gd" data-title="Gradient, contours and gradient descent"><div class="wn">This is the loss landscape \(L(\beta_0,\beta_1)\) for the three points, seen from above. Drag the black point: the red arrow is the gradient (uphill, perpendicular to the contour through the point), the green one is minus the gradient (the direction gradient descent steps in). The arrows show direction only; their length is fixed. Press “Step” a few times, then “Run 50”. Raise the learning rate past about 0.06 and watch the path zig-zag and then diverge: the valley is long and narrow, so a big step overshoots across it.</div></div>
+<div class="py" id="c-m-calc-04"><pre class="src">
+X = np.array([[1., 1.], [1., 2.], [1., 3.]])
+y = np.array([2., 3., 5.])
+beta = np.zeros(2)
+alpha = 0.02
+for t in range(2001):
+    e = y - X @ beta                 # residuals
+    grad = -2 * X.T @ e              # (dL/dbeta0, dL/dbeta1)
+    if t in (0, 1, 2, 3, 10, 100, 2000):
+        print(f"step {t:4d}  beta = {beta}  loss = {e @ e:.4f}")
+    beta = beta - alpha * grad
+</pre><div class="pynote"><b>Read the output:</b> the first rows match the table. After 2000 steps \(\bbeta\approx(0.3333,1.5)\), the normal-equations answer, but notice how slowly the last digits arrive: the long narrow valley makes plain gradient descent slow. Prince Chapter 6 (<a href="#udl6">UDL 6</a>) is about faster variants (momentum, Adam).</div></div>
+<div class="callout pitfall"><p><b>The learning rate is the first thing to blame.</b> Too small: progress crawls. Too large: the loss goes up and then becomes <code>nan</code> (“not a number”, the result of overflow). When a training run diverges, divide the learning rate by 10 before suspecting anything else.</p></div>
+
+<h3 id="m-calc-chain">The chain rule as a computational graph</h3>
+<p>Every model is a chain of simple steps: multiply, add, squash, compare with the truth, square. The <dfn data-g="chain-rule">chain rule</dfn> says how a small change ripples through the chain: if \(y=f(u)\) and \(u=g(x)\), then</p>
+<div class="mathblock" data-sheet="Chain rule"><div class="eqlabel">Chain rule</div>
+\[\frac{dy}{dx}=\frac{dy}{du}\cdot\frac{du}{dx}\]
+<p class="say">Read: “d-y by d-x equals d-y by d-u times d-u by d-x”. Sensitivities along a chain multiply: if \(u\) moves 3 times as fast as \(x\), and \(y\) moves 2 times as fast as \(u\), then \(y\) moves 6 times as fast as \(x\).</p></div>
+<p>Draw the calculation as a <dfn data-g="computational-graph">computational graph</dfn>: one box per elementary step. Then compute in two sweeps:</p>
+<ol>
+<li><b>Forward pass</b>: left to right, compute every box's value from its inputs.</li>
+<li><b>Backward pass</b>: right to left, compute the derivative of the final loss with respect to every box, by multiplying the incoming derivative by the box's own local derivative.</li>
+</ol>
+<p>That two-sweep procedure is <b>backpropagation</b>, the algorithm that trains every neural network (Prince Chapter 7, <a href="#udl7">UDL 7</a>). Here it is for a single neuron with one input.</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>backpropagation through one neuron, every number shown</b></div>
+<div class="given">Model \(a=\sigma(wx+b)\), loss \(L=(a-y)^2\). Data \(x=2\), target \(y=1\). Parameters \(w=0.5\), \(b=-0.5\). We want \(\frac{\partial L}{\partial w}\) and \(\frac{\partial L}{\partial b}\).<br>Graph: \(x,w,b\ \to\ z=wx+b\ \to\ a=\sigma(z)\ \to\ d=a-y\ \to\ L=d^2\).</div>
+<ol class="steps">
+<li><div><b>Forward:</b> \(z=0.5\times2+(-0.5)=0.5\); \(a=\sigma(0.5)=\frac1{1+e^{-0.5}}=\frac1{1.6065}=0.6225\); \(d=0.6225-1=-0.3775\); \(L=(-0.3775)^2=0.1425\).</div></li>
+<li><div><b>Backward, start at the end:</b> \(\frac{\partial L}{\partial L}=1\). Box \(L=d^2\) has local derivative \(2d\): \(\frac{\partial L}{\partial d}=2(-0.3775)=-0.7551\).</div></li>
+<li><div><b>Box \(d=a-y\)</b>: local derivative \(\frac{\partial d}{\partial a}=1\). So \(\frac{\partial L}{\partial a}=-0.7551\times1=-0.7551\).</div></li>
+<li><div><b>Box \(a=\sigma(z)\)</b>: local derivative \(\sigma(z)(1-\sigma(z))=0.6225\times0.3775=0.2350\). So \(\frac{\partial L}{\partial z}=-0.7551\times0.2350=-0.1774\).</div></li>
+<li><div><b>Box \(z=wx+b\)</b>: local derivatives \(\frac{\partial z}{\partial w}=x=2\) and \(\frac{\partial z}{\partial b}=1\). So \(\frac{\partial L}{\partial w}=-0.1774\times2=-0.3549\) and \(\frac{\partial L}{\partial b}=-0.1774\times1=-0.1774\).<span class="why">Both are negative: increasing \(w\) or \(b\) would raise \(a\) towards the target 1 and lower the loss. A gradient-descent step would do exactly that.</span></div></li>
+</ol>
+<div class="result">\(L=0.1425,\quad\frac{\partial L}{\partial w}=-0.3549,\quad\frac{\partial L}{\partial b}=-0.1774\)</div></div>
+<div class="widget" data-w="m-calc-graph" data-title="Forward values, backward derivatives"><div class="wn">Each box shows its forward value (top) and the derivative of the loss with respect to it (bottom, in violet). Move the sliders for \(x\), \(w\), \(b\) and the target \(y\). Make the prediction \(a\) equal the target: every derivative becomes zero. Make \(z\) large (say \(w=3\)): the sigmoid saturates, its local slope is tiny, and the derivatives reaching \(w\) and \(b\) almost vanish, even though the loss is large.</div></div>
+<div class="py" id="c-m-calc-05"><pre class="src">
+x, y_t, w, b = 2.0, 1.0, 0.5, -0.5
+# forward pass
+z = w * x + b
+a = sigmoid(z)
+d = a - y_t
+L = d ** 2
+# backward pass: multiply local derivatives from the end
+dL_dd = 2 * d
+dL_da = dL_dd * 1
+dL_dz = dL_da * a * (1 - a)
+dL_dw, dL_db = dL_dz * x, dL_dz * 1
+print(f"forward : z={z:.4f} a={a:.4f} d={d:.4f} L={L:.4f}")
+print(f"backward: dL/dz={dL_dz:.4f} dL/dw={dL_dw:.4f} dL/db={dL_db:.4f}")
+# check dL/dw with a tiny nudge of w
+h = 1e-6
+Lp = (sigmoid((w + h) * x + b) - y_t) ** 2
+Lm = (sigmoid((w - h) * x + b) - y_t) ** 2
+print("numerical dL/dw:", round((Lp - Lm) / (2 * h), 4))
+</pre><div class="pynote"><b>Read the output:</b> the hand numbers, and a numerical check that nudges \(w\) by a millionth up and down. When you build an autograd engine in <a href="#proj3-autograd">Project 3a</a>, each box becomes an object that knows its local derivative, and the backward pass is a loop over the boxes in reverse order.</div></div>
+<div class="callout ece"><p>A computational graph is a signal-flow graph. The forward pass is the signal; the backward pass runs the graph's transpose, and Mason's-rule-style products of branch gains along a path are exactly the chain rule. When paths split and rejoin, derivatives along the separate paths <b>add</b> (the multivariable chain rule), just as gains of parallel branches add.</p></div>
+
+<h3 id="m-calc-vector">Derivatives of vector expressions</h3>
+<p>Least squares, in matrix form, is \(L(\bbeta)=(\by-\bX\bbeta)\T(\by-\bX\bbeta)=\|\by-\bX\bbeta\|^2\). You will see its gradient everywhere (ISLP 3, ISLP 6.2 ridge, Project 1), so let us derive it twice: element by element with two parameters, then in matrix form.</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>\(\frac{\partial}{\partial\bbeta}\|\by-\bX\bbeta\|^2=-2\bX\T(\by-\bX\bbeta)\)</b></div>
+<div class="given">Two parameters, \(\bbeta=(\beta_0,\beta_1)\), rows of \(\bX\) are \((1,x_i)\). Write \(e_i=y_i-\beta_0-\beta_1x_i\), so \(L=\sum_ie_i^2\).</div>
+<ol class="steps">
+<li><div><b>Partial with respect to \(\beta_0\):</b> chain rule on each term, \(\frac{\partial e_i}{\partial\beta_0}=-1\): \[\frac{\partial L}{\partial\beta_0}=\sum_i2e_i\cdot(-1)=-2\sum_ie_i.\]</div></li>
+<li><div><b>Partial with respect to \(\beta_1\):</b> \(\frac{\partial e_i}{\partial\beta_1}=-x_i\): \[\frac{\partial L}{\partial\beta_1}=\sum_i2e_i\cdot(-x_i)=-2\sum_ix_ie_i.\]</div></li>
+<li><div><b>Stack them</b> and recognise a matrix–vector product. \(\bX\T\) has rows \((1,1,\dots,1)\) and \((x_1,x_2,\dots,x_n)\), so \[\nabla L=-2\begin{pmatrix}\sum_ie_i\\\sum_ix_ie_i\end{pmatrix}=-2\begin{pmatrix}1&1&\cdots&1\\x_1&x_2&\cdots&x_n\end{pmatrix}\begin{pmatrix}e_1\\\vdots\\e_n\end{pmatrix}=-2\bX\T\mathbf{e}=-2\bX\T(\by-\bX\bbeta).\]</div></li>
+<li><div><b>Set to zero:</b> \(\bX\T(\by-\bX\bbeta)=\mathbf{0}\Rightarrow\bX\T\bX\bbeta=\bX\T\by\): the normal equations, now from calculus. The same steps work for any number of columns.</div></li>
+<li><div><b>Numbers</b>, at \(\bbeta=(1,1)\) for our three points: \(\mathbf{e}=(0,0,1)\), so \(\nabla L=-2(0+0+1,\ 0+0+3)=(-2,-6)\).</div></li>
+</ol>
+<div class="result">\(\nabla_{\bbeta}L=-2\bX\T(\by-\bX\bbeta)\); zero exactly at the least-squares solution.</div></div>
+<p>A few vector-derivative facts, each checkable element by element in the same way (with \(\mathbf{a}\) a constant vector and \(\mathbf{A}\) a constant matrix):</p>
+<div class="tw"><table class="t"><thead><tr><th>Function of \(\bx\)</th><th>Gradient \(\frac{\partial}{\partial\bx}\)</th><th>Scalar analogue</th></tr></thead><tbody>
+<tr><td>\(\mathbf{a}\T\bx\)</td><td>\(\mathbf{a}\)</td><td>\(ax\to a\)</td></tr>
+<tr><td>\(\bx\T\bx=\|\bx\|^2\)</td><td>\(2\bx\)</td><td>\(x^2\to2x\)</td></tr>
+<tr><td>\(\bx\T\mathbf{A}\bx\)</td><td>\((\mathbf{A}+\mathbf{A}\T)\bx\) (\(=2\mathbf{A}\bx\) if \(\mathbf{A}\) symmetric)</td><td>\(ax^2\to2ax\)</td></tr>
+<tr><td>\(\|\by-\bX\bbeta\|^2\) (in \(\bbeta\))</td><td>\(-2\bX\T(\by-\bX\bbeta)\)</td><td>\((y-xb)^2\to-2x(y-xb)\)</td></tr>
+<tr><td>\(\lambda\|\bbeta\|^2\) (ridge penalty)</td><td>\(2\lambda\bbeta\)</td><td>\(\lambda b^2\to2\lambda b\)</td></tr>
+</tbody></table></div>
+<p>When the output is a vector too, \(\by=\mathbf{A}\bx\), the derivative is a whole matrix of partial derivatives, the <b>Jacobian</b>. Prince's convention (eq. 23.21) puts \(\frac{\partial y_j}{\partial x_i}\) in row \(i\), column \(j\), which gives \(\frac{\partial\by}{\partial\bx}=\mathbf{A}\T\). Other books use the transposed layout; when in doubt, check shapes.</p>
+
+<h3 id="m-calc-numeric">Numerical derivatives and gradient checking</h3>
+<p>You can always estimate a derivative with two function evaluations. The <b>forward difference</b> \(\frac{f(a+h)-f(a)}{h}\) has an error proportional to \(h\). The <b>central difference</b> \(\frac{f(a+h)-f(a-h)}{2h}\) is much better: its error is proportional to \(h^2\), because the curvature errors on the two sides cancel.</p>
+<div class="mathblock" data-sheet="Central difference"><div class="eqlabel">Central difference</div>
+\[f'(a)\approx\frac{f(a+h)-f(a-h)}{2h}\]
+<p class="say">Read: “f of a-plus-h minus f of a-minus-h, over two h”: the slope of the secant through points just either side of \(a\).</p></div>
+<p>But \(h\) cannot be made arbitrarily small: computers store about 16 significant digits, and subtracting two nearly equal numbers loses most of them. For \(f=e^x\) at 0 (true slope 1):</p>
+<div class="tw"><table class="t"><thead><tr><th>\(h\)</th><th>forward error</th><th>central error</th></tr></thead><tbody>
+<tr><td class="n">0.1</td><td class="n">0.0517</td><td class="n">0.00167</td></tr>
+<tr><td class="n">0.01</td><td class="n">0.00502</td><td class="n">0.0000167</td></tr>
+<tr><td class="n">\(10^{-5}\)</td><td class="n">\(5.0\times10^{-6}\)</td><td class="n">\(1.2\times10^{-11}\)</td></tr>
+<tr><td class="n">\(10^{-10}\)</td><td class="n">\(8.3\times10^{-8}\)</td><td class="n">\(8.3\times10^{-8}\)</td></tr>
+</tbody></table></div>
+<p>Each tenfold cut in \(h\) cuts the forward error tenfold and the central error a hundredfold, until \(h=10^{-10}\), where round-off takes over and both get worse. \(h\approx10^{-5}\) with central differences is a good default.</p>
+<p><dfn data-g="gradient-check">Gradient checking</dfn> uses this to test hand-written gradients: compute the gradient both ways and compare with a <b>relative error</b> \(\frac{\|g_{\text{analytic}}-g_{\text{numeric}}\|}{\|g_{\text{analytic}}\|+\|g_{\text{numeric}}\|}\). Below about \(10^{-7}\) the analytic gradient is right; above \(10^{-3}\) there is a bug. You will do this in <a href="#cs-softmax">the softmax classifier</a>.</p>
+<div class="py" id="c-m-calc-06"><pre class="src">
+def loss(beta):
+    e = y - X @ beta
+    return e @ e
+
+def grad_analytic(beta):
+    return -2 * X.T @ (y - X @ beta)
+
+def grad_numeric(f, beta, h=1e-5):
+    g = np.zeros_like(beta)
+    for j in range(len(beta)):
+        step = np.zeros_like(beta); step[j] = h        # nudge only parameter j
+        g[j] = (f(beta + step) - f(beta - step)) / (2 * h)
+    return g
+
+b_test = np.array([1.0, 1.0])
+ga, gn = grad_analytic(b_test), grad_numeric(loss, b_test)
+rel = np.linalg.norm(ga - gn) / (np.linalg.norm(ga) + np.linalg.norm(gn))
+print("analytic", ga, " numeric", gn, " relative error", rel)
+</pre><div class="pynote"><b>Read the output:</b> both give \((-2,-6)\), as in the worked example, and the relative error is around \(10^{-11}\): the formula is right. <code>grad_numeric</code> works for any function of a parameter vector, which is what makes it such a useful bug detector.</div></div>
+
+<h3 id="m-calc-convex">Convexity: when “downhill” always finds the bottom</h3>
+<p>A function is <dfn data-g="convex">convex</dfn> if the straight line (chord) between any two points on its graph lies on or above the graph (Prince §23.1.2). In one variable, a twice-differentiable function is convex exactly when \(f''(x)\ge0\) everywhere: it always bends upwards, like a bowl.</p>
+<ul>
+<li>Convex: \(x^2\), \(|x|\), \(e^x\), \(-\log x\), and every sum of convex functions. So the least-squares loss, the ridge loss and the lasso loss are convex.</li>
+<li>Concave (upside-down bowl, chord below): \(\log x\), \(\sqrt x\).</li>
+<li>Neither: \(x^3\), \(\sin x\), and the loss of almost any neural network.</li>
+</ul>
+<p>Why it matters: a convex function has no separate local valleys. Any point where the gradient is zero is the global minimum, and gradient descent with a small enough learning rate gets there from anywhere. For neural networks this guarantee is lost, and Prince Chapter 6 (<a href="#udl6">UDL 6</a>) discusses why training works anyway.</p>
+<figure class="book small" data-fig="udl-24.6"><figcaption><b>A convex function sits above its tangent lines.</b> The curved line is \(-\log y\), which is convex; the straight line \(1-y\) is its tangent at \(y=1\) (they touch there, both equal to 0, both with slope \(-1\)). Every tangent of a convex function lies below it. Prince uses this inequality, \(-\log y\ge1-y\), to prove that the KL divergence is never negative (Appendix 24.5.1).</figcaption></figure>
+<div class="callout exam"><p><b>Interview classics:</b> “Derive the gradient of the squared loss for linear regression.” “What is \(\sigma'(z)\)?” “Why does gradient descent diverge with a large learning rate?” “How would you check that your backprop is correct?” (gradient checking with central differences). “Is the logistic regression loss convex?” (yes; a neural network's loss is not).</p></div>
+
+<h3 id="m-calc-practice">Practice: code exercises</h3>
+
+<div class="ex" id="x-m-calc-01" data-title="central difference"><div class="task"><p>Write <code>deriv(f, a, h=1e-5)</code> returning the central-difference estimate of \(f'(a)\). For \(f(x)=x^2\), <code>deriv(f, 3)</code> should be very close to 6.</p></div>
+<pre class="src">
+def deriv(f, a, h=1e-5):
+    ...
+</pre>
+<pre class="check">
+assert abs(deriv(lambda x: x**2, 3) - 6) &lt; 1e-6, f"x^2 at 3 should be 6, got {deriv(lambda x: x**2, 3)}"
+assert abs(deriv(np.exp, 0) - 1) &lt; 1e-8, "e^x at 0 should be 1"
+assert abs(deriv(np.sin, 0) - 1) &lt; 1e-8, "sin at 0 should be 1"
+assert abs(deriv(lambda x: x**3, 2, h=0.1) - 12.01) &lt; 1e-9, "for x^3 at 2 with h=0.1 the central difference is exactly 12.01 (did you use a+h and a-h, divided by 2h?)"
+</pre>
+<div class="hint"><p>Evaluate \(f\) at \(a+h\) and at \(a-h\).</p></div>
+<div class="hint"><p><code>return (f(a + h) - f(a - h)) / (2 * h)</code></p></div>
+<pre class="solution">
+def deriv(f, a, h=1e-5):
+    return (f(a + h) - f(a - h)) / (2 * h)
+</pre>
+<div class="explain"><p>For \(x^3\) the central difference is \(\frac{(a+h)^3-(a-h)^3}{2h}=3a^2+h^2\): with \(a=2,h=0.1\) that is \(12.01\). The error \(h^2\) is the “error proportional to \(h^2\)” in action. A forward difference would give \(12.61\).</p></div></div>
+
+<div class="ex" id="x-m-calc-02" data-title="sigmoid and its derivative"><div class="task"><p>Write <code>dsigmoid(z)</code> returning \(\sigma'(z)=\sigma(z)(1-\sigma(z))\). It must work on single numbers and on NumPy arrays. (<code>sigmoid</code> is defined in the setup cell.)</p></div>
+<pre class="src">
+def dsigmoid(z):
+    ...
+</pre>
+<pre class="check">
+assert abs(dsigmoid(0) - 0.25) &lt; 1e-12, f"sigma'(0) should be 0.25, got {dsigmoid(0)}"
+zs = np.array([-3.0, -0.5, 0.0, 2.0, 6.0])
+num = (sigmoid(zs + 1e-6) - sigmoid(zs - 1e-6)) / 2e-6
+assert np.allclose(dsigmoid(zs), num, atol=1e-8), "should match a numerical derivative on an array"
+assert dsigmoid(10) &lt; 1e-4, "far from 0 the sigmoid is flat"
+</pre>
+<div class="hint"><p>Compute <code>s = sigmoid(z)</code> first.</p></div>
+<pre class="solution">
+def dsigmoid(z):
+    s = sigmoid(z)
+    return s * (1 - s)
+</pre>
+<div class="explain"><p>Computing \(\sigma\) once and reusing it is how real backprop code does it: the forward pass already stored \(a=\sigma(z)\), so the local derivative costs one multiplication.</p></div></div>
+
+<div class="ex" id="x-m-calc-03" data-title="gradient of a two-variable function"><div class="task"><p>For \(f(x,y)=x^2+3xy+y^2\), write <code>grad_f(x, y)</code> returning the gradient as a NumPy array <code>[df/dx, df/dy]</code>. At \((1,2)\) it is <code>[8, 7]</code>.</p></div>
+<pre class="src">
+def grad_f(x, y):
+    ...
+</pre>
+<pre class="check">
+assert np.allclose(grad_f(1, 2), [8, 7]), f"at (1,2) expected [8, 7], got {grad_f(1, 2)}"
+f = lambda x, y: x**2 + 3*x*y + y**2
+for (x0, y0) in [(0.3, -1.2), (-2, 5), (0, 0)]:
+    gx = (f(x0 + 1e-6, y0) - f(x0 - 1e-6, y0)) / 2e-6
+    gy = (f(x0, y0 + 1e-6) - f(x0, y0 - 1e-6)) / 2e-6
+    assert np.allclose(grad_f(x0, y0), [gx, gy], atol=1e-5), f"wrong gradient at {(x0, y0)}"
+</pre>
+<div class="hint"><p>Treat the other variable as a constant: \(\partial f/\partial x=2x+3y\).</p></div>
+<pre class="solution">
+def grad_f(x, y):
+    return np.array([2*x + 3*y, 3*x + 2*y])
+</pre>
+<div class="explain"><p>The check compares with numerical partial derivatives at several points, including the origin, where the gradient is zero (a flat point; for this function it is a saddle, not a minimum, because \(3xy\) can be negative).</p></div></div>
+
+<div class="ex" id="x-m-calc-04" data-title="gradient descent in one dimension"><div class="task"><p>Write <code>gd(df, x0, alpha, steps)</code> that runs \(x\leftarrow x-\alpha\,f'(x)\) for <code>steps</code> steps and returns the final \(x\). <code>df</code> is the derivative function. For \(f=x^2\) (<code>df = lambda x: 2*x</code>), <code>gd(df, 4, 0.1, 3)</code> gives \(2.048\).</p></div>
+<pre class="src">
+def gd(df, x0, alpha, steps):
+    x = x0
+    ...
+    return x
+</pre>
+<pre class="check">
+assert abs(gd(lambda x: 2*x, 4, 0.1, 3) - 2.048) &lt; 1e-12, f"expected 2.048, got {gd(lambda x: 2*x, 4, 0.1, 3)}"
+assert abs(gd(lambda x: 2*(x - 3), 0, 0.1, 200) - 3) &lt; 1e-8, "(x-3)^2 should converge to 3"
+assert abs(gd(lambda x: 2*x, 4, 0.1, 0) - 4) &lt; 1e-12, "zero steps should return the start"
+assert abs(gd(lambda x: 2*x, 1, 1.1, 10)) &gt; 5, "with alpha = 1.1 it should diverge"
+</pre>
+<div class="hint"><p>A <code>for</code> loop over <code>range(steps)</code>, with one update line inside.</p></div>
+<pre class="solution">
+def gd(df, x0, alpha, steps):
+    x = x0
+    for _ in range(steps):
+        x = x - alpha * df(x)
+    return x
+</pre>
+<div class="explain"><p>The last check shows divergence: each step multiplies \(x\) by \(1-2(1.1)=-1.2\), so after 10 steps \(|x|=1.2^{10}\approx6.2\).</p></div></div>
+
+<div class="ex" id="x-m-calc-05" data-title="fit a line by gradient descent"><div class="task"><p>Write <code>fit_gd(X, y, alpha, steps)</code> that starts from \(\bbeta=\mathbf{0}\) and repeats \(\bbeta\leftarrow\bbeta-\alpha\cdot(-2\bX\T(\by-\bX\bbeta))\). Return \(\bbeta\). With the three-point <code>X</code>, <code>y</code> from the lesson, <code>alpha=0.02</code> and 1 step it returns <code>[0.4, 0.92]</code>.</p></div>
+<pre class="src">
+def fit_gd(X, y, alpha, steps):
+    beta = np.zeros(X.shape[1])
+    for _ in range(steps):
+        ...
+    return beta
+</pre>
+<pre class="check">
+X3 = np.array([[1., 1.], [1., 2.], [1., 3.]]); y3 = np.array([2., 3., 5.])
+assert np.allclose(fit_gd(X3, y3, 0.02, 1), [0.4, 0.92]), f"one step should give [0.4, 0.92], got {fit_gd(X3, y3, 0.02, 1)}"
+assert np.allclose(fit_gd(X3, y3, 0.02, 3), [0.5725, 1.3332], atol=1e-4), "three steps should match the table"
+assert np.allclose(fit_gd(X3, y3, 0.04, 3000), [1/3, 1.5], atol=1e-6), "many steps should reach the least-squares answer"
+</pre>
+<div class="hint"><p>Inside the loop: <code>grad = -2 * X.T @ (y - X @ beta)</code>, then update.</p></div>
+<pre class="solution">
+def fit_gd(X, y, alpha, steps):
+    beta = np.zeros(X.shape[1])
+    for _ in range(steps):
+        grad = -2 * X.T @ (y - X @ beta)
+        beta = beta - alpha * grad
+    return beta
+</pre>
+<div class="explain"><p>Two lines, and it fits any linear model. This is the core of <a href="#proj1">Project 1</a>, where you also add a stopping rule and feature scaling (which makes the long, narrow valley rounder, so steps can be bigger).</p></div></div>
+
+<div class="ex" id="x-m-calc-06" data-title="backprop through one neuron"><div class="task"><p>Write <code>neuron_grads(x, y, w, b)</code> returning <code>(L, dL_dw, dL_db)</code> for \(L=(\sigma(wx+b)-y)^2\), using a forward pass and then the chain rule backwards. <code>neuron_grads(2, 1, 0.5, -0.5)</code> gives about <code>(0.1425, -0.3549, -0.1774)</code>.</p></div>
+<pre class="src">
+def neuron_grads(x, y, w, b):
+    z = w * x + b
+    a = sigmoid(z)
+    L = (a - y) ** 2
+    dL_da = ...
+    dL_dz = ...
+    return L, dL_dz * x, dL_dz
+</pre>
+<pre class="check">
+L, gw, gb = neuron_grads(2, 1, 0.5, -0.5)
+assert np.allclose([L, gw, gb], [0.142537, -0.354894, -0.177447], atol=1e-5), f"got {(L, gw, gb)}"
+for (x0, y0, w0, b0) in [(-1.0, 0.0, 2.0, 0.3), (3.0, 1.0, -0.4, 0.1)]:
+    f = lambda w_, b_: (sigmoid(w_ * x0 + b_) - y0) ** 2
+    nw = (f(w0 + 1e-6, b0) - f(w0 - 1e-6, b0)) / 2e-6
+    nb = (f(w0, b0 + 1e-6) - f(w0, b0 - 1e-6)) / 2e-6
+    _, gw, gb = neuron_grads(x0, y0, w0, b0)
+    assert np.allclose([gw, gb], [nw, nb], atol=1e-6), f"gradient check failed at {(x0, y0, w0, b0)}"
+</pre>
+<div class="hint"><p>\(\frac{\partial L}{\partial a}=2(a-y)\).</p></div>
+<div class="hint"><p>\(\frac{\partial L}{\partial z}=\frac{\partial L}{\partial a}\cdot a(1-a)\).</p></div>
+<pre class="solution">
+def neuron_grads(x, y, w, b):
+    z = w * x + b
+    a = sigmoid(z)
+    L = (a - y) ** 2
+    dL_da = 2 * (a - y)
+    dL_dz = dL_da * a * (1 - a)
+    return L, dL_dz * x, dL_dz
+</pre>
+<div class="explain"><p>The checks include a gradient check at two other points: the habit that catches backprop bugs.</p></div></div>
+
+<div class="ex" id="x-m-calc-07" data-title="a general gradient checker"><div class="task"><p>Write <code>rel_error(f, grad, theta)</code> that computes the numerical gradient of <code>f</code> at the vector <code>theta</code> by central differences (h = 1e-5, one coordinate at a time), and returns the relative error \(\frac{\|g_a-g_n\|}{\|g_a\|+\|g_n\|}\) against <code>grad(theta)</code>.</p></div>
+<pre class="src">
+def rel_error(f, grad, theta, h=1e-5):
+    theta = np.asarray(theta, float)
+    gn = np.zeros_like(theta)
+    for j in range(len(theta)):
+        ...
+    ga = grad(theta)
+    return ...
+</pre>
+<pre class="check">
+f1 = lambda t: np.sum(t ** 2); g1 = lambda t: 2 * t
+assert rel_error(f1, g1, [1.0, -2.0, 3.0]) &lt; 1e-8, "correct gradient of sum of squares: error should be tiny"
+g_bad = lambda t: t
+assert rel_error(f1, g_bad, [1.0, -2.0, 3.0]) &gt; 0.1, "a wrong gradient (missing factor 2) should give a large error"
+A = np.array([[2., 1.], [0., 3.]]); fq = lambda t: t @ A @ t; gq = lambda t: (A + A.T) @ t
+assert rel_error(fq, gq, [0.5, -1.5]) &lt; 1e-8, "x^T A x has gradient (A + A^T) x"
+</pre>
+<div class="hint"><p>Build a step vector that is <code>h</code> in position <code>j</code> and 0 elsewhere: <code>e = np.zeros_like(theta); e[j] = h</code>.</p></div>
+<div class="hint"><p><code>gn[j] = (f(theta + e) - f(theta - e)) / (2 * h)</code>; then <code>np.linalg.norm(ga - gn) / (np.linalg.norm(ga) + np.linalg.norm(gn))</code>.</p></div>
+<pre class="solution">
+def rel_error(f, grad, theta, h=1e-5):
+    theta = np.asarray(theta, float)
+    gn = np.zeros_like(theta)
+    for j in range(len(theta)):
+        e = np.zeros_like(theta); e[j] = h
+        gn[j] = (f(theta + e) - f(theta - e)) / (2 * h)
+    ga = grad(theta)
+    return np.linalg.norm(ga - gn) / (np.linalg.norm(ga) + np.linalg.norm(gn))
+</pre>
+<div class="explain"><p>The third check confirms the table entry \(\nabla(\bx\T\mathbf{A}\bx)=(\mathbf{A}+\mathbf{A}\T)\bx\) for a non-symmetric \(\mathbf{A}\). Keep this function: it is the tool for every gradient you will ever write by hand.</p></div></div>
+
+<h3 id="m-calc-paper">Practice: pen and paper</h3>
+
+<div class="prob" id="p-m-calc-01" data-src="Practice" data-title="Rules"><div class="stmt"><p>Differentiate (a) \(4x^5-x^2+3\), (b) \(x\log x\), (c) \(e^{3x-1}\), (d) \(\frac{1}{x^2}\), (e) \(\log(5x)\). Type the value of (b)'s derivative at \(x=e\).</p></div>
+<div class="ansin" data-answer="2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>(b) is a product; (c) is a chain; (d) is \(x^{-2}\); (e) use \(\log(5x)=\log5+\log x\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) \(20x^4-2x\) (b) \(\log x+1\); at \(e\): 2 (c) \(3e^{3x-1}\) (d) \(-2x^{-3}\) (e) \(1/x\)</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>(b) \(u=x,\ v=\log x\): \(u'v+uv'=\log x+x\cdot\frac1x=\log x+1\); at \(x=e\), \(1+1=2\). (e) \(\log5\) is a constant, so its derivative is 0, leaving \(\frac1x\). (The chain rule gives the same: \(\frac{1}{5x}\cdot5\).)</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>(e): answering \(\frac{1}{5x}\), forgetting the inner derivative 5.</p></div></details></div>
+
+<div class="prob" id="p-m-calc-02" data-src="Practice" data-title="A minimum"><div class="stmt"><p>Find the \(x\) that minimises \(f(x)=3x^2-12x+5\) and the minimum value. Type the minimum value.</p></div>
+<div class="ansin" data-answer="-7" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(f'(x)=6x-12\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(x=2\), \(f(2)=-7\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(6x-12=0\Rightarrow x=2\). \(f''=6\gt0\): a minimum. \(f(2)=12-24+5=-7\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Reporting \(x=2\) when the value is asked (argmin versus min).</p></div></details></div>
+
+<div class="prob" id="p-m-calc-03" data-src="Practice" data-title="Weighted squared error"><div class="stmt"><p>Find \(c\) minimising \(L(c)=2(1-c)^2+(4-c)^2\), a weighted version of the mean problem. Type \(c\).</p></div>
+<div class="ansin" data-answer="2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(L'(c)=-4(1-c)-2(4-c)\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(c=2\), the weighted mean \(\frac{2\cdot1+1\cdot4}{2+1}\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(-4+4c-8+2c=0\Rightarrow6c=12\Rightarrow c=2\). The point with weight 2 pulls twice as hard.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Dropping the minus sign from the chain rule (the inner derivative of \(1-c\) is \(-1\)).</p></div></details></div>
+
+<div class="prob" id="p-m-calc-04" data-src="Practice" data-title="Gradient at a point"><div class="stmt"><p>For \(f(x,y)=x^2y+e^{xy}\), compute \(\nabla f\) at \((1,0)\). Type \(\partial f/\partial y\) there.</p></div>
+<div class="ansin" data-answer="2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(\frac{\partial}{\partial x}e^{xy}=ye^{xy}\) and \(\frac{\partial}{\partial y}e^{xy}=xe^{xy}\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\nabla f(1,0)=(0,2)\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(\frac{\partial f}{\partial x}=2xy+ye^{xy}\); at \((1,0)\): \(0+0=0\). \(\frac{\partial f}{\partial y}=x^2+xe^{xy}\); at \((1,0)\): \(1+1\cdot e^0=2\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Forgetting the chain rule's inner factor in \(e^{xy}\).</p></div></details></div>
+
+<div class="prob" id="p-m-calc-05" data-src="Practice" data-title="Two gradient-descent steps"><div class="stmt"><p>Minimise \(f(x,y)=x^2+4y^2\) by gradient descent from \((2,1)\) with \(\alpha=0.1\). Give the point after two steps. Type its \(y\) coordinate.</p></div>
+<div class="ansin" data-answer="0.04" data-tol="0.0001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(\nabla f=(2x,8y)\). Each step multiplies \(x\) by \(1-0.2\) and \(y\) by \(1-0.8\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\((2,1)\to(1.6,0.2)\to(1.28,0.04)\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>Step 1: \(\nabla f=(4,8)\); \((2-0.4,\ 1-0.8)=(1.6,0.2)\). Step 2: \(\nabla f=(3.2,1.6)\); \((1.6-0.32,\ 0.2-0.16)=(1.28,0.04)\). The steep direction \(y\) is almost done, the shallow one \(x\) is slow: the narrow-valley effect from the widget.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Adding the gradient instead of subtracting it (walking uphill).</p></div></details></div>
+
+<div class="prob" id="p-m-calc-06" data-src="Practice" data-title="Chain rule through a graph"><div class="stmt"><p>For \(L=(3u-2)^2\) with \(u=w^2\), find \(\frac{dL}{dw}\) at \(w=1\) by a forward and a backward pass.</p></div>
+<div class="ansin" data-answer="12" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Boxes: \(u=w^2\), \(v=3u-2\), \(L=v^2\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\frac{dL}{dw}=12\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>Forward: \(u=1\), \(v=1\), \(L=1\). Backward: \(\frac{dL}{dv}=2v=2\); \(\frac{dv}{du}=3\Rightarrow\frac{dL}{du}=6\); \(\frac{du}{dw}=2w=2\Rightarrow\frac{dL}{dw}=12\). Check directly: \(L=(3w^2-2)^2\), \(L'=2(3w^2-2)\cdot6w=12\) at \(w=1\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Multiplying local derivatives evaluated at the wrong point: each must use the forward values.</p></div></details></div>
+
+<div class="prob" id="p-m-calc-07" data-src="Practice" data-title="Ridge gradient"><div class="stmt"><p>Ridge regression minimises \(L(\bbeta)=\|\by-\bX\bbeta\|^2+\lambda\|\bbeta\|^2\). Using the table of vector derivatives, find \(\nabla L\), set it to zero and solve for \(\bbeta\). For our three points with \(\lambda=1\) (penalising the intercept too, for simplicity), compute \(\hat\beta_1\) to 4 decimals.</p></div>
+<div class="ansin" data-answer="1.3333" data-tol="0.0005"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(\nabla L=-2\bX\T(\by-\bX\bbeta)+2\lambda\bbeta\). Setting it to zero gives \((\bX\T\bX+\lambda\mathbf{I})\bbeta=\bX\T\by\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\hat\bbeta=(\bX\T\bX+\lambda\mathbf{I})^{-1}\bX\T\by=(0.5,\ 1.3333)\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><ol class="steps"><li><div>Gradient (sum of two table entries): \(-2\bX\T(\by-\bX\bbeta)+2\lambda\bbeta\). Set to zero and divide by 2: \(-\bX\T\by+\bX\T\bX\bbeta+\lambda\bbeta=\mathbf{0}\), so \((\bX\T\bX+\lambda\mathbf{I})\bbeta=\bX\T\by\).</div></li><li><div>With \(\lambda=1\): \(\bX\T\bX+\mathbf{I}=\begin{pmatrix}3+1&6\\6&14+1\end{pmatrix}=\begin{pmatrix}4&6\\6&15\end{pmatrix}\), and \(\bX\T\by=(10,23)\).</div></li><li><div>Determinant \(4\times15-6\times6=24\). Inverse \(\frac1{24}\begin{pmatrix}15&-6\\-6&4\end{pmatrix}\).</div></li><li><div>\(\hat\bbeta=\frac1{24}\begin{pmatrix}15\times10-6\times23\\-6\times10+4\times23\end{pmatrix}=\frac1{24}\begin{pmatrix}12\\32\end{pmatrix}=\begin{pmatrix}0.5\\1.3333\end{pmatrix}\).</div></li></ol><p>The slope shrinks from 1.5 (least squares) to 1.3333: that is ridge regression's shrinkage (<a href="#isl6-2">ISLP 6.2</a>). Adding \(\lambda\mathbf{I}\) also makes the matrix invertible even when \(\bX\T\bX\) is not.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Adding \(\lambda\) to every entry of \(\bX\T\bX\) instead of only the diagonal.</p></div></details></div>
+
+<h3 id="m-calc-review">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="num" data-answer="12" data-tol="0.001"><p class="stem">\(f(x)=x^3\). What is \(f'(2)\)?</p><div class="why">\(3x^2=12\).</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">\(\frac{d}{dx}e^{-2x}=\)?</p><ol class="opts"><li>\(e^{-2x}\)</li><li>\(-2e^{-2x}\)</li><li>\(-2xe^{-2x-1}\)</li><li>\(e^{-2}\)</li></ol><div class="why">Chain rule: the derivative of \(e^u\) is \(e^u\), times \(u'=-2\). Option C wrongly applies the power rule to an exponential.</div></div>
+<div class="q" data-type="num" data-answer="0.25" data-tol="0.001"><p class="stem">\(\sigma'(0)=\)?</p><div class="why">\(\sigma(0)(1-\sigma(0))=0.5\times0.5=0.25\).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Which summary \(c\) minimises \(\sum_i|x_i-c|\)?</p><ol class="opts"><li>the mean</li><li>the mode</li><li>the median</li><li>the midpoint of the range</li></ol><div class="why">The derivative is (number below) minus (number above), which changes sign at the median. The mean minimises squared error.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Gradient descent steps in the direction of…</p><ol class="opts"><li>\(-\nabla L\), steepest descent</li><li>\(\nabla L\), steepest ascent</li><li>along the contour line</li><li>towards the origin</li></ol><div class="why">The gradient points uphill; we subtract it to go downhill. Moving along a contour keeps the loss constant.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">Your loss rises and then becomes <code>nan</code> after a few gradient-descent steps. The most likely cause?</p><ol class="opts"><li>the learning rate is too small</li><li>the data has too many rows</li><li>the gradient is exactly zero</li><li>the learning rate is too large</li></ol><div class="why">Too large a step overshoots the valley and each step makes things worse until numbers overflow. Too small a rate makes progress slow but not explosive.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In backpropagation, the derivative of the loss with respect to a box's input is…</p><ol class="opts"><li>the sum of all local derivatives in the graph</li><li>the derivative with respect to the box's output, times the box's local derivative</li><li>always 1</li><li>computed in the forward pass</li></ol><div class="why">That is the chain rule applied one box at a time, from the loss backwards.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">The gradient of \(\|\by-\bX\bbeta\|^2\) with respect to \(\bbeta\) is…</p><ol class="opts"><li>\(2\bX(\by-\bX\bbeta)\)</li><li>\(-2(\by-\bX\bbeta)\)</li><li>\(-2\bX\T(\by-\bX\bbeta)\)</li><li>\(\bX\T\bX\)</li></ol><div class="why">Element by element it is \(-2\sum_i x_{ij}e_i\), which stacks into \(-2\bX\T\mathbf{e}\). Check shapes: it must have one entry per parameter, which \(\bX\T\mathbf{e}\) does.</div></div>
+<div class="q" data-type="open"><p class="stem">Why is the central difference \(\frac{f(a+h)-f(a-h)}{2h}\) more accurate than the forward difference, and why not use \(h=10^{-15}\)?</p><div class="model">The central difference uses points symmetric about \(a\), so the curvature errors on the two sides cancel, leaving an error proportional to \(h^2\) instead of \(h\). But with a tiny \(h\), \(f(a+h)\) and \(f(a-h)\) agree in almost all of their 16 stored digits, so their difference is mostly round-off error, which is then divided by the tiny \(2h\) and blown up. \(h\approx10^{-5}\) balances the two errors.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">Definition of \(f'(a)\)</div><div class="b">\(\lim_{h\to0}\frac{f(a+h)-f(a)}{h}\): the slope of the tangent at \(a\).</div></div>
+<div class="fc"><div class="f">Product and quotient rules</div><div class="b">\((fg)'=f'g+fg'\); \((f/g)'=(f'g-fg')/g^2\).</div></div>
+<div class="fc"><div class="f">Chain rule</div><div class="b">\(\frac{d}{dx}f(g(x))=f'(g(x))\,g'(x)\); along a graph, local derivatives multiply.</div></div>
+<div class="fc"><div class="f">\(\frac{d}{dx}e^x\), \(\frac{d}{dx}\log x\)</div><div class="b">\(e^x\) and \(1/x\).</div></div>
+<div class="fc"><div class="f">\(\sigma'(z)\)</div><div class="b">\(\sigma(z)(1-\sigma(z))\), at most 0.25 (at \(z=0\)).</div></div>
+<div class="fc"><div class="f">What minimises \(\sum(x_i-c)^2\)? \(\sum|x_i-c|\)?</div><div class="b">The mean; the median.</div></div>
+<div class="fc"><div class="f">Partial derivative \(\partial f/\partial x_1\)</div><div class="b">The slope when only \(x_1\) moves; treat all other inputs as constants.</div></div>
+<div class="fc"><div class="f">Three properties of the gradient</div><div class="b">Points in the steepest-uphill direction; its length is that steepness; it is perpendicular to the contour.</div></div>
+<div class="fc"><div class="f">Gradient descent update</div><div class="b">\(\bphi\leftarrow\bphi-\alpha\,\partial L/\partial\bphi\), with learning rate \(\alpha\).</div></div>
+<div class="fc"><div class="f">Gradient of least squares</div><div class="b">\(\nabla_{\bbeta}\|\by-\bX\bbeta\|^2=-2\bX\T(\by-\bX\bbeta)\).</div></div>
+<div class="fc"><div class="f">Backpropagation in one line</div><div class="b">Forward pass computes values; backward pass multiplies local derivatives from the loss back to each parameter.</div></div>
+<div class="fc"><div class="f">Central difference and its error</div><div class="b">\(\frac{f(a+h)-f(a-h)}{2h}\), error \(\propto h^2\); use \(h\approx10^{-5}\).</div></div>
+<div class="fc"><div class="f">Convex function</div><div class="b">Chord above the graph (\(f''\ge0\)); every stationary point is the global minimum.</div></div>
+<div class="fc"><div class="f">\(\nabla_{\bx}(\bx\T\mathbf{A}\bx)\)</div><div class="b">\((\mathbf{A}+\mathbf{A}\T)\bx\), which is \(2\mathbf{A}\bx\) for symmetric \(\mathbf{A}\).</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can explain a derivative as a limit of secant slopes and estimate one numerically.</label>
+<label><input type="checkbox"> I can apply the power, product, quotient, chain, exp and log rules, and derive \(\sigma'\).</label>
+<label><input type="checkbox"> I can show that the mean minimises squared error and the median minimises absolute error.</label>
+<label><input type="checkbox"> I can compute partial derivatives and a gradient, and explain why \(-\nabla L\) is downhill.</label>
+<label><input type="checkbox"> I can run gradient descent by hand for a few steps and in NumPy, and diagnose a too-large learning rate.</label>
+<label><input type="checkbox"> I can do a forward and backward pass through a small computational graph.</label>
+<label><input type="checkbox"> I can derive \(-2\bX\T(\by-\bX\bbeta)\) and check any gradient with central differences.</label>
+</div>
+</section>

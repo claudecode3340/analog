@@ -1,0 +1,709 @@
+<section class="lesson" id="m-linalg" data-book="Prince pp. 443–447 · ISLP pp. 9–10">
+<p class="lede">Every dataset in this course is a matrix, every linear model is a matrix times a vector, and every neural network is a stack of them. This lesson builds vectors and matrices from nothing, computes every operation by hand with all the numbers shown, and checks each one in NumPy, ending with least squares as a projection: the idea under ISLP Chapter 3.</p>
+<div class="uses"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> <a href="#np1">NumPy I</a> <a href="#np2">NumPy II</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>add vectors, scale them, take dot products, lengths and angles, by hand and in NumPy;</li>
+<li>multiply a matrix by a vector and a matrix by a matrix cell by cell, and predict the shape of the result;</li>
+<li>see a \(2\times2\) matrix as a machine that moves the plane, and read its determinant as an area;</li>
+<li>invert a \(2\times2\) matrix by hand and solve \(\mathbf{A}\bx=\mathbf{b}\);</li>
+<li>build the design matrix \(\bX\), compute \(\bX\bbeta\) as “all predictions at once”, and solve the normal equations \(\bX\T\bX\bbeta=\bX\T\by\) for a three-point example;</li>
+<li>explain least squares as projecting \(\by\) onto the columns of \(\bX\), and compute eigenvalues of a \(2\times2\) matrix.</li></ul></div>
+
+<div class="callout book"><blockquote>For readers who are unfamiliar with matrices, it is useful to visualize X as a spreadsheet of numbers with n rows and p columns.</blockquote><cite>ISLP p. 9</cite></div>
+
+<div class="py" id="c-m-linalg-01" data-mode="setup"><pre class="src">
+import numpy as np
+np.set_printoptions(precision=4, suppress=True)   # print 4 decimals, no 1e-17 noise
+print("NumPy", np.__version__, "ready")
+</pre><div class="pynote">The setup cell. Run it first whenever you come back to this lesson. <code>set_printoptions</code> only changes how arrays are printed, not the numbers themselves.</div></div>
+
+<h3 id="m-linalg-vectors">Vectors: three ways to see a list of numbers</h3>
+<p>A <dfn data-g="vector">vector</dfn> is an ordered list of numbers. Order matters: \((2,1)\) and \((1,2)\) are different vectors. The number of entries is the vector's <b>dimension</b>; a vector with \(p\) real entries lives in \(\R^p\) (read <i>R-p</i>). By convention vectors are written as columns:</p>
+\[\mathbf{a}=\begin{pmatrix}2\\1\end{pmatrix}\in\R^2,\qquad \bx=\begin{pmatrix}230.1\\37.8\\69.2\end{pmatrix}\in\R^3.\]
+<p>The entries are called <b>components</b> or <b>elements</b>, written with a subscript and no bold: \(a_1=2\), \(a_2=1\). The same list can be pictured in three ways, and you will switch between them all the time:</p>
+<ol>
+<li><b>A row of data.</b> \(\bx=(230.1,37.8,69.2)\) is market 1 of the Advertising data: TV, radio and newspaper budgets. Each number is a measurement.</li>
+<li><b>A point in space.</b> \((2,1)\) is the point 2 to the right and 1 up. A data set of \(n\) rows is a cloud of \(n\) points in \(\R^p\). KNN (<a href="#isl2-2">ISLP 2.2</a>) classifies a new point by looking at its nearest neighbours in this cloud.</li>
+<li><b>An arrow.</b> \((2,1)\) is the arrow from the origin to that point: it has a direction and a length. This picture makes addition, angles and projections easy to see.</li>
+</ol>
+<div class="callout ece"><p>You have used vectors as signals: a sampled signal \(x[0],x[1],\dots,x[N-1]\) is a vector in \(\R^N\). Everything in this lesson applies to signals: the dot product is correlation at lag zero, the squared norm is energy, and projecting onto basis functions is how you computed Fourier coefficients.</p></div>
+
+<h4>Adding vectors and multiplying by a number</h4>
+<p>Both operations work <b>component by component</b>. To add, add matching entries; to multiply by a number (a <b>scalar</b>), multiply every entry:</p>
+<div class="mathblock" data-sheet="Vector addition and scaling"><div class="eqlabel">Addition and scalar multiplication</div>
+\[\mathbf{a}+\mathbf{b}=\begin{pmatrix}a_1+b_1\\a_2+b_2\end{pmatrix},\qquad c\,\mathbf{a}=\begin{pmatrix}c\,a_1\\c\,a_2\end{pmatrix}\]
+<p class="say">Read: “a plus b: add first entries, add second entries. c times a: multiply each entry by c.”</p></div>
+<div class="worked"><div class="wt">Worked example · <b>add and scale</b></div>
+<div class="given">\(\mathbf{a}=(2,1)\), \(\mathbf{b}=(1,3)\).</div>
+<ol class="steps">
+<li><div>\(\mathbf{a}+\mathbf{b}=\begin{pmatrix}2+1\\1+3\end{pmatrix}=\begin{pmatrix}3\\4\end{pmatrix}\).<span class="why">Picture: walk along \(\mathbf{a}\), then from its tip walk along \(\mathbf{b}\). You end at \((3,4)\). This is the “tip-to-tail” rule.</span></div></li>
+<li><div>\(2\mathbf{a}=\begin{pmatrix}2\times2\\2\times1\end{pmatrix}=\begin{pmatrix}4\\2\end{pmatrix}\).<span class="why">Same direction, twice as long. A negative scalar flips the arrow: \(-1\cdot\mathbf{a}=(-2,-1)\).</span></div></li>
+<li><div>\(\mathbf{b}-\mathbf{a}=\begin{pmatrix}1-2\\3-1\end{pmatrix}=\begin{pmatrix}-1\\2\end{pmatrix}\).<span class="why">The arrow from the tip of \(\mathbf{a}\) to the tip of \(\mathbf{b}\). Its length is the distance between the two points.</span></div></li>
+</ol>
+<div class="result">\(\mathbf{a}+\mathbf{b}=(3,4)\), \(2\mathbf{a}=(4,2)\), \(\mathbf{b}-\mathbf{a}=(-1,2)\)</div></div>
+<p>A sum of scaled vectors, such as \(3\mathbf{a}-2\mathbf{b}\), is called a <dfn data-g="linear-combination">linear combination</dfn>. Hold on to that phrase: a linear model's prediction is a linear combination of the predictor columns, with the coefficients \(\beta_j\) as the scalars.</p>
+<div class="py" id="c-m-linalg-02"><pre class="src">
+a = np.array([2, 1])
+b = np.array([1, 3])
+print("a + b   =", a + b)
+print("2a      =", 2 * a)
+print("b - a   =", b - a)
+print("3a - 2b =", 3 * a - 2 * b)
+</pre><div class="pynote"><b>Read the output:</b> NumPy does exactly the component-by-component arithmetic above. Check \(3\mathbf{a}-2\mathbf{b}=(6-2,\ 3-6)=(4,-3)\) by hand.</div></div>
+
+<h3 id="m-linalg-dot">The dot product: multiply matching entries, then add</h3>
+<p>The <dfn data-g="dot-product">dot product</dfn> takes two vectors of the same length and returns <b>one number</b>:</p>
+<div class="mathblock" data-sheet="Dot product"><div class="eqlabel">Dot product (Prince eq. 23.11)</div>
+\[\mathbf{a}\T\mathbf{b}=\mathbf{a}\cdot\mathbf{b}=\sum_{d=1}^{D}a_d\,b_d=a_1b_1+a_2b_2+\dots+a_Db_D\]
+<p class="say">Read: “a-transpose b”, or “a dot b”: multiply the first entries, multiply the second entries, and so on, then add all the products.</p></div>
+<p>Prince always writes the dot product as \(\mathbf{a}\T\mathbf{b}\): a row (\(\mathbf{a}\T\)) times a column (\(\mathbf{b}\)). You will see in a moment that this is exactly a tiny matrix product. Order does not matter: \(\mathbf{a}\T\mathbf{b}=\mathbf{b}\T\mathbf{a}\).</p>
+<div class="worked"><div class="wt">Worked example · <b>two dot products, term by term</b></div>
+<div class="given">\(\mathbf{a}=(2,1)\), \(\mathbf{b}=(1,3)\); and \(\mathbf{u}=(1,2,3)\), \(\mathbf{v}=(4,-5,6)\).</div>
+<ol class="steps">
+<li><div>\(\mathbf{a}\T\mathbf{b}=(2)(1)+(1)(3)=2+3=5\).</div></li>
+<li><div>\(\mathbf{u}\T\mathbf{v}=(1)(4)+(2)(-5)+(3)(6)=4-10+18=12\).<span class="why">Products can be negative; the minus in the middle term pulls the total down.</span></div></li>
+</ol>
+<div class="result">\(\mathbf{a}\T\mathbf{b}=5,\qquad\mathbf{u}\T\mathbf{v}=12\)</div></div>
+<div class="callout intuition"><p><b>You have seen dot products everywhere already.</b> A shopping bill is a dot product: quantities \((3,1,2)\) times prices \((40,250,15)\) gives \(120+250+30=400\) rupees. A linear model's prediction is a dot product: \(\hat y=\beta_1x_1+\beta_2x_2+\beta_3x_3=\bbeta\T\bx\), the coefficients “dotted with” the inputs.</p></div>
+
+<h4>Length (norm) and distance</h4>
+<p>The dot product of a vector with itself is the sum of squares of its entries. Its square root is the vector's length, by Pythagoras:</p>
+<div class="mathblock" data-sheet="Euclidean norm"><div class="eqlabel">Length, the Euclidean or \(\ell_2\) norm (Prince eq. 23.8 with \(p=2\))</div>
+\[\|\mathbf{a}\|_2=\sqrt{\mathbf{a}\T\mathbf{a}}=\sqrt{a_1^2+a_2^2+\dots+a_D^2}\]
+<p class="say">Read: “the two-norm of a”, or “the length of a”: square each entry, add, take the square root.</p></div>
+<p>For \(\mathbf{a}=(2,1)\): \(\|\mathbf{a}\|=\sqrt{4+1}=\sqrt5=2.2361\). For \(\mathbf{b}=(1,3)\): \(\sqrt{1+9}=\sqrt{10}=3.1623\). The <b>distance</b> between two points is the length of their difference: \(\|\mathbf{b}-\mathbf{a}\|=\|(-1,2)\|=\sqrt{1+4}=\sqrt5\). This Euclidean distance is exactly what KNN uses to find neighbours.</p>
+<p>Prince's general \(\ell_p\) norm is \(\|\bz\|_p=\big(\sum_d|z_d|^p\big)^{1/p}\). Three cases matter to us:</p>
+<div class="tw"><table class="t"><thead><tr><th>Norm</th><th>Formula</th><th>For \(\bz=(3,-4)\)</th><th>Where you will meet it</th></tr></thead><tbody>
+<tr><td>\(\ell_2\) (length)</td><td>\(\sqrt{\sum z_d^2}\)</td><td class="n">\(\sqrt{9+16}=5\)</td><td>distances (KNN), ridge penalty \(\|\bbeta\|_2^2\) (ISLP 6.2)</td></tr>
+<tr><td>\(\ell_1\)</td><td>\(\sum|z_d|\)</td><td class="n">\(3+4=7\)</td><td>the lasso penalty \(\|\bbeta\|_1\) (ISLP 6.2)</td></tr>
+<tr><td>\(\ell_\infty\)</td><td>\(\max_d|z_d|\)</td><td class="n">\(4\)</td><td>“the largest entry”, occasionally</td></tr>
+</tbody></table></div>
+
+<h4>The angle between two vectors, and cosine similarity</h4>
+<p>The dot product also measures how much two arrows point the same way. Prince eq. 23.12 says</p>
+<div class="mathblock" data-sheet="Dot product and angle"><div class="eqlabel">Geometric meaning of the dot product</div>
+\[\mathbf{a}\T\mathbf{b}=\|\mathbf{a}\|\,\|\mathbf{b}\|\cos\theta\qquad\Longleftrightarrow\qquad\cos\theta=\frac{\mathbf{a}\T\mathbf{b}}{\|\mathbf{a}\|\,\|\mathbf{b}\|}\]
+<p class="say">Read: “a dot b equals the length of a times the length of b times cos theta”, where theta is the angle between the arrows.</p></div>
+<div class="worked"><div class="wt">Worked example · <b>the angle between \((2,1)\) and \((1,3)\)</b></div>
+<div class="given">From above: \(\mathbf{a}\T\mathbf{b}=5\), \(\|\mathbf{a}\|=\sqrt5\), \(\|\mathbf{b}\|=\sqrt{10}\).</div>
+<ol class="steps">
+<li><div>\(\cos\theta=\dfrac{5}{\sqrt5\,\sqrt{10}}=\dfrac{5}{\sqrt{50}}=\dfrac{5}{7.0711}=0.7071.\)</div></li>
+<li><div>\(\theta=\cos^{-1}(0.7071)=45^\circ\).<span class="why">\(\cos45^\circ=1/\sqrt2=0.7071\).</span></div></li>
+</ol>
+<div class="result">\(\theta=45^\circ\)</div></div>
+<p>The sign of the dot product tells you a lot without computing any angle:</p>
+<ul>
+<li>\(\mathbf{a}\T\mathbf{b}>0\): the angle is less than \(90^\circ\); the arrows point roughly the same way.</li>
+<li>\(\mathbf{a}\T\mathbf{b}=0\): exactly \(90^\circ\). The vectors are <dfn data-g="orthogonal">orthogonal</dfn> (perpendicular). Example: \((1,2)\T(2,-1)=2-2=0\).</li>
+<li>\(\mathbf{a}\T\mathbf{b}\lt0\): more than \(90^\circ\); they point in roughly opposite directions.</li>
+</ul>
+<p>The number \(\cos\theta\) on its own is called the <dfn data-g="cosine-similarity">cosine similarity</dfn>. It ignores length and compares only direction, which is why search engines and embedding models (the vectors that represent words and images in deep learning) use it: a long document and a short one about the same topic point in the same direction.</p>
+<div class="callout ece"><p>Cosine similarity is the <b>normalised correlation coefficient</b> you used in matched filtering: correlate the received signal with the template, then divide by the square roots of both energies. A value near 1 means “the template is present”.</p></div>
+
+<div class="widget" data-w="m-linalg-dot" data-title="Dot product, angle and projection"><div class="wn">Drag the tips of the two arrows. Watch the dot product computed term by term, and the angle. Make the dot product exactly zero: the arrows are then at right angles. Make it negative. The dashed arrow is the projection of b onto a, which the section on projection explains.</div></div>
+
+<div class="predict" data-correct="3"><p>The cell computes \(\mathbf{u}\T\mathbf{v}\) for \(\mathbf{u}=(1,2,3)\) and \(\mathbf{v}=(4,-5,6)\) in three ways. What do the three results look like?</p><ol class="opts"><li>three different numbers</li><li><code>12</code>, <code>12</code> and the array <code>[4, -10, 18]</code></li><li><code>12</code>, <code>12</code>, <code>12</code></li></ol><div class="why"><code>u @ v</code>, <code>np.dot(u, v)</code> and <code>np.sum(u * v)</code> all compute \(\sum_d u_dv_d=12\). The array <code>[4, -10, 18]</code> is <code>u * v</code> before the sum: the products, not yet added.</div></div>
+<div class="py" id="c-m-linalg-03"><pre class="src">
+u = np.array([1, 2, 3])
+v = np.array([4, -5, 6])
+print(u @ v, np.dot(u, v), np.sum(u * v))
+a, b = np.array([2, 1]), np.array([1, 3])
+na, nb = np.linalg.norm(a), np.linalg.norm(b)          # lengths: sqrt(5), sqrt(10)
+cos = (a @ b) / (na * nb)
+print("lengths", na, nb, " cos", cos, " angle", np.degrees(np.arccos(cos)))
+</pre><div class="pynote"><b>Read the output:</b> 12 three times; then the lengths 2.236… and 3.162…, \(\cos\theta=0.7071\), and the angle 45 degrees (it may print as 45.00000000000001: a rounding error in the 16th digit, not a mistake).</div></div>
+<div class="callout pitfall"><p><b><code>*</code> is not the dot product.</b> In NumPy, <code>u * v</code> multiplies entry by entry and returns a vector. The dot product is <code>u @ v</code>. Mixing them up is the most common bug in hand-written ML code, and it often does not crash, it just gives wrong numbers.</p></div>
+
+<h3 id="m-linalg-matrices">Matrices: tables of numbers</h3>
+<p>A <dfn data-g="matrix">matrix</dfn> is a rectangular table of numbers. A matrix with \(m\) rows and \(n\) columns is called “\(m\) by \(n\)”, written \(m\times n\), and lives in \(\R^{m\times n}\). <b>Rows are always counted first.</b> The entry in row \(i\), column \(j\) is \(a_{ij}\) (or \(A_{ij}\)):</p>
+\[\mathbf{A}=\begin{pmatrix}a_{11}&a_{12}&a_{13}\\a_{21}&a_{22}&a_{23}\end{pmatrix}=\begin{pmatrix}1&0&2\\-1&3&1\end{pmatrix}\in\R^{2\times3},\qquad a_{23}=1,\ a_{21}=-1.\]
+<p>A vector is a matrix with one column (\(D\times1\)); its transpose is a matrix with one row (\(1\times D\)); a plain number is a \(1\times1\) matrix. In PyTorch all of these, and higher-dimensional tables, are called <b>tensors</b> (Prince §23.3).</p>
+<p>Matrices add entry by entry (only if they have the same shape) and are scaled entry by entry, exactly like vectors. The interesting operation is multiplication, and it is <i>not</i> entry by entry.</p>
+
+<h3 id="m-linalg-matvec">Matrix times vector: one dot product per row</h3>
+<p>To multiply a matrix \(\mathbf{A}\) (\(m\times n\)) by a vector \(\bx\) (length \(n\)), take the dot product of <b>each row</b> of \(\mathbf{A}\) with \(\bx\). Each row gives one number, so the result has \(m\) entries:</p>
+<div class="mathblock" data-sheet="Matrix times vector"><div class="eqlabel">Matrix–vector product</div>
+\[(\mathbf{A}\bx)_i=\sum_{j=1}^{n}a_{ij}\,x_j\qquad i=1,\dots,m\]
+<p class="say">Read: “entry i of A-x is the sum over j of a-i-j times x-j”: row \(i\) of \(\mathbf{A}\), dotted with \(\bx\).</p></div>
+<div class="worked"><div class="wt">Worked example · <b>\(\mathbf{A}\bx\) cell by cell</b></div>
+<div class="given">\(\mathbf{A}=\begin{pmatrix}1&2\\3&4\end{pmatrix}\), \(\bx=\begin{pmatrix}5\\6\end{pmatrix}\).</div>
+<ol class="steps">
+<li><div><b>Row 1 dotted with \(\bx\)</b> gives entry 1.
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h1">1</span><span class="h1">2</span><span>3</span><span>4</span></span><span class="lab">A</span></span><span class="op">×</span><span><span class="mgrid" style="grid-template-columns:auto"><span class="h2">5</span><span class="h2">6</span></span><span class="lab">x</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:auto"><span class="h4">17</span><span>·</span></span><span class="lab">Ax</span></span></div>
+\(1\times5+2\times6=5+12=17\).</div></li>
+<li><div><b>Row 2 dotted with \(\bx\)</b> gives entry 2.
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>2</span><span class="h1">3</span><span class="h1">4</span></span><span class="lab">A</span></span><span class="op">×</span><span><span class="mgrid" style="grid-template-columns:auto"><span class="h2">5</span><span class="h2">6</span></span><span class="lab">x</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:auto"><span>17</span><span class="h4">39</span></span><span class="lab">Ax</span></span></div>
+\(3\times5+4\times6=15+24=39\).</div></li>
+</ol>
+<div class="result">\(\begin{pmatrix}1&2\\3&4\end{pmatrix}\begin{pmatrix}5\\6\end{pmatrix}=\begin{pmatrix}17\\39\end{pmatrix}\)</div></div>
+
+<h4>The column picture: a weighted sum of columns</h4>
+<p>There is a second, equally important way to read the same product. Group the arithmetic by <b>column</b> instead of by row:</p>
+\[\begin{pmatrix}1&2\\3&4\end{pmatrix}\begin{pmatrix}\color{#d97706}5\\\color{#2563eb}6\end{pmatrix}=\color{#d97706}5\color{currentColor}\begin{pmatrix}1\\3\end{pmatrix}+\color{#2563eb}6\color{currentColor}\begin{pmatrix}2\\4\end{pmatrix}=\begin{pmatrix}5\\15\end{pmatrix}+\begin{pmatrix}12\\24\end{pmatrix}=\begin{pmatrix}17\\39\end{pmatrix}.\]
+<p><b>\(\mathbf{A}\bx\) is a linear combination of the columns of \(\mathbf{A}\), with the entries of \(\bx\) as the weights.</b> Prince §23.3.6 uses exactly this view: the set of all vectors \(\mathbf{A}\bx\) can reach is the set of all weighted sums of \(\mathbf{A}\)'s columns, called the <dfn data-g="column-space">column space</dfn>. This picture is the key to least squares at the end of the lesson.</p>
+<div class="callout ece"><p>Prince eq. 23.19 writes a whole bank of linear equations \(y_i=\phi_{i0}+\sum_j\phi_{ij}z_j\) as \(\by=\bphi_0+\boldsymbol\Phi\bz\). That is a matrix–vector product plus an offset vector: each output is a weighted sum of the inputs, like a bank of FIR filters evaluated at one instant. A neural network layer (<a href="#udl3">UDL 3</a>) is this, followed by a non-linearity.</p></div>
+
+<h3 id="m-linalg-matmul">Matrix times matrix: one dot product per cell</h3>
+<p>To multiply \(\mathbf{A}\) (\(m\times n\)) by \(\mathbf{B}\) (\(n\times p\)), compute every cell of the answer as a dot product: <b>row \(i\) of \(\mathbf{A}\) with column \(j\) of \(\mathbf{B}\)</b> gives cell \((i,j)\).</p>
+<div class="mathblock" data-sheet="Matrix product"><div class="eqlabel">Matrix–matrix product (ISLP p. 10, Prince eq. 23.10)</div>
+\[(\mathbf{AB})_{ij}=\sum_{k=1}^{n}a_{ik}\,b_{kj}\]
+<p class="say">Read: “the i-j entry of A-B is the sum over k of a-i-k times b-k-j”. The index \(k\) walks along row \(i\) of \(\mathbf{A}\) and down column \(j\) of \(\mathbf{B}\) at the same time.</p></div>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>ISLP's own example, all four cells</b></div>
+<div class="given">\(\mathbf{A}=\begin{pmatrix}1&2\\3&4\end{pmatrix}\), \(\mathbf{B}=\begin{pmatrix}5&6\\7&8\end{pmatrix}\). Compute \(\mathbf{AB}\) (ISLP p. 10).</div>
+<ol class="steps">
+<li><div><b>Cell (1,1):</b> row 1 of A, column 1 of B.
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h1">1</span><span class="h1">2</span><span>3</span><span>4</span></span><span class="lab">A</span></span><span class="op">×</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h2">5</span><span>6</span><span class="h2">7</span><span>8</span></span><span class="lab">B</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h4">19</span><span>·</span><span>·</span><span>·</span></span><span class="lab">AB</span></span></div>
+\(1\times5+2\times7=5+14=19\).</div></li>
+<li><div><b>Cell (1,2):</b> row 1 of A, column 2 of B.
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h1">1</span><span class="h1">2</span><span>3</span><span>4</span></span><span class="lab">A</span></span><span class="op">×</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>5</span><span class="h2">6</span><span>7</span><span class="h2">8</span></span><span class="lab">B</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>19</span><span class="h4">22</span><span>·</span><span>·</span></span><span class="lab">AB</span></span></div>
+\(1\times6+2\times8=6+16=22\).</div></li>
+<li><div><b>Cell (2,1):</b> row 2 of A, column 1 of B.
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>2</span><span class="h1">3</span><span class="h1">4</span></span><span class="lab">A</span></span><span class="op">×</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span class="h2">5</span><span>6</span><span class="h2">7</span><span>8</span></span><span class="lab">B</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>19</span><span>22</span><span class="h4">43</span><span>·</span></span><span class="lab">AB</span></span></div>
+\(3\times5+4\times7=15+28=43\).</div></li>
+<li><div><b>Cell (2,2):</b> row 2 of A, column 2 of B.
+<div class="mrow"><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>1</span><span>2</span><span class="h1">3</span><span class="h1">4</span></span><span class="lab">A</span></span><span class="op">×</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>5</span><span class="h2">6</span><span>7</span><span class="h2">8</span></span><span class="lab">B</span></span><span class="op">=</span><span><span class="mgrid" style="grid-template-columns:repeat(2,auto)"><span>19</span><span>22</span><span>43</span><span class="h4">50</span></span><span class="lab">AB</span></span></div>
+\(3\times6+4\times8=18+32=50\).</div></li>
+</ol>
+<div class="result">\(\mathbf{AB}=\begin{pmatrix}19&22\\43&50\end{pmatrix}\), as on ISLP p. 10.</div></div>
+
+<div class="widget" data-w="m-linalg-matmul" data-title="Click a cell of the product"><div class="wn">Click any cell of the result. The row of A and the column of B that make it light up, and the dot product is written out. Switch to the 2×3 times 3×2 example and check the result's shape: its rows come from A, its columns from B.</div></div>
+
+<h4>The shape rule</h4>
+<div class="mathblock" data-sheet="Shape rule"><div class="eqlabel">When can you multiply, and what shape comes out?</div>
+\[\underset{m\times \color{#dc2626}n}{\mathbf{A}}\ \underset{\color{#dc2626}n\times p}{\mathbf{B}}=\underset{m\times p}{\mathbf{C}}\]
+<p class="say">The two inner numbers (red) must match: each row of A must be as long as each column of B, or the dot products are impossible. The outer numbers give the shape of the answer.</p></div>
+<div class="worked"><div class="wt">Worked example · <b>a \(2\times3\) times a \(3\times2\)</b></div>
+<div class="given">\(\mathbf{A}=\begin{pmatrix}1&0&2\\-1&3&1\end{pmatrix}\) (\(2\times3\)), \(\mathbf{B}=\begin{pmatrix}3&1\\2&1\\1&0\end{pmatrix}\) (\(3\times2\)). Inner sizes 3 and 3 match, so \(\mathbf{AB}\) exists and is \(2\times2\).</div>
+<ol class="steps">
+<li><div>Cell (1,1): \((1,0,2)\cdot(3,2,1)=3+0+2=5\).</div></li>
+<li><div>Cell (1,2): \((1,0,2)\cdot(1,1,0)=1+0+0=1\).</div></li>
+<li><div>Cell (2,1): \((-1,3,1)\cdot(3,2,1)=-3+6+1=4\).</div></li>
+<li><div>Cell (2,2): \((-1,3,1)\cdot(1,1,0)=-1+3+0=2\).</div></li>
+</ol>
+<div class="result">\(\mathbf{AB}=\begin{pmatrix}5&1\\4&2\end{pmatrix}\)</div></div>
+<p>Now try the other order. \(\mathbf{B}\) is \(3\times2\) and \(\mathbf{A}\) is \(2\times3\): inner sizes 2 and 2 match, so \(\mathbf{BA}\) exists, but it is \(3\times3\):</p>
+\[\mathbf{BA}=\begin{pmatrix}3&1\\2&1\\1&0\end{pmatrix}\begin{pmatrix}1&0&2\\-1&3&1\end{pmatrix}=\begin{pmatrix}3-1&0+3&6+1\\2-1&0+3&4+1\\1+0&0+0&2+0\end{pmatrix}=\begin{pmatrix}2&3&7\\1&3&5\\1&0&2\end{pmatrix}.\]
+<div class="callout pitfall"><p><b>Order matters: \(\mathbf{AB}\ne\mathbf{BA}\) in general.</b> Here they are not even the same shape. Even for square matrices they usually differ: with ISLP's \(\mathbf{A},\mathbf{B}\), \(\mathbf{BA}=\begin{pmatrix}23&34\\31&46\end{pmatrix}\ne\mathbf{AB}\). Never swap the order of a matrix product to “tidy up” a formula.</p></div>
+<p>Two more facts you will use. Matrix products are <b>associative</b>: \((\mathbf{AB})\mathbf{C}=\mathbf{A}(\mathbf{BC})\), so brackets can move (but the order cannot). And a deep network applies matrices one after another: \(\mathbf{C}(\mathbf{B}(\mathbf{A}\bx))\). Without non-linear functions in between, that collapses into a single matrix \((\mathbf{CBA})\bx\), which is why Prince's networks need activation functions (<a href="#udl4">UDL 4</a>).</p>
+
+<div class="py" id="c-m-linalg-04"><pre class="src">
+A = np.array([[1, 2], [3, 4]])
+B = np.array([[5, 6], [7, 8]])
+print("A @ B =\n", A @ B)
+print("B @ A =\n", B @ A)
+print("A * B (entry by entry, NOT the matrix product) =\n", A * B)
+A2 = np.array([[1, 0, 2], [-1, 3, 1]])
+B2 = np.array([[3, 1], [2, 1], [1, 0]])
+print("shapes:", A2.shape, "@", B2.shape, "->", (A2 @ B2).shape, "and", (B2 @ A2).shape)
+</pre><div class="pynote"><b>Read the output:</b> \(\mathbf{AB}=\begin{pmatrix}19&22\\43&50\end{pmatrix}\) as by hand, \(\mathbf{BA}\) is different, and <code>A * B</code> is \(\begin{pmatrix}5&12\\21&32\end{pmatrix}\), the entry-by-entry (Hadamard) product. The shapes line shows \((2,3)\,@\,(3,2)\to(2,2)\) and the other order \((3,3)\).</div></div>
+
+<p>When the inner sizes do not match, NumPy refuses. This cell fails on purpose:</p>
+<div class="py" id="c-m-linalg-05" data-mode="expect-error" data-error="ValueError"><pre class="src">
+A2 @ A2      # (2,3) @ (2,3): inner sizes 3 and 2 do not match
+</pre><div class="pynote">Read the last line of the error: NumPy names the mismatched dimension. When you see this in your own code, write down the two shapes and apply the shape rule. Here <code>A2 @ A2.T</code> (a \(2\times3\) times a \(3\times2\)) would work.</div></div>
+
+<h3 id="m-linalg-map">A matrix is a machine that moves space</h3>
+<p>So far a matrix has been a table. The deeper view is that a matrix is a <b>function</b>: it takes a vector \(\bx\) in and gives the vector \(\mathbf{A}\bx\) out. Such functions are called <dfn data-g="linear-map">linear maps</dfn> because they keep straight lines straight and keep the origin fixed.</p>
+<p>The column picture tells you exactly what a \(2\times2\) matrix does. The two basic arrows \(\mathbf{e}_1=(1,0)\) and \(\mathbf{e}_2=(0,1)\) are sent to</p>
+\[\mathbf{A}\mathbf{e}_1=\begin{pmatrix}a&b\\c&d\end{pmatrix}\begin{pmatrix}1\\0\end{pmatrix}=\begin{pmatrix}a\\c\end{pmatrix}\ (\text{column 1}),\qquad \mathbf{A}\mathbf{e}_2=\begin{pmatrix}b\\d\end{pmatrix}\ (\text{column 2}).\]
+<p><b>The columns of a matrix are where the basic arrows land.</b> Every other point \((x_1,x_2)=x_1\mathbf{e}_1+x_2\mathbf{e}_2\) goes to \(x_1(\text{column 1})+x_2(\text{column 2})\). So the unit square, with corners \((0,0),(1,0),(1,1),(0,1)\), becomes a parallelogram with sides along the two columns, and the whole grid of the plane becomes a slanted grid.</p>
+<div class="widget" data-w="m-linalg-transform" data-title="A 2×2 matrix moving the plane" data-args='{"m":[2,1,1,2]}'><div class="wn">Move the four sliders (the entries a, b, c, d). The orange and blue arrows are the two columns: they are where (1,0) and (0,1) land. The shaded square becomes the parallelogram, and its area is |det A|. Try the presets: a rotation keeps the area 1; the “singular” matrix squashes everything onto a line (det = 0). For the starting matrix, find the two directions that are only stretched, not turned: those are the eigenvectors (dashed lines).</div></div>
+
+<p>Some special matrices you will meet (Prince §23.4):</p>
+<div class="tw"><table class="t"><thead><tr><th>Name</th><th>Example</th><th>What it does</th></tr></thead><tbody>
+<tr><td><dfn data-g="identity-matrix">identity</dfn> \(\mathbf{I}\)</td><td>\(\begin{pmatrix}1&0\\0&1\end{pmatrix}\)</td><td>nothing: \(\mathbf{I}\bx=\bx\), \(\mathbf{IA}=\mathbf{AI}=\mathbf{A}\). The matrix version of the number 1.</td></tr>
+<tr><td>diagonal</td><td>\(\begin{pmatrix}2&0\\0&0.5\end{pmatrix}\)</td><td>stretches along the axes: \(x_1\) doubled, \(x_2\) halved</td></tr>
+<tr><td>rotation (orthogonal)</td><td>\(\begin{pmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{pmatrix}\)</td><td>turns by \(\theta\), keeps lengths; its inverse is its transpose</td></tr>
+<tr><td>symmetric</td><td>\(\begin{pmatrix}2&1\\1&2\end{pmatrix}\)</td><td>equals its own transpose. Covariance matrices and \(\bX\T\bX\) are always symmetric.</td></tr>
+<tr><td>permutation</td><td>\(\begin{pmatrix}0&1\\1&0\end{pmatrix}\)</td><td>reorders entries: \((a,b)\mapsto(b,a)\)</td></tr>
+</tbody></table></div>
+
+<h4>The determinant: how much area is scaled</h4>
+<p>For a \(2\times2\) matrix the <dfn data-g="determinant">determinant</dfn> is</p>
+<div class="mathblock" data-sheet="2x2 determinant"><div class="eqlabel">Determinant of a 2×2 matrix</div>
+\[\det\begin{pmatrix}a&b\\c&d\end{pmatrix}=|\mathbf{A}|=ad-bc\]
+<p class="say">Read: “the determinant of A is a-d minus b-c”: the product down the main diagonal minus the product down the other diagonal.</p></div>
+<p>Its meaning: the unit square (area 1) becomes a parallelogram of area \(|ad-bc|\). For \(\begin{pmatrix}2&1\\1&2\end{pmatrix}\): \(2\cdot2-1\cdot1=3\), so every area is tripled. A negative determinant means the map also flips the plane over (like a mirror). And <b>a determinant of zero means the parallelogram is flat</b>: the two columns lie on one line, a whole direction is squashed to nothing, and the map cannot be undone. Such a matrix is called <b>singular</b>.</p>
+
+<h3 id="m-linalg-transpose">Transpose, and the rule \((\mathbf{AB})\T=\mathbf{B}\T\mathbf{A}\T\)</h3>
+<p>The transpose \(\mathbf{A}\T\) swaps rows and columns: \((\mathbf{A}\T)_{ij}=a_{ji}\). A \(2\times3\) matrix becomes \(3\times2\):</p>
+\[\begin{pmatrix}1&0&2\\-1&3&1\end{pmatrix}\T=\begin{pmatrix}1&-1\\0&3\\2&1\end{pmatrix}.\]
+<p>The transpose of a product reverses the order (Prince eq. 23.7): \((\mathbf{AB})\T=\mathbf{B}\T\mathbf{A}\T\). Check with the shapes: if \(\mathbf{A}\) is \(2\times3\) and \(\mathbf{B}\) is \(3\times2\), then \(\mathbf{B}\T\) is \(2\times3\) and \(\mathbf{A}\T\) is \(3\times2\), and \(\mathbf{B}\T\mathbf{A}\T\) is \(2\times2\), the shape of \((\mathbf{AB})\T\). The other order \(\mathbf{A}\T\mathbf{B}\T\) would be \(3\times3\): wrong shape, so it cannot be right. The shape rule often tells you the correct order before you do any algebra.</p>
+<p>A product you will see constantly is \(\bX\T\bX\). If \(\bX\) is \(n\times p\), then \(\bX\T\bX\) is \((p\times n)(n\times p)=p\times p\). Its \((j,k)\) entry is the dot product of column \(j\) with column \(k\) of \(\bX\). It is always symmetric, since \((\bX\T\bX)\T=\bX\T(\bX\T)\T=\bX\T\bX\).</p>
+<div class="py" id="c-m-linalg-06"><pre class="src">
+print("A2.T =\n", A2.T, "  shape", A2.T.shape)
+lhs = (A2 @ B2).T
+rhs = B2.T @ A2.T
+print("(AB)^T =\n", lhs, "\nB^T A^T =\n", rhs, "\nequal?", np.array_equal(lhs, rhs))
+</pre><div class="pynote"><b>Read the output:</b> the transpose of the \(2\times3\) matrix is \(3\times2\), and both ways of computing \((\mathbf{AB})\T\) give \(\begin{pmatrix}5&4\\1&2\end{pmatrix}\), so <code>equal?</code> is <code>True</code>. Try <code>A2.T @ B2.T</code>: it runs, but gives a \(3\times3\) matrix, the wrong shape.</div></div>
+
+<h3 id="m-linalg-inverse">The inverse: undoing a matrix</h3>
+<p>For a number, dividing by 4 undoes multiplying by 4, because \(\frac14\times4=1\). The matrix version is the <dfn data-g="inverse">inverse</dfn> \(\mathbf{A}^{-1}\) (read <i>A-inverse</i>), defined by</p>
+\[\mathbf{A}^{-1}\mathbf{A}=\mathbf{A}\mathbf{A}^{-1}=\mathbf{I}.\]
+<p>Only square matrices can have an inverse, and only if their determinant is not zero. For a \(2\times2\) matrix there is a formula you should know by heart:</p>
+<div class="mathblock" data-sheet="2x2 inverse"><div class="eqlabel">Inverse of a 2×2 matrix</div>
+\[\begin{pmatrix}a&b\\c&d\end{pmatrix}^{-1}=\frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}\]
+<p class="say">Swap the two diagonal entries, change the sign of the two off-diagonal entries, and divide everything by the determinant.</p></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>invert \(\begin{pmatrix}4&7\\2&6\end{pmatrix}\) and check</b></div>
+<div class="given">\(\mathbf{A}=\begin{pmatrix}4&7\\2&6\end{pmatrix}\), so \(a=4,b=7,c=2,d=6\).</div>
+<ol class="steps">
+<li><div><b>Determinant:</b> \(ad-bc=4\times6-7\times2=24-14=10\). Not zero, so the inverse exists.</div></li>
+<li><div><b>Swap and negate:</b> \(\begin{pmatrix}d&-b\\-c&a\end{pmatrix}=\begin{pmatrix}6&-7\\-2&4\end{pmatrix}\).</div></li>
+<li><div><b>Divide by 10:</b> \(\mathbf{A}^{-1}=\frac1{10}\begin{pmatrix}6&-7\\-2&4\end{pmatrix}=\begin{pmatrix}0.6&-0.7\\-0.2&0.4\end{pmatrix}\).</div></li>
+<li><div><b>Check</b> \(\mathbf{A}\mathbf{A}^{-1}\): cell (1,1) \(=4(0.6)+7(-0.2)=2.4-1.4=1\); cell (1,2) \(=4(-0.7)+7(0.4)=-2.8+2.8=0\); cell (2,1) \(=2(0.6)+6(-0.2)=1.2-1.2=0\); cell (2,2) \(=2(-0.7)+6(0.4)=-1.4+2.4=1\).<span class="why">We got \(\mathbf{I}\), so the inverse is right. Always check: it takes a minute and catches sign slips.</span></div></li>
+</ol>
+<div class="result">\(\mathbf{A}^{-1}=\begin{pmatrix}0.6&-0.7\\-0.2&0.4\end{pmatrix}\)</div></div>
+<p>Two rules (Prince eq. 23.13 and §23.4): \((\mathbf{AB})^{-1}=\mathbf{B}^{-1}\mathbf{A}^{-1}\) (order reverses, like the transpose), and a diagonal matrix is inverted by inverting each diagonal entry. For bigger matrices the cost of inverting grows like \(D^3\) (Prince writes \(O[D^3]\)), so we let NumPy do it.</p>
+
+<h3 id="m-linalg-solve">Solving \(\mathbf{A}\bx=\mathbf{b}\)</h3>
+<p>A system of linear equations is one matrix equation. The two equations</p>
+\[\begin{aligned}2x_1+\ \ x_2&=5\\ x_1+3x_2&=10\end{aligned}\qquad\Longleftrightarrow\qquad\underbrace{\begin{pmatrix}2&1\\1&3\end{pmatrix}}_{\mathbf{A}}\underbrace{\begin{pmatrix}x_1\\x_2\end{pmatrix}}_{\bx}=\underbrace{\begin{pmatrix}5\\10\end{pmatrix}}_{\mathbf{b}}\]
+<p>are the same statement (multiply out the left side row by row to check). Multiplying both sides on the left by \(\mathbf{A}^{-1}\) gives \(\bx=\mathbf{A}^{-1}\mathbf{b}\).</p>
+<div class="worked"><div class="wt">Worked example · <b>solve by the inverse, and by elimination</b></div>
+<div class="given">\(\mathbf{A}=\begin{pmatrix}2&1\\1&3\end{pmatrix}\), \(\mathbf{b}=(5,10)\).</div>
+<ol class="steps">
+<li><div><b>Determinant:</b> \(2\times3-1\times1=5\). <b>Inverse:</b> \(\mathbf{A}^{-1}=\frac15\begin{pmatrix}3&-1\\-1&2\end{pmatrix}\).</div></li>
+<li><div><b>Multiply:</b> \(\bx=\frac15\begin{pmatrix}3\times5+(-1)\times10\\(-1)\times5+2\times10\end{pmatrix}=\frac15\begin{pmatrix}5\\15\end{pmatrix}=\begin{pmatrix}1\\3\end{pmatrix}\).</div></li>
+<li><div><b>Elimination instead:</b> from the first equation \(x_2=5-2x_1\). Substitute into the second: \(x_1+3(5-2x_1)=10\Rightarrow x_1+15-6x_1=10\Rightarrow-5x_1=-5\Rightarrow x_1=1\), and \(x_2=5-2=3\).<span class="why">Same answer. Elimination is what computers actually do (without ever forming the inverse), because it is faster and more accurate.</span></div></li>
+<li><div><b>Check:</b> \(2(1)+3=5\) ✓ and \(1+3(3)=10\) ✓.</div></li>
+</ol>
+<div class="result">\(\bx=(1,3)\)</div></div>
+<div class="py" id="c-m-linalg-07"><pre class="src">
+A = np.array([[4., 7.], [2., 6.]])
+print("det =", np.linalg.det(A))
+print("inverse =\n", np.linalg.inv(A))
+print("A @ inverse =\n", A @ np.linalg.inv(A))
+M = np.array([[2., 1.], [1., 3.]])
+rhs = np.array([5., 10.])
+print("solve:", np.linalg.solve(M, rhs))
+</pre><div class="pynote"><b>Read the output:</b> det 10 (perhaps 10.000000000000002: floating-point numbers carry about 16 significant digits, so the last one can wobble), the inverse matches the hand result, the product is the identity, and <code>np.linalg.solve</code> returns \((1,3)\). In your own code, prefer <code>np.linalg.solve(A, b)</code> to <code>np.linalg.inv(A) @ b</code>: same answer, faster and more accurate.</div></div>
+
+<h3 id="m-linalg-rank">Linear independence and rank</h3>
+<p>What goes wrong when the determinant is zero? Take</p>
+\[\mathbf{S}=\begin{pmatrix}1&2\\2&4\end{pmatrix},\qquad\det\mathbf{S}=1\cdot4-2\cdot2=0.\]
+<p>Its second column \((2,4)\) is exactly 2 times its first column \((1,2)\). The two columns point along the same line, so every \(\mathbf{S}\bx=x_1(1,2)+x_2(2,4)=(x_1+2x_2)(1,2)\) lands on that one line. The plane is squashed onto a line; points such as \((1,0)\) can never be reached, and many different \(\bx\) land on the same output (for example \((2,0)\) and \((0,1)\) both give \((2,4)\)). There is no way to undo that, hence no inverse.</p>
+<p>A set of vectors is <dfn data-g="linear-independence">linearly independent</dfn> if none of them is a linear combination of the others: each one adds a genuinely new direction. The <dfn data-g="rank">rank</dfn> of a matrix is the number of independent columns, the number of genuinely different directions it can reach. \(\mathbf{S}\) has rank 1; \(\begin{pmatrix}2&1\\1&3\end{pmatrix}\) has rank 2 (full rank).</p>
+<div class="callout key"><p><b>Why rank matters in ML.</b> If one predictor column of \(\bX\) is a combination of others (say <i>price in rupees</i> and <i>price in dollars</i>), the columns are dependent, \(\bX\T\bX\) is singular, and the least-squares coefficients are not uniquely defined. When a column is only <i>nearly</i> a combination of others (as <i>limit</i> and <i>rating</i> are in ISLP's Credit data), \(\bX\T\bX\) is nearly singular and the coefficients become very uncertain. ISLP calls this <b>collinearity</b> (<a href="#isl3-3">ISLP 3.3</a>). Dependence always happens when there are more predictors than observations, \(p\gt n\): an \(n\times p\) matrix can have at most \(n\) independent columns (<a href="#isl6-3">ISLP 6.4</a>).</p></div>
+<div class="py" id="c-m-linalg-08"><pre class="src">
+S = np.array([[1., 2.], [2., 4.]])
+print("det S =", np.linalg.det(S), "  rank S =", np.linalg.matrix_rank(S))
+print("rank of [[2,1],[1,3]] =", np.linalg.matrix_rank(np.array([[2., 1.], [1., 3.]])))
+X3 = np.array([[1., 2., 3.], [1., 4., 5.], [1., 1., 2.], [1., 3., 4.]])   # column 3 = column 1 + column 2
+print("rank of a 4x3 matrix whose 3rd column = 1st + 2nd:", np.linalg.matrix_rank(X3))
+</pre><div class="pynote"><b>Read the output:</b> \(\det\mathbf{S}=0\) and rank 1; the invertible matrix has rank 2; the \(4\times3\) matrix has only rank 2, because its third column adds no new direction.</div></div>
+
+<h3 id="m-linalg-design">The design matrix: all predictions at once</h3>
+<p>Here is where linear algebra pays off. ISLP's linear model for one observation is</p>
+\[\hat y_i=\beta_0+\beta_1x_{i1}+\beta_2x_{i2}+\dots+\beta_px_{ip}.\]
+<p>Put a 1 in front of each row of data, so the intercept \(\beta_0\) is multiplied by something like every other coefficient. Stacking those rows gives the <dfn data-g="design-matrix">design matrix</dfn> \(\bX\), of shape \(n\times(p+1)\). Then <b>all \(n\) predictions are one matrix–vector product</b>:</p>
+<div class="mathblock" data-sheet="Predictions as X beta"><div class="eqlabel">All predictions at once</div>
+\[\hat\by=\bX\bbeta,\qquad\begin{pmatrix}\hat y_1\\\hat y_2\\\vdots\\\hat y_n\end{pmatrix}=\begin{pmatrix}1&x_{11}&\cdots&x_{1p}\\1&x_{21}&\cdots&x_{2p}\\\vdots&\vdots&&\vdots\\1&x_{n1}&\cdots&x_{np}\end{pmatrix}\begin{pmatrix}\beta_0\\\beta_1\\\vdots\\\beta_p\end{pmatrix}\]
+<p class="say">Read: “y-hat equals X beta”. Row \(i\) of \(\bX\) dotted with \(\bbeta\) is the prediction for observation \(i\).</p></div>
+<p>We will use the same three points as in <a href="#s0-maths">How to read the maths</a>: \((x_i,y_i)=(1,2),(2,3),(3,5)\), and a straight line \(\hat y=\beta_0+\beta_1x\) (so \(p=1\)):</p>
+\[\bX=\begin{pmatrix}1&1\\1&2\\1&3\end{pmatrix},\qquad\by=\begin{pmatrix}2\\3\\5\end{pmatrix},\qquad\bbeta=\begin{pmatrix}\beta_0\\\beta_1\end{pmatrix}.\]
+<p>With the guess \(\bbeta=(1,1)\): \(\bX\bbeta=(1+1,\ 1+2,\ 1+3)=(2,3,4)\). The residuals are \(\by-\bX\bbeta=(0,0,1)\), and</p>
+\[\RSS=\sum_i(y_i-\hat y_i)^2=(\by-\bX\bbeta)\T(\by-\bX\bbeta)=\|\by-\bX\bbeta\|^2=0^2+0^2+1^2=1.\]
+<p>The RSS is the squared length of the residual vector. Least squares means: <b>choose \(\bbeta\) to make the residual vector as short as possible.</b></p>
+
+<h4>The normal equations</h4>
+<p>The best \(\bbeta\) satisfies the <dfn data-g="normal-equations">normal equations</dfn>. You will derive them with calculus in <a href="#m-calc">Derivatives and gradients</a> and with geometry in the next section; for now, use them:</p>
+<div class="mathblock" data-sheet="Normal equations"><div class="eqlabel">Normal equations of least squares</div>
+\[\bX\T\bX\,\hat\bbeta=\bX\T\by\qquad\Longrightarrow\qquad\hat\bbeta=(\bX\T\bX)^{-1}\bX\T\by\]
+<p class="say">Read: “X-transpose X times beta-hat equals X-transpose y”. A small \((p+1)\times(p+1)\) system of equations whose solution is the least-squares coefficients.</p></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>least squares for three points, by hand</b></div>
+<div class="given">\(\bX=\begin{pmatrix}1&1\\1&2\\1&3\end{pmatrix}\), \(\by=\begin{pmatrix}2\\3\\5\end{pmatrix}\).</div>
+<ol class="steps">
+<li><div><b>\(\bX\T\bX\)</b> is \((2\times3)(3\times2)=2\times2\). Each cell is a dot product of two columns of \(\bX\):
+\[\bX\T\bX=\begin{pmatrix}1&1&1\\1&2&3\end{pmatrix}\begin{pmatrix}1&1\\1&2\\1&3\end{pmatrix}=\begin{pmatrix}1+1+1&1+2+3\\1+2+3&1+4+9\end{pmatrix}=\begin{pmatrix}3&6\\6&14\end{pmatrix}.\]<span class="why">Top-left is \(n=3\); the off-diagonal is \(\sum x_i=6\); bottom-right is \(\sum x_i^2=14\).</span></div></li>
+<li><div><b>\(\bX\T\by\)</b> is \((2\times3)(3\times1)=2\times1\):
+\[\bX\T\by=\begin{pmatrix}1&1&1\\1&2&3\end{pmatrix}\begin{pmatrix}2\\3\\5\end{pmatrix}=\begin{pmatrix}2+3+5\\2+6+15\end{pmatrix}=\begin{pmatrix}10\\23\end{pmatrix}.\]<span class="why">\(\sum y_i=10\) and \(\sum x_iy_i=23\).</span></div></li>
+<li><div><b>Solve</b> \(\begin{pmatrix}3&6\\6&14\end{pmatrix}\hat\bbeta=\begin{pmatrix}10\\23\end{pmatrix}\). Determinant \(3\times14-6\times6=42-36=6\). Inverse \(\frac16\begin{pmatrix}14&-6\\-6&3\end{pmatrix}\).</div></li>
+<li><div><b>Multiply:</b> \(\hat\bbeta=\frac16\begin{pmatrix}14\times10-6\times23\\-6\times10+3\times23\end{pmatrix}=\frac16\begin{pmatrix}140-138\\-60+69\end{pmatrix}=\frac16\begin{pmatrix}2\\9\end{pmatrix}=\begin{pmatrix}0.3333\\1.5\end{pmatrix}.\)</div></li>
+<li><div><b>Predictions and residuals:</b> \(\hat\by=\bX\hat\bbeta=(0.3333+1.5,\ 0.3333+3,\ 0.3333+4.5)=(1.8333,\ 3.3333,\ 4.8333)\). Residuals \(\mathbf{e}=\by-\hat\by=(0.1667,\ -0.3333,\ 0.1667)\). \(\RSS=0.0278+0.1111+0.0278=0.1667\).<span class="why">Compare with RSS = 1 for the guess \((1,1)\). No other line does better than 0.1667.</span></div></li>
+</ol>
+<div class="result">\(\hat\beta_0=1/3\approx0.3333,\quad\hat\beta_1=1.5,\quad\RSS=1/6\)</div></div>
+
+<div class="py" id="c-m-linalg-09"><pre class="src">
+X = np.array([[1., 1.], [1., 2.], [1., 3.]])
+y = np.array([2., 3., 5.])
+XtX, Xty = X.T @ X, X.T @ y
+print("X^T X =\n", XtX, "\nX^T y =", Xty)
+beta_hat = np.linalg.solve(XtX, Xty)
+print("beta_hat =", beta_hat)
+e = y - X @ beta_hat
+print("residuals =", e, "  RSS =", e @ e)
+print("lstsq agrees:", np.linalg.lstsq(X, y, rcond=None)[0])
+</pre><div class="pynote"><b>Read the output:</b> every number from the worked example. <code>np.linalg.lstsq</code> solves the least-squares problem directly (more robustly, using a method called the SVD); it agrees.</div></div>
+
+<p>The same three lines of code fit ISLP's Advertising regression of sales on TV for all 200 markets. <code>np.loadtxt</code> reads a CSV file of numbers; <code>skiprows=1</code> skips the header line and <code>usecols=(1, 4)</code> keeps the TV and sales columns.</p>
+<div class="predict" data-correct="1"><p>ISLP §3.1 reports \(\hat\beta_0=7.03\) and \(\hat\beta_1=0.0475\) for sales on TV. What will our normal-equations code print?</p><ol class="opts"><li>about <code>[7.0326 0.0475]</code></li><li>something close but different, because NumPy uses a different method from the book</li><li>an error, because 200 rows is too many for <code>solve</code></li></ol><div class="why">Least squares has one answer, whatever method computes it, so we get ISLP's numbers. And <code>solve</code> only ever sees the \(2\times2\) system \(\bX\T\bX\), however many rows \(\bX\) has.</div></div>
+<div class="py" id="c-m-linalg-10"><pre class="src">
+d = np.loadtxt("Advertising.csv", delimiter=",", skiprows=1, usecols=(1, 4))
+tv, sales = d[:, 0], d[:, 1]
+Xa = np.column_stack([np.ones(len(tv)), tv])     # n x 2 design matrix: a column of 1s, then TV
+print("X shape:", Xa.shape, "  X^T X shape:", (Xa.T @ Xa).shape)
+print("beta_hat =", np.linalg.solve(Xa.T @ Xa, Xa.T @ sales))
+</pre><div class="pynote"><b>Read the output:</b> \(\bX\) is \(200\times2\) but \(\bX\T\bX\) is only \(2\times2\), and the coefficients are ISLP's 7.0326 and 0.0475: each extra \$1,000 of TV advertising goes with about 47.5 extra units sold.</div></div>
+
+<h3 id="m-linalg-proj">Orthogonality and projection: least squares as a shadow</h3>
+<p>Now the geometry that explains why the normal equations work. Start with one vector. The <dfn data-g="projection">projection</dfn> of \(\by\) onto the line through \(\mathbf{u}\) is the point on that line closest to \(\by\): the foot of the perpendicular, the “shadow” of \(\by\) when light shines at right angles to the line.</p>
+<div class="mathblock" data-sheet="Projection onto a vector"><div class="eqlabel">Projection onto one vector</div>
+\[\mathrm{proj}_{\mathbf{u}}(\by)=\frac{\mathbf{u}\T\by}{\mathbf{u}\T\mathbf{u}}\,\mathbf{u}\]
+<p class="say">Read: “the projection of y onto u is (u dot y over u dot u) times u”. The fraction is the best coefficient; the leftover \(\by-\mathrm{proj}\) is at right angles to \(\mathbf{u}\).</p></div>
+<div class="worked"><div class="wt">Worked example · <b>two projections</b></div>
+<div class="given">(a) \(\by=(3,1)\) onto \(\mathbf{u}=(1,1)\). (b) Our data \(\by=(2,3,5)\) onto the all-ones vector \(\mathbf{1}=(1,1,1)\).</div>
+<ol class="steps">
+<li><div>(a) \(\mathbf{u}\T\by=3+1=4\), \(\mathbf{u}\T\mathbf{u}=2\), coefficient \(4/2=2\), projection \(2(1,1)=(2,2)\). Leftover \((3,1)-(2,2)=(1,-1)\). Check it is perpendicular: \((1,-1)\T(1,1)=1-1=0\) ✓.</div></li>
+<li><div>(b) \(\mathbf{1}\T\by=10\), \(\mathbf{1}\T\mathbf{1}=3\), coefficient \(10/3=3.3333\), projection \((3.3333,3.3333,3.3333)\).<span class="why">The coefficient is the <b>mean</b> \(\bar y\). If you must predict every \(y_i\) by one constant, the best constant in the least-squares sense is the mean: it is the projection onto \(\mathbf{1}\).</span></div></li>
+</ol>
+<div class="result">(a) \((2,2)\), leftover \((1,-1)\perp\mathbf{u}\). (b) \(\bar y\,\mathbf{1}\) with \(\bar y=10/3\).</div></div>
+
+<p>Least squares with several columns is the same idea in more dimensions. The possible prediction vectors \(\bX\bbeta\) are all the linear combinations of the columns of \(\bX\): the column space, a flat plane (for two columns) sitting inside \(\R^n\). The data vector \(\by\) usually does not lie in that plane. The closest point of the plane to \(\by\) is its projection \(\hat\by\), and at that point the residual \(\mathbf{e}=\by-\hat\by\) sticks out of the plane at a right angle: it is <b>orthogonal to every column of \(\bX\)</b>. Writing “orthogonal to every column” as dot products equal to zero gives</p>
+\[\bX\T(\by-\bX\hat\bbeta)=\mathbf{0}\quad\Longleftrightarrow\quad\bX\T\bX\hat\bbeta=\bX\T\by,\]
+<p>the normal equations. (“Normal” is an old word for perpendicular.) Check with our three points: \(\mathbf{e}=(0.1667,-0.3333,0.1667)\). Dot with column 1 (all ones): \(0.1667-0.3333+0.1667=0\) ✓. Dot with column 2 \((1,2,3)\): \(0.1667-0.6667+0.5=0\) ✓.</p>
+<div class="callout ece"><p><b>This is Fourier analysis with a non-orthogonal basis.</b> To find Fourier-series coefficients you projected the signal onto each basis function separately, \(c_k=\langle x,\phi_k\rangle/\langle\phi_k,\phi_k\rangle\), and that worked because sines and cosines are mutually orthogonal. The columns of a design matrix (a column of ones, a column of TV budgets) are usually <i>not</i> orthogonal, so projecting onto each column separately would double-count. The normal equations do the joint projection correctly: \((\bX\T\bX)^{-1}\) undoes the overlap between columns. If the columns were orthonormal, \(\bX\T\bX=\mathbf{I}\) and \(\hat\bbeta=\bX\T\by\): one separate projection per column, exactly your Fourier recipe.</p></div>
+
+<div class="widget" data-w="m-linalg-lsq" data-title="Least squares: shorten the residuals"><div class="wn">Move the intercept and slope sliders. The red segments are the residuals; the readout gives RSS and the two dot products \(\mathbf{1}\T\mathbf{e}\) and \(\bx\T\mathbf{e}\). Press “Solve the normal equations”: RSS drops to its minimum 0.1667 and both dot products become 0 (the residual is orthogonal to both columns). Drag a data point up or down and solve again.</div></div>
+
+<h3 id="m-linalg-eigen">Eigenvalues and eigenvectors (a first look)</h3>
+<p>Most vectors change direction when a matrix acts on them. A few special directions do not: the matrix only stretches (or shrinks, or flips) them. Such a vector is an <dfn data-g="eigenvector">eigenvector</dfn>, and the stretch factor is its <b>eigenvalue</b> \(\lambda\) (lambda):</p>
+<div class="mathblock" data-sheet="Eigenvalue equation"><div class="eqlabel">Eigenvalue equation</div>
+\[\mathbf{A}\mathbf{v}=\lambda\mathbf{v}\qquad(\mathbf{v}\ne\mathbf{0})\]
+<p class="say">Read: “A times v equals lambda times v”: applying the matrix to v gives the same arrow, scaled by the number lambda.</p></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>eigenvalues and eigenvectors of \(\begin{pmatrix}2&1\\1&2\end{pmatrix}\)</b></div>
+<div class="given">\(\mathbf{A}=\begin{pmatrix}2&1\\1&2\end{pmatrix}\), the starting matrix of the widget above.</div>
+<ol class="steps">
+<li><div><b>Why a determinant appears.</b> \(\mathbf{A}\mathbf{v}=\lambda\mathbf{v}\) is the same as \((\mathbf{A}-\lambda\mathbf{I})\mathbf{v}=\mathbf{0}\) with \(\mathbf{v}\ne\mathbf{0}\). A non-zero vector is squashed to zero only if \(\mathbf{A}-\lambda\mathbf{I}\) is singular, so we need \(\det(\mathbf{A}-\lambda\mathbf{I})=0\).</div></li>
+<li><div><b>Write it out:</b> \(\det\begin{pmatrix}2-\lambda&1\\1&2-\lambda\end{pmatrix}=(2-\lambda)^2-1=0\).</div></li>
+<li><div><b>Solve:</b> \((2-\lambda)^2=1\Rightarrow2-\lambda=\pm1\Rightarrow\lambda=1\) or \(\lambda=3\).</div></li>
+<li><div><b>Eigenvector for \(\lambda=3\):</b> \((\mathbf{A}-3\mathbf{I})\mathbf{v}=\begin{pmatrix}-1&1\\1&-1\end{pmatrix}\mathbf{v}=\mathbf{0}\) means \(-v_1+v_2=0\), so \(\mathbf{v}=(1,1)\). Check: \(\mathbf{A}(1,1)=(2+1,1+2)=(3,3)=3(1,1)\) ✓.</div></li>
+<li><div><b>Eigenvector for \(\lambda=1\):</b> \(\begin{pmatrix}1&1\\1&1\end{pmatrix}\mathbf{v}=\mathbf{0}\) means \(v_1+v_2=0\), so \(\mathbf{v}=(1,-1)\). Check: \(\mathbf{A}(1,-1)=(2-1,1-2)=(1,-1)\) ✓.</div></li>
+<li><div><b>Two quick checks</b> (Prince §23.3.8): the eigenvalues add to the <b>trace</b> (sum of the diagonal): \(1+3=4=2+2\) ✓; they multiply to the determinant: \(1\times3=3=4-1\) ✓.</div></li>
+</ol>
+<div class="result">\(\lambda_1=3\) along \((1,1)\); \(\lambda_2=1\) along \((1,-1)\). The two eigenvectors are orthogonal.</div></div>
+<p>In the widget, the matrix stretches the diagonal direction \((1,1)\) by 3 and leaves \((1,-1)\) alone, so the unit circle becomes an ellipse with its long axis along \((1,1)\). Prince's Figure 23.3 shows the same kind of picture:</p>
+<figure class="book small" data-fig="udl-23.3"><figcaption><b>Look at the circle and the ellipse.</b> Points on the unit circle (inner loop) are mapped by \(\mathbf{A}\) to the ellipse (outer loop); the colours show which point goes where. The grey arrows are the ellipse's longest and shortest axes. One precise note: the axis lengths of this ellipse are the matrix's <i>singular values</i>. For a <b>symmetric</b> matrix (such as our \(\begin{pmatrix}2&1\\1&2\end{pmatrix}\), and every covariance matrix) they equal the absolute eigenvalues, and the axes point along the eigenvectors; for a general matrix like the one in the figure they can differ, and NumPy reports complex eigenvalues for it.</figcaption></figure>
+<div class="callout key"><p><b>Where eigenvectors come back.</b> The eigenvectors of a covariance matrix point along the directions in which the data spread most; that is principal components analysis, used for PCR in <a href="#isl6-3">ISLP 6.3</a>. Symmetric matrices, the kind we meet most, always have real eigenvalues and orthogonal eigenvectors. And Prince uses the largest eigenvalue (the “spectral norm”) to describe how much a layer can stretch its input, which matters for how gradients grow or shrink in deep networks (<a href="#udl7">UDL 7</a>).</p></div>
+<div class="py" id="c-m-linalg-11"><pre class="src">
+A = np.array([[2., 1.], [1., 2.]])
+vals, vecs = np.linalg.eig(A)
+print("eigenvalues:", vals)
+print("eigenvectors (as COLUMNS, scaled to length 1):\n", vecs)
+v = vecs[:, 0]
+print("A v =", A @ v, "   lambda v =", vals[0] * v)
+print("trace", np.trace(A), "= sum", vals.sum(), "; det", np.linalg.det(A), "= product", vals.prod())
+</pre><div class="pynote"><b>Read the output:</b> NumPy scales each eigenvector to length 1, so \((1,1)\) appears as \((0.7071,0.7071)\), the same direction. The order of the eigenvalues may differ from ours; that does not matter. For symmetric matrices use <code>np.linalg.eigh</code>, which is faster and returns them sorted.</div></div>
+
+<h3 id="m-linalg-summary">Summary: the operations on one page</h3>
+<div class="tw"><table class="t"><thead><tr><th>Operation</th><th>Maths</th><th>NumPy</th><th>Shape</th></tr></thead><tbody>
+<tr><td>dot product</td><td>\(\mathbf{a}\T\mathbf{b}=\sum_d a_db_d\)</td><td><code>a @ b</code></td><td>\((D)\cdot(D)\to\) number</td></tr>
+<tr><td>length</td><td>\(\|\mathbf{a}\|=\sqrt{\mathbf{a}\T\mathbf{a}}\)</td><td><code>np.linalg.norm(a)</code></td><td>number</td></tr>
+<tr><td>matrix × vector</td><td>\((\mathbf{A}\bx)_i=\sum_j a_{ij}x_j\)</td><td><code>A @ x</code></td><td>\((m\times n)(n)\to(m)\)</td></tr>
+<tr><td>matrix × matrix</td><td>\((\mathbf{AB})_{ij}=\sum_k a_{ik}b_{kj}\)</td><td><code>A @ B</code></td><td>\((m\times n)(n\times p)\to(m\times p)\)</td></tr>
+<tr><td>entry-by-entry product</td><td>\(\mathbf{A}\odot\mathbf{B}\)</td><td><code>A * B</code></td><td>same shapes</td></tr>
+<tr><td>transpose</td><td>\(\mathbf{A}\T\)</td><td><code>A.T</code></td><td>\((m\times n)\to(n\times m)\)</td></tr>
+<tr><td>inverse</td><td>\(\mathbf{A}^{-1}\)</td><td><code>np.linalg.inv(A)</code></td><td>square only</td></tr>
+<tr><td>solve \(\mathbf{A}\bx=\mathbf{b}\)</td><td>\(\bx=\mathbf{A}^{-1}\mathbf{b}\)</td><td><code>np.linalg.solve(A, b)</code></td><td>square, full rank</td></tr>
+<tr><td>least squares</td><td>\(\hat\bbeta=(\bX\T\bX)^{-1}\bX\T\by\)</td><td><code>np.linalg.lstsq(X, y)</code></td><td>\((n\times p)\to(p)\)</td></tr>
+<tr><td>eigen</td><td>\(\mathbf{A}\mathbf{v}=\lambda\mathbf{v}\)</td><td><code>np.linalg.eig(A)</code></td><td>square</td></tr>
+</tbody></table></div>
+<div class="callout exam"><p><b>Interview classics from this lesson:</b> “What shape is \(\bX\T\bX\)?” (\(p\times p\)). “Why might \(\bX\T\bX\) not be invertible?” (collinear columns, or \(p\gt n\); ridge regression fixes it by adding \(\lambda\mathbf{I}\)). “Derive the normal equations” (residual orthogonal to the columns, or set the gradient to zero). “What is the difference between <code>*</code> and <code>@</code>?” “What does a zero determinant mean?”</p></div>
+
+<h3 id="m-linalg-practice">Practice: code exercises</h3>
+<p>Each exercise asks you to build an operation from its definition with plain loops, then checks it against NumPy. That is how you prove to yourself that you understand what <code>@</code> does.</p>
+
+<div class="ex" id="x-m-linalg-01" data-title="dot product from the definition"><div class="task"><p>Write <code>dot(a, b)</code> returning \(\sum_d a_db_d\) with a loop (do not use <code>@</code> or <code>np.dot</code>). <code>dot([2, 1], [1, 3])</code> gives <code>5</code>.</p></div>
+<pre class="src">
+def dot(a, b):
+    total = 0
+    for d in range(len(a)):
+        ...
+    return total
+</pre>
+<pre class="check">
+assert dot([2, 1], [1, 3]) == 5, f"dot([2,1],[1,3]) should be 5, got {dot([2,1],[1,3])}"
+assert dot([1, 2, 3], [4, -5, 6]) == 12, f"should be 12, got {dot([1,2,3],[4,-5,6])}"
+rng = np.random.default_rng(0); a, b = rng.normal(size=7), rng.normal(size=7)
+assert abs(dot(a, b) - a @ b) &lt; 1e-12, "should match a @ b on random vectors"
+assert dot([1, 2], [2, -1]) == 0, "orthogonal vectors have dot product 0"
+</pre>
+<div class="hint"><p>Inside the loop, add the product of entry <code>d</code> of each vector to <code>total</code>.</p></div>
+<div class="hint"><p><code>total = total + a[d] * b[d]</code></p></div>
+<pre class="solution">
+def dot(a, b):
+    total = 0
+    for d in range(len(a)):
+        total = total + a[d] * b[d]
+    return total
+</pre>
+<div class="explain"><p>The loop index <code>d</code> plays the role of the summation index in \(\sum_{d=1}^D a_db_d\) (Python counts from 0, the maths from 1).</p></div></div>
+
+<div class="ex" id="x-m-linalg-02" data-title="cosine similarity"><div class="task"><p>Write <code>cos_sim(a, b)</code> returning \(\frac{\mathbf{a}\T\mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}\). You may use <code>@</code> and <code>np.sqrt</code> (but not <code>np.linalg.norm</code>). <code>cos_sim([2, 1], [1, 3])</code> is about <code>0.7071</code>.</p></div>
+<pre class="src">
+def cos_sim(a, b):
+    a, b = np.asarray(a, float), np.asarray(b, float)
+    ...
+</pre>
+<pre class="check">
+assert abs(cos_sim([2, 1], [1, 3]) - 1/np.sqrt(2)) &lt; 1e-12, f"expected 0.7071, got {cos_sim([2,1],[1,3])}"
+assert abs(cos_sim([1, 0], [0, 5])) &lt; 1e-12, "perpendicular vectors: 0"
+assert abs(cos_sim([1, 2, 3], [2, 4, 6]) - 1) &lt; 1e-12, "same direction: 1, whatever the lengths"
+assert abs(cos_sim([1, 1], [-3, -3]) + 1) &lt; 1e-12, "opposite directions: -1"
+</pre>
+<div class="hint"><p>The length is <code>np.sqrt(a @ a)</code>.</p></div>
+<div class="hint"><p><code>return (a @ b) / (np.sqrt(a @ a) * np.sqrt(b @ b))</code></p></div>
+<pre class="solution">
+def cos_sim(a, b):
+    a, b = np.asarray(a, float), np.asarray(b, float)
+    return (a @ b) / (np.sqrt(a @ a) * np.sqrt(b @ b))
+</pre>
+<div class="explain"><p>Dividing by both lengths removes the effect of length, leaving only direction: \((1,2,3)\) and \((2,4,6)\) score exactly 1.</p></div></div>
+
+<div class="ex" id="x-m-linalg-03" data-title="matrix times vector with loops"><div class="task"><p>Write <code>matvec(A, x)</code> returning \(\mathbf{A}\bx\) as a NumPy array, using loops: entry \(i\) is \(\sum_j a_{ij}x_j\). Use <code>A.shape</code> to get \(m\) and \(n\).</p></div>
+<pre class="src">
+def matvec(A, x):
+    A, x = np.asarray(A, float), np.asarray(x, float)
+    m, n = A.shape
+    out = np.zeros(m)
+    for i in range(m):
+        for j in range(n):
+            ...
+    return out
+</pre>
+<pre class="check">
+assert np.allclose(matvec([[1, 2], [3, 4]], [5, 6]), [17, 39]), f"expected [17, 39], got {matvec([[1,2],[3,4]],[5,6])}"
+rng = np.random.default_rng(1); A, x = rng.normal(size=(4, 3)), rng.normal(size=3)
+assert matvec(A, x).shape == (4,), "a 4x3 matrix times a length-3 vector gives length 4"
+assert np.allclose(matvec(A, x), A @ x), "should match A @ x"
+</pre>
+<div class="hint"><p>Each step of the inner loop adds one product to <code>out[i]</code>.</p></div>
+<div class="hint"><p><code>out[i] += A[i, j] * x[j]</code></p></div>
+<pre class="solution">
+def matvec(A, x):
+    A, x = np.asarray(A, float), np.asarray(x, float)
+    m, n = A.shape
+    out = np.zeros(m)
+    for i in range(m):
+        for j in range(n):
+            out[i] += A[i, j] * x[j]
+    return out
+</pre>
+<div class="explain"><p>The outer loop picks a row (one entry of the answer); the inner loop is the dot product of that row with \(\bx\). <code>+=</code> means “add to what is already there”.</p></div></div>
+
+<div class="ex" id="x-m-linalg-04" data-title="matrix times matrix with loops"><div class="task"><p>Write <code>matmul(A, B)</code> with three loops: \((\mathbf{AB})_{ij}=\sum_k a_{ik}b_{kj}\). If the inner sizes do not match, <code>raise ValueError("shapes do not match")</code>.</p></div>
+<pre class="src">
+def matmul(A, B):
+    A, B = np.asarray(A, float), np.asarray(B, float)
+    m, n = A.shape
+    n2, p = B.shape
+    # check the shapes here
+    C = np.zeros((m, p))
+    for i in range(m):
+        for j in range(p):
+            for k in range(n):
+                ...
+    return C
+</pre>
+<pre class="check">
+assert np.allclose(matmul([[1, 2], [3, 4]], [[5, 6], [7, 8]]), [[19, 22], [43, 50]]), "ISLP's example: [[19,22],[43,50]]"
+assert np.allclose(matmul([[1, 0, 2], [-1, 3, 1]], [[3, 1], [2, 1], [1, 0]]), [[5, 1], [4, 2]]), "the 2x3 times 3x2 example"
+rng = np.random.default_rng(2); A, B = rng.normal(size=(3, 5)), rng.normal(size=(5, 2))
+assert np.allclose(matmul(A, B), A @ B), "should match A @ B"
+try:
+    matmul(np.ones((2, 3)), np.ones((2, 3)))
+    raise AssertionError("a (2,3) times (2,3) product should raise ValueError")
+except ValueError:
+    pass
+</pre>
+<div class="hint"><p>The check: <code>if n != n2: raise ValueError("shapes do not match")</code>.</p></div>
+<div class="hint"><p>Inner line: <code>C[i, j] += A[i, k] * B[k, j]</code>.</p></div>
+<pre class="solution">
+def matmul(A, B):
+    A, B = np.asarray(A, float), np.asarray(B, float)
+    m, n = A.shape
+    n2, p = B.shape
+    if n != n2:
+        raise ValueError("shapes do not match")
+    C = np.zeros((m, p))
+    for i in range(m):
+        for j in range(p):
+            for k in range(n):
+                C[i, j] += A[i, k] * B[k, j]
+    return C
+</pre>
+<div class="explain"><p>Two loops choose the cell \((i,j)\); the third is the dot product of row \(i\) and column \(j\). This costs \(m\cdot p\cdot n\) multiplications, which is why big matrix products dominate the run time of neural networks (and why GPUs exist).</p></div></div>
+
+<div class="ex" id="x-m-linalg-05" data-title="inverse of a 2×2 by the formula"><div class="task"><p>Write <code>inv2(A)</code> returning the inverse of a \(2\times2\) matrix by the swap–negate–divide formula. If the determinant is 0, <code>raise ValueError("singular")</code>.</p></div>
+<pre class="src">
+def inv2(A):
+    (a, b), (c, d) = np.asarray(A, float)
+    det = ...
+    ...
+</pre>
+<pre class="check">
+assert np.allclose(inv2([[4, 7], [2, 6]]), [[0.6, -0.7], [-0.2, 0.4]]), f"expected [[0.6,-0.7],[-0.2,0.4]], got {inv2([[4,7],[2,6]])}"
+M = np.array([[2., 1.], [1., 3.]])
+assert np.allclose(inv2(M), np.linalg.inv(M)), "should match np.linalg.inv"
+assert np.allclose(inv2(M) @ M, np.eye(2)), "inverse times matrix should be the identity"
+try:
+    inv2([[1, 2], [2, 4]])
+    raise AssertionError("[[1,2],[2,4]] is singular: should raise ValueError")
+except ValueError:
+    pass
+</pre>
+<div class="hint"><p><code>det = a * d - b * c</code>. Then check <code>if det == 0</code>.</p></div>
+<div class="hint"><p><code>return np.array([[d, -b], [-c, a]]) / det</code></p></div>
+<pre class="solution">
+def inv2(A):
+    (a, b), (c, d) = np.asarray(A, float)
+    det = a * d - b * c
+    if det == 0:
+        raise ValueError("singular")
+    return np.array([[d, -b], [-c, a]]) / det
+</pre>
+<div class="explain"><p>The first line “unpacks” the two rows into four names. In real code you would test <code>abs(det) &lt; 1e-12</code> rather than exactly 0, because floating-point determinants of singular matrices often come out as tiny non-zero numbers.</p></div></div>
+
+<div class="ex" id="x-m-linalg-06" data-title="least squares by the normal equations"><div class="task"><p>Write <code>fit_line(x, y)</code> that builds the design matrix (a column of ones, then <code>x</code>) and returns \(\hat\bbeta=(\hat\beta_0,\hat\beta_1)\) by solving the normal equations with <code>np.linalg.solve</code>. For \(x=(1,2,3)\), \(y=(2,3,5)\) it should return about <code>[0.3333, 1.5]</code>.</p></div>
+<pre class="src">
+def fit_line(x, y):
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    X = ...          # n x 2 design matrix
+    return ...
+</pre>
+<pre class="check">
+assert np.allclose(fit_line([1, 2, 3], [2, 3, 5]), [1/3, 1.5]), f"expected [0.3333, 1.5], got {fit_line([1,2,3],[2,3,5])}"
+assert np.allclose(fit_line([0, 1, 2], [1, 3, 4]), [7/6, 1.5]), "for (0,1),(1,3),(2,4) expected [1.1667, 1.5]"
+rng = np.random.default_rng(3); xx = rng.uniform(0, 10, 50); yy = 2 - 0.7 * xx + rng.normal(size=50)
+assert np.allclose(fit_line(xx, yy)[::-1], np.polyfit(xx, yy, 1)), "should match np.polyfit (which returns slope first)"
+</pre>
+<div class="hint"><p><code>X = np.column_stack([np.ones(len(x)), x])</code>.</p></div>
+<div class="hint"><p><code>return np.linalg.solve(X.T @ X, X.T @ y)</code></p></div>
+<pre class="solution">
+def fit_line(x, y):
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    X = np.column_stack([np.ones(len(x)), x])
+    return np.linalg.solve(X.T @ X, X.T @ y)
+</pre>
+<div class="explain"><p>This is the whole of least-squares fitting in two lines, and it works unchanged for any number of predictor columns. You will build on it in <a href="#proj1">Project 1</a>.</p></div></div>
+
+<div class="ex" id="x-m-linalg-07" data-title="projection onto a vector"><div class="task"><p>Write <code>project(y, u)</code> returning \(\frac{\mathbf{u}\T\by}{\mathbf{u}\T\mathbf{u}}\mathbf{u}\). <code>project([3, 1], [1, 1])</code> gives <code>[2, 2]</code>.</p></div>
+<pre class="src">
+def project(y, u):
+    y, u = np.asarray(y, float), np.asarray(u, float)
+    ...
+</pre>
+<pre class="check">
+assert np.allclose(project([3, 1], [1, 1]), [2, 2]), f"expected [2, 2], got {project([3,1],[1,1])}"
+assert np.allclose(project([2, 3, 5], [1, 1, 1]), [10/3] * 3), "projection onto the ones vector is the mean in every entry"
+rng = np.random.default_rng(4); y, u = rng.normal(size=6), rng.normal(size=6)
+r = y - project(y, u)
+assert abs(r @ u) &lt; 1e-10, "the leftover y - proj should be orthogonal to u"
+</pre>
+<div class="hint"><p>The coefficient is <code>(u @ y) / (u @ u)</code>.</p></div>
+<pre class="solution">
+def project(y, u):
+    y, u = np.asarray(y, float), np.asarray(u, float)
+    return (u @ y) / (u @ u) * u
+</pre>
+<div class="explain"><p>The third check is the defining property of a projection: the leftover is perpendicular to the direction projected on.</p></div></div>
+
+<h3 id="m-linalg-paper">Practice: pen and paper</h3>
+
+<div class="prob" id="p-m-linalg-01" data-src="Practice" data-title="Dot product and angle"><div class="stmt"><p>For \(\mathbf{a}=(1,2,2)\) and \(\mathbf{b}=(2,0,1)\), compute \(\mathbf{a}\T\mathbf{b}\), both lengths, and \(\cos\theta\). Type \(\cos\theta\) to 4 decimals.</p></div>
+<div class="ansin" data-answer="0.5963" data-tol="0.0005"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(\|\mathbf{a}\|=\sqrt{1+4+4}\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\mathbf{a}\T\mathbf{b}=4\), \(\|\mathbf{a}\|=3\), \(\|\mathbf{b}\|=\sqrt5\), \(\cos\theta=4/(3\sqrt5)=0.5963\) (\(\theta\approx53.4^\circ\)).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><ol class="steps"><li><div>\(1\cdot2+2\cdot0+2\cdot1=2+0+2=4\).</div></li><li><div>\(\|\mathbf{a}\|=\sqrt9=3\); \(\|\mathbf{b}\|=\sqrt{4+0+1}=\sqrt5=2.2361\).</div></li><li><div>\(\cos\theta=4/(3\times2.2361)=4/6.7082=0.5963\).</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Dividing by the squared lengths (9 and 5) instead of the lengths.</p></div></details></div>
+
+<div class="prob" id="p-m-linalg-02" data-src="Practice" data-title="Shapes"><div class="stmt"><p>\(\bX\) is \(100\times4\), \(\bbeta\) has length 4, \(\mathbf{W}\) is \(3\times4\). Which of these exist, and what shape is each? (a) \(\bX\bbeta\) (b) \(\bX\T\bX\) (c) \(\bX\bX\) (d) \(\mathbf{W}\bX\T\) (e) \(\bX\mathbf{W}\T\) (f) \(\bbeta\T\bX\T\bX\bbeta\). Type the number of entries of (d).</p></div>
+<div class="ansin" data-answer="300" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Write the shapes under each matrix and check that the inner numbers match.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>(a) length 100; (b) \(4\times4\); (c) impossible (4 ≠ 100); (d) \((3\times4)(4\times100)=3\times100\), 300 entries; (e) \((100\times4)(4\times3)=100\times3\); (f) a single number (\(1\times1\)): it equals \(\|\bX\bbeta\|^2\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>Apply \((m\times n)(n\times p)\to(m\times p)\) left to right. For (f): \(\bbeta\T\) is \(1\times4\), \(\bX\T\) is \(4\times100\), \(\bX\) is \(100\times4\), \(\bbeta\) is \(4\times1\): \((1\times4)(4\times100)(100\times4)(4\times1)=1\times1\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Forgetting that a transpose swaps the two numbers of a shape.</p></div></details></div>
+
+<div class="prob" id="p-m-linalg-03" data-src="Practice" data-title="A product by hand"><div class="stmt"><p>Compute \(\begin{pmatrix}2&-1\\0&3\\1&1\end{pmatrix}\begin{pmatrix}1&4\\2&-2\end{pmatrix}\). Type the bottom-right entry.</p></div>
+<div class="ansin" data-answer="2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>The result is \(3\times2\). Bottom-right = row 3 of the first with column 2 of the second.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\begin{pmatrix}0&10\\6&-6\\3&2\end{pmatrix}\)</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>Row 1: \((2,-1)\cdot(1,2)=2-2=0\); \((2,-1)\cdot(4,-2)=8+2=10\). Row 2: \((0,3)\cdot(1,2)=6\); \((0,3)\cdot(4,-2)=-6\). Row 3: \((1,1)\cdot(1,2)=3\); \((1,1)\cdot(4,-2)=2\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Using a column of the first matrix instead of a row. Always row (left) times column (right).</p></div></details></div>
+
+<div class="prob" id="p-m-linalg-04" data-src="Practice" data-title="Invert and solve"><div class="stmt"><p>Solve \(3x_1+x_2=9\), \(x_1+2x_2=8\) using the inverse of \(\begin{pmatrix}3&1\\1&2\end{pmatrix}\). Type \(x_1\).</p></div>
+<div class="ansin" data-answer="2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Determinant \(3\cdot2-1\cdot1=5\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(x_1=2,\ x_2=3\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(\mathbf{A}^{-1}=\frac15\begin{pmatrix}2&-1\\-1&3\end{pmatrix}\). \(\bx=\frac15\begin{pmatrix}2\cdot9-1\cdot8\\-1\cdot9+3\cdot8\end{pmatrix}=\frac15\begin{pmatrix}10\\15\end{pmatrix}=\begin{pmatrix}2\\3\end{pmatrix}\). Check: \(6+3=9\) ✓, \(2+6=8\) ✓.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Negating the diagonal instead of the off-diagonal entries.</p></div></details></div>
+
+<div class="prob" id="p-m-linalg-05" data-src="Practice" data-title="Normal equations for another three points"><div class="stmt"><p>Fit \(\hat y=\beta_0+\beta_1x\) to \((0,1),(1,3),(2,4)\) by forming \(\bX\T\bX\) and \(\bX\T\by\) and solving. Type \(\hat\beta_0\) to 4 decimals.</p></div>
+<div class="ansin" data-answer="1.1667" data-tol="0.0005"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(\bX\T\bX=\begin{pmatrix}n&\sum x\\\sum x&\sum x^2\end{pmatrix}\), \(\bX\T\by=\begin{pmatrix}\sum y\\\sum xy\end{pmatrix}\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\hat\beta_0=7/6\approx1.1667\), \(\hat\beta_1=1.5\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><ol class="steps"><li><div>\(\bX\T\bX=\begin{pmatrix}3&3\\3&5\end{pmatrix}\) (\(n=3\), \(\sum x=3\), \(\sum x^2=0+1+4=5\)).</div></li><li><div>\(\bX\T\by=\begin{pmatrix}8\\11\end{pmatrix}\) (\(\sum y=8\), \(\sum xy=0+3+8=11\)).</div></li><li><div>Determinant \(15-9=6\); inverse \(\frac16\begin{pmatrix}5&-3\\-3&3\end{pmatrix}\).</div></li><li><div>\(\hat\bbeta=\frac16\begin{pmatrix}40-33\\-24+33\end{pmatrix}=\frac16\begin{pmatrix}7\\9\end{pmatrix}=\begin{pmatrix}1.1667\\1.5\end{pmatrix}\).</div></li></ol></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Forgetting the column of ones, which forces the line through the origin.</p></div></details></div>
+
+<div class="prob" id="p-m-linalg-06" data-src="Practice" data-title="Eigenvalues of a 2×2"><div class="stmt"><p>Find the eigenvalues of \(\begin{pmatrix}4&1\\2&3\end{pmatrix}\) and an eigenvector for the larger one. Type the larger eigenvalue.</p></div>
+<div class="ansin" data-answer="5" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\((4-\lambda)(3-\lambda)-2=0\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\lambda=5\) (eigenvector \((1,1)\)) and \(\lambda=2\) (eigenvector \((1,-2)\)).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(\lambda^2-7\lambda+12-2=\lambda^2-7\lambda+10=(\lambda-5)(\lambda-2)=0\). For 5: \(\begin{pmatrix}-1&1\\2&-2\end{pmatrix}\mathbf{v}=\mathbf{0}\Rightarrow v_1=v_2\), \(\mathbf{v}=(1,1)\); check \((4+1,2+3)=(5,5)\) ✓. For 2: \(2v_1+v_2=0\), \(\mathbf{v}=(1,-2)\); check \((4-2,2-6)=(2,-4)=2(1,-2)\) ✓. Trace check \(5+2=7\) ✓, determinant check \(5\cdot2=10=12-2\) ✓. This matrix is not symmetric, so its eigenvectors are not orthogonal: \((1,1)\cdot(1,-2)=-1\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Subtracting \(\lambda\) from every entry rather than only the diagonal.</p></div></details></div>
+
+<div class="prob" id="p-m-linalg-07" data-src="Practice" data-title="Rank and collinearity"><div class="stmt"><p>A design matrix has columns: ones, temperature in °C, temperature in °F (\(F=1.8C+32\)). What is its rank if it has 50 rows and the temperatures vary? Is \(\bX\T\bX\) invertible? Type the rank.</p></div>
+<div class="ansin" data-answer="2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Is the °F column a linear combination of the other two?</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Rank 2, so the \(3\times3\) matrix \(\bX\T\bX\) is singular (not invertible).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>The °F column equals \(32\times(\text{ones})+1.8\times(\text{°C})\), a linear combination, so it adds no new direction. Three columns, two independent: rank 2. A \(3\times3\) matrix of rank 2 has determinant 0. Least squares cannot separate the effects of the two temperature columns: infinitely many \(\bbeta\) give the same predictions. This is perfect collinearity (ISLP §3.3.3).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Thinking that because °F is not a <i>multiple</i> of °C, they are independent. The column of ones absorbs the \(+32\).</p></div></details></div>
+
+<div class="prob" id="p-m-linalg-08" data-src="Practice" data-title="Orthogonal residuals"><div class="stmt"><p>For the three-point fit in the lesson, \(\mathbf{e}=(1/6,-1/3,1/6)\). Verify \(\bX\T\mathbf{e}=\mathbf{0}\). Then explain in one sentence why the residuals of any least-squares fit with an intercept add up to zero. Type \(\sum_ie_i\).</p></div>
+<div class="ansin" data-answer="0" data-tol="0.0001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>The first row of \(\bX\T\) is all ones.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\sum e_i=0\) and \(\sum x_ie_i=0\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(1/6-1/3+1/6=0\); \(1/6-2/3+3/6=(1-4+3)/6=0\). The first normal equation is “residual dotted with the ones column = 0”, which says exactly \(\sum_ie_i=0\). So whenever a model has an intercept, its least-squares residuals add to zero.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Expecting the residuals themselves to be zero. Only their dot products with the columns are.</p></div></details></div>
+
+<h3 id="m-linalg-review">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">\(\mathbf{A}\) is \(3\times5\) and \(\mathbf{B}\) is \(5\times2\). What is the shape of \(\mathbf{AB}\)?</p><ol class="opts"><li>\(5\times5\)</li><li>\(3\times2\)</li><li>\(2\times3\)</li><li>it does not exist</li></ol><div class="why">Inner sizes 5 and 5 match; the outer sizes give \(3\times2\). \(5\times5\) uses the inner numbers; \(2\times3\) is the shape of \((\mathbf{AB})\T\).</div></div>
+<div class="q" data-type="num" data-answer="0" data-tol="0.0001"><p class="stem">\((3,-2,1)\T(2,4,2)=\)?</p><div class="why">\(6-8+2=0\): the two vectors are orthogonal.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">In NumPy, for two arrays of shape (3, 3), what is <code>A * B</code>?</p><ol class="opts"><li>the matrix product</li><li>an error</li><li>the entry-by-entry product</li><li>the dot product of the flattened arrays</li></ol><div class="why"><code>*</code> multiplies matching entries. The matrix product is <code>A @ B</code>. No error, which is what makes the bug dangerous.</div></div>
+<div class="q" data-type="num" data-answer="-2" data-tol="0.001"><p class="stem">\(\det\begin{pmatrix}1&2\\3&4\end{pmatrix}=\)?</p><div class="why">\(1\cdot4-2\cdot3=4-6=-2\). Negative: the map flips the plane over, and doubles areas.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">The columns of \(\mathbf{A}\) tell you…</p><ol class="opts"><li>where the basic arrows \((1,0)\) and \((0,1)\) are sent</li><li>the eigenvalues</li><li>the inverse</li><li>nothing in particular</li></ol><div class="why">\(\mathbf{A}\mathbf{e}_1\) is column 1 and \(\mathbf{A}\mathbf{e}_2\) is column 2; every other output is a combination of them.</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">At the least-squares solution, the residual vector \(\by-\bX\hat\bbeta\) is…</p><ol class="opts"><li>zero</li><li>parallel to \(\by\)</li><li>as long as \(\by\)</li><li>orthogonal to every column of \(\bX\)</li></ol><div class="why">That is exactly what \(\bX\T(\by-\bX\hat\bbeta)=\mathbf{0}\) says. It is zero only if \(\by\) lies in the column space (a perfect fit).</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Why can \(\bX\T\bX\) fail to be invertible?</p><ol class="opts"><li>because \(n\) is too large</li><li>because some column of \(\bX\) is a linear combination of others (including whenever \(p\gt n\))</li><li>because \(\by\) has outliers</li><li>it is always invertible</li></ol><div class="why">Dependent columns mean rank below the number of columns, so \(\bX\T\bX\) is singular. Many rows never cause this; outliers affect the fit, not invertibility.</div></div>
+<div class="q" data-type="num" data-answer="3" data-tol="0.001"><p class="stem">The largest eigenvalue of \(\begin{pmatrix}2&1\\1&2\end{pmatrix}\) is…</p><div class="why">\((2-\lambda)^2=1\) gives 1 and 3.</div></div>
+<div class="q" data-type="open"><p class="stem">Explain to a friend in three sentences why \(\bX\bbeta\) gives all the predictions of a linear model at once.</p><div class="model">Each row of \(\bX\) holds one observation's inputs, with a 1 in front for the intercept. A matrix–vector product dots each row with \(\bbeta\), and that dot product \(\beta_0+\beta_1x_{i1}+\dots\) is exactly the model's prediction for that observation. So the \(n\) entries of \(\bX\bbeta\) are the \(n\) predictions.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">Dot product \(\mathbf{a}\T\mathbf{b}\)?</div><div class="b">\(\sum_d a_db_d\): multiply matching entries, add. Equals \(\|\mathbf{a}\|\|\mathbf{b}\|\cos\theta\).</div></div>
+<div class="fc"><div class="f">Two vectors are orthogonal when…</div><div class="b">their dot product is 0 (angle \(90^\circ\)).</div></div>
+<div class="fc"><div class="f">\((\mathbf{AB})_{ij}=\)?</div><div class="b">\(\sum_k a_{ik}b_{kj}\): row \(i\) of A dotted with column \(j\) of B.</div></div>
+<div class="fc"><div class="f">Shape rule for \(\mathbf{AB}\)</div><div class="b">\((m\times n)(n\times p)=(m\times p)\); inner sizes must match.</div></div>
+<div class="fc"><div class="f">\(\mathbf{A}\bx\) in the column picture</div><div class="b">A weighted sum of the columns of A, with weights \(x_j\).</div></div>
+<div class="fc"><div class="f">Inverse of \(\begin{pmatrix}a&b\\c&d\end{pmatrix}\)</div><div class="b">\(\frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}\)</div></div>
+<div class="fc"><div class="f">\((\mathbf{AB})\T=\)? and \((\mathbf{AB})^{-1}=\)?</div><div class="b">\(\mathbf{B}\T\mathbf{A}\T\) and \(\mathbf{B}^{-1}\mathbf{A}^{-1}\) (order reverses).</div></div>
+<div class="fc"><div class="f">Meaning of \(\det\mathbf{A}=0\)</div><div class="b">The map squashes a direction to zero: columns dependent, no inverse (singular).</div></div>
+<div class="fc"><div class="f">Normal equations</div><div class="b">\(\bX\T\bX\hat\bbeta=\bX\T\by\), i.e. \(\hat\bbeta=(\bX\T\bX)^{-1}\bX\T\by\).</div></div>
+<div class="fc"><div class="f">Least squares, geometrically</div><div class="b">\(\hat\by\) is the projection of \(\by\) onto the column space of \(\bX\); the residual is orthogonal to every column.</div></div>
+<div class="fc"><div class="f">Projection of \(\by\) onto \(\mathbf{u}\)</div><div class="b">\(\frac{\mathbf{u}\T\by}{\mathbf{u}\T\mathbf{u}}\mathbf{u}\)</div></div>
+<div class="fc"><div class="f">Eigenvector and eigenvalue</div><div class="b">\(\mathbf{A}\mathbf{v}=\lambda\mathbf{v}\): a direction the matrix only stretches, by \(\lambda\). Find \(\lambda\) from \(\det(\mathbf{A}-\lambda\mathbf{I})=0\).</div></div>
+<div class="fc"><div class="f">Sum and product of eigenvalues</div><div class="b">Sum = trace (diagonal sum); product = determinant.</div></div>
+<div class="fc"><div class="f">Shape of \(\bX\T\bX\) for \(\bX\) of shape \(n\times p\)</div><div class="b">\(p\times p\), symmetric.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can compute a dot product, a length and an angle by hand.</label>
+<label><input type="checkbox"> I can multiply matrices cell by cell and predict the shape first.</label>
+<label><input type="checkbox"> I can explain what a 2×2 matrix does to the unit square, and what its determinant means.</label>
+<label><input type="checkbox"> I can invert a 2×2 matrix and solve a 2×2 system by hand, and with <code>np.linalg.solve</code>.</label>
+<label><input type="checkbox"> I can build a design matrix and solve the normal equations for a small example.</label>
+<label><input type="checkbox"> I can explain least squares as a projection and check that the residual is orthogonal to the columns.</label>
+<label><input type="checkbox"> I can find the eigenvalues and eigenvectors of a 2×2 matrix.</label>
+</div>
+</section>

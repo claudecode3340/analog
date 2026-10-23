@@ -1,0 +1,574 @@
+<section class="lesson" id="m-prob" data-book="Prince pp. 449–462 · prepares ISLP 2–5">
+<p class="lede">Data are noisy, so every number a model learns is uncertain. Probability is the language for that uncertainty: ISLP uses it to say how much to trust a coefficient (standard errors, t-statistics, p-values) and to classify (Bayes' rule), and Prince uses it to derive every loss function (maximum likelihood). This lesson builds all of it from dice, coins and one medical test, with every number shown and every claim checked by simulation.</p>
+<div class="uses"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> <a href="#m-calc">Derivatives</a> <a href="#np2">NumPy II (randomness)</a> <a href="#plt1">matplotlib</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>describe a random variable by its PMF or PDF, and compute an expectation and a variance by hand;</li>
+<li>use the rules \(\E[aX+b]=a\E[X]+b\), \(\Var(aX+b)=a^2\Var(X)\) and the variance of a sum of independent variables;</li>
+<li>compute a covariance and a correlation from a small table;</li>
+<li>work with the Bernoulli, binomial, categorical, Poisson, uniform and normal distributions, and read a 2-D normal;</li>
+<li>apply Bayes' rule to a medical test, and explain why a positive result can still mean “probably healthy”;</li>
+<li>write a likelihood, maximise it with calculus, and see why least squares is maximum likelihood;</li>
+<li>compute a sample variance (with \(n-1\)), a standard error, a 95% confidence interval, a t-statistic and a p-value, and explain the danger of running many tests.</li></ul></div>
+
+<div class="callout book"><blockquote>Probability is critical to deep learning.</blockquote><cite>Prince, Appendix 24, p. 449</cite></div>
+
+<div class="py" id="c-m-prob-01" data-mode="setup"><pre class="src">
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+rng = np.random.default_rng(0)        # a seeded random generator: the same "random" numbers every run
+np.set_printoptions(precision=4, suppress=True)
+print("ready")
+</pre><div class="pynote">The setup cell: run it first. <code>scipy.stats</code> holds ready-made distributions (normal, t, binomial, …). The seed makes every simulation in this lesson repeatable.</div></div>
+
+<h3 id="m-prob-rv">Random variables: numbers we do not know yet</h3>
+<p>A <dfn data-g="random-variable">random variable</dfn> is a quantity whose value is uncertain until we observe it: the face a die shows, tomorrow's sales, whether a customer defaults. ISLP writes random variables as capitals (\(X\), \(Y\)) and the values they take as small letters (\(x\), \(y\)), so \(\Pr(X=x)\) reads “the probability that the random variable \(X\) takes the value \(x\)”. Prince usually drops the distinction and writes \(Pr(x)\) (Appendix A, p. 438).</p>
+<p>There are two kinds:</p>
+<ul>
+<li><b>Discrete</b>: takes separate values you can list (die faces 1–6, number of heads, class labels). Described by a <dfn data-g="pmf">probability mass function</dfn> (PMF), \(p(k)=\Pr(X=k)\). Every \(p(k)\) is between 0 and 1 and they add up to 1.</li>
+<li><b>Continuous</b>: takes any value in a range (a height, a voltage, a price). Described by a <dfn data-g="pdf">probability density function</dfn> (PDF) \(p(x)\). The probability of landing between \(a\) and \(b\) is the <b>area</b> under the PDF between them, \(\Pr(a\le X\le b)=\int_a^bp(x)\,dx\), and the total area is 1.</li>
+</ul>
+<div class="tw"><table class="t"><thead><tr><th>Fair die: \(k\)</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>total</th></tr></thead><tbody>
+<tr><td>\(p(k)=\Pr(X=k)\)</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1</td></tr></tbody></table></div>
+<div class="callout pitfall"><p><b>A density is not a probability.</b> For a continuous variable, \(\Pr(X=x)\) for one exact value is 0 (a single point has no width, hence no area). The density \(p(x)\) can even be bigger than 1: a uniform distribution on \([0,0.5]\) has density 2 everywhere on that interval, and total area \(2\times0.5=1\). Prince makes the same point on p. 449. Only areas are probabilities.</p></div>
+<div class="callout ece"><p>A PDF is exactly the amplitude distribution you met for noise in communications: the Gaussian PDF of thermal noise, the uniform PDF of quantisation error on \([-\Delta/2,\Delta/2]\). The <b>cumulative distribution function</b> (CDF) \(F(x)=\Pr(X\le x)=\int_{-\infty}^xp(t)\,dt\) is the running area, and the bit-error rate \(Q(\cdot)\) function is one minus the normal CDF.</p></div>
+
+<h3 id="m-prob-expect">Expectation and variance, by hand</h3>
+<p>The <dfn data-g="expectation">expected value</dfn> (or <b>mean</b>) \(\E[X]\) is the long-run average: each value weighted by its probability.</p>
+<div class="mathblock" data-sheet="Expectation"><div class="eqlabel">Expectation (Prince eq. 24.8)</div>
+\[\E[X]=\sum_kk\,p(k)\quad(\text{discrete}),\qquad\E[X]=\int x\,p(x)\,dx\quad(\text{continuous})\]
+<p class="say">Read: “E of X”, the expected value: add up every value times its probability (or integrate, for a density). Often written \(\mu\) (mu).</p></div>
+<p>The <dfn data-g="variance">variance</dfn> measures spread: the expected squared distance from the mean. Its square root, the <b>standard deviation</b> \(\sigma\), is in the same units as \(X\).</p>
+<div class="mathblock" data-sheet="Variance"><div class="eqlabel">Variance and the variance identity (Prince eq. 24.17)</div>
+\[\Var(X)=\E\big[(X-\mu)^2\big]=\E[X^2]-\big(\E[X]\big)^2,\qquad\sigma=\sqrt{\Var(X)}\]
+<p class="say">Read: “the variance of X is the expected squared deviation from the mean, which equals the mean of the squares minus the square of the mean”.</p></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>mean and variance of a fair die</b></div>
+<div class="given">\(k=1,\dots,6\), each with \(p(k)=\frac16\).</div>
+<ol class="steps">
+<li><div><b>Mean:</b> \(\E[X]=\frac16(1+2+3+4+5+6)=\frac{21}{6}=3.5\).<span class="why">The expected value need not be a possible outcome: no die shows 3.5.</span></div></li>
+<li><div><b>Mean of the squares:</b> \(\E[X^2]=\frac16(1+4+9+16+25+36)=\frac{91}{6}=15.1667\).</div></li>
+<li><div><b>Variance by the identity:</b> \(\Var(X)=15.1667-3.5^2=15.1667-12.25=2.9167\).</div></li>
+<li><div><b>Variance by the definition, as a check:</b> deviations \(k-3.5\) are \(-2.5,-1.5,-0.5,0.5,1.5,2.5\); squares \(6.25,2.25,0.25,0.25,2.25,6.25\), total 17.5; times \(\frac16\): \(2.9167\) ✓.</div></li>
+<li><div><b>Standard deviation:</b> \(\sigma=\sqrt{2.9167}=1.7078\).</div></li>
+</ol>
+<div class="result">\(\E[X]=3.5,\quad\Var(X)=35/12\approx2.9167,\quad\sigma\approx1.708\)</div></div>
+<div class="py" id="c-m-prob-02"><pre class="src">
+k = np.arange(1, 7)              # faces 1..6
+p = np.full(6, 1/6)              # each with probability 1/6
+mean = np.sum(k * p)
+var = np.sum((k - mean)**2 * p)
+print("exact:     mean", mean, " var", round(var, 4))
+rolls = rng.integers(1, 7, size=100_000)       # 100,000 simulated rolls
+print("simulated: mean", rolls.mean().round(4), " var", rolls.var().round(4))
+</pre><div class="pynote"><b>Read the output:</b> the exact values 3.5 and 2.9167, and a simulation of 100,000 rolls that lands very close to them: the average of many draws approximates the expectation (Prince eq. 24.10). <code>rng.integers(1, 7)</code> draws whole numbers from 1 up to but not including 7.</div></div>
+
+<h4>Rules for expectations and variances</h4>
+<p>These rules (Prince eq. 24.11) are used constantly, from ISLP's standard errors to Prince's weight initialisation in <a href="#udl7">UDL 7</a>. Here \(a,b\) are constants.</p>
+<div class="mathblock" data-sheet="Rules of expectation and variance"><div class="eqlabel">The rules</div>
+\[\begin{aligned}\E[aX+b]&=a\,\E[X]+b, &\Var(aX+b)&=a^2\Var(X),\\ \E[X+Y]&=\E[X]+\E[Y]\ \ (\text{always}), &\Var(X+Y)&=\Var(X)+\Var(Y)\ \ (\text{if independent}),\\ \E[XY]&=\E[X]\,\E[Y]\ \ (\text{if independent}). &&\end{aligned}\]
+<p class="say">Shifting by \(b\) moves the mean but not the spread; scaling by \(a\) scales the mean by \(a\) and the variance by \(a^2\). Means always add; variances add when the variables are independent.</p></div>
+<div class="worked"><div class="wt">Worked example · <b>using the rules on dice</b></div>
+<div class="given">\(X\) and \(Y\) are two independent fair dice: \(\E=3.5\), \(\Var=35/12\) each.</div>
+<ol class="steps">
+<li><div>\(\E[2X+1]=2(3.5)+1=8\); \(\Var(2X+1)=2^2\times35/12=35/3=11.667\).<span class="why">The \(+1\) shifts every value equally, so the spread is unchanged.</span></div></li>
+<li><div>Total of two dice: \(\E[X+Y]=7\); \(\Var(X+Y)=35/12+35/12=35/6=5.833\).</div></li>
+<li><div>Note \(2X\) (one die doubled) has variance \(4\times35/12=11.667\), but \(X+Y\) (two dice) only \(5.833\): independent errors partly cancel. That is the whole reason averaging helps.</div></li>
+<li><div><b>The average of \(n\) independent copies</b>, \(\bar X=\frac1n(X_1+\dots+X_n)\): \(\Var(\bar X)=\frac1{n^2}\times n\sigma^2=\frac{\sigma^2}{n}\).<span class="why">This single line is the origin of the standard error, \(\sigma/\sqrt n\), later in this lesson.</span></div></li>
+</ol>
+<div class="result">\(\Var(\bar X)=\sigma^2/n\): averaging \(n\) independent values divides the variance by \(n\).</div></div>
+<p>Two consequences you will use. <b>Standardising</b> (Prince eq. 24.19): \(Z=\frac{X-\mu}{\sigma}\) has mean 0 and variance 1, since \(\E[Z]=\frac{\mu-\mu}{\sigma}=0\) and \(\Var(Z)=\frac{\sigma^2}{\sigma^2}=1\). ISLP standardises predictors before ridge regression (<a href="#isl6-2">ISLP 6.2</a>). And for a sum of \(D\) independent terms \(w_jx_j\), the variances add, which is how Prince chooses the size of initial weights so that signals neither explode nor vanish through a deep network.</p>
+
+<h3 id="m-prob-cov">Covariance and correlation</h3>
+<p>Do two variables move together? The <dfn data-g="covariance">covariance</dfn> is the expected product of their deviations from their means:</p>
+<div class="mathblock" data-sheet="Covariance and correlation"><div class="eqlabel">Covariance and correlation</div>
+\[\Cov(X,Y)=\E\big[(X-\mu_X)(Y-\mu_Y)\big],\qquad\rho=\mathrm{Cor}(X,Y)=\frac{\Cov(X,Y)}{\sigma_X\sigma_Y}\in[-1,1]\]
+<p class="say">If big \(X\) tends to come with big \(Y\), the products of deviations are mostly positive, so the covariance is positive. Dividing by both standard deviations gives the correlation \(\rho\) (rho), which has no units and lies between \(-1\) and \(1\).</p></div>
+<p>From data, we use the sample versions: replace \(\E\) by an average over the \(n\) pairs, dividing by \(n-1\) (the reason for \(n-1\) comes later in this lesson):</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>covariance and correlation of five pairs</b></div>
+<div class="given">\(x=(1,2,3,4,5)\), \(y=(2,4,5,4,5)\), \(n=5\).</div>
+<ol class="steps">
+<li><div><b>Means:</b> \(\bar x=15/5=3\), \(\bar y=20/5=4\).</div></li>
+<li><div><b>Deviations:</b> \(x_i-\bar x=(-2,-1,0,1,2)\); \(y_i-\bar y=(-2,0,1,0,1)\).</div></li>
+<li><div><b>Products:</b> \((-2)(-2)=4,\ (-1)(0)=0,\ (0)(1)=0,\ (1)(0)=0,\ (2)(1)=2\). Sum \(=6\).</div></li>
+<li><div><b>Sample covariance:</b> \(\frac{6}{n-1}=\frac64=1.5\).</div></li>
+<li><div><b>Sample variances:</b> \(s_x^2=\frac{4+1+0+1+4}{4}=2.5\), \(s_y^2=\frac{4+0+1+0+1}{4}=1.5\).</div></li>
+<li><div><b>Correlation:</b> \(r=\frac{1.5}{\sqrt{2.5}\sqrt{1.5}}=\frac{1.5}{1.5811\times1.2247}=\frac{1.5}{1.9365}=0.7746\).</div></li>
+</ol>
+<div class="result">\(\widehat{\Cov}=1.5,\quad r=0.7746\): a fairly strong positive relationship.</div></div>
+<p>For a vector of variables, all the covariances are collected in the <b>covariance matrix</b> \(\bSigma\), with variances on the diagonal and covariances off it (Prince §24.2.2). For our pairs, \(\bSigma=\begin{pmatrix}2.5&1.5\\1.5&1.5\end{pmatrix}\): symmetric, as every covariance matrix is.</p>
+<div class="py" id="c-m-prob-03"><pre class="src">
+x = np.array([1, 2, 3, 4, 5.]); y = np.array([2, 4, 5, 4, 5.])
+print("covariance matrix:\n", np.cov(x, y))        # np.cov divides by n-1
+print("correlation:", np.corrcoef(x, y)[0, 1].round(4))
+fig, axes = plt.subplots(1, 4, figsize=(11, 2.8))
+for ax, r in zip(axes[:3], [-0.9, 0.0, 0.7]):
+    pts = rng.multivariate_normal([0, 0], [[1, r], [r, 1]], size=300)
+    ax.scatter(pts[:, 0], pts[:, 1], s=6); ax.set_title(f"correlation {r}")
+u = rng.uniform(-1, 1, 300)
+axes[3].scatter(u, u**2, s=6); axes[3].set_title(f"y = x², r = {np.corrcoef(u, u**2)[0, 1]:.2f}")
+for ax in axes: ax.set_xticks([]); ax.set_yticks([])
+plt.tight_layout()
+</pre><div class="pynote"><b>Read the output:</b> the hand numbers, then four scatter plots. Strong negative, none, moderate positive, and the last one: \(y=x^2\) is completely determined by \(x\), yet its correlation is about 0. Correlation measures only <i>straight-line</i> association; zero correlation does not mean independence (Prince §24.2.2 gives a circle as the example).</div></div>
+
+<h3 id="m-prob-dists">The distributions you will meet</h3>
+<div class="tw"><table class="t"><thead><tr><th>Name</th><th>Values</th><th>PMF / PDF</th><th>Mean</th><th>Variance</th><th>Used for</th></tr></thead><tbody>
+<tr><td><b>Bernoulli</b>\((p)\)</td><td>0 or 1</td><td>\(\Pr(1)=p,\ \Pr(0)=1-p\)</td><td>\(p\)</td><td>\(p(1-p)\)</td><td>one yes/no outcome; logistic regression (ISLP 4, Prince 5.4)</td></tr>
+<tr><td><b>binomial</b>\((n,p)\)</td><td>\(0,\dots,n\)</td><td>\(\binom nkp^k(1-p)^{n-k}\)</td><td>\(np\)</td><td>\(np(1-p)\)</td><td>number of successes in \(n\) tries</td></tr>
+<tr><td><b>categorical</b></td><td>\(1,\dots,K\)</td><td>\(\Pr(k)=\lambda_k\), \(\sum\lambda_k=1\)</td><td>–</td><td>–</td><td>multiclass classification (Prince 5.5, softmax)</td></tr>
+<tr><td><b>Poisson</b>\((\lambda)\)</td><td>\(0,1,2,\dots\)</td><td>\(\frac{\lambda^ke^{-\lambda}}{k!}\)</td><td>\(\lambda\)</td><td>\(\lambda\)</td><td>counts (bike rentals per hour, ISLP 4.6)</td></tr>
+<tr><td><b>uniform</b>\((a,b)\)</td><td>\([a,b]\)</td><td>\(\frac{1}{b-a}\)</td><td>\(\frac{a+b}2\)</td><td>\(\frac{(b-a)^2}{12}\)</td><td>random initial values, simulation</td></tr>
+<tr><td><b>normal</b>\((\mu,\sigma^2)\)</td><td>all of \(\R\)</td><td>\(\frac{1}{\sqrt{2\pi\sigma^2}}e^{-\frac{(x-\mu)^2}{2\sigma^2}}\)</td><td>\(\mu\)</td><td>\(\sigma^2\)</td><td>noise \(\epsilon\) in regression; almost everything</td></tr>
+</tbody></table></div>
+<div class="worked"><div class="wt">Worked example · <b>a binomial and a Poisson probability</b></div>
+<div class="given">(a) 10 fair coin flips: probability of exactly 7 heads. (b) Calls arrive at an average of \(\lambda=2\) per minute: probability of exactly 3 in a minute.</div>
+<ol class="steps">
+<li><div>(a) \(\binom{10}{7}=\frac{10!}{7!\,3!}=\frac{10\times9\times8}{3\times2\times1}=120\) ways to place the 7 heads. Each specific sequence has probability \(0.5^7\times0.5^3=0.5^{10}=\frac1{1024}\). So \(\Pr(7)=\frac{120}{1024}=0.1172\).</div></li>
+<li><div>(a) Mean \(np=5\), variance \(np(1-p)=2.5\).</div></li>
+<li><div>(b) \(\Pr(3)=\frac{2^3e^{-2}}{3!}=\frac{8\times0.13534}{6}=0.1804\).</div></li>
+</ol>
+<div class="result">(a) 0.1172 (b) 0.1804</div></div>
+
+<h4>The normal distribution</h4>
+<p>The <dfn data-g="normal-distribution">normal</dfn> (Gaussian) distribution is the bell curve. Prince writes it \(\mathrm{Norm}_x[\mu,\sigma^2]\) (eq. 24.25), ISLP writes \(N(\mu,\sigma^2)\):</p>
+<div class="mathblock" data-sheet="Normal density"><div class="eqlabel">Normal density</div>
+\[p(x)=\frac{1}{\sqrt{2\pi\sigma^2}}\exp\!\left[-\frac{(x-\mu)^2}{2\sigma^2}\right]\]
+<p class="say">Read: “one over root two-pi sigma-squared, times e to the minus (x minus mu) squared over two sigma squared”. The exponent is a downward parabola centred at \(\mu\); exp turns it into a bell; the front factor makes the area 1.</p></div>
+<p>Prince's explanation (p. 457) is worth repeating: the exponent \(-(x-\mu)^2/2\sigma^2\) is 0 at \(x=\mu\) and falls away on both sides, faster when \(\sigma\) is small; \(e^{(\cdot)}\) turns that into a bump of height 1; dividing by \(\sqrt{2\pi\sigma^2}\) scales it to area 1. So \(\mu\) places the bump and \(\sigma\) sets its width. The <b>standard normal</b> has \(\mu=0,\sigma=1\). Three numbers to remember: about <b>68%</b> of the area lies within \(1\sigma\) of the mean, <b>95%</b> within \(1.96\sigma\) (“about 2”), and <b>99.7%</b> within \(3\sigma\).</p>
+<div class="worked"><div class="wt">Worked example · <b>normal probabilities by standardising</b></div>
+<div class="given">Test scores \(X\sim N(100,15^2)\). Find \(\Pr(X\gt130)\) and \(\Pr(85\lt X\lt110)\).</div>
+<ol class="steps">
+<li><div>Standardise: \(z=\frac{130-100}{15}=2\). \(\Pr(X\gt130)=\Pr(Z\gt2)=1-\Phi(2)=1-0.9772=0.0228\).<span class="why">\(\Phi\) (capital phi) is the standard normal CDF, from a table or <code>stats.norm.cdf</code>.</span></div></li>
+<li><div>\(z\)-values \(\frac{85-100}{15}=-1\) and \(\frac{110-100}{15}=0.667\). \(\Pr=\Phi(0.667)-\Phi(-1)=0.7475-0.1587=0.5889\).</div></li>
+</ol>
+<div class="result">\(\Pr(X\gt130)=0.0228,\quad\Pr(85\lt X\lt110)=0.5889\)</div></div>
+<div class="widget" data-w="m-prob-normal" data-title="The normal curve: area is probability"><div class="wn">Move \(\mu\) and \(\sigma\) and the two ends of the shaded interval. The shaded area is the probability, computed live. Set \(\mu=0,\sigma=1\) and the interval to \([-1,1]\), then \([-1.96,1.96]\): 68% and 95%. Make \(\sigma\) small (0.3): the peak rises above 1, yet the total area stays 1.</div></div>
+<div class="py" id="c-m-prob-04"><pre class="src">
+print("P(X > 130)        =", round(1 - stats.norm.cdf(130, loc=100, scale=15), 4))
+print("P(85 &lt; X &lt; 110)   =", round(stats.norm.cdf(110, 100, 15) - stats.norm.cdf(85, 100, 15), 4))
+print("P(|Z| &lt; 1), P(|Z| &lt; 1.96):", round(stats.norm.cdf(1) - stats.norm.cdf(-1), 4), round(stats.norm.cdf(1.96) - stats.norm.cdf(-1.96), 4))
+print("binomial P(7 of 10):", round(stats.binom.pmf(7, 10, 0.5), 4), "  Poisson P(3 | lambda=2):", round(stats.poisson.pmf(3, 2), 4))
+</pre><div class="pynote"><b>Read the output:</b> every number from the two worked examples. In <code>stats.norm.cdf(x, loc, scale)</code>, <code>loc</code> is \(\mu\) and <code>scale</code> is \(\sigma\) (the standard deviation, <i>not</i> the variance: a classic slip).</div></div>
+
+<h4>The multivariate normal</h4>
+<p>For a vector \(\bx\in\R^D\), the normal distribution has a mean vector \(\bmu\) and a covariance matrix \(\bSigma\) (Prince eq. 24.26):</p>
+\[p(\bx)=\frac{1}{(2\pi)^{D/2}|\bSigma|^{1/2}}\exp\!\left[-\tfrac12(\bx-\bmu)\T\bSigma^{-1}(\bx-\bmu)\right].\]
+<p>Read it as the 1-D formula with each piece upgraded: \((x-\mu)^2/\sigma^2\) becomes \((\bx-\bmu)\T\bSigma^{-1}(\bx-\bmu)\) (a number, built from <a href="#m-linalg">matrix products</a>), and \(\sigma^2\) in the front factor becomes the determinant \(|\bSigma|\). Points of equal density form ellipses. ISLP's linear discriminant analysis models each class as exactly this (<a href="#isl4-2">ISLP 4.4</a>).</p>
+<figure class="book" data-fig="udl-24.4"><figcaption><b>Read the matrices at the bottom of each panel.</b> (a–b) Spherical: \(\bSigma\) is a multiple of \(\mathbf{I}\), so contours are circles. (c–d) Diagonal: different variances, zero covariance, so ellipses aligned with the axes. (e–f) Full: non-zero off-diagonal covariance tilts the ellipse. In (f) the covariance 0.7 is positive, so the ellipse leans up-right: large \(z_1\) comes with large \(z_2\). The ellipse axes point along the eigenvectors of \(\bSigma\).</figcaption></figure>
+
+<h3 id="m-prob-joint">Joint, marginal and conditional probability</h3>
+<p>With two variables we need three kinds of probability. Here is a small made-up table of 1,000 patients, counted by smoking and by a lung condition:</p>
+<div class="tw"><table class="t"><thead><tr><th></th><th>condition</th><th>no condition</th><th>total</th></tr></thead><tbody>
+<tr><td>smoker</td><td class="n">60</td><td class="n">140</td><td class="n">200</td></tr>
+<tr><td>non-smoker</td><td class="n">40</td><td class="n">760</td><td class="n">800</td></tr>
+<tr><td>total</td><td class="n">100</td><td class="n">900</td><td class="n">1000</td></tr></tbody></table></div>
+<ul>
+<li><b>Joint</b> \(\Pr(\text{smoker},\text{condition})=60/1000=0.06\): both at once, one cell.</li>
+<li><b>Marginal</b> \(\Pr(\text{condition})=100/1000=0.10\): one variable, ignoring the other; add along a row or column (the margins of the table, hence the name). Prince eq. 24.2 does this with an integral.</li>
+<li><b>Conditional</b> \(\Pr(\text{condition}\mid\text{smoker})=60/200=0.30\): restrict to the smokers' row, then take the fraction. In general (Prince eq. 24.3) \[\Pr(A\mid B)=\frac{\Pr(A,B)}{\Pr(B)}=\frac{0.06}{0.20}=0.30.\]</li>
+</ul>
+<p>Compare \(\Pr(\text{condition}\mid\text{non-smoker})=40/800=0.05\). Because knowing smoking status changes the probability (0.30 versus 0.05), the two variables are <b>dependent</b>. Two variables are <dfn data-g="independence">independent</dfn> when knowing one tells you nothing about the other: \(\Pr(A\mid B)=\Pr(A)\), equivalently \(\Pr(A,B)=\Pr(A)\Pr(B)\) (Prince eq. 24.7). Here \(\Pr(\text{smoker})\Pr(\text{condition})=0.2\times0.1=0.02\ne0.06\).</p>
+<figure class="book" data-fig="udl-24.2"><figcaption><b>Conditioning is slicing.</b> (a) The joint density of \(x\) and \(y\) as a heat map. The two cyan lines are slices at \(y=3\) and \(y=-1\). (b–c) Each slice, rescaled to have area 1, is the conditional distribution \(Pr(x\mid y)\). The two slices have different shapes, so here \(x\) and \(y\) are dependent; Prince's Figure 24.3 shows the independent case, where every slice has the same shape.</figcaption></figure>
+
+<h3 id="m-prob-bayes">Bayes' rule and the medical test</h3>
+<p>Writing the joint probability two ways, \(\Pr(A,B)=\Pr(A\mid B)\Pr(B)=\Pr(B\mid A)\Pr(A)\), and dividing gives <dfn data-g="bayes-rule">Bayes' rule</dfn> (Prince eq. 24.6):</p>
+<div class="mathblock" data-sheet="Bayes' rule"><div class="eqlabel">Bayes' rule</div>
+\[\Pr(A\mid B)=\frac{\Pr(B\mid A)\,\Pr(A)}{\Pr(B)},\qquad\Pr(B)=\Pr(B\mid A)\Pr(A)+\Pr(B\mid\text{not }A)\Pr(\text{not }A)\]
+<p class="say">Read: “the probability of A given B equals the probability of B given A, times the probability of A, divided by the probability of B”. It turns “how likely is the evidence if the hypothesis is true” into “how likely is the hypothesis given the evidence”. The names: \(\Pr(A)\) prior, \(\Pr(B\mid A)\) likelihood, \(\Pr(A\mid B)\) posterior, \(\Pr(B)\) evidence.</p></div>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>a positive test for a rare disease</b></div>
+<div class="given">1% of people have a disease (prevalence). The test detects 90% of sick people (sensitivity \(\Pr(+\mid D)=0.90\)) and correctly clears 91% of healthy people (specificity, so \(\Pr(+\mid\text{healthy})=0.09\)). You test positive. What is \(\Pr(D\mid+)\)?</div>
+<ol class="steps">
+<li><div><b>Think in people.</b> Imagine 10,000 people. 100 have the disease; 9,900 do not.</div></li>
+<li><div><b>Of the 100 sick,</b> 90% test positive: 90 true positives.</div></li>
+<li><div><b>Of the 9,900 healthy,</b> 9% test positive: 891 false positives.</div></li>
+<li><div><b>Among all 981 positives,</b> only 90 are sick: \(\Pr(D\mid+)=\frac{90}{981}=0.0917\).</div></li>
+<li><div><b>The same with the formula:</b> \(\Pr(+)=0.90\times0.01+0.09\times0.99=0.009+0.0891=0.0981\), and \(\Pr(D\mid+)=\frac{0.90\times0.01}{0.0981}=0.0917\).<span class="why">The prior matters enormously. The disease is so rare that false positives from the huge healthy group outnumber true positives ten to one.</span></div></li>
+</ol>
+<div class="result">\(\Pr(D\mid+)\approx9.2\%\): a positive result raises the probability from 1% to 9%, but you are still probably healthy.</div></div>
+<div class="widget" data-w="m-prob-bayes" data-title="Bayes' rule with 1,000 people"><div class="wn">Each square is a person. Red-filled squares are sick people who test positive, outlined red squares are sick people the test misses, orange squares are healthy people who test positive. Move the prevalence to 20%: the same test now gives a much higher posterior. Then push specificity to 99.9%: false positives almost vanish. The posterior is red-filled ÷ (red-filled + orange).</div></div>
+<div class="callout key"><p><b>Where Bayes' rule comes back.</b> ISLP's <b>Bayes classifier</b> assigns each \(x\) to the class with the largest \(\Pr(Y=k\mid X=x)\) (<a href="#isl2-2">ISLP 2.2</a>), and §4.4 computes it with exactly this rule: \[\Pr(Y=k\mid X=x)=\frac{\pi_kf_k(x)}{\sum_{l=1}^K\pi_lf_l(x)},\] where \(\pi_k\) (pi-k) is the prior probability of class \(k\) and \(f_k(x)\) the density of \(x\) within class \(k\) (<a href="#isl4-2">ISLP 4.4</a>). The denominator is \(\Pr(X=x)\), summed over the classes, exactly like \(\Pr(+)\) above.</p></div>
+
+<h3 id="m-prob-lik">Likelihood and maximum likelihood</h3>
+<p>So far the parameters were known and we asked about data. In machine learning it is the other way round: the data are known and the parameters are not. The <dfn data-g="likelihood">likelihood</dfn> is the probability of the observed data, viewed as a function of the parameter (Prince §24.1.3).</p>
+<p>A coin is flipped 10 times and shows 7 heads (in some particular order). If the probability of heads is \(p\), the probability of that sequence is</p>
+<div class="mathblock" data-sheet="Bernoulli likelihood"><div class="eqlabel">Likelihood of \(k\) heads in \(n\) independent flips</div>
+\[L(p)=\prod_{i=1}^{n}p^{y_i}(1-p)^{1-y_i}=p^k(1-p)^{n-k},\qquad\log L(p)=k\log p+(n-k)\log(1-p)\]
+<p class="say">Each flip \(y_i\) (1 for heads, 0 for tails) contributes \(p\) if heads and \(1-p\) if tails; independence lets us multiply. The log turns the product into a sum.</p></div>
+<div class="tw"><table class="t"><thead><tr><th>\(p\)</th><th>0.3</th><th>0.5</th><th>0.7</th><th>0.9</th></tr></thead><tbody>
+<tr><td>\(L(p)=p^7(1-p)^3\)</td><td class="n">0.000075</td><td class="n">0.000977</td><td class="n"><span class="hlg">0.002224</span></td><td class="n">0.000478</td></tr></tbody></table></div>
+<p>The value \(p=0.7\) makes the observed data most probable. The <dfn data-g="mle">maximum likelihood estimate</dfn> (MLE) is the parameter that maximises the likelihood. With calculus:</p>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>the MLE of a coin's bias</b></div>
+<div class="given">\(\log L(p)=k\log p+(n-k)\log(1-p)\) with \(k=7\), \(n=10\).</div>
+<ol class="steps">
+<li><div><b>Why the log?</b> \(\log\) is increasing, so the \(p\) that maximises \(\log L\) also maximises \(L\). The log is a sum (easy to differentiate) and avoids tiny numbers (\(L(0.7)=0.0022\) here; with 1,000 flips it would be about \(10^{-266}\)).</div></li>
+<li><div><b>Differentiate</b> (\(\frac{d}{dp}\log p=\frac1p\); \(\frac{d}{dp}\log(1-p)=\frac{-1}{1-p}\) by the chain rule): \[\frac{d\log L}{dp}=\frac kp-\frac{n-k}{1-p}.\]</div></li>
+<li><div><b>Set to zero:</b> \(\frac kp=\frac{n-k}{1-p}\Rightarrow k(1-p)=(n-k)p\Rightarrow k-kp=np-kp\Rightarrow\hat p=\frac kn\).</div></li>
+<li><div><b>Numbers:</b> \(\hat p=7/10=0.7\), and \(\log L(0.7)=7\log0.7+3\log0.3=7(-0.3567)+3(-1.2040)=-6.1086\).</div></li>
+</ol>
+<div class="result">\(\hat p_{\text{MLE}}=k/n=0.7\): the sample proportion.</div></div>
+<div class="widget" data-w="m-prob-lik" data-title="Likelihood of a coin's bias" data-args='{"n":10,"k":7}'><div class="wn">The top curve is the likelihood \(L(p)\), the bottom one the log-likelihood. Drag \(p\): the tangent's slope on the log-likelihood is zero exactly at the peak, \(\hat p=k/n\). Increase \(n\) while keeping \(k/n\) the same (try \(n=100\), \(k=70\)): the peak stays put but becomes much narrower. More data, less uncertainty about \(p\).</div></div>
+<div class="callout key"><p><b>Least squares is maximum likelihood.</b> Suppose \(y_i=f(x_i)+\epsilon_i\) with \(\epsilon_i\sim N(0,\sigma^2)\) independent. Each \(y_i\) has density \(\frac1{\sqrt{2\pi\sigma^2}}\exp[-\frac{(y_i-f(x_i))^2}{2\sigma^2}]\), so \[\log L=\sum_{i=1}^n\Big[-\tfrac12\log(2\pi\sigma^2)-\frac{(y_i-f(x_i))^2}{2\sigma^2}\Big]=\text{const}-\frac{1}{2\sigma^2}\sum_{i=1}^n(y_i-f(x_i))^2.\] Maximising this is the same as minimising \(\sum(y_i-f(x_i))^2\), the RSS. Prince Chapter 5 (<a href="#udl5">UDL 5</a>) builds every loss this way: choose a distribution for the output, write its negative log-likelihood, minimise. The Bernoulli likelihood gives the binary cross-entropy loss of logistic regression.</p></div>
+
+<h3 id="m-prob-sampling">Samples, the sample variance and the standard error</h3>
+<p>In practice we never see a distribution, only a <b>sample</b> of \(n\) values drawn from it (independently and from the same distribution: “iid”). From the sample we compute <b>statistics</b> that estimate the unknown truth:</p>
+<div class="mathblock" data-sheet="Sample mean and variance"><div class="eqlabel">Sample mean and sample variance</div>
+\[\bar x=\frac1n\sum_{i=1}^nx_i,\qquad s^2=\frac{1}{n-1}\sum_{i=1}^n(x_i-\bar x)^2\]
+<p class="say">Read: “x-bar” estimates \(\mu\); “s squared” estimates \(\sigma^2\). Note the \(n-1\).</p></div>
+<p><b>Why \(n-1\)?</b> The deviations are measured from \(\bar x\), which was fitted to these same data, so they are on average a little smaller than deviations from the true \(\mu\). Dividing by \(n-1\) instead of \(n\) exactly corrects this, making \(s^2\) <b>unbiased</b>: right on average. (One way to see it: the \(n\) deviations must add to zero, so only \(n-1\) of them are free; we say one <b>degree of freedom</b> was used up estimating the mean.) The simulation below shows the bias. NumPy's <code>np.var</code> divides by \(n\) unless you write <code>ddof=1</code>; pandas' <code>.var()</code> divides by \(n-1\). In ISLP's regression, two parameters are estimated, so the noise variance estimate divides by \(n-2\) (the RSE, eq. 3.15).</p>
+<div class="py" id="c-m-prob-05"><pre class="src">
+# 100,000 samples of size n = 5 from N(0, 2^2): true variance 4
+samples = rng.normal(0, 2, size=(100_000, 5))
+v_n  = samples.var(axis=1, ddof=0)     # divide by n
+v_n1 = samples.var(axis=1, ddof=1)     # divide by n - 1
+print("average of the divide-by-n   estimates:", v_n.mean().round(3))
+print("average of the divide-by-(n-1) estimates:", v_n1.mean().round(3), "  (truth: 4)")
+</pre><div class="pynote"><b>Read the output:</b> dividing by \(n\) gives about 3.2, which is \(\frac{n-1}{n}\times4=\frac45\times4\): too small on average. Dividing by \(n-1\) gives about 4. Each row of <code>samples</code> is one sample of 5 values; <code>axis=1</code> computes along each row.</div></div>
+
+<h4>The standard error: how much an estimate wobbles</h4>
+<p>If you collected a new sample, you would get a different \(\bar x\). The standard deviation of an estimate across repeated samples is its <dfn data-g="standard-error">standard error</dfn> (SE). From the rules above, \(\Var(\bar x)=\sigma^2/n\), so</p>
+<div class="mathblock" data-sheet="Standard error of the mean"><div class="eqlabel">Standard error of the mean (ISLP eq. 3.7)</div>
+\[\SE(\bar x)=\frac{\sigma}{\sqrt n}\approx\frac{s}{\sqrt n}\]
+<p class="say">Read: “the standard error of x-bar is sigma over root n”. Four times the data halves the uncertainty.</p></div>
+<p>ISLP writes this as \(\Var(\hat\mu)=\SE(\hat\mu)^2=\sigma^2/n\) on p. 75, then gives similar formulas for the regression coefficients \(\hat\beta_0,\hat\beta_1\) (eq. 3.8). Example: \(n=16\) measurements with \(s=6\) give \(\SE=6/4=1.5\).</p>
+
+<h3 id="m-prob-clt">The central limit theorem, by simulation</h3>
+<p>Here is one of the most useful facts in statistics. Take the mean of \(n\) independent draws from almost <i>any</i> distribution (with finite variance). As \(n\) grows, the distribution of that mean approaches a normal distribution with mean \(\mu\) and standard deviation \(\sigma/\sqrt n\), whatever the original shape. This is the <dfn data-g="clt">central limit theorem</dfn> (CLT).</p>
+<p>It is why normal distributions are everywhere (a measurement error is the sum of many small effects), and why ISLP can use “estimate ± 2 SE” and normal-based p-values even when the data themselves are not normal.</p>
+<div class="widget" data-w="m-prob-clt" data-title="The central limit theorem" data-args='{"seed":7}'><div class="wn">Pick a starting distribution (the small grey picture shows its shape) and a sample size \(n\). The histogram shows 3,000 sample means; the curve is the normal distribution the CLT predicts, with standard deviation \(\sigma/\sqrt n\). Start with the very skewed “exponential” at \(n=1\) (the histogram is just the distribution itself), then raise \(n\) to 5 and 30: the histogram becomes a bell, and narrows like \(1/\sqrt n\).</div></div>
+<div class="py" id="c-m-prob-06"><pre class="src">
+n = 30
+means = rng.exponential(scale=1.0, size=(20_000, n)).mean(axis=1)   # exponential: mean 1, sd 1
+print("mean of the sample means:", means.mean().round(4), "  (CLT: 1)")
+print("sd of the sample means:  ", means.std().round(4), "  (CLT: 1/sqrt(30) =", round(1/np.sqrt(30), 4), ")")
+plt.figure(figsize=(6, 3))
+plt.hist(means, bins=60, density=True, alpha=0.6, label="20,000 sample means")
+g = np.linspace(0.3, 1.8, 200)
+plt.plot(g, stats.norm.pdf(g, 1, 1/np.sqrt(n)), lw=2, label="normal predicted by the CLT")
+plt.legend(); plt.xlabel("sample mean of 30 exponential draws")
+</pre><div class="pynote"><b>Read the output:</b> the mean and the spread match the CLT's predictions, and the histogram is close to the normal curve (still slightly skewed to the right: \(n=30\) is large but not infinite). <code>density=True</code> scales the histogram to area 1 so it can be compared with a PDF.</div></div>
+
+<h3 id="m-prob-ci">Confidence intervals</h3>
+<p>Since \(\bar x\) is approximately normal with standard deviation \(\SE\), it lands within \(1.96\,\SE\) of \(\mu\) in 95% of samples. Turning that round gives a <dfn data-g="confidence-interval">95% confidence interval</dfn>:</p>
+<div class="mathblock" data-sheet="95% confidence interval"><div class="eqlabel">Approximate 95% confidence interval (ISLP eq. 3.9 uses 2)</div>
+\[\bar x\pm1.96\,\SE(\bar x),\qquad\text{e.g. }\hat\beta_1\pm2\cdot\SE(\hat\beta_1)\]
+<p class="say">An interval built this way contains the true value in about 95% of repeated samples.</p></div>
+<p>Example: \(n=16\), \(\bar x=52.4\), \(s=6\): \(\SE=1.5\), and the interval is \(52.4\pm1.96\times1.5=52.4\pm2.94=[49.46,\ 55.34]\). (With only 16 points the exact interval uses the t-distribution's 2.131 instead of 1.96, giving \([49.20,\ 55.60]\); the difference vanishes as \(n\) grows.) For the Advertising data, ISLP reports the 95% interval for the TV slope as \([0.042,\ 0.053]\) (p. 76).</p>
+<div class="callout pitfall"><p><b>What “95%” means.</b> It is a property of the <i>procedure</i>: 95% of intervals built this way, from repeated samples, catch the true value. Once you have one particular interval, the true value is either in it or not. The next cell builds 100 intervals and counts how many catch the truth.</p></div>
+<div class="py" id="c-m-prob-07"><pre class="src">
+mu_true, sigma, n = 50, 6, 16
+hits = 0
+for _ in range(100):
+    xs = rng.normal(mu_true, sigma, n)
+    se = xs.std(ddof=1) / np.sqrt(n)
+    lo, hi = xs.mean() - 1.96 * se, xs.mean() + 1.96 * se
+    hits += (lo &lt;= mu_true &lt;= hi)
+print(f"{hits} of 100 intervals contain the true mean")
+</pre><div class="pynote"><b>Read the output:</b> close to 95 (a little lower is typical here, because with \(n=16\) the 1.96 should really be the t-value 2.131). Change <code>n</code> to 200 and run again: the count settles near 95.</div></div>
+
+<h3 id="m-prob-tests">Hypothesis tests, t-statistics and p-values</h3>
+<p>ISLP's first big question about a regression (§3.1.2) is: is there any relationship at all, or could the slope we estimated be just noise? A <dfn data-g="hypothesis-test">hypothesis test</dfn> answers it in four steps:</p>
+<ol>
+<li><b>Null hypothesis</b> \(H_0\): the boring explanation. “The true slope is 0”, or “the true mean is 50”. The <b>alternative</b> \(H_a\): it is not.</li>
+<li><b>Test statistic</b>: how many standard errors the estimate is from the null value, \[t=\frac{\text{estimate}-\text{null value}}{\SE}.\]</li>
+<li><b>p-value</b>: assuming \(H_0\) is true, the probability of a test statistic at least as extreme as the one observed (both tails, for a two-sided test).</li>
+<li><b>Decision</b>: if the p-value is small (below a chosen <b>significance level</b> \(\alpha\), usually 0.05), reject \(H_0\). Otherwise, say you do not have evidence against it (not that it is true).</li>
+</ol>
+<div class="worked" data-reveal><div class="wt">Worked example · <b>a one-sample t-test by hand</b></div>
+<div class="given">A machine should fill bags with 50 g. A sample of \(n=16\) bags has \(\bar x=52.4\) g and \(s=6\) g. Is the machine mis-set?</div>
+<ol class="steps">
+<li><div>\(H_0:\mu=50\); \(H_a:\mu\ne50\).</div></li>
+<li><div>\(\SE=s/\sqrt n=6/4=1.5\).</div></li>
+<li><div>\(t=\frac{52.4-50}{1.5}=\frac{2.4}{1.5}=1.6\). The sample mean is 1.6 standard errors above 50.</div></li>
+<li><div>Under \(H_0\), \(t\) follows a <b>t-distribution</b> with \(n-1=15\) degrees of freedom (a normal-like bell with slightly fatter tails, because \(s\) is itself estimated). \(\Pr(|T|\ge1.6)=0.130\).</div></li>
+<li><div>\(0.130\gt0.05\): do not reject \(H_0\). A deviation this large would happen 13% of the time by chance alone.<span class="why">This does not prove the machine is fine. With more bags, the SE would shrink, and the same 2.4 g difference might become significant.</span></div></li>
+</ol>
+<div class="result">\(t=1.6\), p-value \(=0.13\): not significant at the 5% level.</div></div>
+<p>ISLP's Table 3.1 applies the same recipe to the TV slope: \(\hat\beta_1=0.0475\), \(\SE=0.0027\), so \(t=0.0475/0.0027\approx17.6\) (the book prints 17.67 from unrounded numbers). Under \(H_0:\beta_1=0\), a value 17 standard errors from zero essentially never happens: \(p\lt0.0001\). TV advertising is clearly associated with sales. The cell below reproduces those numbers with nothing but NumPy, using the standard-error formula ISLP gives in eq. 3.8.</p>
+<div class="py" id="c-m-prob-08"><pre class="src">
+t = (52.4 - 50) / (6 / np.sqrt(16))
+p = 2 * stats.t.sf(abs(t), df=15)             # sf = 1 - cdf: the upper-tail area
+print(f"bags: t = {t:.2f}, two-sided p = {p:.3f}")
+
+d = np.loadtxt("Advertising.csv", delimiter=",", skiprows=1, usecols=(1, 4))
+tv, sales = d[:, 0], d[:, 1]; n = len(tv)
+b1 = np.sum((tv - tv.mean()) * (sales - sales.mean())) / np.sum((tv - tv.mean())**2)
+b0 = sales.mean() - b1 * tv.mean()
+rse = np.sqrt(np.sum((sales - b0 - b1 * tv)**2) / (n - 2))      # estimate of sigma
+se_b1 = rse / np.sqrt(np.sum((tv - tv.mean())**2))              # ISLP eq. 3.8
+t1 = b1 / se_b1
+print(f"TV slope = {b1:.4f}, SE = {se_b1:.4f}, t = {t1:.2f}, p = {2 * stats.t.sf(t1, n - 2):.1e}")
+</pre><div class="pynote"><b>Read the output:</b> the bag test's \(t=1.60\), \(p=0.130\); then ISLP's Table 3.1 row for TV: slope 0.0475, SE 0.0027, \(t=17.67\), and a p-value so small (around \(10^{-42}\)) that ISLP just writes “&lt; 0.0001”. You will meet these formulas properly in <a href="#isl3-1">ISLP 3.1</a>.</div></div>
+<div class="tw"><table class="t"><thead><tr><th></th><th>\(H_0\) true</th><th>\(H_0\) false</th></tr></thead><tbody>
+<tr><td>reject \(H_0\)</td><td><b>Type I error</b> (false positive), probability \(\alpha\)</td><td>correct (power)</td></tr>
+<tr><td>do not reject</td><td>correct</td><td><b>Type II error</b> (false negative)</td></tr></tbody></table></div>
+
+<h3 id="m-prob-many">The danger of many tests</h3>
+<p>A 5% significance level means that when \(H_0\) is true, you wrongly reject it 5% of the time. Run one test and that is a small risk. Run 20 independent tests where every null is true, and</p>
+\[\Pr(\text{at least one false positive})=1-0.95^{20}=1-0.3585=0.6415.\]
+<p>Almost two chances in three of “discovering” something that is not there. This is exactly why ISLP §3.2.2 insists on the F-test for “is <i>any</i> predictor useful?” instead of scanning the individual p-values of many predictors: with 100 useless predictors, about 5 will have p &lt; 0.05 by chance. The simplest fix, the <b>Bonferroni correction</b>, tests each of \(m\) hypotheses at level \(\alpha/m\) (here \(0.05/20=0.0025\)).</p>
+<div class="py" id="c-m-prob-09"><pre class="src">
+# 1,000 "studies", each testing 20 predictors that truly have NO effect (all nulls true)
+pvals = rng.uniform(0, 1, size=(1000, 20))     # under H0, p-values are uniform on [0, 1]
+any_hit = (pvals &lt; 0.05).any(axis=1)
+print("fraction of studies with at least one p &lt; 0.05:", any_hit.mean())
+print("with Bonferroni (p &lt; 0.05/20):               ", (pvals &lt; 0.05 / 20).any(axis=1).mean())
+print("theory: 1 - 0.95**20 =", round(1 - 0.95**20, 4))
+</pre><div class="pynote"><b>Read the output:</b> about 64% of the null studies “find” something at the 5% level; with Bonferroni, about 5%. The cell uses the fact that, when the null hypothesis is true, a p-value is equally likely to be anywhere between 0 and 1.</div></div>
+<div class="callout key"><p><b>A look ahead: bias and variance.</b> ISLP eq. 2.7 splits the expected test error at a point \(x_0\) into three parts, \(\E[(y_0-\hat f(x_0))^2]=\Var(\hat f(x_0))+[\mathrm{Bias}(\hat f(x_0))]^2+\Var(\epsilon)\), using exactly the tools of this lesson: expectations over repeated training sets, the rules for variances, and independence of the noise. You will meet it in <a href="#isl2-2">ISLP 2.2</a>.</p></div>
+<div class="callout exam"><p><b>Interview classics:</b> the rare-disease Bayes question; “why divide by \(n-1\)?”; “what does a p-value mean?” (not the probability that \(H_0\) is true); “why is squared error the MLE under Gaussian noise?”; “what is the variance of the mean of \(n\) iid variables?”; “can two variables be uncorrelated but dependent?” (yes: \(y=x^2\)).</p></div>
+
+<h3 id="m-prob-practice">Practice: code exercises</h3>
+
+<div class="ex" id="x-m-prob-01" data-title="mean and variance of a PMF"><div class="task"><p>Write <code>pmf_stats(values, probs)</code> returning <code>(mean, variance)</code> of a discrete distribution, using \(\E[X]=\sum kp(k)\) and \(\Var(X)=\sum(k-\mu)^2p(k)\). For a fair die it returns <code>(3.5, 2.9167)</code>.</p></div>
+<pre class="src">
+def pmf_stats(values, probs):
+    values, probs = np.asarray(values, float), np.asarray(probs, float)
+    mean = ...
+    var = ...
+    return mean, var
+</pre>
+<pre class="check">
+m, v = pmf_stats(range(1, 7), [1/6] * 6)
+assert abs(m - 3.5) &lt; 1e-12 and abs(v - 35/12) &lt; 1e-12, f"fair die: expected (3.5, 2.9167), got {(m, v)}"
+m, v = pmf_stats([0, 1], [0.7, 0.3])
+assert abs(m - 0.3) &lt; 1e-12 and abs(v - 0.21) &lt; 1e-12, "Bernoulli(0.3): mean 0.3, variance p(1-p) = 0.21"
+m, v = pmf_stats([5], [1.0])
+assert m == 5 and v == 0, "a constant has variance 0"
+</pre>
+<div class="hint"><p><code>mean = np.sum(values * probs)</code>.</p></div>
+<div class="hint"><p><code>var = np.sum((values - mean)**2 * probs)</code></p></div>
+<pre class="solution">
+def pmf_stats(values, probs):
+    values, probs = np.asarray(values, float), np.asarray(probs, float)
+    mean = np.sum(values * probs)
+    var = np.sum((values - mean)**2 * probs)
+    return mean, var
+</pre>
+<div class="explain"><p>Both formulas are weighted sums: the weights are the probabilities. The Bernoulli check confirms the table entry \(p(1-p)\).</p></div></div>
+
+<div class="ex" id="x-m-prob-02" data-title="sample variance with n − 1"><div class="task"><p>Write <code>sample_var(x)</code> returning \(s^2=\frac1{n-1}\sum(x_i-\bar x)^2\) without using <code>np.var</code>. <code>sample_var([1, 2, 3, 4, 5])</code> is <code>2.5</code>.</p></div>
+<pre class="src">
+def sample_var(x):
+    x = np.asarray(x, float)
+    ...
+</pre>
+<pre class="check">
+assert abs(sample_var([1, 2, 3, 4, 5]) - 2.5) &lt; 1e-12, f"expected 2.5, got {sample_var([1, 2, 3, 4, 5])}"
+r = np.random.default_rng(1).normal(size=50)
+assert abs(sample_var(r) - np.var(r, ddof=1)) &lt; 1e-12, "should match np.var(x, ddof=1)"
+assert abs(sample_var([3, 3, 3]) - 0) &lt; 1e-12, "identical values have variance 0"
+</pre>
+<div class="hint"><p><code>len(x)</code> is \(n\); <code>x.mean()</code> is \(\bar x\).</p></div>
+<pre class="solution">
+def sample_var(x):
+    x = np.asarray(x, float)
+    return np.sum((x - x.mean())**2) / (len(x) - 1)
+</pre>
+<div class="explain"><p>Dividing by \(n-1\) makes the estimate unbiased, as the simulation in the lesson showed.</p></div></div>
+
+<div class="ex" id="x-m-prob-03" data-title="correlation from scratch"><div class="task"><p>Write <code>corr(x, y)</code> returning the sample correlation \(r=\frac{\sum(x_i-\bar x)(y_i-\bar y)}{\sqrt{\sum(x_i-\bar x)^2}\sqrt{\sum(y_i-\bar y)^2}}\). (The \(n-1\)s cancel.) For the five pairs in the lesson it is 0.7746.</p></div>
+<pre class="src">
+def corr(x, y):
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    dx, dy = x - x.mean(), y - y.mean()
+    ...
+</pre>
+<pre class="check">
+assert abs(corr([1, 2, 3, 4, 5], [2, 4, 5, 4, 5]) - 0.7745967) &lt; 1e-6, f"expected 0.7746, got {corr([1,2,3,4,5],[2,4,5,4,5])}"
+assert abs(corr([1, 2, 3], [6, 4, 2]) + 1) &lt; 1e-12, "a perfect decreasing line has r = -1"
+g = np.random.default_rng(2); a, b = g.normal(size=40), g.normal(size=40)
+assert abs(corr(a, b) - np.corrcoef(a, b)[0, 1]) &lt; 1e-12, "should match np.corrcoef"
+</pre>
+<div class="hint"><p>Numerator: <code>np.sum(dx * dy)</code>.</p></div>
+<div class="hint"><p>Denominator: <code>np.sqrt(np.sum(dx**2)) * np.sqrt(np.sum(dy**2))</code>.</p></div>
+<pre class="solution">
+def corr(x, y):
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    dx, dy = x - x.mean(), y - y.mean()
+    return np.sum(dx * dy) / (np.sqrt(np.sum(dx**2)) * np.sqrt(np.sum(dy**2)))
+</pre>
+<div class="explain"><p>The correlation is the cosine similarity of the two deviation vectors (<a href="#m-linalg">Vectors and matrices</a>): +1 when they point the same way, −1 when opposite, 0 when orthogonal.</p></div></div>
+
+<div class="ex" id="x-m-prob-04" data-title="Bayes' rule for a test"><div class="task"><p>Write <code>posterior(prev, sens, spec)</code> returning \(\Pr(D\mid+)\) for a test with prevalence <code>prev</code>, sensitivity <code>sens</code> \(=\Pr(+\mid D)\) and specificity <code>spec</code> \(=\Pr(-\mid\text{healthy})\). <code>posterior(0.01, 0.9, 0.91)</code> is about 0.0917.</p></div>
+<pre class="src">
+def posterior(prev, sens, spec):
+    p_pos = ...       # total probability of a positive test
+    return ...
+</pre>
+<pre class="check">
+assert abs(posterior(0.01, 0.9, 0.91) - 0.0917431) &lt; 1e-6, f"expected 0.0917, got {posterior(0.01, 0.9, 0.91)}"
+assert abs(posterior(0.5, 0.9, 0.9) - 0.9) &lt; 1e-12, "with a 50% prior and a symmetric 90% test the posterior is 0.9"
+assert abs(posterior(0.01, 1.0, 1.0) - 1.0) &lt; 1e-12, "a perfect test gives certainty"
+</pre>
+<div class="hint"><p>False-positive rate is <code>1 - spec</code>. So <code>p_pos = sens * prev + (1 - spec) * (1 - prev)</code>.</p></div>
+<pre class="solution">
+def posterior(prev, sens, spec):
+    p_pos = sens * prev + (1 - spec) * (1 - prev)
+    return sens * prev / p_pos
+</pre>
+<div class="explain"><p>Numerator: sick and positive. Denominator: all positives, sick or not. This is the 90/981 calculation in two lines.</p></div></div>
+
+<div class="ex" id="x-m-prob-05" data-title="the normal density"><div class="task"><p>Write <code>normal_pdf(x, mu, sigma)</code> implementing \(\frac{1}{\sqrt{2\pi\sigma^2}}\exp[-\frac{(x-\mu)^2}{2\sigma^2}]\). It must work for arrays. At \(x=\mu\) with \(\sigma=1\) it is \(1/\sqrt{2\pi}=0.3989\).</p></div>
+<pre class="src">
+def normal_pdf(x, mu, sigma):
+    x = np.asarray(x, float)
+    ...
+</pre>
+<pre class="check">
+assert abs(normal_pdf(0, 0, 1) - 0.3989423) &lt; 1e-6, f"expected 0.3989, got {normal_pdf(0, 0, 1)}"
+xs = np.linspace(-5, 15, 41)
+assert np.allclose(normal_pdf(xs, 4, 2.5), stats.norm.pdf(xs, 4, 2.5)), "should match stats.norm.pdf (careful: sigma is the standard deviation)"
+g = np.linspace(-10, 10, 20001)
+assert abs(np.sum(normal_pdf(g, 1, 0.3)) * (g[1] - g[0]) - 1) &lt; 1e-6, "the total area should be 1"
+</pre>
+<div class="hint"><p><code>np.exp(-(x - mu)**2 / (2 * sigma**2))</code> is the bell; divide by <code>np.sqrt(2 * np.pi * sigma**2)</code>.</p></div>
+<pre class="solution">
+def normal_pdf(x, mu, sigma):
+    x = np.asarray(x, float)
+    return np.exp(-(x - mu)**2 / (2 * sigma**2)) / np.sqrt(2 * np.pi * sigma**2)
+</pre>
+<div class="explain"><p>The last check adds up thin rectangles (a Riemann sum) to confirm the area is 1, even though with \(\sigma=0.3\) the peak is 1.33, above 1.</p></div></div>
+
+<div class="ex" id="x-m-prob-06" data-title="t-statistic and confidence interval"><div class="task"><p>Write <code>t_and_ci(x, mu0)</code> returning <code>(t, lo, hi)</code>: the t-statistic \(\frac{\bar x-\mu_0}{s/\sqrt n}\) and the approximate 95% interval \(\bar x\pm1.96\,s/\sqrt n\), with \(s\) the sample standard deviation (divide by \(n-1\)).</p></div>
+<pre class="src">
+def t_and_ci(x, mu0):
+    x = np.asarray(x, float)
+    n = len(x)
+    se = ...
+    t = ...
+    return t, x.mean() - 1.96 * se, x.mean() + 1.96 * se
+</pre>
+<pre class="check">
+data = np.array([48., 55, 53, 60, 47, 52, 58, 46])
+t, lo, hi = t_and_ci(data, 50)
+se_ref = data.std(ddof=1) / np.sqrt(8)
+assert abs(t - stats.ttest_1samp(data, 50).statistic) &lt; 1e-10, f"t should match scipy's ttest_1samp, got {t}"
+assert abs(lo - (data.mean() - 1.96 * se_ref)) &lt; 1e-10 and abs(hi - (data.mean() + 1.96 * se_ref)) &lt; 1e-10, "interval should be mean +/- 1.96 SE"
+t2, _, _ = t_and_ci(data, data.mean())
+assert abs(t2) &lt; 1e-12, "testing the sample's own mean gives t = 0"
+</pre>
+<div class="hint"><p><code>se = x.std(ddof=1) / np.sqrt(n)</code>.</p></div>
+<pre class="solution">
+def t_and_ci(x, mu0):
+    x = np.asarray(x, float)
+    n = len(x)
+    se = x.std(ddof=1) / np.sqrt(n)
+    t = (x.mean() - mu0) / se
+    return t, x.mean() - 1.96 * se, x.mean() + 1.96 * se
+</pre>
+<div class="explain"><p><code>stats.ttest_1samp</code> computes the same \(t\) (and its p-value). Writing it yourself first means its output will never be a mystery.</p></div></div>
+
+<div class="ex" id="x-m-prob-07" data-title="maximum likelihood by grid search"><div class="task"><p>Write <code>mle_grid(k, n)</code> that evaluates the log-likelihood \(k\log p+(n-k)\log(1-p)\) on the grid <code>p = np.linspace(0.001, 0.999, 999)</code> and returns the \(p\) with the largest value. It should agree with \(k/n\) to the grid's precision.</p></div>
+<pre class="src">
+def mle_grid(k, n):
+    p = np.linspace(0.001, 0.999, 999)
+    loglik = ...
+    return ...
+</pre>
+<pre class="check">
+assert abs(mle_grid(7, 10) - 0.7) &lt; 1e-9, f"7 heads in 10: expected 0.7, got {mle_grid(7, 10)}"
+assert abs(mle_grid(23, 100) - 0.23) &lt; 1e-9, "23 in 100: expected 0.23"
+assert abs(mle_grid(1, 3) - 1/3) &lt; 0.001, "1 in 3: expected about 0.333"
+</pre>
+<div class="hint"><p><code>loglik = k * np.log(p) + (n - k) * np.log(1 - p)</code>.</p></div>
+<div class="hint"><p><code>np.argmax(loglik)</code> gives the position of the largest value; use it to index <code>p</code>.</p></div>
+<pre class="solution">
+def mle_grid(k, n):
+    p = np.linspace(0.001, 0.999, 999)
+    loglik = k * np.log(p) + (n - k) * np.log(1 - p)
+    return p[np.argmax(loglik)]
+</pre>
+<div class="explain"><p>This is \(\hat p=\argmax_p\log L(p)\) done by brute force: <code>np.argmax</code> is literally argmax. Calculus gave the same answer in one line; for neural networks there is no formula, and gradient descent replaces the grid.</p></div></div>
+
+<h3 id="m-prob-paper">Practice: pen and paper</h3>
+
+<div class="prob" id="p-m-prob-01" data-src="Practice" data-title="A loaded die"><div class="stmt"><p>A die shows 6 with probability 0.5 and each of 1–5 with probability 0.1. Find \(\E[X]\) and \(\Var(X)\). Type the mean.</p></div>
+<div class="ansin" data-answer="4.5" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(\E[X]=0.1(1+2+3+4+5)+0.5\times6\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\E[X]=4.5\), \(\Var(X)=3.25\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(\E[X]=0.1\times15+3=4.5\). \(\E[X^2]=0.1(1+4+9+16+25)+0.5\times36=5.5+18=23.5\). \(\Var=23.5-4.5^2=23.5-20.25=3.25\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Using \((\E[X])^2\) where \(\E[X^2]\) is needed.</p></div></details></div>
+
+<div class="prob" id="p-m-prob-02" data-src="Practice" data-title="Scaling and shifting"><div class="stmt"><p>A temperature \(C\) in °C has mean 25 and standard deviation 4. \(F=1.8C+32\). Find the mean and standard deviation of \(F\). Type the standard deviation.</p></div>
+<div class="ansin" data-answer="7.2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(\Var(aX+b)=a^2\Var(X)\), so \(\mathrm{SD}(aX+b)=|a|\,\mathrm{SD}(X)\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>Mean \(77\), SD \(7.2\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(\E[F]=1.8\times25+32=77\). \(\Var(F)=1.8^2\times16=51.84\), \(\mathrm{SD}=7.2\). The \(+32\) changes the mean only.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Adding 32 to the standard deviation too.</p></div></details></div>
+
+<div class="prob" id="p-m-prob-03" data-src="Practice" data-title="A better test"><div class="stmt"><p>Same disease (prevalence 1%), but a test with sensitivity 99% and specificity 99%. What is \(\Pr(D\mid+)\)? Then: if a second, independent test of the same kind is also positive, what is the new posterior (use the first posterior as the new prior)? Type the first answer.</p></div>
+<div class="ansin" data-answer="0.5" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Of 10,000 people: 100 sick, 99 test positive; 9,900 healthy, 99 test positive.</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>First test: \(0.5\). After a second positive: \(0.99\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(\Pr(D\mid+)=\frac{0.99\times0.01}{0.99\times0.01+0.01\times0.99}=\frac{0.0099}{0.0198}=0.5\). Second test with prior 0.5: \(\frac{0.99\times0.5}{0.99\times0.5+0.01\times0.5}=0.99\). Today's posterior is tomorrow's prior.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Answering 0.99 for the first test: confusing \(\Pr(+\mid D)\) with \(\Pr(D\mid+)\).</p></div></details></div>
+
+<div class="prob" id="p-m-prob-04" data-src="Practice" data-title="Normal probabilities"><div class="stmt"><p>Noise \(\epsilon\sim N(0,0.5^2)\) volts. Using 68–95–99.7, about what fraction of samples exceed 1 V in absolute value? Type it as a decimal.</p></div>
+<div class="ansin" data-answer="0.05" data-tol="0.006"></div>
+<details class="hintd"><summary>Hint</summary><div><p>1 V is \(2\sigma\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>About 5% (exactly 4.55%).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(z=1/0.5=2\). About 95% lie within \(2\sigma\), so about 5% lie outside, split equally between the two tails. Exactly: \(2(1-\Phi(2))=2\times0.02275=0.0455\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Using the variance 0.25 as if it were \(\sigma\).</p></div></details></div>
+
+<div class="prob" id="p-m-prob-05" data-src="Practice · preview of Prince 5" data-title="MLE of a normal mean"><div class="stmt"><p>Data \(y_1,\dots,y_n\) are iid \(N(\mu,\sigma^2)\) with \(\sigma\) known. Write \(\log L(\mu)\), differentiate, and find \(\hat\mu\). For \(y=(4,7,10)\), type \(\hat\mu\).</p></div>
+<div class="ansin" data-answer="7" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>Only the term \(-\sum(y_i-\mu)^2/2\sigma^2\) depends on \(\mu\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\hat\mu=\bar y=7\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(\log L=-\frac n2\log(2\pi\sigma^2)-\frac1{2\sigma^2}\sum(y_i-\mu)^2\). \(\frac{d\log L}{d\mu}=\frac1{\sigma^2}\sum(y_i-\mu)=0\Rightarrow\hat\mu=\bar y\). It is the same calculation as “the mean minimises squared error” in <a href="#m-calc">Derivatives</a>: maximum likelihood with normal noise is least squares.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Losing the minus sign when differentiating \(-(y_i-\mu)^2\): the inner derivative is \(-1\).</p></div></details></div>
+
+<div class="prob" id="p-m-prob-06" data-src="Practice" data-title="Standard error and sample size"><div class="stmt"><p>With \(n=25\) measurements and \(s=10\), what is \(\SE(\bar x)\)? How many measurements would halve it? Type the SE.</p></div>
+<div class="ansin" data-answer="2" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>\(\SE=s/\sqrt n\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(\SE=2\); \(n=100\) halves it to 1.</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(10/\sqrt{25}=10/5=2\). To halve \(\SE\), \(\sqrt n\) must double, so \(n\) must quadruple: \(n=100\).</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Doubling \(n\) to halve the SE. Precision grows only like \(\sqrt n\).</p></div></details></div>
+
+<div class="prob" id="p-m-prob-07" data-src="Practice" data-title="Ten tests"><div class="stmt"><p>You test 10 useless predictors, each at \(\alpha=0.05\), independently. What is the probability that at least one is “significant”? What Bonferroni threshold would keep this near 5%? Type the probability to 3 decimals.</p></div>
+<div class="ansin" data-answer="0.401" data-tol="0.001"></div>
+<details class="hintd"><summary>Hint</summary><div><p>The probability that none is significant is \(0.95^{10}\).</p></div></details>
+<details class="ans"><summary>Final answer</summary><div><p>\(1-0.95^{10}=0.401\); Bonferroni threshold \(0.05/10=0.005\).</p></div></details>
+<details class="sol"><summary>Full solution</summary><div><p>\(0.95^{10}=0.5987\), so \(1-0.5987=0.4013\). With threshold 0.005: \(1-0.995^{10}=0.0489\), just under 5%.</p></div></details>
+<details class="mist"><summary>Common mistakes</summary><div><p>Computing \(10\times0.05=0.5\). That overcounts (it can exceed 1 for many tests); it is the Bonferroni upper bound, not the exact value.</p></div></details></div>
+
+<h3 id="m-prob-review">Check yourself</h3>
+<div class="quiz">
+<div class="q" data-type="num" data-answer="3.5" data-tol="0.001"><p class="stem">The expected value of a fair six-sided die is…</p><div class="why">\(21/6=3.5\).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">\(\Var(3X+5)=\)?</p><ol class="opts"><li>\(3\Var(X)+5\)</li><li>\(3\Var(X)\)</li><li>\(9\Var(X)\)</li><li>\(9\Var(X)+25\)</li></ol><div class="why">Shifts do not change spread; scaling by 3 multiplies the variance by \(3^2=9\).</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">A PDF value \(p(x)=2.5\) at some point means…</p><ol class="opts"><li>a mistake: probabilities cannot exceed 1</li><li>a high density there; probabilities are areas, which still total 1</li><li>\(\Pr(X=x)=2.5\)</li><li>the variance is 2.5</li></ol><div class="why">Densities can exceed 1 over narrow ranges; only areas under the PDF are probabilities.</div></div>
+<div class="q" data-type="num" data-answer="0.0917" data-tol="0.001"><p class="stem">Prevalence 1%, sensitivity 90%, specificity 91%. \(\Pr(D\mid+)=\)?</p><div class="why">\(0.009/(0.009+0.0891)=0.0917\).</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">7 heads in 10 flips. The maximum likelihood estimate of \(p\) is…</p><ol class="opts"><li>0.5, because coins are fair</li><li>0.5, the value with the highest prior</li><li>0.75</li><li>0.7</li></ol><div class="why">\(\hat p=k/n=0.7\) maximises \(p^7(1-p)^3\). A prior belief in fairness is Bayesian thinking, not maximum likelihood.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">Why does the sample variance divide by \(n-1\)?</p><ol class="opts"><li>deviations from \(\bar x\) are slightly too small on average, and \(n-1\) corrects the bias</li><li>to make the formula simpler</li><li>because one data point is always an outlier</li><li>it makes the variance larger than the truth</li></ol><div class="why">\(\bar x\) is fitted to the same data, using up one degree of freedom; dividing by \(n-1\) makes \(s^2\) unbiased.</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">A p-value of 0.03 means…</p><ol class="opts"><li>there is a 3% chance that \(H_0\) is true</li><li>there is a 97% chance the effect is real</li><li>if \(H_0\) were true, a result at least this extreme would occur 3% of the time</li><li>the effect is large</li></ol><div class="why">The p-value is computed assuming \(H_0\); it is not a probability about \(H_0\). It says nothing about the size of the effect.</div></div>
+<div class="q" data-type="num" data-answer="0.6415" data-tol="0.001"><p class="stem">Twenty independent tests at \(\alpha=0.05\), all nulls true. Probability of at least one false positive?</p><div class="why">\(1-0.95^{20}=0.6415\).</div></div>
+<div class="q" data-type="open"><p class="stem">Explain in your own words why minimising squared error is the same as maximising a likelihood.</p><div class="model">If each output equals the model's prediction plus independent normal noise, the probability of the data is a product of normal densities. Its log is a constant minus the sum of squared errors divided by \(2\sigma^2\). Making that log-likelihood as large as possible is therefore the same as making the sum of squared errors as small as possible.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">\(\E[X]\) for a discrete variable</div><div class="b">\(\sum_kk\,p(k)\): values weighted by probabilities.</div></div>
+<div class="fc"><div class="f">Variance identity</div><div class="b">\(\Var(X)=\E[X^2]-(\E[X])^2\).</div></div>
+<div class="fc"><div class="f">\(\E[aX+b]\), \(\Var(aX+b)\)</div><div class="b">\(a\E[X]+b\); \(a^2\Var(X)\).</div></div>
+<div class="fc"><div class="f">Variance of the mean of \(n\) iid variables</div><div class="b">\(\sigma^2/n\), so \(\SE(\bar x)=\sigma/\sqrt n\).</div></div>
+<div class="fc"><div class="f">Correlation</div><div class="b">\(\rho=\Cov(X,Y)/(\sigma_X\sigma_Y)\in[-1,1]\); measures straight-line association only.</div></div>
+<div class="fc"><div class="f">Bernoulli and binomial mean/variance</div><div class="b">Bernoulli: \(p\), \(p(1-p)\). Binomial: \(np\), \(np(1-p)\).</div></div>
+<div class="fc"><div class="f">Normal density</div><div class="b">\(\frac1{\sqrt{2\pi\sigma^2}}\exp[-(x-\mu)^2/2\sigma^2]\); 68–95–99.7 within 1, 2, 3 \(\sigma\).</div></div>
+<div class="fc"><div class="f">Conditional probability</div><div class="b">\(\Pr(A\mid B)=\Pr(A,B)/\Pr(B)\).</div></div>
+<div class="fc"><div class="f">Bayes' rule</div><div class="b">\(\Pr(A\mid B)=\Pr(B\mid A)\Pr(A)/\Pr(B)\): posterior = likelihood × prior / evidence.</div></div>
+<div class="fc"><div class="f">Independence</div><div class="b">\(\Pr(A,B)=\Pr(A)\Pr(B)\), equivalently \(\Pr(A\mid B)=\Pr(A)\).</div></div>
+<div class="fc"><div class="f">MLE of a coin's \(p\)</div><div class="b">\(\hat p=k/n\), from setting \(\frac kp-\frac{n-k}{1-p}=0\).</div></div>
+<div class="fc"><div class="f">Sample variance</div><div class="b">\(s^2=\frac1{n-1}\sum(x_i-\bar x)^2\) (unbiased).</div></div>
+<div class="fc"><div class="f">Central limit theorem</div><div class="b">The mean of \(n\) iid draws is approximately \(N(\mu,\sigma^2/n)\) for large \(n\), whatever the original distribution.</div></div>
+<div class="fc"><div class="f">t-statistic and 95% CI</div><div class="b">\(t=(\text{estimate}-\text{null})/\SE\); CI \(\approx\) estimate \(\pm1.96\,\SE\) (ISLP: \(\pm2\SE\)).</div></div>
+<div class="fc"><div class="f">p-value</div><div class="b">Probability, assuming \(H_0\), of a result at least as extreme as observed.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can compute the mean and variance of a discrete distribution by hand.</label>
+<label><input type="checkbox"> I can use the rules for \(\E\) and \(\Var\), including \(\Var(\bar X)=\sigma^2/n\).</label>
+<label><input type="checkbox"> I can compute a covariance and a correlation from a small table.</label>
+<label><input type="checkbox"> I can compute binomial, Poisson and normal probabilities, and read a 2-D normal's covariance matrix.</label>
+<label><input type="checkbox"> I can solve the rare-disease Bayes problem with counts and with the formula.</label>
+<label><input type="checkbox"> I can write a likelihood, take its log, and maximise it with calculus.</label>
+<label><input type="checkbox"> I can compute \(s^2\), an SE, a 95% CI, a t-statistic and a p-value, and explain the multiple-testing problem.</label>
+</div>
+</section>

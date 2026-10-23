@@ -1,0 +1,47 @@
+{
+"derivative": {
+"term": "derivative",
+"def": "\\(f'(a)=\\lim_{h\\to0}\\frac{f(a+h)-f(a)}{h}\\): the slope of the tangent, the rate at which \\(f\\) changes.",
+"at": "m-calc"
+},
+"sigmoid": {
+"term": "sigmoid (logistic function)",
+"def": "\\(\\sigma(z)=\\frac{1}{1+e^{-z}}\\), squashing any number into (0, 1); \\(\\sigma'(z)=\\sigma(z)(1-\\sigma(z))\\).",
+"at": "m-calc"
+},
+"partial-derivative": {
+"term": "partial derivative",
+"def": "\\(\\partial f/\\partial x_j\\): the slope of \\(f\\) when only \\(x_j\\) moves and every other input is held fixed.",
+"at": "m-calc"
+},
+"gradient": {
+"term": "gradient",
+"def": "\\(\\nabla f\\): the vector of all partial derivatives. Points steepest uphill, perpendicular to contours.",
+"at": "m-calc"
+},
+"gradient-descent": {
+"term": "gradient descent",
+"def": "Repeat \\(\\boldsymbol\\phi\\leftarrow\\boldsymbol\\phi-\\alpha\\nabla L\\): small steps downhill with learning rate \\(\\alpha\\).",
+"at": "m-calc"
+},
+"chain-rule": {
+"term": "chain rule",
+"def": "\\(\\frac{dy}{dx}=\\frac{dy}{du}\\frac{du}{dx}\\): sensitivities along a chain of functions multiply.",
+"at": "m-calc"
+},
+"computational-graph": {
+"term": "computational graph",
+"def": "A calculation drawn as boxes of elementary steps; values flow forwards, derivatives flow backwards (backpropagation).",
+"at": "m-calc"
+},
+"gradient-check": {
+"term": "gradient checking",
+"def": "Comparing a hand-derived gradient with a central-difference estimate via their relative error.",
+"at": "m-calc"
+},
+"convex": {
+"term": "convex function",
+"def": "A function whose chords lie above its graph (\\(f''\\ge0\\)); any stationary point is the global minimum.",
+"at": "m-calc"
+}
+}

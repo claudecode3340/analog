@@ -1,0 +1,87 @@
+{
+"vector": {
+"term": "vector",
+"def": "An ordered list of numbers, written as a column. A vector of \\(p\\) real numbers lives in \\(\\mathbb{R}^p\\).",
+"at": "m-linalg"
+},
+"linear-combination": {
+"term": "linear combination",
+"def": "A sum of scaled vectors, such as \\(3\\mathbf{a}-2\\mathbf{b}\\).",
+"at": "m-linalg"
+},
+"dot-product": {
+"term": "dot product",
+"def": "\\(\\mathbf{a}^{\\mathsf{T}}\\mathbf{b}=\\sum_d a_db_d\\): multiply matching entries and add. Equals \\(\\|\\mathbf{a}\\|\\|\\mathbf{b}\\|\\cos\\theta\\).",
+"at": "m-linalg"
+},
+"orthogonal": {
+"term": "orthogonal",
+"def": "At right angles: two vectors whose dot product is zero.",
+"at": "m-linalg"
+},
+"cosine-similarity": {
+"term": "cosine similarity",
+"def": "\\(\\cos\\theta=\\mathbf{a}^{\\mathsf{T}}\\mathbf{b}/(\\|\\mathbf{a}\\|\\|\\mathbf{b}\\|)\\): compares direction only, from −1 to 1.",
+"at": "m-linalg"
+},
+"matrix": {
+"term": "matrix",
+"def": "A rectangular table of numbers with \\(m\\) rows and \\(n\\) columns (\\(m\\times n\\)).",
+"at": "m-linalg"
+},
+"column-space": {
+"term": "column space",
+"def": "All vectors \\(\\mathbf{A}\\mathbf{x}\\) can produce: every linear combination of the columns of \\(\\mathbf{A}\\).",
+"at": "m-linalg"
+},
+"linear-map": {
+"term": "linear map",
+"def": "A function \\(\\mathbf{x}\\mapsto\\mathbf{A}\\mathbf{x}\\): keeps lines straight and the origin fixed. The columns of A are where the basic arrows land.",
+"at": "m-linalg"
+},
+"identity-matrix": {
+"term": "identity matrix",
+"def": "\\(\\mathbf{I}\\): ones on the diagonal, zeros elsewhere. \\(\\mathbf{I}\\mathbf{x}=\\mathbf{x}\\).",
+"at": "m-linalg"
+},
+"determinant": {
+"term": "determinant",
+"def": "For a 2×2 matrix, \\(ad-bc\\): the factor by which the matrix scales areas. Zero means singular (no inverse).",
+"at": "m-linalg"
+},
+"inverse": {
+"term": "inverse",
+"def": "\\(\\mathbf{A}^{-1}\\) with \\(\\mathbf{A}^{-1}\\mathbf{A}=\\mathbf{I}\\). Exists only for square matrices with non-zero determinant.",
+"at": "m-linalg"
+},
+"linear-independence": {
+"term": "linear independence",
+"def": "Vectors none of which is a linear combination of the others: each adds a new direction.",
+"at": "m-linalg"
+},
+"rank": {
+"term": "rank",
+"def": "The number of linearly independent columns of a matrix.",
+"at": "m-linalg"
+},
+"design-matrix": {
+"term": "design matrix",
+"def": "\\(\\mathbf{X}\\): one row per observation, a column of ones then one column per predictor. Predictions are \\(\\mathbf{X}\\boldsymbol\\beta\\).",
+"at": "m-linalg"
+},
+"normal-equations": {
+"term": "normal equations",
+"def": "\\(\\mathbf{X}^{\\mathsf{T}}\\mathbf{X}\\hat{\\boldsymbol\\beta}=\\mathbf{X}^{\\mathsf{T}}\\mathbf{y}\\): their solution is the least-squares fit.",
+"at": "m-linalg"
+},
+"projection": {
+"term": "projection",
+"def": "The closest point to \\(\\mathbf{y}\\) on a line or plane; the leftover is orthogonal to it. Onto \\(\\mathbf{u}\\): \\(\\frac{\\mathbf{u}^{\\mathsf{T}}\\mathbf{y}}{\\mathbf{u}^{\\mathsf{T}}\\mathbf{u}}\\mathbf{u}\\).",
+"at": "m-linalg"
+},
+"eigenvector": {
+"term": "eigenvector",
+"def": "A non-zero \\(\\mathbf{v}\\) with \\(\\mathbf{A}\\mathbf{v}=\\lambda\\mathbf{v}\\): a direction the matrix only stretches; \\(\\lambda\\) is the eigenvalue.",
+"at": "m-linalg"
+}
+}
