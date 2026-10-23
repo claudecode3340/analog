@@ -54,7 +54,7 @@
     var svg = G.svg("svg", { viewBox: "0 0 640 400", class: "wsvg", role: "img", "aria-label": "1000 people coloured by disease and test result" }, host);
     var leg = G.el("div", ""); leg.style.cssText = "display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;font-size:13.5px;color:var(--muted);margin-top:8px"; body.appendChild(leg);
     function sw(st) { return "<span style='display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px;" + st + "'></span>"; }
-    leg.innerHTML = sw("background:var(--bad)") + "sick, test positive" + "&nbsp;&nbsp;" + sw("border:2px solid var(--bad)") + "sick, test negative (missed)" + "&nbsp;&nbsp;" + sw("background:var(--warn)") + "healthy, test positive (false alarm)" + "&nbsp;&nbsp;" + sw("background:var(--line)") + "healthy, test negative";
+    leg.innerHTML = [["background:var(--bad)", "sick, test positive"], ["border:2px solid var(--bad)", "sick, missed by the test"], ["background:var(--warn)", "healthy, false alarm"], ["background:var(--line)", "healthy, test negative"]].map(function (q) { return "<span style='white-space:nowrap'>" + sw(q[0]) + q[1] + "</span>"; }).join("");
     function draw() {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       var sick = Math.round(1000 * prev), tp = Math.round(sick * sens), fn = sick - tp, fp = Math.round((1000 - sick) * (1 - spec));

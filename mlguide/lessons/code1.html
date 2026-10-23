@@ -1,7 +1,7 @@
 <section class="lesson" id="code1" data-book="Interview practice · original problems">
 <p class="lede">Every ML job interview, from a start-up to Google, has at least one round where you write a small program while someone watches. The problems are not hard maths; they test whether you can turn a plain-English request into correct, tidy code and say how fast it runs. This lesson teaches you a calm, repeatable method for doing that, gives you a first feel for “how fast” (Big-O), and then walks you through ten warm-up problems.</p>
 
-<div class="uses"><b>You'll use</b> <a href="#py1">Python I</a> (lists, strings, functions) <a href="#py2">Python II</a> (loops, dictionaries, comprehensions)</div>
+<div class="uses"><b>You'll use</b> <a href="#py1">Python I</a> <a href="#py2">Python II</a></div>
 
 <div class="goals"><h4>By the end of this lesson you can</h4><ul>
 <li>solve a small coding problem with the five-step method: read, work examples by hand, brute force first, improve, test the edge cases;</li>
@@ -55,10 +55,11 @@ The answer is <b>3</b>. What did my hand do? It walked from day 1 to the last da
 </ol>
 <div class="result">One loop, one counter: answer 3 for the example, and 0 for the empty list.</div></div>
 
-<p>Now the code. Two Python tools appear that you may not have used yet, so read the “New in this lesson” box first.</p>
+<p>Now the code. First a short recap of four small tools it uses.</p>
 
-<div class="callout key"><div class="ct">New in this lesson</div>
-<p><b><code>assert condition, message</code></b> checks that <code>condition</code> is true. If it is, nothing happens. If it is false, Python stops with an <code>AssertionError</code> and shows your <code>message</code>. It is the quickest way to write a test: <code>assert add(2, 2) == 4, "2 + 2 should be 4"</code>. The Check button of every exercise is just a list of asserts.</p>
+<div class="callout key"><div class="ct">Tools for this lesson (a quick recap)</div>
+<p>You met these in <a href="#py2">Python II</a>; here is what each does, in one line, because every problem below uses them.</p>
+<p><b><code>assert condition, message</code></b> checks that <code>condition</code> is true. If it is, nothing happens. If it is false, Python stops with an <code>AssertionError</code> and shows your <code>message</code>. It is the quickest way to write a test: <code>assert add(2, 2) == 4, "oops"</code>. The Check button of every exercise is just a list of asserts.</p>
 <p><b><code>range(1, n)</code></b> gives 1, 2, …, n−1 (it starts at the first number and stops <i>before</i> the second). <code>range(1, 1)</code> and <code>range(1, 0)</code> are empty, which is why the loop above is safe for short lists.</p>
 <p><b><code>a, b = b, a</code></b> swaps two variables in one line: Python first builds the pair on the right, (b, a), then unpacks it into the names on the left.</p>
 <p><b><code>None</code></b> is Python's value for “no answer”. Test for it with <code>x is None</code>.</p></div>
@@ -123,7 +124,7 @@ for n in [10, 100, 1000]:
 <li><b>Drop constant multipliers.</b> \(3n\) and \(n\) grow the same way: doubling \(n\) doubles both. So \(3n\) is \(O(n)\). Constants depend on the computer and the language; growth does not.</li>
 </ol>
 
-<div class="mathblock" data-sheet="Big-O (informal definition)"><div class="eqlabel">What \(f(n)=O(g(n))\) means</div>
+<div class="mathblock" data-sheet="Big-O (informal definition)"><div class="eqlabel">What big-O means</div>
 \[f(n)=O\big(g(n)\big)\quad\text{if there is a constant } c \text{ with } f(n)\le c\,g(n)\ \text{for all large enough } n\]
 <p class="say">Read: “f of n is big-O of g of n” if, once n is big enough, f is never more than some fixed multiple of g. In words: g is a <i>ceiling on the growth</i> of f, up to a constant factor.</p></div>
 
@@ -337,9 +338,9 @@ def count_vowels(text):
 
 <h4 id="code1-p4">Problem 4 · Reverse a list in place</h4>
 <div class="ex" id="x-code1-04" data-title="reverse in place"><div class="task"><p>Write <code>reverse_in_place(xs)</code> that reverses the list <code>xs</code> <b>itself</b> (no new list) and returns nothing. Do not use <code>.reverse()</code>, <code>reversed()</code> or slicing such as <code>xs[::-1]</code>: swap items instead.</p>
-<ul><li><code>a = [1, 2, 3, 4]; reverse_in_place(a)</code> → afterwards <code>a</code> is <code>[4, 3, 2, 1]</code></li>
-<li><code>b = ["x", "y", "z"]; reverse_in_place(b)</code> → <code>b</code> is <code>["z", "y", "x"]</code></li>
-<li><code>c = []; reverse_in_place(c)</code> → <code>c</code> is still <code>[]</code></li></ul></div>
+<ul><li><code>a = [1, 2, 3, 4]</code>, then <code>reverse_in_place(a)</code> → afterwards <code>a</code> is <code>[4, 3, 2, 1]</code></li>
+<li><code>b = ["x", "y", "z"]</code>, then <code>reverse_in_place(b)</code> → <code>b</code> is <code>["z", "y", "x"]</code></li>
+<li><code>c = []</code>, then <code>reverse_in_place(c)</code> → <code>c</code> is still <code>[]</code></li></ul></div>
 <pre class="src">
 def reverse_in_place(xs):
     # your code here: swap items, change xs itself
@@ -530,7 +531,7 @@ def second_largest(nums):
 <ul><li><code>dedupe([3, 1, 3, 2, 1])</code> → <code>[3, 1, 2]</code></li>
 <li><code>dedupe(["b", "a", "b"])</code> → <code>["b", "a"]</code></li>
 <li><code>dedupe([])</code> → <code>[]</code></li></ul>
-<p>It must handle 20,000 different items quickly. New tool: a <dfn data-g="set">set</dfn>. <code>seen = set()</code> makes an empty set, <code>seen.add(x)</code> puts <code>x</code> in it, and <code>x in seen</code> asks whether it is there. Unlike a list, a set answers <code>in</code> in about one step, \(O(1)\), however big it is (it works like a dictionary with keys but no values).</p></div>
+<p>It must handle 20,000 different items quickly. Recall the <dfn data-g="set">set</dfn> from <a href="#py2">Python II</a>. <code>seen = set()</code> makes an empty set, <code>seen.add(x)</code> puts <code>x</code> in it, and <code>x in seen</code> asks whether it is there. Unlike a list, a set answers <code>in</code> in about one step, \(O(1)\), however big it is (it works like a dictionary with keys but no values).</p></div>
 <pre class="src">
 def dedupe(items):
     result = []

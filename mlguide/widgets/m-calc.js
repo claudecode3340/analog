@@ -56,9 +56,10 @@
   G.widget("m-calc-meanmed", function (body, args) {
     var xs = (args.x || [1, 2, 6]).slice(), XR = [0, 12], drag = -1;
     var info = G.el("div", "readout"); body.appendChild(info);
-    var strip = G.plot(body, { w: 680, h: 96, x: XR, y: [0, 1], yticks: [], xlabel: "the data (drag the dots)", pad: { l: 54, r: 16, t: 8, b: 40 }, label: "data points on a line" });
-    var p1 = G.plot(body, { w: 680, h: 200, x: XR, y: [0, 120], ylabel: "Σ(xᵢ − c)²", pad: { l: 54, r: 16, t: 10, b: 26 }, label: "squared loss as a function of c" });
-    var p2 = G.plot(body, { w: 680, h: 200, x: XR, y: [0, 24], ylabel: "Σ|xᵢ − c|", xlabel: "summary value c", pad: { l: 54, r: 16, t: 10, b: 40 }, label: "absolute loss as a function of c" });
+    var hostM = G.el("div", ""); hostM.style.cssText = "max-width:760px;margin:0 auto"; body.appendChild(hostM);
+    var strip = G.plot(hostM, { w: 680, h: 96, x: XR, y: [0, 1], yticks: [], xlabel: "the data (drag the dots)", pad: { l: 54, r: 16, t: 8, b: 40 }, label: "data points on a line" });
+    var p1 = G.plot(hostM, { w: 680, h: 200, x: XR, y: [0, 120], ylabel: "Σ(xᵢ − c)²", pad: { l: 54, r: 16, t: 10, b: 26 }, label: "squared loss as a function of c" });
+    var p2 = G.plot(hostM, { w: 680, h: 200, x: XR, y: [0, 24], ylabel: "Σ|xᵢ − c|", xlabel: "summary value c", pad: { l: 54, r: 16, t: 10, b: 40 }, label: "absolute loss as a function of c" });
     clip(p1); clip(p2);
     function draw() {
       var n = xs.length, mean = xs.reduce(function (s, v) { return s + v; }, 0) / n, srt = xs.slice().sort(function (u, v) { return u - v; }), med = srt[(n - 1) / 2];

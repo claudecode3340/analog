@@ -1,6 +1,6 @@
 <section class="lesson" id="m-prob" data-book="Prince pp. 449–462 · prepares ISLP 2–5">
 <p class="lede">Data are noisy, so every number a model learns is uncertain. Probability is the language for that uncertainty: ISLP uses it to say how much to trust a coefficient (standard errors, t-statistics, p-values) and to classify (Bayes' rule), and Prince uses it to derive every loss function (maximum likelihood). This lesson builds all of it from dice, coins and one medical test, with every number shown and every claim checked by simulation.</p>
-<div class="uses"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> <a href="#m-calc">Derivatives</a> <a href="#np2">NumPy II (randomness)</a> <a href="#plt1">matplotlib</a></div>
+<div class="uses" style="margin-bottom:16px"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> <a href="#m-calc">Derivatives</a> <a href="#np2">NumPy II (randomness)</a> <a href="#plt1">matplotlib</a></div>
 
 <div class="goals"><h4>By the end of this lesson you can</h4><ul>
 <li>describe a random variable by its PMF or PDF, and compute an expectation and a variance by hand;</li>
@@ -29,7 +29,7 @@ print("ready")
 <li><b>Discrete</b>: takes separate values you can list (die faces 1–6, number of heads, class labels). Described by a <dfn data-g="pmf">probability mass function</dfn> (PMF), \(p(k)=\Pr(X=k)\). Every \(p(k)\) is between 0 and 1 and they add up to 1.</li>
 <li><b>Continuous</b>: takes any value in a range (a height, a voltage, a price). Described by a <dfn data-g="pdf">probability density function</dfn> (PDF) \(p(x)\). The probability of landing between \(a\) and \(b\) is the <b>area</b> under the PDF between them, \(\Pr(a\le X\le b)=\int_a^bp(x)\,dx\), and the total area is 1.</li>
 </ul>
-<div class="tw"><table class="t"><thead><tr><th>Fair die: \(k\)</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>total</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>Fair die: \(k\)</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>total</th></tr></thead><tbody>
 <tr><td>\(p(k)=\Pr(X=k)\)</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1/6</td><td class="n">1</td></tr></tbody></table></div>
 <div class="callout pitfall"><p><b>A density is not a probability.</b> For a continuous variable, \(\Pr(X=x)\) for one exact value is 0 (a single point has no width, hence no area). The density \(p(x)\) can even be bigger than 1: a uniform distribution on \([0,0.5]\) has density 2 everywhere on that interval, and total area \(2\times0.5=1\). Prince makes the same point on p. 449. Only areas are probabilities.</p></div>
 <div class="callout ece"><p>A PDF is exactly the amplitude distribution you met for noise in communications: the Gaussian PDF of thermal noise, the uniform PDF of quantisation error on \([-\Delta/2,\Delta/2]\). The <b>cumulative distribution function</b> (CDF) \(F(x)=\Pr(X\le x)=\int_{-\infty}^xp(t)\,dt\) is the running area, and the bit-error rate \(Q(\cdot)\) function is one minus the normal CDF.</p></div>
@@ -112,7 +112,7 @@ plt.tight_layout()
 </pre><div class="pynote"><b>Read the output:</b> the hand numbers, then four scatter plots. Strong negative, none, moderate positive, and the last one: \(y=x^2\) is completely determined by \(x\), yet its correlation is about 0. Correlation measures only <i>straight-line</i> association; zero correlation does not mean independence (Prince §24.2.2 gives a circle as the example).</div></div>
 
 <h3 id="m-prob-dists">The distributions you will meet</h3>
-<div class="tw"><table class="t"><thead><tr><th>Name</th><th>Values</th><th>PMF / PDF</th><th>Mean</th><th>Variance</th><th>Used for</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>Name</th><th>Values</th><th>PMF / PDF</th><th>Mean</th><th>Variance</th><th>Used for</th></tr></thead><tbody>
 <tr><td><b>Bernoulli</b>\((p)\)</td><td>0 or 1</td><td>\(\Pr(1)=p,\ \Pr(0)=1-p\)</td><td>\(p\)</td><td>\(p(1-p)\)</td><td>one yes/no outcome; logistic regression (ISLP 4, Prince 5.4)</td></tr>
 <tr><td><b>binomial</b>\((n,p)\)</td><td>\(0,\dots,n\)</td><td>\(\binom nkp^k(1-p)^{n-k}\)</td><td>\(np\)</td><td>\(np(1-p)\)</td><td>number of successes in \(n\) tries</td></tr>
 <tr><td><b>categorical</b></td><td>\(1,\dots,K\)</td><td>\(\Pr(k)=\lambda_k\), \(\sum\lambda_k=1\)</td><td>–</td><td>–</td><td>multiclass classification (Prince 5.5, softmax)</td></tr>
@@ -158,7 +158,7 @@ print("binomial P(7 of 10):", round(stats.binom.pmf(7, 10, 0.5), 4), "  Poisson 
 
 <h3 id="m-prob-joint">Joint, marginal and conditional probability</h3>
 <p>With two variables we need three kinds of probability. Here is a small made-up table of 1,000 patients, counted by smoking and by a lung condition:</p>
-<div class="tw"><table class="t"><thead><tr><th></th><th>condition</th><th>no condition</th><th>total</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th></th><th>condition</th><th>no condition</th><th>total</th></tr></thead><tbody>
 <tr><td>smoker</td><td class="n">60</td><td class="n">140</td><td class="n">200</td></tr>
 <tr><td>non-smoker</td><td class="n">40</td><td class="n">760</td><td class="n">800</td></tr>
 <tr><td>total</td><td class="n">100</td><td class="n">900</td><td class="n">1000</td></tr></tbody></table></div>
@@ -185,7 +185,7 @@ print("binomial P(7 of 10):", round(stats.binom.pmf(7, 10, 0.5), 4), "  Poisson 
 <li><div><b>The same with the formula:</b> \(\Pr(+)=0.90\times0.01+0.09\times0.99=0.009+0.0891=0.0981\), and \(\Pr(D\mid+)=\frac{0.90\times0.01}{0.0981}=0.0917\).<span class="why">The prior matters enormously. The disease is so rare that false positives from the huge healthy group outnumber true positives ten to one.</span></div></li>
 </ol>
 <div class="result">\(\Pr(D\mid+)\approx9.2\%\): a positive result raises the probability from 1% to 9%, but you are still probably healthy.</div></div>
-<div class="widget" data-w="m-prob-bayes" data-title="Bayes' rule with 1,000 people"><div class="wn">Each square is a person. Red-filled squares are sick people who test positive, outlined red squares are sick people the test misses, orange squares are healthy people who test positive. Move the prevalence to 20%: the same test now gives a much higher posterior. Then push specificity to 99.9%: false positives almost vanish. The posterior is red-filled ÷ (red-filled + orange).</div></div>
+<div class="widget" data-w="m-prob-bayes" data-title="Bayes' rule with 1,000 people"><div class="wn">Each square is a person. Red-filled squares are sick people who test positive, outlined red squares are sick people the test misses, amber squares are healthy people who test positive (false alarms). Move the prevalence to 20%: the same test now gives a much higher posterior. Then push specificity to 99.9%: false positives almost vanish. The posterior is red-filled ÷ (red-filled + amber).</div></div>
 <div class="callout key"><p><b>Where Bayes' rule comes back.</b> ISLP's <b>Bayes classifier</b> assigns each \(x\) to the class with the largest \(\Pr(Y=k\mid X=x)\) (<a href="#isl2-2">ISLP 2.2</a>), and §4.4 computes it with exactly this rule: \[\Pr(Y=k\mid X=x)=\frac{\pi_kf_k(x)}{\sum_{l=1}^K\pi_lf_l(x)},\] where \(\pi_k\) (pi-k) is the prior probability of class \(k\) and \(f_k(x)\) the density of \(x\) within class \(k\) (<a href="#isl4-2">ISLP 4.4</a>). The denominator is \(\Pr(X=x)\), summed over the classes, exactly like \(\Pr(+)\) above.</p></div>
 
 <h3 id="m-prob-lik">Likelihood and maximum likelihood</h3>
@@ -194,7 +194,7 @@ print("binomial P(7 of 10):", round(stats.binom.pmf(7, 10, 0.5), 4), "  Poisson 
 <div class="mathblock" data-sheet="Bernoulli likelihood"><div class="eqlabel">Likelihood of \(k\) heads in \(n\) independent flips</div>
 \[L(p)=\prod_{i=1}^{n}p^{y_i}(1-p)^{1-y_i}=p^k(1-p)^{n-k},\qquad\log L(p)=k\log p+(n-k)\log(1-p)\]
 <p class="say">Each flip \(y_i\) (1 for heads, 0 for tails) contributes \(p\) if heads and \(1-p\) if tails; independence lets us multiply. The log turns the product into a sum.</p></div>
-<div class="tw"><table class="t"><thead><tr><th>\(p\)</th><th>0.3</th><th>0.5</th><th>0.7</th><th>0.9</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>\(p\)</th><th>0.3</th><th>0.5</th><th>0.7</th><th>0.9</th></tr></thead><tbody>
 <tr><td>\(L(p)=p^7(1-p)^3\)</td><td class="n">0.000075</td><td class="n">0.000977</td><td class="n"><span class="hlg">0.002224</span></td><td class="n">0.000478</td></tr></tbody></table></div>
 <p>The value \(p=0.7\) makes the observed data most probable. The <dfn data-g="mle">maximum likelihood estimate</dfn> (MLE) is the parameter that maximises the likelihood. With calculus:</p>
 <div class="worked" data-reveal><div class="wt">Worked example · <b>the MLE of a coin's bias</b></div>
@@ -215,6 +215,7 @@ print("binomial P(7 of 10):", round(stats.binom.pmf(7, 10, 0.5), 4), "  Poisson 
 \[\bar x=\frac1n\sum_{i=1}^nx_i,\qquad s^2=\frac{1}{n-1}\sum_{i=1}^n(x_i-\bar x)^2\]
 <p class="say">Read: “x-bar” estimates \(\mu\); “s squared” estimates \(\sigma^2\). Note the \(n-1\).</p></div>
 <p><b>Why \(n-1\)?</b> The deviations are measured from \(\bar x\), which was fitted to these same data, so they are on average a little smaller than deviations from the true \(\mu\). Dividing by \(n-1\) instead of \(n\) exactly corrects this, making \(s^2\) <b>unbiased</b>: right on average. (One way to see it: the \(n\) deviations must add to zero, so only \(n-1\) of them are free; we say one <b>degree of freedom</b> was used up estimating the mean.) The simulation below shows the bias. NumPy's <code>np.var</code> divides by \(n\) unless you write <code>ddof=1</code>; pandas' <code>.var()</code> divides by \(n-1\). In ISLP's regression, two parameters are estimated, so the noise variance estimate divides by \(n-2\) (the RSE, eq. 3.15).</p>
+<div class="predict" data-correct="1"><p>The true variance is 4. Each simulated sample has only \(n=5\) values. On average, what will the divide-by-\(n\) estimate give?</p><ol class="opts"><li>about 3.2, too small</li><li>about 4, right on average</li><li>about 5, too large</li></ol><div class="why">Deviations from \(\bar x\) are on average smaller than deviations from \(\mu\), so dividing by \(n\) underestimates, by the factor \(\frac{n-1}{n}=\frac45\): \(0.8\times4=3.2\). Dividing by \(n-1\) fixes exactly that factor.</div></div>
 <div class="py" id="c-m-prob-05"><pre class="src">
 # 100,000 samples of size n = 5 from N(0, 2^2): true variance 4
 samples = rng.normal(0, 2, size=(100_000, 5))
@@ -298,7 +299,7 @@ se_b1 = rse / np.sqrt(np.sum((tv - tv.mean())**2))              # ISLP eq. 3.8
 t1 = b1 / se_b1
 print(f"TV slope = {b1:.4f}, SE = {se_b1:.4f}, t = {t1:.2f}, p = {2 * stats.t.sf(t1, n - 2):.1e}")
 </pre><div class="pynote"><b>Read the output:</b> the bag test's \(t=1.60\), \(p=0.130\); then ISLP's Table 3.1 row for TV: slope 0.0475, SE 0.0027, \(t=17.67\), and a p-value so small (around \(10^{-42}\)) that ISLP just writes “&lt; 0.0001”. You will meet these formulas properly in <a href="#isl3-1">ISLP 3.1</a>.</div></div>
-<div class="tw"><table class="t"><thead><tr><th></th><th>\(H_0\) true</th><th>\(H_0\) false</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th></th><th>\(H_0\) true</th><th>\(H_0\) false</th></tr></thead><tbody>
 <tr><td>reject \(H_0\)</td><td><b>Type I error</b> (false positive), probability \(\alpha\)</td><td>correct (power)</td></tr>
 <tr><td>do not reject</td><td>correct</td><td><b>Type II error</b> (false negative)</td></tr></tbody></table></div>
 
@@ -346,7 +347,7 @@ def pmf_stats(values, probs):
 </pre>
 <div class="explain"><p>Both formulas are weighted sums: the weights are the probabilities. The Bernoulli check confirms the table entry \(p(1-p)\).</p></div></div>
 
-<div class="ex" id="x-m-prob-02" data-title="sample variance with n − 1"><div class="task"><p>Write <code>sample_var(x)</code> returning \(s^2=\frac1{n-1}\sum(x_i-\bar x)^2\) without using <code>np.var</code>. <code>sample_var([1, 2, 3, 4, 5])</code> is <code>2.5</code>.</p></div>
+<div class="ex" id="x-m-prob-02" data-title="sample variance with n − 1"><div class="task"><p>Write <code>sample_var(x)</code> returning \(s^2=\dfrac1{n-1}\sum(x_i-\bar x)^2\) without using <code>np.var</code>. <code>sample_var([1, 2, 3, 4, 5])</code> is <code>2.5</code>.</p></div>
 <pre class="src">
 def sample_var(x):
     x = np.asarray(x, float)
@@ -366,7 +367,7 @@ def sample_var(x):
 </pre>
 <div class="explain"><p>Dividing by \(n-1\) makes the estimate unbiased, as the simulation in the lesson showed.</p></div></div>
 
-<div class="ex" id="x-m-prob-03" data-title="correlation from scratch"><div class="task"><p>Write <code>corr(x, y)</code> returning the sample correlation \(r=\frac{\sum(x_i-\bar x)(y_i-\bar y)}{\sqrt{\sum(x_i-\bar x)^2}\sqrt{\sum(y_i-\bar y)^2}}\). (The \(n-1\)s cancel.) For the five pairs in the lesson it is 0.7746.</p></div>
+<div class="ex" id="x-m-prob-03" data-title="correlation from scratch"><div class="task"><p>Write <code>corr(x, y)</code> returning the sample correlation \(r=\dfrac{\sum(x_i-\bar x)(y_i-\bar y)}{\sqrt{\sum(x_i-\bar x)^2}\sqrt{\sum(y_i-\bar y)^2}}\). (The \(n-1\)s cancel.) For the five pairs in the lesson it is 0.7746.</p></div>
 <pre class="src">
 def corr(x, y):
     x, y = np.asarray(x, float), np.asarray(y, float)
@@ -408,7 +409,7 @@ def posterior(prev, sens, spec):
 </pre>
 <div class="explain"><p>Numerator: sick and positive. Denominator: all positives, sick or not. This is the 90/981 calculation in two lines.</p></div></div>
 
-<div class="ex" id="x-m-prob-05" data-title="the normal density"><div class="task"><p>Write <code>normal_pdf(x, mu, sigma)</code> implementing \(\frac{1}{\sqrt{2\pi\sigma^2}}\exp[-\frac{(x-\mu)^2}{2\sigma^2}]\). It must work for arrays. At \(x=\mu\) with \(\sigma=1\) it is \(1/\sqrt{2\pi}=0.3989\).</p></div>
+<div class="ex" id="x-m-prob-05" data-title="the normal density"><div class="task"><p>Write <code>normal_pdf(x, mu, sigma)</code> implementing \(\dfrac{1}{\sqrt{2\pi\sigma^2}}\exp[-\dfrac{(x-\mu)^2}{2\sigma^2}]\). It must work for arrays. At \(x=\mu\) with \(\sigma=1\) it is \(1/\sqrt{2\pi}=0.3989\).</p></div>
 <pre class="src">
 def normal_pdf(x, mu, sigma):
     x = np.asarray(x, float)
@@ -429,7 +430,7 @@ def normal_pdf(x, mu, sigma):
 </pre>
 <div class="explain"><p>The last check adds up thin rectangles (a Riemann sum) to confirm the area is 1, even though with \(\sigma=0.3\) the peak is 1.33, above 1.</p></div></div>
 
-<div class="ex" id="x-m-prob-06" data-title="t-statistic and confidence interval"><div class="task"><p>Write <code>t_and_ci(x, mu0)</code> returning <code>(t, lo, hi)</code>: the t-statistic \(\frac{\bar x-\mu_0}{s/\sqrt n}\) and the approximate 95% interval \(\bar x\pm1.96\,s/\sqrt n\), with \(s\) the sample standard deviation (divide by \(n-1\)).</p></div>
+<div class="ex" id="x-m-prob-06" data-title="t-statistic and confidence interval"><div class="task"><p>Write <code>t_and_ci(x, mu0)</code> returning <code>(t, lo, hi)</code>: the t-statistic \(\dfrac{\bar x-\mu_0}{s/\sqrt n}\) and the approximate 95% interval \(\bar x\pm1.96\,s/\sqrt n\), with \(s\) the sample standard deviation (divide by \(n-1\)).</p></div>
 <pre class="src">
 def t_and_ci(x, mu0):
     x = np.asarray(x, float)

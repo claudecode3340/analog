@@ -3,7 +3,7 @@ G.widget("code1-bigo", function (body, args) {
   var N = args.nmax || 64;
   var fam = [
     { k: "O(1)", f: function () { return 1; }, c: "var(--good)" },
-    { k: "O(log n)", f: function (n) { return Math.max(1, Math.log2(n)); }, c: "var(--isl)" },
+    { k: "O(log n)", f: function (n) { return Math.max(1, Math.log2(n)); }, c: "var(--udl)" },
     { k: "O(n)", f: function (n) { return n; }, c: "var(--accent)" },
     { k: "O(n log n)", f: function (n) { return n * Math.max(1, Math.log2(n)); }, c: "var(--warn)" },
     { k: "O(n²)", f: function (n) { return n * n; }, c: "var(--bad)" }

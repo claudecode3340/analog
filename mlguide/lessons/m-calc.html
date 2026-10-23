@@ -1,6 +1,6 @@
-<section class="lesson" id="m-calc" data-book="Prince pp. 441, 448 · prepares ISLP 3 and Prince 6–7">
+<section class="lesson" id="m-calc" data-book="Prince pp. 441, 448">
 <p class="lede">Training a model means walking downhill on a loss surface, and derivatives are what tell you which way is downhill. This lesson rebuilds derivatives from the slope of a line, then adds partial derivatives, gradients, gradient descent and the chain rule, with every number shown, so that least squares in ISLP Chapter 3 and backpropagation in Prince Chapter 7 feel like old friends.</p>
-<div class="uses"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> <a href="#m-linalg">Vectors and matrices</a> <a href="#np2">NumPy II</a> <a href="#plt1">matplotlib</a></div>
+<div class="uses" style="margin-bottom:16px"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> <a href="#m-linalg">Vectors and matrices</a> <a href="#np2">NumPy II</a> <a href="#plt1">matplotlib</a></div>
 
 <div class="goals"><h4>By the end of this lesson you can</h4><ul>
 <li>explain a derivative as the limit of secant slopes, and estimate one numerically;</li>
@@ -45,7 +45,7 @@ print("ready")
 
 <h3 id="m-calc-rules">The rules, each with a worked example</h3>
 <p>Nobody computes limits every time. A handful of rules, each proved once from the definition, lets you differentiate everything in months 1–3. Here they are, with \(c\) a constant and \(f,g\) functions of \(x\).</p>
-<div class="tw"><table class="t"><thead><tr><th>Rule</th><th>Formula</th><th>Example</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>Rule</th><th>Formula</th><th>Example</th></tr></thead><tbody>
 <tr><td>constant</td><td>\(\frac{d}{dx}c=0\)</td><td>\(\frac{d}{dx}7=0\)</td></tr>
 <tr><td>power</td><td>\(\frac{d}{dx}x^n=nx^{n-1}\)</td><td>\(\frac{d}{dx}x^3=3x^2\); \(\frac{d}{dx}\sqrt x=\frac{d}{dx}x^{1/2}=\frac{1}{2\sqrt x}\)</td></tr>
 <tr><td>constant multiple</td><td>\((cf)'=cf'\)</td><td>\(\frac{d}{dx}5x^3=15x^2\)</td></tr>
@@ -203,7 +203,7 @@ plt.tight_layout()
 <p>Now the real thing: fitting the line to our three points \((1,2),(2,3),(3,5)\) by gradient descent instead of the normal equations. The loss and its two partial derivatives (derived properly in the matrix section below) are</p>
 \[L(\beta_0,\beta_1)=\sum_i e_i^2,\quad e_i=y_i-\beta_0-\beta_1x_i,\qquad\frac{\partial L}{\partial\beta_0}=-2\sum_ie_i,\qquad\frac{\partial L}{\partial\beta_1}=-2\sum_ix_ie_i.\]
 <p>Start at \((\beta_0,\beta_1)=(0,0)\) with \(\alpha=0.02\):</p>
-<div class="tw"><table class="t"><thead><tr><th>step</th><th>\((\beta_0,\beta_1)\)</th><th>residuals \(e\)</th><th>\(L\)</th><th>\(\frac{\partial L}{\partial\beta_0}=-2\sum e_i\)</th><th>\(\frac{\partial L}{\partial\beta_1}=-2\sum x_ie_i\)</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>step</th><th>\((\beta_0,\beta_1)\)</th><th>residuals \(e\)</th><th>\(L\)</th><th>\(\frac{\partial L}{\partial\beta_0}=-2\sum e_i\)</th><th>\(\frac{\partial L}{\partial\beta_1}=-2\sum x_ie_i\)</th></tr></thead><tbody>
 <tr><td>0</td><td class="n">(0, 0)</td><td class="n">(2, 3, 5)</td><td class="n">38</td><td class="n">\(-2(10)=-20\)</td><td class="n">\(-2(2+6+15)=-46\)</td></tr>
 <tr><td>1</td><td class="n">(0.4, 0.92)</td><td class="n">(0.68, 0.76, 1.84)</td><td class="n">4.4256</td><td class="n">−6.56</td><td class="n">−15.44</td></tr>
 <tr><td>2</td><td class="n">(0.5312, 1.2288)</td><td class="n">(0.24, 0.0112, 0.7824)</td><td class="n">0.6699</td><td class="n">−2.0672</td><td class="n">−5.2192</td></tr>
@@ -211,6 +211,7 @@ plt.tight_layout()
 </tbody></table></div>
 <p>Step 0 to 1 in full: \(\beta_0\leftarrow0-0.02\times(-20)=0.4\) and \(\beta_1\leftarrow0-0.02\times(-46)=0.92\). Both gradients were negative (increasing either parameter reduces the loss), so both parameters went up. The loss falls 38 → 4.43 → 0.67 → 0.25, heading for the minimum 0.1667 at \((1/3,1.5)\) found by the normal equations in <a href="#m-linalg">Vectors and matrices</a>.</p>
 <div class="widget" data-w="m-calc-gd" data-title="Gradient, contours and gradient descent"><div class="wn">This is the loss landscape \(L(\beta_0,\beta_1)\) for the three points, seen from above. Drag the black point: the red arrow is the gradient (uphill, perpendicular to the contour through the point), the green one is minus the gradient (the direction gradient descent steps in). The arrows show direction only; their length is fixed. Press “Step” a few times, then “Run 50”. Raise the learning rate past about 0.06 and watch the path zig-zag and then diverge: the valley is long and narrow, so a big step overshoots across it.</div></div>
+<div class="predict" data-correct="2"><p>The cell runs 2,000 gradient-descent steps from \((0,0)\). Where will \(\bbeta\) end up?</p><ol class="opts"><li>at \((0,0)\): the gradient is zero there</li><li>at about \((0.3333,1.5)\), the normal-equations answer, with loss 0.1667</li><li>at a different point from the normal equations, because gradient descent finds an approximate minimum of a different problem</li></ol><div class="why">Both methods minimise the same loss, and this loss is a convex bowl with one bottom, so gradient descent with a small enough step ends at the same \((1/3,1.5)\). The gradient at \((0,0)\) is \((-20,-46)\), far from zero.</div></div>
 <div class="py" id="c-m-calc-04"><pre class="src">
 X = np.array([[1., 1.], [1., 2.], [1., 3.]])
 y = np.array([2., 3., 5.])
@@ -282,7 +283,7 @@ print("numerical dL/dw:", round((Lp - Lm) / (2 * h), 4))
 </ol>
 <div class="result">\(\nabla_{\bbeta}L=-2\bX\T(\by-\bX\bbeta)\); zero exactly at the least-squares solution.</div></div>
 <p>A few vector-derivative facts, each checkable element by element in the same way (with \(\mathbf{a}\) a constant vector and \(\mathbf{A}\) a constant matrix):</p>
-<div class="tw"><table class="t"><thead><tr><th>Function of \(\bx\)</th><th>Gradient \(\frac{\partial}{\partial\bx}\)</th><th>Scalar analogue</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>Function of \(\bx\)</th><th>Gradient \(\frac{\partial}{\partial\bx}\)</th><th>Scalar analogue</th></tr></thead><tbody>
 <tr><td>\(\mathbf{a}\T\bx\)</td><td>\(\mathbf{a}\)</td><td>\(ax\to a\)</td></tr>
 <tr><td>\(\bx\T\bx=\|\bx\|^2\)</td><td>\(2\bx\)</td><td>\(x^2\to2x\)</td></tr>
 <tr><td>\(\bx\T\mathbf{A}\bx\)</td><td>\((\mathbf{A}+\mathbf{A}\T)\bx\) (\(=2\mathbf{A}\bx\) if \(\mathbf{A}\) symmetric)</td><td>\(ax^2\to2ax\)</td></tr>
@@ -297,7 +298,7 @@ print("numerical dL/dw:", round((Lp - Lm) / (2 * h), 4))
 \[f'(a)\approx\frac{f(a+h)-f(a-h)}{2h}\]
 <p class="say">Read: “f of a-plus-h minus f of a-minus-h, over two h”: the slope of the secant through points just either side of \(a\).</p></div>
 <p>But \(h\) cannot be made arbitrarily small: computers store about 16 significant digits, and subtracting two nearly equal numbers loses most of them. For \(f=e^x\) at 0 (true slope 1):</p>
-<div class="tw"><table class="t"><thead><tr><th>\(h\)</th><th>forward error</th><th>central error</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>\(h\)</th><th>forward error</th><th>central error</th></tr></thead><tbody>
 <tr><td class="n">0.1</td><td class="n">0.0517</td><td class="n">0.00167</td></tr>
 <tr><td class="n">0.01</td><td class="n">0.00502</td><td class="n">0.0000167</td></tr>
 <tr><td class="n">\(10^{-5}\)</td><td class="n">\(5.0\times10^{-6}\)</td><td class="n">\(1.2\times10^{-11}\)</td></tr>
@@ -479,7 +480,7 @@ def neuron_grads(x, y, w, b):
 </pre>
 <div class="explain"><p>The checks include a gradient check at two other points: the habit that catches backprop bugs.</p></div></div>
 
-<div class="ex" id="x-m-calc-07" data-title="a general gradient checker"><div class="task"><p>Write <code>rel_error(f, grad, theta)</code> that computes the numerical gradient of <code>f</code> at the vector <code>theta</code> by central differences (h = 1e-5, one coordinate at a time), and returns the relative error \(\frac{\|g_a-g_n\|}{\|g_a\|+\|g_n\|}\) against <code>grad(theta)</code>.</p></div>
+<div class="ex" id="x-m-calc-07" data-title="a general gradient checker"><div class="task"><p>Write <code>rel_error(f, grad, theta)</code> that computes the numerical gradient of <code>f</code> at the vector <code>theta</code> by central differences (h = 1e-5, one coordinate at a time), and returns the relative error \(\dfrac{\|g_a-g_n\|}{\|g_a\|+\|g_n\|}\) against <code>grad(theta)</code>.</p></div>
 <pre class="src">
 def rel_error(f, grad, theta, h=1e-5):
     theta = np.asarray(theta, float)

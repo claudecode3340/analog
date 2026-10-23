@@ -1,6 +1,6 @@
 <section class="lesson" id="m-linalg" data-book="Prince pp. 443–447 · ISLP pp. 9–10">
 <p class="lede">Every dataset in this course is a matrix, every linear model is a matrix times a vector, and every neural network is a stack of them. This lesson builds vectors and matrices from nothing, computes every operation by hand with all the numbers shown, and checks each one in NumPy, ending with least squares as a projection: the idea under ISLP Chapter 3.</p>
-<div class="uses"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> <a href="#np1">NumPy I</a> <a href="#np2">NumPy II</a></div>
+<div class="uses" style="margin-bottom:16px"><b>You'll use</b> <a href="#s0-maths">How to read the maths</a> <a href="#np1">NumPy I</a> <a href="#np2">NumPy II</a></div>
 
 <div class="goals"><h4>By the end of this lesson you can</h4><ul>
 <li>add vectors, scale them, take dot products, lengths and angles, by hand and in NumPy;</li>
@@ -74,7 +74,7 @@ print("3a - 2b =", 3 * a - 2 * b)
 <p class="say">Read: “the two-norm of a”, or “the length of a”: square each entry, add, take the square root.</p></div>
 <p>For \(\mathbf{a}=(2,1)\): \(\|\mathbf{a}\|=\sqrt{4+1}=\sqrt5=2.2361\). For \(\mathbf{b}=(1,3)\): \(\sqrt{1+9}=\sqrt{10}=3.1623\). The <b>distance</b> between two points is the length of their difference: \(\|\mathbf{b}-\mathbf{a}\|=\|(-1,2)\|=\sqrt{1+4}=\sqrt5\). This Euclidean distance is exactly what KNN uses to find neighbours.</p>
 <p>Prince's general \(\ell_p\) norm is \(\|\bz\|_p=\big(\sum_d|z_d|^p\big)^{1/p}\). Three cases matter to us:</p>
-<div class="tw"><table class="t"><thead><tr><th>Norm</th><th>Formula</th><th>For \(\bz=(3,-4)\)</th><th>Where you will meet it</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>Norm</th><th>Formula</th><th>For \(\bz=(3,-4)\)</th><th>Where you will meet it</th></tr></thead><tbody>
 <tr><td>\(\ell_2\) (length)</td><td>\(\sqrt{\sum z_d^2}\)</td><td class="n">\(\sqrt{9+16}=5\)</td><td>distances (KNN), ridge penalty \(\|\bbeta\|_2^2\) (ISLP 6.2)</td></tr>
 <tr><td>\(\ell_1\)</td><td>\(\sum|z_d|\)</td><td class="n">\(3+4=7\)</td><td>the lasso penalty \(\|\bbeta\|_1\) (ISLP 6.2)</td></tr>
 <tr><td>\(\ell_\infty\)</td><td>\(\max_d|z_d|\)</td><td class="n">\(4\)</td><td>“the largest entry”, occasionally</td></tr>
@@ -212,7 +212,7 @@ A2 @ A2      # (2,3) @ (2,3): inner sizes 3 and 2 do not match
 <div class="widget" data-w="m-linalg-transform" data-title="A 2×2 matrix moving the plane" data-args='{"m":[2,1,1,2]}'><div class="wn">Move the four sliders (the entries a, b, c, d). The orange and blue arrows are the two columns: they are where (1,0) and (0,1) land. The shaded square becomes the parallelogram, and its area is |det A|. Try the presets: a rotation keeps the area 1; the “singular” matrix squashes everything onto a line (det = 0). For the starting matrix, find the two directions that are only stretched, not turned: those are the eigenvectors (dashed lines).</div></div>
 
 <p>Some special matrices you will meet (Prince §23.4):</p>
-<div class="tw"><table class="t"><thead><tr><th>Name</th><th>Example</th><th>What it does</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>Name</th><th>Example</th><th>What it does</th></tr></thead><tbody>
 <tr><td><dfn data-g="identity-matrix">identity</dfn> \(\mathbf{I}\)</td><td>\(\begin{pmatrix}1&0\\0&1\end{pmatrix}\)</td><td>nothing: \(\mathbf{I}\bx=\bx\), \(\mathbf{IA}=\mathbf{AI}=\mathbf{A}\). The matrix version of the number 1.</td></tr>
 <tr><td>diagonal</td><td>\(\begin{pmatrix}2&0\\0&0.5\end{pmatrix}\)</td><td>stretches along the axes: \(x_1\) doubled, \(x_2\) halved</td></tr>
 <tr><td>rotation (orthogonal)</td><td>\(\begin{pmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{pmatrix}\)</td><td>turns by \(\theta\), keeps lengths; its inverse is its transpose</td></tr>
@@ -397,7 +397,7 @@ print("trace", np.trace(A), "= sum", vals.sum(), "; det", np.linalg.det(A), "= p
 </pre><div class="pynote"><b>Read the output:</b> NumPy scales each eigenvector to length 1, so \((1,1)\) appears as \((0.7071,0.7071)\), the same direction. The order of the eigenvalues may differ from ours; that does not matter. For symmetric matrices use <code>np.linalg.eigh</code>, which is faster and returns them sorted.</div></div>
 
 <h3 id="m-linalg-summary">Summary: the operations on one page</h3>
-<div class="tw"><table class="t"><thead><tr><th>Operation</th><th>Maths</th><th>NumPy</th><th>Shape</th></tr></thead><tbody>
+<div class="tw" style="position:relative"><table class="t"><thead><tr><th>Operation</th><th>Maths</th><th>NumPy</th><th>Shape</th></tr></thead><tbody>
 <tr><td>dot product</td><td>\(\mathbf{a}\T\mathbf{b}=\sum_d a_db_d\)</td><td><code>a @ b</code></td><td>\((D)\cdot(D)\to\) number</td></tr>
 <tr><td>length</td><td>\(\|\mathbf{a}\|=\sqrt{\mathbf{a}\T\mathbf{a}}\)</td><td><code>np.linalg.norm(a)</code></td><td>number</td></tr>
 <tr><td>matrix × vector</td><td>\((\mathbf{A}\bx)_i=\sum_j a_{ij}x_j\)</td><td><code>A @ x</code></td><td>\((m\times n)(n)\to(m)\)</td></tr>
@@ -440,7 +440,7 @@ def dot(a, b):
 </pre>
 <div class="explain"><p>The loop index <code>d</code> plays the role of the summation index in \(\sum_{d=1}^D a_db_d\) (Python counts from 0, the maths from 1).</p></div></div>
 
-<div class="ex" id="x-m-linalg-02" data-title="cosine similarity"><div class="task"><p>Write <code>cos_sim(a, b)</code> returning \(\frac{\mathbf{a}\T\mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}\). You may use <code>@</code> and <code>np.sqrt</code> (but not <code>np.linalg.norm</code>). <code>cos_sim([2, 1], [1, 3])</code> is about <code>0.7071</code>.</p></div>
+<div class="ex" id="x-m-linalg-02" data-title="cosine similarity"><div class="task"><p>Write <code>cos_sim(a, b)</code> returning \(\dfrac{\mathbf{a}\T\mathbf{b}}{\|\mathbf{a}\|\|\mathbf{b}\|}\). You may use <code>@</code> and <code>np.sqrt</code> (but not <code>np.linalg.norm</code>). <code>cos_sim([2, 1], [1, 3])</code> is about <code>0.7071</code>.</p></div>
 <pre class="src">
 def cos_sim(a, b):
     a, b = np.asarray(a, float), np.asarray(b, float)
@@ -588,7 +588,7 @@ def fit_line(x, y):
 </pre>
 <div class="explain"><p>This is the whole of least-squares fitting in two lines, and it works unchanged for any number of predictor columns. You will build on it in <a href="#proj1">Project 1</a>.</p></div></div>
 
-<div class="ex" id="x-m-linalg-07" data-title="projection onto a vector"><div class="task"><p>Write <code>project(y, u)</code> returning \(\frac{\mathbf{u}\T\by}{\mathbf{u}\T\mathbf{u}}\mathbf{u}\). <code>project([3, 1], [1, 1])</code> gives <code>[2, 2]</code>.</p></div>
+<div class="ex" id="x-m-linalg-07" data-title="projection onto a vector"><div class="task"><p>Write <code>project(y, u)</code> returning \(\dfrac{\mathbf{u}\T\by}{\mathbf{u}\T\mathbf{u}}\mathbf{u}\). <code>project([3, 1], [1, 1])</code> gives <code>[2, 2]</code>.</p></div>
 <pre class="src">
 def project(y, u):
     y, u = np.asarray(y, float), np.asarray(u, float)

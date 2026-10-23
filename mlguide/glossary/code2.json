@@ -1,0 +1,7 @@
+{
+"hash": {"term": "hash", "def": "A number computed from a key that tells a dictionary or set which slot to look in. Equal keys always have equal hashes.", "at": "code2"},
+"hashable": {"term": "hashable", "def": "A value that cannot change (number, string, tuple), so it can be a dictionary key or set member. Lists, dicts and sets are not hashable.", "at": "code2"},
+"complement": {"term": "complement (two-sum)", "def": "For a target sum \\(t\\), the partner a value \\(x\\) needs: \\(t-x\\). Looking it up in a dict of values already seen solves two-sum in \\(O(n)\\).", "at": "code2"},
+"signature": {"term": "signature (grouping key)", "def": "A hashable value that is equal for two items exactly when they belong in the same group, e.g. the sorted letters of a word for anagrams.", "at": "code2"},
+"anagram": {"term": "anagram", "def": "A word or phrase made of exactly the same letters as another, each used the same number of times (listen, silent).", "at": "code2"}
+}

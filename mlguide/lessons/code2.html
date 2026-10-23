@@ -1,0 +1,689 @@
+<section class="lesson" id="code2" data-book="Interview practice · original problems">
+<p class="lede">Two ideas solve a surprising share of all interview problems. The first is the <b>hash map</b> (a Python dictionary or set): it lets you remember what you have seen and look it up instantly, which turns many O(n²) searches into a single O(n) pass. The second is <b>two pointers</b>: two index variables walking through a list, so that one pass does the work of two nested loops. This lesson teaches both slowly, with hand traces and a step-by-step animation, and then gives you ten problems to make them yours.</p>
+
+<div class="uses"><b>You'll use</b> <a href="#py2">Python II</a> <a href="#code1">Coding practice 1</a></div>
+
+<div class="goals"><h4>By the end of this lesson you can</h4><ul>
+<li>explain in plain words how a dictionary finds a key in O(1) average time, and what “hashable” means;</li>
+<li>use the three hash-map patterns: <b>counting</b>, <b>seen-so-far look-up</b> (complements) and <b>grouping by a signature</b>;</li>
+<li>use the two two-pointer patterns: <b>from both ends</b> of a sorted list, and <b>read/write</b> pointers moving the same way;</li>
+<li>pick the right pattern from the words of a problem, and solve ten problems with it, tracing each by hand.</li></ul></div>
+
+<h3 id="code2-tools">The tools you need, in one place</h3>
+<p>Most of these you met in <a href="#py2">Python II</a>. Two are new: sorting the characters of a string, and gluing them back together. Run the cell and match each output line with its comment.</p>
+<div class="callout key"><div class="ct">Tools for this lesson</div>
+<p><b><code>d.get(key, default)</code></b> returns <code>d[key]</code> if the key is there, and <code>default</code> otherwise, with no error. So <code>d.get("x", 0) + 1</code> means “the current count plus one, treating a missing key as 0”.</p>
+<p><b><code>for i, x in enumerate(xs)</code></b> gives you the position <code>i</code> and the item <code>x</code> together: (0, first item), (1, second item), and so on.</p>
+<p><b>New:</b> <b><code>sorted("listen")</code></b> sorts the <i>characters</i> of a string and returns a list, <code>['e', 'i', 'l', 'n', 's', 't']</code>. <b><code>"".join(chars)</code></b> glues a list of strings back into one string, with <code>""</code> (nothing) between the pieces.</p>
+<p><b><code>for key, value in d.items()</code></b> walks through a dictionary's pairs, in the order the keys were first put in.</p>
+<p><b><code>lambda p: p[1]</code></b> is a tiny nameless function: “given p, return p[1]”. <code>sorted(pairs, key=lambda p: p[1])</code> sorts the pairs by their second item.</p>
+<p><b><code>Counter("banana")</code></b> (from <code>collections</code>) counts everything for you. In this lesson, write the counting loop yourself first, then use <code>Counter</code> to check your answer.</p></div>
+
+<div class="py" id="c-code2-01"><pre class="src">
+from collections import Counter
+
+d = {"a": 3}
+print(d.get("a", 0), d.get("z", 0))          # 3 0   (no KeyError for "z")
+for i, x in enumerate(["x", "y", "z"]):
+    print(i, x)                               # 0 x, then 1 y, then 2 z
+letters = sorted("listen")
+print(letters, "".join(letters))              # a sorted list of characters, then glued back
+pairs = [("b", 2), ("a", 5), ("c", 1)]
+print(sorted(pairs, key=lambda p: p[1]))      # sorted by the number in each pair
+Counter("banana")
+</pre><div class="pynote"><b>Read the output:</b> <code>d.get("z", 0)</code> gave 0 instead of crashing. <code>enumerate</code> printed each position with its item. The sorted letters of “listen” are <code>eilnst</code>, which are also the sorted letters of “silent”: keep that in mind for the anagram problems. The <code>Counter</code> shows <code>a</code> three times, <code>n</code> twice, <code>b</code> once.</div></div>
+
+<h3 id="code2-hash">How a dictionary finds a key in one step</h3>
+<p>A list finds a value by checking its items one after another: up to \(n\) checks, so O(n). A dictionary does something cleverer. Understanding it in plain words will help you trust it.</p>
+<ol>
+<li>Python keeps a table of numbered slots, say 8 of them (they are often called “buckets”).</li>
+<li>To store the key <code>"cat"</code>, Python first computes a number from the key, called its <dfn data-g="hash">hash</dfn>: <code>hash("cat")</code>, some big whole number. It takes the remainder after dividing by the number of slots, for example <code>hash("cat") % 8 = 5</code>, and puts the pair into slot 5.</li>
+<li>To look up <code>"cat"</code> later, Python computes the same hash, goes straight to slot 5, and checks that the key stored there really is <code>"cat"</code>. No scanning at all.</li>
+<li>If two keys land in the same slot (a <i>collision</i>), Python tries another slot by a fixed rule. When the table is about two-thirds full, Python makes it bigger and re-places every key, so collisions stay rare.</li>
+</ol>
+<p>So a look-up, an insert, or <code>key in d</code> costs one hash calculation plus one or two slot checks, whatever the size of the dictionary: <b>O(1) on average</b>. (In the very worst case, if every key collided, it would be O(n). With Python's hash functions that practically never happens, and interviewers accept “O(1) average”.) A <code>set</code> is the same table holding keys without values.</p>
+
+<div class="callout ece"><p><b>In hardware terms:</b> a hash table is like a look-up-table ROM whose address is computed from the data itself, an address decoder fed by a checksum of the key. The CRC you compute for a frame is exactly this kind of function: it squashes a long input into a short number. Computing the address is O(1), and reading one memory word is O(1).</p></div>
+
+<p>There is one rule. A key must never change after it is stored, or its hash (and so its slot) would become wrong. Numbers, strings and tuples cannot change, so they can be keys; such values are called <dfn data-g="hashable">hashable</dfn>. Lists can change, so they cannot be keys. The next cell fails on purpose to show you the error.</p>
+<div class="py" id="c-code2-02" data-mode="expect-error" data-error="TypeError"><pre class="src">
+groups = {}
+groups[("a", "e", "t")] = ["tea"]     # a tuple as key: fine
+print(groups)
+groups[["a", "e", "t"]] = ["eat"]     # a list as key: not allowed
+</pre><div class="pynote"><b>Read the error:</b> <code>TypeError: unhashable type: 'list'</code>. When you want a list-like key (for example the sorted letters of a word), turn it into a tuple with <code>tuple(...)</code> or into a string with <code>"".join(...)</code>.</div></div>
+
+<h3 id="code2-count">Pattern 1: counting with a dictionary</h3>
+<p><b>When to use it:</b> the problem talks about “how many times”, “most frequent”, “appears exactly once”, “same letters” or “anagram”. One pass builds a dictionary from each item to its count; then you answer the question by reading the dictionary.</p>
+
+<div class="worked" data-reveal><div class="wt">Worked example · <b>counting the letters of “banana”</b></div>
+<div class="given">Build <code>counts</code> by doing <code>counts[ch] = counts.get(ch, 0) + 1</code> for each character of <code>"banana"</code>.</div>
+<ol class="steps">
+<li><div><code>ch = "b"</code>: <code>get</code> returns 0 (not there yet), so store 1. counts = {b: 1}</div></li>
+<li><div><code>ch = "a"</code>: get 0, store 1. counts = {b: 1, a: 1}</div></li>
+<li><div><code>ch = "n"</code>: get 0, store 1. counts = {b: 1, a: 1, n: 1}</div></li>
+<li><div><code>ch = "a"</code>: get <span class="hlc">1</span>, store <span class="hlc">2</span>. counts = {b: 1, a: 2, n: 1}<span class="why">The second “a” finds the first one's count and adds to it.</span></div></li>
+<li><div><code>ch = "n"</code>: get 1, store 2. counts = {b: 1, a: 2, n: 2}</div></li>
+<li><div><code>ch = "a"</code>: get 2, store 3. counts = {b: 1, a: 3, n: 2}</div></li>
+</ol>
+<div class="result">counts = {b: 1, a: 3, n: 2}, built with six O(1) updates: O(n) time, and O(k) space for k different characters.</div></div>
+
+<div class="py" id="c-code2-03"><pre class="src">
+def count_items(items):
+    counts = {}
+    for x in items:
+        counts[x] = counts.get(x, 0) + 1
+    return counts
+
+mine = count_items("banana")
+print(mine)
+print(mine == dict(Counter("banana")))     # check against the library
+count_items([3, 1, 3, 3, 2])
+</pre><div class="pynote"><b>Read the output:</b> the same function counts the characters of a string or the numbers in a list, because you can loop over both. The comparison with <code>Counter</code> prints <code>True</code>. Try <code>count_items("Mississippi")</code>: notice that <code>"M"</code> and <code>"m"</code> would be different keys.</div></div>
+
+<h3 id="code2-seen">Pattern 2: “have I already seen what I need?”</h3>
+<p><b>When to use it:</b> the problem asks for a <i>pair</i> (or a match) with some property, such as “two numbers that add up to a target”. The brute force tries every pair: O(n²). The trick is to walk through the list once, and for each item ask a dictionary whether its <i>partner</i> has already gone past. For a sum, the partner of <code>x</code> is <code>target - x</code>, called its <dfn data-g="complement">complement</dfn>.</p>
+
+<div class="worked"><div class="wt">Worked example · <b>two numbers adding to 10 in [3, 8, 4, 6, 1]</b></div>
+<div class="given">Keep <code>seen</code>, a dictionary from value to the index where we saw it. At each position <code>i</code>, compute <code>need = 10 - nums[i]</code>. If <code>need</code> is in <code>seen</code>, we are done.</div>
+<div class="tw"><table class="t"><thead><tr><th>i</th><th>nums[i]</th><th>need = 10 − nums[i]</th><th>need in seen?</th><th>seen after this step</th></tr></thead><tbody>
+<tr><td class="n">0</td><td class="n">3</td><td class="n">7</td><td>no</td><td>{3: 0}</td></tr>
+<tr><td class="n">1</td><td class="n">8</td><td class="n">2</td><td>no</td><td>{3: 0, 8: 1}</td></tr>
+<tr><td class="n">2</td><td class="n">4</td><td class="n">6</td><td>no</td><td>{3: 0, 8: 1, 4: 2}</td></tr>
+<tr><td class="n">3</td><td class="n">6</td><td class="n">4</td><td><b>yes, at index 2</b></td><td>stop: answer (2, 3)</td></tr>
+</tbody></table></div>
+<div class="result">4 + 6 = 10 at indices (2, 3), found in one pass: O(n) time, O(n) space.</div></div>
+<p>Why check <i>before</i> storing? So that an item can never pair with itself. For target 8 and the list <code>[4, 1]</code>, the 4 must not find its own entry.</p>
+
+<h3 id="code2-group">Pattern 3: grouping by a signature</h3>
+<p><b>When to use it:</b> “group together the items that are the same in some sense”. Choose a <dfn data-g="signature">signature</dfn>: a hashable value that is equal for two items exactly when they belong together. Use it as a dictionary key whose value is the list of items in that group. For anagrams the signature is the sorted letters: <code>"".join(sorted("tea"))</code> is <code>"aet"</code>, and so is the signature of “eat” and of “ate”.</p>
+<div class="py" id="c-code2-04"><pre class="src">
+def by_last_digit(nums):
+    groups = {}
+    for x in nums:
+        key = x % 10                           # the signature: the last digit
+        if key not in groups:
+            groups[key] = []                   # first member of a new group
+        groups[key].append(x)
+    return groups
+
+by_last_digit([12, 7, 42, 17, 30, 2])
+</pre><div class="pynote"><b>Read the output:</b> 12, 42 and 2 share the key 2; 7 and 17 share the key 7; 30 is alone under 0. The groups appear in the order their first member was met, because dictionaries remember insertion order.</div></div>
+
+<h3 id="code2-two">Two pointers</h3>
+<p>In <a href="#code1">Coding practice 1</a> you reversed a list with two pointers that started at the two ends. The same idea comes in two common shapes.</p>
+<h4>Shape A: from both ends of a sorted list</h4>
+<p>Problem: in a <b>sorted</b> list, find two numbers that add up to a target. Put <code>L</code> at the smallest item and <code>R</code> at the largest, and look at their sum:</p>
+<ul>
+<li>sum too <b>small</b>: the only way to make it bigger is a bigger left item, so <code>L += 1</code>;</li>
+<li>sum too <b>big</b>: the only way to make it smaller is a smaller right item, so <code>R -= 1</code>;</li>
+<li>sum equal: found.</li>
+</ul>
+<p><b>Why it never misses the answer.</b> Suppose <code>nums[L] + nums[R]</code> is too small. Then <code>nums[L]</code> plus <i>any</i> item between L and R is also too small, because those items are no bigger than <code>nums[R]</code>. So <code>nums[L]</code> cannot be part of any answer, and throwing it away is safe. The same argument works on the right. Each step throws away one item for good, so there are at most \(n-1\) steps: O(n) time and O(1) space.</p>
+
+<h4>Shape B: read and write pointers moving the same way</h4>
+<p>Problem: change a list in place, keeping some items and dropping or moving others. A <b>read</b> pointer <code>r</code> visits every item. A <b>write</b> pointer <code>w</code> marks where the next kept item should go. <code>w</code> never overtakes <code>r</code>, so we never overwrite an item before reading it. Everything before <code>w</code> is finished.</p>
+
+<div class="predict" data-correct="2"><p>Sorted list <code>[1, 3, 4, 6, 8, 11]</code>, target 10. The first sum is 1 + 11 = 12. Which pointer moves first?</p><ol class="opts"><li>L moves right</li><li>R moves left</li><li>Both move</li></ol><div class="why">12 is too big, so we need a smaller sum. Only a smaller right item can give one, so R moves left (to 8). Moving L right would make the sum even bigger. Step through the widget to see the whole search: it ends at 4 + 6.</div></div>
+<div class="widget" data-w="code2-pointers" data-title="Step through the patterns" data-args='{"mode":"pair"}'><div class="wn">Press Next to move one step at a time. In “pair sum”, watch each pointer move only when the sum tells it to. Then try “move zeros”: w (green) lags behind r, and every non-zero is swapped back to position w. “two-sum (dict)” and “count letters” show the dictionary growing by one entry per step: the hash-map patterns from above.</div></div>
+
+<div class="py" id="c-code2-05"><pre class="src">
+def remove_value(nums, bad):
+    """Remove every copy of `bad` in place; return how many items are kept."""
+    w = 0
+    for r in range(len(nums)):
+        if nums[r] != bad:
+            nums[w] = nums[r]       # keep it: copy it to the write position
+            w += 1
+    del nums[w:]                    # cut off the leftovers after the last kept item
+    return w
+
+xs = [3, 2, 2, 3, 4, 2]
+print(remove_value(xs, 2), xs)
+</pre><div class="pynote"><b>Read the output:</b> 3 items are kept, and <code>xs</code> itself is now <code>[3, 3, 4]</code>. Trace it on paper: <code>w</code> goes 0→1 (copy 3), stays at 1 for both 2s, goes 1→2 (copy 3), 2→3 (copy 4), and stays for the last 2. <code>del nums[w:]</code> deletes everything from position <code>w</code> to the end.</div></div>
+
+<h3 id="code2-choose">Which pattern? Read the words of the problem</h3>
+<div class="tw"><table class="t"><thead><tr><th>The problem says…</th><th>Try</th><th>Typical cost</th></tr></thead><tbody>
+<tr><td>“how many times”, “most frequent”, “exactly once”, “anagram”</td><td>counting dict</td><td>O(n) time, O(k) space</td></tr>
+<tr><td>“find a pair / two items such that…” (list not sorted)</td><td>seen-so-far dict of complements</td><td>O(n) time, O(n) space</td></tr>
+<tr><td>“group”, “categorise”, “bucket”</td><td>dict from signature to list</td><td>O(n · cost of one signature)</td></tr>
+<tr><td>“sorted list” and a pair, or “in place, keep the order”</td><td>two pointers</td><td>O(n) time, O(1) space</td></tr>
+<tr><td>“palindrome”, “reverse”, “from both ends”</td><td>two pointers from the ends</td><td>O(n) time, O(1) space</td></tr>
+</tbody></table></div>
+<div class="callout exam"><p><b>What to say in an interview:</b> name the trade-off. “The brute force is O(n²) time and O(1) space. With a hash map I can do it in O(n) time but O(n) space. If the input were sorted, two pointers would give O(n) time <i>and</i> O(1) space.” Interviewers love hearing the three options compared, even when you only code one.</p></div>
+
+<h3 id="code2-problems">Ten problems</h3>
+<p>Same routine as last time: the five steps, a few asserts of your own, then Check. Problems 1 to 6 use dictionaries, sets and counters; 7 to 9 use two pointers; 10 combines counting with sorting. Give each one ten honest minutes before you open a hint.</p>
+
+<h4 id="code2-p1">Problem 1 · Anagram check</h4>
+<div class="ex" id="x-code2-01" data-title="anagram check"><div class="task"><p>Two phrases are <dfn data-g="anagram">anagrams</dfn> if one uses exactly the same letters as the other, each the same number of times. Write <code>is_anagram(a, b)</code>, <b>ignoring capital letters and spaces</b>.</p>
+<div class="tw"><table class="t"><thead><tr><th>call</th><th>returns</th></tr></thead><tbody>
+<tr><td><code>is_anagram("Listen", "Silent")</code></td><td><code>True</code></td></tr>
+<tr><td><code>is_anagram("Dormitory", "dirty room")</code></td><td><code>True</code></td></tr>
+<tr><td><code>is_anagram("abc", "abd")</code></td><td><code>False</code></td></tr></tbody></table></div>
+<p>It must handle phrases of 50,000 characters quickly.</p></div>
+<pre class="src">
+def is_anagram(a, b):
+    # your code here
+    ...
+
+print(is_anagram("Listen", "Silent"))
+</pre>
+<pre class="check">
+import time, random
+for _a, _b, _e in [("Listen", "Silent", True), ("Dormitory", "dirty room", True), ("abc", "abd", False), ("", "", True), ("a", "a", True),
+                   ("a", "", False), ("aab", "abb", False), ("abc", "abcc", False), ("The eyes", "They see", True), ("aabbcc", "abcabc", True)]:
+    _g = is_anagram(_a, _b)
+    assert _g is _e, f"is_anagram({_a!r}, {_b!r}) should be {_e}, got {_g!r}"
+_r = random.Random(5)
+_s = "".join(_r.choice("abcdefghij") for _ in range(50000)); _l = list(_s); _r.shuffle(_l); _t2 = "".join(_l)
+_t = time.perf_counter(); _g = is_anagram(_s, _t2); _dt = time.perf_counter() - _t
+assert _g is True, "two shuffles of the same 50,000 letters should be anagrams"
+assert _dt &lt; 0.5, f"50,000 characters took {_dt:.2f} s: avoid calling .count() or .remove() inside a loop"
+</pre>
+<div class="hint"><p>First clean both phrases: make them lower-case and drop the spaces. <code>a.lower().replace(" ", "")</code> does both.</p></div>
+<div class="hint"><p>Count the letters of each cleaned phrase into a dictionary (Pattern 1), then compare the two dictionaries with <code>==</code>. Two dictionaries are equal when they have the same keys with the same values.</p></div>
+<div class="hint"><p>A neat variation uses one dictionary: add 1 for every letter of <code>a</code>, subtract 1 for every letter of <code>b</code>, and check that every count ends at 0.</p></div>
+<pre class="solution">
+def is_anagram(a, b):
+    a = a.lower().replace(" ", "")
+    b = b.lower().replace(" ", "")
+    if len(a) != len(b):              # quick exit: different lengths can never match
+        return False
+    counts = {}
+    for ch in a:
+        counts[ch] = counts.get(ch, 0) + 1    # +1 for every letter of a
+    for ch in b:
+        counts[ch] = counts.get(ch, 0) - 1    # -1 for every letter of b
+    for v in counts.values():
+        if v != 0:
+            return False
+    return True
+</pre>
+<div class="explain"><p><b>The idea.</b> Anagrams have identical letter counts. This solution uses one dictionary: add 1 for each letter of <code>a</code>, subtract 1 for each letter of <code>b</code>. If every count ends at 0, the letters balance exactly. (Building two dictionaries and comparing them, or <code>Counter(a) == Counter(b)</code>, is just as good.)</p>
+<p><b>Trace on “Listen”, “Silent”</b> (after cleaning: “listen”, “silent”):</p>
+<div class="tw"><table class="t"><thead><tr><th>phase</th><th>counts afterwards</th></tr></thead><tbody>
+<tr><td>after adding l, i, s, t, e, n</td><td>{l: 1, i: 1, s: 1, t: 1, e: 1, n: 1}</td></tr>
+<tr><td>after subtracting s</td><td>{l: 1, i: 1, s: 0, t: 1, e: 1, n: 1}</td></tr>
+<tr><td>after subtracting i</td><td>{l: 1, i: 0, s: 0, t: 1, e: 1, n: 1}</td></tr>
+<tr><td>after subtracting l, e, n, t</td><td>{l: 0, i: 0, s: 0, t: 0, e: 0, n: 0}: all zero, return True</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> Two passes over the strings and one over the k different characters: <b>O(n) time</b>, <b>O(k) space</b>. The sorting version <code>sorted(a) == sorted(b)</code> is shorter and fine in practice, but O(n log n). The slow trap is calling <code>a.count(ch)</code> for every character: each <code>count</code> scans the whole string, so the total is O(n²).</p></div></div>
+
+<h4 id="code2-p2">Problem 2 · First character that appears once</h4>
+<div class="ex" id="x-code2-02" data-title="first unique character"><div class="task"><p>Write <code>first_unique(s)</code> that returns the <b>index</b> of the first character of <code>s</code> that appears exactly once in the whole string, or <code>-1</code> if there is none.</p>
+<div class="tw"><table class="t"><thead><tr><th>call</th><th>returns</th><th>why</th></tr></thead><tbody>
+<tr><td><code>first_unique("statistics")</code></td><td><code>2</code></td><td>the “a”: s, t and i all repeat</td></tr>
+<tr><td><code>first_unique("aabb")</code></td><td><code>-1</code></td><td>every character repeats</td></tr>
+<tr><td><code>first_unique("z")</code></td><td><code>0</code></td><td>one character, appearing once</td></tr></tbody></table></div></div>
+<pre class="src">
+def first_unique(s):
+    # your code here
+    ...
+
+print(first_unique("statistics"))
+</pre>
+<pre class="check">
+import time
+for _s, _e in [("statistics", 2), ("aabb", -1), ("z", 0), ("", -1), ("abcabd", 2), ("aabbc", 4), ("xxyzz", 2), ("loveleetcodev", 7)]:
+    _g = first_unique(_s)
+    assert _g == _e, f"first_unique({_s!r}) should be {_e}, got {_g}"
+_big = "ab" * 20000 + "c"
+_t = time.perf_counter(); _g = first_unique(_big); _dt = time.perf_counter() - _t
+assert _g == 40000, f"for 'abab...ab' + 'c' the answer is 40000, got {_g}"
+assert _dt &lt; 0.3, f"40,001 characters took {_dt:.2f} s: s.count(ch) inside the loop is O(n²). Count once, up front."
+</pre>
+<div class="hint"><p>One pass cannot decide, because a character that looks unique early may repeat later. Use two passes. First pass: count every character (Pattern 1).</p></div>
+<div class="hint"><p>Second pass: walk the string again with <code>enumerate</code>, and return the first index <code>i</code> whose character has count 1. If the loop finishes without returning, return -1.</p></div>
+<pre class="solution">
+def first_unique(s):
+    counts = {}
+    for ch in s:                       # pass 1: how often does each character appear?
+        counts[ch] = counts.get(ch, 0) + 1
+    for i, ch in enumerate(s):         # pass 2: the first one with count 1, in string order
+        if counts[ch] == 1:
+            return i
+    return -1
+</pre>
+<div class="explain"><p><b>The idea.</b> “Appears once” depends on the <i>whole</i> string, so pass 1 collects the counts, and pass 2 respects the order. Two O(n) passes are still O(n).</p>
+<p><b>Trace on “statistics”.</b> Pass 1 gives counts = {s: 3, t: 3, a: 1, i: 2, c: 1}. Pass 2:</p>
+<div class="tw"><table class="t"><thead><tr><th>i</th><th>ch</th><th>counts[ch]</th><th>equal to 1?</th></tr></thead><tbody>
+<tr><td class="n">0</td><td>s</td><td class="n">3</td><td>no</td></tr>
+<tr><td class="n">1</td><td>t</td><td class="n">3</td><td>no</td></tr>
+<tr><td class="n">2</td><td>a</td><td class="n">1</td><td><b>yes: return 2</b></td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> <b>O(n) time</b>, <b>O(k) space</b> for k different characters (at most 26 for lower-case letters, so many interviewers call it O(1)). The brute force, <code>if s.count(ch) == 1</code> inside the loop, is O(n²).</p></div></div>
+
+<h4 id="code2-p3">Problem 3 · Two-sum with a dictionary</h4>
+<div class="ex" id="x-code2-03" data-title="two-sum"><div class="task"><p>Given a list of integers <code>nums</code> (not sorted) and an integer <code>target</code>, return a tuple <code>(i, j)</code> with <code>i &lt; j</code> and <code>nums[i] + nums[j] == target</code>. You may assume exactly one such pair exists. Each position can be used at most once.</p>
+<div class="tw"><table class="t"><thead><tr><th>call</th><th>returns</th></tr></thead><tbody>
+<tr><td><code>two_sum([3, 8, 4, 6, 1], 10)</code></td><td><code>(2, 3)</code></td></tr>
+<tr><td><code>two_sum([5, 5], 10)</code></td><td><code>(0, 1)</code></td></tr>
+<tr><td><code>two_sum([-3, 4, 3, 90], 0)</code></td><td><code>(0, 2)</code></td></tr></tbody></table></div>
+<p>It must handle 4,000 numbers quickly.</p></div>
+<pre class="src">
+def two_sum(nums, target):
+    # your code here
+    ...
+
+print(two_sum([3, 8, 4, 6, 1], 10))
+</pre>
+<pre class="check">
+import time
+for _n, _t, _e in [([3, 8, 4, 6, 1], 10, (2, 3)), ([5, 5], 10, (0, 1)), ([-3, 4, 3, 90], 0, (0, 2)), ([1, 2], 3, (0, 1)),
+                   ([4, 1, 9, 7], 8, (1, 3)), ([0, 7, 0], 0, (0, 2)), ([2, 6, 11, 4], 6, (0, 3))]:
+    _g = two_sum(list(_n), _t)
+    assert _g is not None and tuple(_g) == _e, f"two_sum({_n}, {_t}) should be {_e}, got {_g}"
+_big = list(range(1, 8001, 2))          # 4000 odd numbers: no two of them add up to an odd target
+_big[-1] = 2                             # the only even number, placed last
+_t = time.perf_counter(); _g = two_sum(_big, 3); _dt = time.perf_counter() - _t
+assert _g is not None and tuple(_g) == (0, 3999), f"expected (0, 3999), got {_g}"
+assert _dt &lt; 0.15, f"4,000 numbers took {_dt:.2f} s: trying every pair is O(n²); use a dict of the values already seen"
+</pre>
+<div class="hint"><p>At position <code>i</code>, the partner you need has the value <code>target - nums[i]</code>. How could you know instantly whether that value appeared earlier?</p></div>
+<div class="hint"><p>Keep <code>seen = {}</code> mapping value → index. In the loop: if <code>need</code> is in <code>seen</code>, return <code>(seen[need], i)</code>; otherwise store <code>seen[nums[i]] = i</code>. Check first, store second.</p></div>
+<pre class="solution">
+def two_sum(nums, target):
+    seen = {}                              # value -&gt; index where we saw it
+    for i, x in enumerate(nums):
+        need = target - x                  # the complement of x
+        if need in seen:
+            return (seen[need], i)         # seen[need] &lt; i because it was stored earlier
+        seen[x] = i                        # store AFTER checking, so x cannot pair with itself
+    return None
+</pre>
+<div class="explain"><p><b>The idea.</b> Pattern 2. While walking left to right, the dictionary holds every value to the left of the current position. If the current value's complement is among them, the pair is complete. The earlier index always comes first, so <code>i &lt; j</code> happens automatically.</p>
+<p><b>Trace on <code>[-3, 4, 3, 90]</code>, target 0:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>i</th><th>x</th><th>need</th><th>need in seen?</th><th>seen after</th></tr></thead><tbody>
+<tr><td class="n">0</td><td class="n">−3</td><td class="n">3</td><td>no</td><td>{−3: 0}</td></tr>
+<tr><td class="n">1</td><td class="n">4</td><td class="n">−4</td><td>no</td><td>{−3: 0, 4: 1}</td></tr>
+<tr><td class="n">2</td><td class="n">3</td><td class="n">−3</td><td><b>yes, at 0</b></td><td>return (0, 2)</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> One pass with O(1) dictionary operations: <b>O(n) time</b>, <b>O(n) space</b>. The brute force (two nested loops over all i &lt; j) is O(n²) time and O(1) space. On <code>[5, 5]</code> with target 10, the “check, then store” order matters: at i = 0 the dictionary is empty, and at i = 1 it finds the first 5.</p></div></div>
+
+<h4 id="code2-p4">Problem 4 · Group words by their letters</h4>
+<div class="ex" id="x-code2-04" data-title="group anagrams"><div class="task"><p>Write <code>group_by_letters(words)</code> that puts words made of the same letters (with the same counts) into the same group, and returns a list of groups, each a list of words. Groups appear in the order their first word appears; inside a group, words keep their input order.</p>
+<div class="tw"><table class="t"><thead><tr><th>input</th><th>returns</th></tr></thead><tbody>
+<tr><td><code>["tea", "eat", "tan", "ate", "nat", "bat"]</code></td><td><code>[["tea", "eat", "ate"], ["tan", "nat"], ["bat"]]</code></td></tr>
+<tr><td><code>["abc"]</code></td><td><code>[["abc"]]</code></td></tr>
+<tr><td><code>[]</code></td><td><code>[]</code></td></tr></tbody></table></div></div>
+<pre class="src">
+def group_by_letters(words):
+    groups = {}
+    # your code here
+    return []
+
+print(group_by_letters(["tea", "eat", "tan", "ate", "nat", "bat"]))
+</pre>
+<pre class="check">
+_cases = [(["tea", "eat", "tan", "ate", "nat", "bat"], [["tea", "eat", "ate"], ["tan", "nat"], ["bat"]]), (["abc"], [["abc"]]), ([], []),
+          ([""], [[""]]), (["ab", "ba", "ab"], [["ab", "ba", "ab"]]), (["a", "b", "c"], [["a"], ["b"], ["c"]]),
+          (["aab", "abb", "bab", "aba"], [["aab", "aba"], ["abb", "bab"]]), (["listen", "silent", "enlist", "google"], [["listen", "silent", "enlist"], ["google"]])]
+for _w, _e in _cases:
+    _g = group_by_letters(list(_w))
+    assert _g == _e, f"group_by_letters({_w}) should be {_e}, got {_g}"
+</pre>
+<div class="hint"><p>What is the same for “tea”, “eat” and “ate”, and different for “tan”? Their sorted letters: <code>"aet"</code> versus <code>"ant"</code>. That is the signature (Pattern 3).</p></div>
+<div class="hint"><p>For each word: <code>key = "".join(sorted(word))</code>. If <code>key</code> is not in <code>groups</code>, start it with an empty list. Append the word. At the end, <code>list(groups.values())</code> gives the groups in first-seen order.</p></div>
+<pre class="solution">
+def group_by_letters(words):
+    groups = {}                              # signature -&gt; list of words
+    for w in words:
+        key = "".join(sorted(w))             # e.g. "tea" -&gt; "aet"
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(w)
+    return list(groups.values())             # dicts keep insertion order
+</pre>
+<div class="explain"><p><b>The idea.</b> Two words are anagrams exactly when their sorted letters are equal, so the sorted letters make a perfect dictionary key. The dictionary does the grouping for us.</p>
+<p><b>Trace on <code>["tea", "eat", "tan", "ate", "nat", "bat"]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>w</th><th>key</th><th>new group?</th><th>groups after</th></tr></thead><tbody>
+<tr><td>tea</td><td>aet</td><td>yes</td><td>{aet: [tea]}</td></tr>
+<tr><td>eat</td><td>aet</td><td>no</td><td>{aet: [tea, eat]}</td></tr>
+<tr><td>tan</td><td>ant</td><td>yes</td><td>{aet: [tea, eat], ant: [tan]}</td></tr>
+<tr><td>ate</td><td>aet</td><td>no</td><td>{aet: [tea, eat, ate], ant: [tan]}</td></tr>
+<tr><td>nat</td><td>ant</td><td>no</td><td>{aet: [tea, eat, ate], ant: [tan, nat]}</td></tr>
+<tr><td>bat</td><td>abt</td><td>yes</td><td>{aet: […], ant: […], abt: [bat]}</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> For \(n\) words of length at most \(m\), each signature costs one sort, \(O(m\log m)\). Total <b>O(n · m log m) time</b>, and <b>O(n · m) space</b> to hold all the words in groups. (Interview follow-up: a signature made of the 26 letter counts, as a tuple, costs O(m) instead of O(m log m).) A list cannot be a key, which is why we join the sorted letters into a string.</p></div></div>
+
+<h4 id="code2-p5">Problem 5 · Balanced brackets, counting version</h4>
+<div class="ex" id="x-code2-05" data-title="balanced brackets (lite)"><div class="task"><p>A string contains round brackets <code>(</code> and <code>)</code>, and possibly other characters (ignore those). It is <b>balanced</b> if every <code>)</code> closes an earlier <code>(</code> that is still open, and nothing is left open at the end. Write <code>is_balanced(s)</code>.</p>
+<div class="tw"><table class="t"><thead><tr><th>call</th><th>returns</th><th>why</th></tr></thead><tbody>
+<tr><td><code>is_balanced("(a+b)*(c)")</code></td><td><code>True</code></td><td>each bracket closes in turn</td></tr>
+<tr><td><code>is_balanced("())(")</code></td><td><code>False</code></td><td>the third character closes nothing</td></tr>
+<tr><td><code>is_balanced("(()")</code></td><td><code>False</code></td><td>one bracket is left open</td></tr></tbody></table></div>
+<p>(With only one kind of bracket, a counter is enough. With <code>()[]{}</code> mixed together you need a stack: that is <a href="#code3">Coding practice 3</a>.)</p></div>
+<pre class="src">
+def is_balanced(s):
+    # your code here
+    ...
+
+print(is_balanced("(a+b)*(c)"))
+</pre>
+<pre class="check">
+for _s, _e in [("(a+b)*(c)", True), ("())(", False), ("(()", False), ("", True), ("abc", True), ("()", True), (")(", False),
+               ("((()))()", True), ("(()))(()", False), ("(", False), (")", False), ("f(g(x), h(y))", True)]:
+    _g = is_balanced(_s)
+    assert _g is _e, f"is_balanced({_s!r}) should be {_e}, got {_g!r}"
+</pre>
+<div class="hint"><p>Keep <code>depth</code>: how many brackets are open right now. <code>(</code> adds one, <code>)</code> takes one away.</p></div>
+<div class="hint"><p>There are two ways to fail: <code>depth</code> drops below 0 at some moment (a <code>)</code> with nothing to close, so return False at once), or <code>depth</code> is not 0 at the end. Only comparing the total numbers of <code>(</code> and <code>)</code> is not enough: <code>")("</code> has one of each.</p></div>
+<pre class="solution">
+def is_balanced(s):
+    depth = 0                     # number of brackets open right now
+    for ch in s:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth &lt; 0:         # closed a bracket that was never opened
+                return False
+    return depth == 0             # nothing may stay open
+</pre>
+<div class="explain"><p><b>The idea.</b> The depth is a running count of open brackets. Balanced means it never dips below zero and it ends at exactly zero. This is a counting solution where the count is one number instead of a dictionary.</p>
+<p><b>Trace on <code>"())("</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>ch</th><th>depth after</th><th>note</th></tr></thead><tbody>
+<tr><td>(</td><td class="n">1</td><td>one open</td></tr>
+<tr><td>)</td><td class="n">0</td><td>closed it</td></tr>
+<tr><td>)</td><td class="n">−1</td><td>below zero: return False</td></tr>
+</tbody></table></div>
+<p>Comparing only the totals would wrongly say yes: two opens and two closes. The order matters, and the running depth sees the order.</p>
+<p><b>Complexity.</b> <b>O(n) time</b>, <b>O(1) space</b>.</p>
+<div class="callout ece"><p>Plot the depth against position and you get a staircase. The string is balanced exactly when the staircase never goes below the axis and ends on it, like an up/down counter that must never underflow and must return to zero.</p></div></div></div>
+
+<h4 id="code2-p6">Problem 6 · Longest common prefix</h4>
+<div class="ex" id="x-code2-06" data-title="longest common prefix"><div class="task"><p>Write <code>common_prefix(words)</code> that returns the longest string that every word in the list starts with. Return <code>""</code> (the empty string) if there is none, or if the list is empty.</p>
+<div class="tw"><table class="t"><thead><tr><th>call</th><th>returns</th></tr></thead><tbody>
+<tr><td><code>common_prefix(["signal", "sigma", "sign"])</code></td><td><code>"sig"</code></td></tr>
+<tr><td><code>common_prefix(["cat", "dog"])</code></td><td><code>""</code></td></tr>
+<tr><td><code>common_prefix(["alone"])</code></td><td><code>"alone"</code></td></tr></tbody></table></div></div>
+<pre class="src">
+def common_prefix(words):
+    # your code here
+    ...
+
+print(common_prefix(["signal", "sigma", "sign"]))
+</pre>
+<pre class="check">
+for _w, _e in [(["signal", "sigma", "sign"], "sig"), (["cat", "dog"], ""), (["alone"], "alone"), ([], ""), (["ab", "a"], "a"),
+               (["", "abc"], ""), (["same", "same", "same"], "same"), (["prefix", "prefixes", "pre"], "pre"), (["abc", "abd", "xbc"], "")]:
+    _g = common_prefix(list(_w))
+    assert _g == _e, f"common_prefix({_w}) should be {_e!r}, got {_g!r}"
+</pre>
+<div class="hint"><p>Deal with the empty list first. Then compare position by position: position 0 of every word, then position 1, and so on. When must you stop?</p></div>
+<div class="hint"><p>Loop <code>i</code> over the positions of the first word. For every other word <code>w</code>: if <code>i == len(w)</code> (that word has run out) or <code>w[i] != words[0][i]</code>, return <code>words[0][:i]</code>. If the loop finishes, the whole first word is the prefix.</p></div>
+<pre class="solution">
+def common_prefix(words):
+    if not words:                        # an empty list counts as False
+        return ""
+    first = words[0]
+    for i in range(len(first)):
+        ch = first[i]
+        for w in words[1:]:
+            if i == len(w) or w[i] != ch:    # w ran out, or disagrees at position i
+                return first[:i]
+    return first
+</pre>
+<div class="explain"><p><b>The idea.</b> Read the words column by column, as if they were written one under another. The prefix ends at the first column where some word disagrees or has no letter left.</p>
+<p><b>Trace on <code>["signal", "sigma", "sign"]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>i</th><th>signal[i]</th><th>sigma[i]</th><th>sign[i]</th><th>all agree?</th></tr></thead><tbody>
+<tr><td class="n">0</td><td>s</td><td>s</td><td>s</td><td>yes</td></tr>
+<tr><td class="n">1</td><td>i</td><td>i</td><td>i</td><td>yes</td></tr>
+<tr><td class="n">2</td><td>g</td><td>g</td><td>g</td><td>yes</td></tr>
+<tr><td class="n">3</td><td>n</td><td>m</td><td>(not reached)</td><td>no, n ≠ m: return "sig"</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> In the worst case we look at every character of every word once: <b>O(S) time</b>, where S is the total number of characters, and <b>O(1) extra space</b> apart from the answer. (<code>if not words</code> is true for an empty list, because Python treats empty collections as false.) No dictionary is needed here: this problem is in the lesson to practise careful indexing, where the edge cases (short words, empty strings) are the whole difficulty.</p></div></div>
+
+<h4 id="code2-p7">Problem 7 · Pair with a given sum in a sorted list</h4>
+<div class="ex" id="x-code2-07" data-title="pair sum, sorted"><div class="task"><p><code>nums</code> is sorted from small to large. Write <code>pair_sum_sorted(nums, target)</code> that returns a tuple <code>(i, j)</code> with <code>i &lt; j</code> and <code>nums[i] + nums[j] == target</code>, or <code>None</code> if no such pair exists. Use two pointers: O(n) time and O(1) extra space (no dictionary).</p>
+<div class="tw"><table class="t"><thead><tr><th>call</th><th>returns</th></tr></thead><tbody>
+<tr><td><code>pair_sum_sorted([1, 3, 4, 6, 8, 11], 10)</code></td><td><code>(2, 3)</code></td></tr>
+<tr><td><code>pair_sum_sorted([-4, -1, 2, 7], 6)</code></td><td><code>(1, 3)</code></td></tr>
+<tr><td><code>pair_sum_sorted([1, 2, 3], 100)</code></td><td><code>None</code></td></tr></tbody></table></div></div>
+<pre class="src">
+def pair_sum_sorted(nums, target):
+    left, right = 0, len(nums) - 1
+    # your code here
+    return None
+
+print(pair_sum_sorted([1, 3, 4, 6, 8, 11], 10))
+</pre>
+<pre class="check">
+import time
+def _ok(nums, t, g):
+    return g is not None and len(g) == 2 and 0 &lt;= g[0] &lt; g[1] &lt; len(nums) and nums[g[0]] + nums[g[1]] == t
+for _n, _t in [([1, 3, 4, 6, 8, 11], 10), ([-4, -1, 2, 7], 6), ([2, 2], 4), ([1, 2, 3, 4, 5], 9), ([1, 2, 3, 4, 5], 3), ([-5, -3, 0, 0], 0), ([-10, -2, 1], -12)]:
+    _g = pair_sum_sorted(list(_n), _t)
+    assert _ok(_n, _t, _g), f"pair_sum_sorted({_n}, {_t}) gave {_g}, which is not a valid pair of indices i &lt; j adding to {_t}"
+for _n, _t in [([1, 2, 3], 100), ([], 5), ([5], 10), ([1, 1, 1], 3)]:
+    _g = pair_sum_sorted(list(_n), _t)
+    assert _g is None, f"pair_sum_sorted({_n}, {_t}) should be None (no valid pair), got {_g}"
+_big = list(range(0, 8000, 2))
+_t = time.perf_counter(); _g = pair_sum_sorted(_big, 7); _dt = time.perf_counter() - _t
+assert _g is None, "only even numbers: no pair can add up to 7"
+assert _dt &lt; 0.15, f"4,000 numbers took {_dt:.2f} s: trying every pair is O(n²); move one pointer per step instead"
+</pre>
+<div class="hint"><p>Loop <code>while left &lt; right</code>, and compute <code>s = nums[left] + nums[right]</code> each time.</p></div>
+<div class="hint"><p>If <code>s == target</code>, return <code>(left, right)</code>. If <code>s &lt; target</code>, the sum must grow: <code>left += 1</code>. Otherwise it must shrink: <code>right -= 1</code>. After the loop, return <code>None</code>.</p></div>
+<pre class="solution">
+def pair_sum_sorted(nums, target):
+    left, right = 0, len(nums) - 1
+    while left &lt; right:
+        s = nums[left] + nums[right]
+        if s == target:
+            return (left, right)
+        elif s &lt; target:
+            left += 1          # nums[left] is too small to pair with anything: discard it
+        else:
+            right -= 1         # nums[right] is too big to pair with anything: discard it
+    return None
+</pre>
+<div class="explain"><p><b>The idea.</b> Shape A of two pointers. Each step throws away one item that provably cannot be in any answer (see the argument in the teaching section), so we never miss a pair, and the search window shrinks by one every step.</p>
+<p><b>Trace on <code>[-4, -1, 2, 7]</code>, target 6:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>left</th><th>right</th><th>sum</th><th>compared with 6</th><th>action</th></tr></thead><tbody>
+<tr><td class="n">0</td><td class="n">3</td><td>−4 + 7 = 3</td><td>too small</td><td>left → 1</td></tr>
+<tr><td class="n">1</td><td class="n">3</td><td>−1 + 7 = 6</td><td>equal</td><td>return (1, 3)</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> At most \(n-1\) steps: <b>O(n) time</b>, <b>O(1) space</b>. Compare with Problem 3: the dictionary method also works on unsorted lists but needs O(n) space; two pointers need the sorted order but no extra memory. If a list arrives unsorted, sorting it first costs O(n log n) and loses the original positions.</p></div></div>
+
+<h4 id="code2-p8">Problem 8 · Move the zeros to the end</h4>
+<div class="ex" id="x-code2-08" data-title="move zeros"><div class="task"><p>Write <code>move_zeros(nums)</code> that changes <code>nums</code> <b>in place</b> so that all the zeros are at the end, and the other numbers keep their original order. Return nothing.</p>
+<div class="tw"><table class="t"><thead><tr><th>list before</th><th>list after <code>move_zeros</code></th></tr></thead><tbody>
+<tr><td><code>[0, 1, 0, 3, 12]</code></td><td><code>[1, 3, 12, 0, 0]</code></td></tr>
+<tr><td><code>[4, 0, -2]</code></td><td><code>[4, -2, 0]</code></td></tr>
+<tr><td><code>[0, 0]</code></td><td><code>[0, 0]</code></td></tr></tbody></table></div></div>
+<pre class="src">
+def move_zeros(nums):
+    w = 0          # write position: where the next non-zero goes
+    # your code here
+
+a = [0, 1, 0, 3, 12]
+move_zeros(a)
+print(a)
+</pre>
+<pre class="check">
+import random
+for _c in [[0, 1, 0, 3, 12], [4, 0, -2], [0, 0], [], [7], [0], [1, 2, 3], [0, 0, 1], [1, 0, 0, 2, 0, 3, -1]]:
+    _xs = list(_c); _id = id(_xs)
+    _ret = move_zeros(_xs)
+    _e = [x for x in _c if x != 0] + [0] * _c.count(0)
+    assert _xs == _e, f"{_c} should become {_e}, but it is now {_xs}"
+    assert _ret is None and id(_xs) == _id, "change the list in place and return None"
+_r = random.Random(11); _c = [_r.choice([0, 0, 1, 2, -3]) for _ in range(2000)]; _xs = list(_c); move_zeros(_xs)
+assert _xs == [x for x in _c if x != 0] + [0] * _c.count(0), "wrong answer on a long random list"
+</pre>
+<div class="hint"><p>Shape B: a read pointer <code>r</code> visits every position, and the write pointer <code>w</code> marks where the next non-zero should go.</p></div>
+<div class="hint"><p>For each <code>r</code>: if <code>nums[r] != 0</code>, swap <code>nums[w]</code> and <code>nums[r]</code>, then <code>w += 1</code>. Swapping (rather than copying) leaves the zeros behind automatically. The “move zeros” mode of the widget above shows every step.</p></div>
+<pre class="solution">
+def move_zeros(nums):
+    w = 0
+    for r in range(len(nums)):
+        if nums[r] != 0:
+            nums[w], nums[r] = nums[r], nums[w]   # bring the non-zero back to position w
+            w += 1
+</pre>
+<div class="explain"><p><b>The idea.</b> Everything before <code>w</code> is finished: the non-zeros seen so far, in order. Everything from <code>w</code> up to <code>r</code> is zeros. When <code>r</code> meets a non-zero, the swap moves it to the end of the finished part and pushes a zero into the gap.</p>
+<p><b>Trace on <code>[0, 1, 0, 3, 12]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>r</th><th>nums[r]</th><th>action</th><th>nums after</th><th>w after</th></tr></thead><tbody>
+<tr><td class="n">0</td><td class="n">0</td><td>skip</td><td>[0, 1, 0, 3, 12]</td><td class="n">0</td></tr>
+<tr><td class="n">1</td><td class="n">1</td><td>swap positions 0 and 1</td><td>[1, 0, 0, 3, 12]</td><td class="n">1</td></tr>
+<tr><td class="n">2</td><td class="n">0</td><td>skip</td><td>[1, 0, 0, 3, 12]</td><td class="n">1</td></tr>
+<tr><td class="n">3</td><td class="n">3</td><td>swap positions 1 and 3</td><td>[1, 3, 0, 0, 12]</td><td class="n">2</td></tr>
+<tr><td class="n">4</td><td class="n">12</td><td>swap positions 2 and 4</td><td>[1, 3, 12, 0, 0]</td><td class="n">3</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> One pass: <b>O(n) time</b>, <b>O(1) extra space</b>. A tempting alternative, <code>nums.remove(0)</code> and then <code>nums.append(0)</code> for each zero, is O(n²): every <code>remove</code> searches from the start and shifts everything after it one place left.</p></div></div>
+
+<h4 id="code2-p9">Problem 9 · Squares of a sorted list</h4>
+<div class="ex" id="x-code2-09" data-title="sorted squares"><div class="task"><p><code>nums</code> is sorted from small to large and may contain negative numbers. Write <code>sorted_squares(nums)</code> that returns a new list of the squares, also sorted from small to large, in O(n) time and <b>without</b> calling <code>sorted()</code>.</p>
+<div class="tw"><table class="t"><thead><tr><th>call</th><th>returns</th></tr></thead><tbody>
+<tr><td><code>sorted_squares([-5, -2, 0, 1, 4])</code></td><td><code>[0, 1, 4, 16, 25]</code></td></tr>
+<tr><td><code>sorted_squares([-3, -1])</code></td><td><code>[1, 9]</code></td></tr>
+<tr><td><code>sorted_squares([])</code></td><td><code>[]</code></td></tr></tbody></table></div></div>
+<pre class="src">
+def sorted_squares(nums):
+    n = len(nums)
+    result = [0] * n          # a list of n zeros, to be filled from the back
+    # your code here
+    return result
+
+print(sorted_squares([-5, -2, 0, 1, 4]))
+</pre>
+<pre class="check">
+import random
+def _banned(*a, **k):
+    raise AssertionError("please use two pointers: sorted() is switched off for this exercise")
+sorted = _banned
+try:
+    for _c in [[-5, -2, 0, 1, 4], [-3, -1], [], [2], [-2], [0, 0], [1, 2, 3], [-3, -2, -1], [-2, -2, 2, 2], [-7, -3, 2, 3, 11]]:
+        _g = sorted_squares(list(_c))
+        _e = [x * x for x in _c]; _e.sort()
+        assert _g == _e, f"sorted_squares({_c}) should be {_e}, got {_g}"
+    _r = random.Random(2); _c = [_r.randint(-1000, 1000) for _ in range(3000)]; _c.sort()
+    _e = [x * x for x in _c]; _e.sort()
+    assert sorted_squares(_c) == _e, "wrong answer on a long random list"
+finally:
+    del sorted
+</pre>
+<div class="hint"><p>Where is the <i>largest</i> square? It must come from one of the two ends: the most negative number, or the most positive one.</p></div>
+<div class="hint"><p>Use pointers <code>left = 0</code> and <code>right = n - 1</code>, and a position <code>k</code> going from <code>n - 1</code> down to 0. At each step put the bigger of <code>nums[left]**2</code> and <code>nums[right]**2</code> into <code>result[k]</code>, and move inwards the pointer it came from.</p></div>
+<div class="hint"><p><code>range(n - 1, -1, -1)</code> counts down: it starts at n−1, stops before −1, and steps by −1, so it gives n−1, n−2, …, 0.</p></div>
+<pre class="solution">
+def sorted_squares(nums):
+    n = len(nums)
+    result = [0] * n
+    left, right = 0, n - 1
+    for k in range(n - 1, -1, -1):          # k = n-1, n-2, ..., 0: fill the biggest slots first
+        a, b = nums[left] ** 2, nums[right] ** 2
+        if a &gt; b:
+            result[k] = a
+            left += 1
+        else:
+            result[k] = b
+            right -= 1
+    return result
+</pre>
+<div class="explain"><p><b>The idea.</b> Squaring folds the number line at 0: big negative numbers become big positive ones. In a sorted list the squares are largest at the two ends and smallest somewhere in the middle. So the biggest square not yet used is always at <code>left</code> or at <code>right</code>, and we fill the result from the back. It is the merge from Coding practice 1, run backwards.</p>
+<p><b>Trace on <code>[-5, -2, 0, 1, 4]</code>:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>k</th><th>left</th><th>right</th><th>nums[left]²</th><th>nums[right]²</th><th>result[k]</th><th>move</th></tr></thead><tbody>
+<tr><td class="n">4</td><td class="n">0</td><td class="n">4</td><td class="n">25</td><td class="n">16</td><td class="n">25</td><td>left → 1</td></tr>
+<tr><td class="n">3</td><td class="n">1</td><td class="n">4</td><td class="n">4</td><td class="n">16</td><td class="n">16</td><td>right → 3</td></tr>
+<tr><td class="n">2</td><td class="n">1</td><td class="n">3</td><td class="n">4</td><td class="n">1</td><td class="n">4</td><td>left → 2</td></tr>
+<tr><td class="n">1</td><td class="n">2</td><td class="n">3</td><td class="n">0</td><td class="n">1</td><td class="n">1</td><td>right → 2</td></tr>
+<tr><td class="n">0</td><td class="n">2</td><td class="n">2</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td>right → 1</td></tr>
+</tbody></table></div>
+<p>Result: <code>[0, 1, 4, 16, 25]</code>.</p>
+<p><b>Complexity.</b> <b>O(n) time</b>, and <b>O(n) space</b> for the result. The obvious answer, square everything and then sort, is O(n log n).</p></div></div>
+
+<h4 id="code2-p10">Problem 10 · The k most frequent characters</h4>
+<div class="ex" id="x-code2-10" data-title="top-k characters"><div class="task"><p>Write <code>top_k_chars(text, k)</code> that returns a list of the <code>k</code> most frequent characters of <code>text</code>, most frequent first. If two characters are equally frequent, the one earlier in the alphabet comes first. If there are fewer than <code>k</code> different characters, return all of them.</p>
+<div class="tw"><table class="t"><thead><tr><th>call</th><th>returns</th><th>why</th></tr></thead><tbody>
+<tr><td><code>top_k_chars("mississippi", 2)</code></td><td><code>["i", "s"]</code></td><td>both appear 4 times; i comes first</td></tr>
+<tr><td><code>top_k_chars("mississippi", 3)</code></td><td><code>["i", "s", "p"]</code></td><td>p appears twice</td></tr>
+<tr><td><code>top_k_chars("", 2)</code></td><td><code>[]</code></td><td>nothing to count</td></tr></tbody></table></div></div>
+<pre class="src">
+def top_k_chars(text, k):
+    counts = {}
+    # your code here
+    return []
+
+print(top_k_chars("mississippi", 2))
+</pre>
+<pre class="check">
+from collections import Counter
+for _t, _k, _e in [("mississippi", 2, ["i", "s"]), ("mississippi", 3, ["i", "s", "p"]), ("", 2, []), ("aaab", 1, ["a"]),
+                   ("abc", 5, ["a", "b", "c"]), ("cba", 2, ["a", "b"]), ("zzyyx", 2, ["y", "z"]), ("hello world", 3, ["l", "o", " "])]:
+    _g = top_k_chars(_t, _k)
+    assert _g == _e, f"top_k_chars({_t!r}, {_k}) should be {_e}, got {_g}"
+_txt = "the quick brown fox jumps over the lazy dog " * 50
+_ref = [c for c, _ in sorted(Counter(_txt).items(), key=lambda p: (-p[1], p[0]))[:5]]
+assert top_k_chars(_txt, 5) == _ref, f"on a longer text expected {_ref}, got {top_k_chars(_txt, 5)}"
+</pre>
+<div class="hint"><p>Three steps: count the characters (Pattern 1); put the (character, count) pairs in order; take the first <code>k</code>.</p></div>
+<div class="hint"><p>Sort the pairs with a key that puts bigger counts first and, among equal counts, earlier letters first: <code>key=lambda p: (-p[1], p[0])</code>. Tuples are compared item by item, so the count decides first and the letter breaks ties.</p></div>
+<div class="hint"><p>Finally <code>[ch for ch, c in pairs[:k]]</code> keeps just the characters of the first k pairs. Slicing past the end is safe.</p></div>
+<pre class="solution">
+def top_k_chars(text, k):
+    counts = {}
+    for ch in text:
+        counts[ch] = counts.get(ch, 0) + 1
+    pairs = sorted(counts.items(), key=lambda p: (-p[1], p[0]))   # count high-&gt;low, then letter a-&gt;z
+    return [ch for ch, c in pairs[:k]]
+</pre>
+<div class="explain"><p><b>The idea.</b> Count, then rank. The sort key <code>(-count, ch)</code> turns “count from high to low, then letter from a to z” into one ordinary small-to-large sort: a count of 4 becomes −4, which comes before −2. Slicing <code>pairs[:k]</code> is safe even when <code>k</code> is larger than the list.</p>
+<p><b>Trace on “mississippi”, k = 2:</b></p>
+<div class="tw"><table class="t"><thead><tr><th>stage</th><th>value</th></tr></thead><tbody>
+<tr><td>counts</td><td>{m: 1, i: 4, s: 4, p: 2}</td></tr>
+<tr><td>sort keys</td><td>m → (−1, m), i → (−4, i), s → (−4, s), p → (−2, p)</td></tr>
+<tr><td>sorted pairs</td><td>(i, 4), (s, 4), (p, 2), (m, 1)</td></tr>
+<tr><td>first 2</td><td>["i", "s"]</td></tr>
+</tbody></table></div>
+<p><b>Complexity.</b> Counting is O(n). Sorting the \(u\) different characters costs O(u log u). Total <b>O(n + u log u) time</b>, <b>O(u) space</b>. For letters, \(u\le 26\), so this is effectively O(n). (When there are very many different items, a heap gives O(n log k); Coding practice 4 returns to “top k”.)</p></div></div>
+
+<h3 id="code2-recap">Summary</h3>
+<div class="tw"><table class="t"><thead><tr><th>Problem</th><th>Pattern</th><th>Time</th><th>Extra space</th></tr></thead><tbody>
+<tr><td>Anagram check</td><td>counting dict</td><td>O(n)</td><td>O(k)</td></tr>
+<tr><td>First unique character</td><td>counting dict, two passes</td><td>O(n)</td><td>O(k)</td></tr>
+<tr><td>Two-sum</td><td>seen-so-far dict of complements</td><td>O(n)</td><td>O(n)</td></tr>
+<tr><td>Group by letters</td><td>signature → list</td><td>O(n · m log m)</td><td>O(n · m)</td></tr>
+<tr><td>Balanced brackets (one kind)</td><td>running counter</td><td>O(n)</td><td>O(1)</td></tr>
+<tr><td>Longest common prefix</td><td>column-by-column scan</td><td>O(S)</td><td>O(1)</td></tr>
+<tr><td>Pair sum in a sorted list</td><td>two pointers from the ends</td><td>O(n)</td><td>O(1)</td></tr>
+<tr><td>Move zeros</td><td>read/write pointers</td><td>O(n)</td><td>O(1)</td></tr>
+<tr><td>Sorted squares</td><td>two pointers, fill from the back</td><td>O(n)</td><td>O(n) for the output</td></tr>
+<tr><td>Top-k characters</td><td>count, then sort with a key</td><td>O(n + u log u)</td><td>O(u)</td></tr>
+</tbody></table></div>
+
+<div class="quiz">
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">Why is <code>key in d</code> for a dictionary O(1) on average, while <code>x in xs</code> for a list is O(n)?</p><ol class="opts"><li>Dictionaries are written in C and lists are not</li><li>Dictionaries keep their keys sorted and use a clever search</li><li>The dictionary computes the slot from the key's hash and goes straight there</li><li>Dictionaries have a size limit</li></ol><div class="why">The hash of the key tells Python which slot to check, so there is no scanning. A is false (both are written in C). B describes a different structure (a sorted search would be O(log n)). D is false.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">Which of these can be a dictionary key?</p><ol class="opts"><li><code>["a", "b"]</code></li><li><code>("a", "b")</code></li><li><code>{"a": 1}</code></li><li><code>{1, 2}</code> (a set)</li></ol><div class="why">Only values that cannot change (hashable ones) can be keys. A tuple cannot change, so it is hashable. Lists, dictionaries and sets can change, so they are not.</div></div>
+<div class="q" data-type="mcq" data-correct="1"><p class="stem">In two-sum with a dictionary, why do we check for the complement <i>before</i> storing the current value?</p><ol class="opts"><li>So that a value cannot be paired with itself</li><li>Because storing first is slower</li><li>To keep the dictionary sorted</li><li>It makes no difference</li></ol><div class="why">If we stored first, then for target 8 the value 4 would find its own entry and return (i, i). Checking first means the dictionary only holds items strictly to the left. Speed (B) and order (C) are not the reason, and it does make a difference (D).</div></div>
+<div class="q" data-type="mcq" data-correct="4"><p class="stem">Sorted list, two pointers, target 15. Right now <code>nums[L] + nums[R]</code> is 11. What happens next?</p><ol class="opts"><li>R moves left</li><li>Both pointers move</li><li>Return None</li><li>L moves right</li></ol><div class="why">11 is too small. Only a bigger left item can raise the sum, and <code>nums[L]</code> cannot be part of any answer (even with the largest remaining item it falls short). So L moves right. Moving R left (A) would make the sum smaller still.</div></div>
+<div class="q" data-type="num" data-answer="2" data-tol="0"><p class="stem">Run the anagram grouping on the seven words <i>post, stop, spot, pots, tops, opt, top</i>. How many groups are there?</p><div class="why">Signatures: post, stop, spot, pots and tops all sort to <code>opst</code>; opt and top both sort to <code>opt</code>. Two different signatures, so <b>2</b> groups: one of five words and one of two.</div></div>
+<div class="q" data-type="mcq" data-correct="2"><p class="stem">In move-zeros, which statement is true at every moment of the loop?</p><ol class="opts"><li><code>w</code> is bigger than <code>r</code></li><li>Everything before position <code>w</code> is a non-zero, in the original order</li><li>The list is sorted</li><li>All zeros are already at the end</li></ol><div class="why">This always-true statement (an <i>invariant</i>) is why the algorithm is correct. <code>w</code> never passes <code>r</code> (A is false); the list is not sorted (C); the zeros reach the end only when the loop is over (D).</div></div>
+<div class="q" data-type="mcq" data-correct="3"><p class="stem">The brute-force anagram check that calls <code>a.count(ch)</code> and <code>b.count(ch)</code> for every character of <code>a</code> has which running time, for strings of length n?</p><ol class="opts"><li>O(n)</li><li>O(n log n)</li><li>O(n²)</li><li>O(1)</li></ol><div class="why">It calls <code>count</code> (an O(n) scan) for each of n characters: O(n²). Counting once into a dictionary is O(n); sorting both strings is O(n log n).</div></div>
+<div class="q" data-type="open"><p class="stem">An interviewer asks: “Find two numbers in a list that add up to a target.” Give three solutions with their time and space, and say when you would use each.</p><div class="model">(1) Brute force, two nested loops over all pairs: O(n²) time, O(1) space; fine only for tiny inputs. (2) One pass with a dictionary of the values seen so far, looking up target − x: O(n) time, O(n) space; the default for an unsorted list. (3) If the list is already sorted, two pointers from both ends: O(n) time, O(1) space. Sorting first to use (3) costs O(n log n) and loses the original positions unless you sort (value, index) pairs.</div></div>
+</div>
+
+<div class="cards">
+<div class="fc"><div class="f">Average cost of <code>d[key]</code>, <code>key in d</code>, <code>s.add(x)</code></div><div class="b">O(1) on average: the hash gives the slot directly.</div></div>
+<div class="fc"><div class="f">What makes a value usable as a dictionary key?</div><div class="b">It must be hashable, which means it cannot change: a number, string or tuple. Lists, dicts and sets are not hashable.</div></div>
+<div class="fc"><div class="f">One-line counting update</div><div class="b"><code>counts[x] = counts.get(x, 0) + 1</code></div></div>
+<div class="fc"><div class="f">The complement trick for a pair adding up to a target</div><div class="b">For each x, look up <code>target - x</code> in a dict of the values already seen. Check before storing x.</div></div>
+<div class="fc"><div class="f">Signature for grouping anagrams</div><div class="b"><code>"".join(sorted(word))</code>, or a tuple of the 26 letter counts.</div></div>
+<div class="fc"><div class="f">Two pointers on a sorted list: the sum is too small. What moves?</div><div class="b">The left pointer moves right: the left item cannot be in any answer.</div></div>
+<div class="fc"><div class="f">Read/write pointers: what is always true?</div><div class="b">Everything before <code>w</code> is finished (kept items, in order), and <code>w</code> never passes <code>r</code>.</div></div>
+<div class="fc"><div class="f">Balanced brackets of one kind: the two ways to fail</div><div class="b">The depth goes below 0 at some point, or the depth is not 0 at the end.</div></div>
+<div class="fc"><div class="f">Sort key for “count high to low, then letter a to z”</div><div class="b"><code>key=lambda p: (-p[1], p[0])</code> for (letter, count) pairs.</div></div>
+<div class="fc"><div class="f">Squares of a sorted list in O(n): where is the biggest square?</div><div class="b">At one of the two ends. Fill the result from the back with two pointers.</div></div>
+</div>
+
+<div class="checklist">
+<label><input type="checkbox"> I can explain hashing in three sentences and say why a list cannot be a dictionary key.</label>
+<label><input type="checkbox"> I can write the counting loop with <code>get</code> without looking.</label>
+<label><input type="checkbox"> I can solve two-sum in O(n) and explain why I check before storing.</label>
+<label><input type="checkbox"> I can explain why the two-pointer pair search never misses an answer.</label>
+<label><input type="checkbox"> I can move zeros (or remove a value) in place with read/write pointers.</label>
+<label><input type="checkbox"> I solved all ten problems and can name the pattern of each from its wording.</label>
+</div>
+</section>

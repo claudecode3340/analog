@@ -100,7 +100,8 @@
     var presets = [["sym", "[[2,1],[1,2]]", [2, 1, 1, 2]], ["id", "identity", [1, 0, 0, 1]], ["rot", "rotate 30°", [0.87, -0.5, 0.5, 0.87]], ["shear", "shear", [1, 1, 0, 1]], ["refl", "mirror", [1, 0, 0, -1]], ["sing", "singular", [1, 2, 0.5, 1]], ["prince", "Prince Fig. 23.3", [2, -1, 3.1, 1.5]]];
     var ctr = G.el("div", "ctrls"); body.appendChild(ctr);
     var sl = [];
-    G.seg(ctr, presets.map(function (p) { return [p[0], p[1]]; }), "sym", function (v) { presets.forEach(function (p) { if (p[0] === v) M = p[2].slice(); }); sl.forEach(function (s, k) { s.set(M[k]); }); draw(); });
+    var sg = G.seg(ctr, presets.map(function (p) { return [p[0], p[1]]; }), "sym", function (v) { presets.forEach(function (p) { if (p[0] === v) M = p[2].slice(); }); sl.forEach(function (s, k) { s.set(M[k]); }); draw(); });
+    sg.style.flexWrap = "wrap";
     var ctr2 = G.el("div", "ctrls"); body.appendChild(ctr2);
     ["a (top-left)", "b (top-right)", "c (bottom-left)", "d (bottom-right)"].forEach(function (lab, k) {
       sl.push(G.slider(ctr2, { label: lab, min: -3, max: 3, step: 0.1, value: M[k], fmt: function (v) { return G.fmt(v, 2); }, onChange: function (v) { M[k] = v; draw(); } }));
