@@ -195,7 +195,7 @@ def fig_bucket():
 def sub(s):
     """Turn X_ab into X with a subscript inside SVG text."""
     import re
-    return re.sub(r"([A-Za-zτ])_\{([^}]*)\}|([A-Za-zτ])_([A-Za-z0-9%]+(?:,[A-Za-z]+)?)",
+    return re.sub(r"([A-Za-zτ)])_\{([^}]*)\}|([A-Za-zτ)])_([A-Za-z0-9%]+(?:,[A-Za-z]+)?)",
                   lambda m: (m.group(1) or m.group(3)) + "<tspan font-size='9' dy='3'>" + (m.group(2) or m.group(4)) + "</tspan><tspan dy='-3'></tspan>", s)
 
 
@@ -633,10 +633,249 @@ def fig_slope():
     return svg(640, 200, s)
 
 
+
+
+# ---------- one figure per question ----------
+def barh(rows, unit, w=620, title=None, maxv=None):
+    """Horizontal bar chart. rows = [(label, value, colour)]."""
+    s = defs(*ALLC)
+    lx, bx, bw = 215, 225, w - 310
+    maxv = maxv or max(v for _, v, _ in rows)
+    y = 34 if title else 12
+    if title:
+        s += text(w / 2, 20, title, INK, 13, "middle", 700)
+    for lab, v, c in rows:
+        s += text(lx, y + 16, sub(lab), INK, 12.5, "end")
+        s += f'<rect x="{bx}" y="{y}" width="{max(2, v / maxv * bw):.1f}" height="22" rx="4" fill="{c}" opacity="0.85"/>'
+        s += text(bx + v / maxv * bw + 8, y + 16, f"{v:g} {unit}", c, 12.5, "start", 700)
+        y += 32
+    return svg(w, y + 6, s)
+
+
+def fig_t8q1_regions():
+    s = defs(*ALLC)
+    for i, (title, pc, nc, plab, nlab, vin, vout) in enumerate([
+            ("At V_IL = 1.06 V (output still high, 3.11 V)", ORANGE, BLUE, "PMOS: LINEAR (fully on)", "NMOS: SAT (just on)", "1.06 V", "3.11 V"),
+            ("At V_IH = 1.55 V (output nearly low, 0.27 V)", ORANGE, BLUE, "PMOS: SAT (nearly off)", "NMOS: LINEAR (fully on)", "1.55 V", "0.27 V")]):
+        ox = 110 + i * 320
+        s += text(ox + 70, 22, sub(title), INK, 12.5, "middle", 700)
+        s += inverter(ox, 150, pc, nc)
+        s += line(ox - 60, 150, ox - 30, 150) + text(ox - 64, 155, vin, INK, 12, "end", 600)
+        s += line(ox + 18, 150, ox + 70, 150) + dot(ox + 70, 150) + text(ox + 76, 155, vout, INK, 12, "start", 600)
+        s += text(ox + 50, 104, plab, ORANGE, 12, "start", 700)
+        s += text(ox + 50, 204, nlab, BLUE, 12, "start", 700)
+    s += text(320, 270, "Same equations every time: currents equal + slope dV_out/dV_in = −1".replace("V_out", sub("V_out")).replace("V_in", sub("V_in")), INK, 12.5, "middle")
+    return svg(660, 282, s)
+
+
+def fig_t8q2_vtc():
+    VDD = 3.3
+    pts = vtc(VDD, 0.6, -0.7, 480, 300)
+    p = Plot(600, 360, (0, 3.3), (0, 3.5), (60, 20, 20, 44))
+    p.band(1.1985, 1.6958, PURPLE, 0.07)
+    p.curve([(0, 0), (3.3, 3.3)], "#c3c8d2", 1.4, "5 4")
+    p.curve(pts, BLUE, 2.8)
+    for vi, vo, lab, dx, anchor in ((1.1985, 3.078, "V_IL = 1.20", -8, "end"), (1.6958, 0.2653, "V_IH = 1.70", 8, "start")):
+        p.curve([(vi - 0.35, vo + 0.35), (vi + 0.35, vo - 0.35)], ORANGE, 2)
+        p.add(dot(p.X(vi), p.Y(vo), ORANGE, 5))
+        p.add(text(p.X(vi) + dx, p.Y(vo) + (24 if dx < 0 else -12), sub(lab) + " V", ORANGE, 13, anchor, 700))
+    p.add(dot(p.X(1.483), p.Y(1.483), PURPLE, 5) + text(p.X(1.483) + 10, p.Y(1.483) + 4, sub("V_th = 1.48 V"), PURPLE, 13, "start", 700))
+    p.add(text(p.X(2.2), p.Y(2.6), "k_R = 1.6 (closer to 1 than Q1)".replace("k_R", sub("k_R")), INK, 12))
+    p.add(text(p.X(2.2), p.Y(2.35), "→ V_th closer to the middle".replace("V_th", sub("V_th")), INK, 12))
+    p.axes(sub("V_in") + " (V)", sub("V_out") + " (V)", [(0, "0"), (1, "1"), (2, "2"), (3.3, "3.3")], [(0, "0"), (1, "1"), (2, "2"), (3.3, "3.3")])
+    return p.render()
+
+
+def fig_t8q3_tug():
+    s = defs(*ALLC)
+    s += text(320, 22, "Tug-of-war at the switching point: both transistors saturated, currents equal", INK, 12.5, "middle", 700)
+    s += f'<rect x="60" y="50" width="200" height="56" rx="10" fill="{BLUE}" opacity="0.13" stroke="{BLUE}"/>'
+    s += text(160, 74, "NMOS pulls output DOWN", BLUE, 12.5, "middle", 700) + text(160, 94, sub("k_n ∝ 60·W_n"), BLUE, 12, "middle")
+    s += f'<rect x="380" y="50" width="200" height="56" rx="10" fill="{ORANGE}" opacity="0.13" stroke="{ORANGE}"/>'
+    s += text(480, 74, "PMOS pulls output UP", ORANGE, 12.5, "middle", 700) + text(480, 94, sub("k_p ∝ 25·W_p"), ORANGE, 12, "middle")
+    s += arrow(300, 78, 264, 78, BLUE, 3) + arrow(340, 78, 376, 78, ORANGE, 3) + dot(320, 78, INK, 6)
+    s += text(320, 140, "Want V_th = 1.4 V (below the middle, 1.65 V) → the NMOS must win a little → k_R = 2.25".replace("V_th", sub("V_th")).replace("k_R", sub("k_R")), INK, 12.5, "middle")
+    s += text(320, 162, "A weaker part (higher |V_T|) loses the tug-of-war → V_th moves toward it", MUTE, 12, "middle")
+    return svg(640, 172, s)
+
+
+def rise_pts(C, kp, VT, VDD, t_end, dt=2e-3):
+    return [(t, VDD - v) for t, v in discharge(C, kp, VT, VDD, VDD, t_end, dt)]
+
+
+def fig_t9q4():
+    kp = 295.805
+    p = Plot(640, 320, (0, 12), (0, 5.3), (92, 20, 20, 44))
+    r5 = rise_pts(2000, kp, 1.0, 5.0, 12, 5e-3)
+    r3 = rise_pts(2000, kp, 1.0, 3.3, 12, 5e-3)
+    p.curve(r3, MUTE, 2.2, "6 4")
+    p.curve(r5, ORANGE, 2.8)
+    t10 = next(t for t, v in r5 if v >= 0.5); t90 = next(t for t, v in r5 if v >= 4.5)
+    p.hline(0.5); p.hline(4.5)
+    p.add(dot(p.X(t10), p.Y(0.5), ORANGE, 5) + dot(p.X(t90), p.Y(4.5), ORANGE, 5))
+    y = p.Y(2.6)
+    p.add(arrow(p.X(t10), y, p.X(t90), y, ORANGE, 1.8) + arrow(p.X(t90), y, p.X(t10), y, ORANGE, 1.8))
+    p.add(text(p.X(5.6), p.Y(1.7), sub("τ_rise") + " = 5.0 ns → " + sub("W_p") + " = 14.8 µm", ORANGE, 13, "start", 700))
+    p.add(text(p.X(11.8), p.Y(0.9), "dashed: same inverter at V_DD = 3.3 V (slower)".replace("V_DD", sub("V_DD")), MUTE, 12, "end"))
+    p.axes("time after the input steps down (ns)", sub("V_out") + " (V)", [(0, "0"), (t10, f"{t10:.2f}"), (t90, f"{t90:.2f}"), (8, "8"), (12, "12")], [(0, "0"), (0.5, "0.5 (10%)"), (3.3, "3.3"), (4.5, "4.5 (90%)")])
+    return p.render()
+
+
+def fig_dq1():
+    return barh([("C_g (next gate)", 6.65, RED), ("C_int (wire)", 5, AMBER), ("C_db,p", 4, GREEN), ("C_db,n", 2, GREEN),
+                 ("C_gd,p", 0.76, PURPLE), ("C_gd,n", 0.304, PURPLE)], "fF", title="The six pieces of C_load = 18.7 fF".replace("C_load", sub("C_load")))
+
+
+def fig_dq2():
+    return barh([("C_g (next gate)", 28.8, RED), ("C_db,p", 14.84, GREEN), ("C_db,n", 4.66, GREEN),
+                 ("C_gd,p", 3.0, PURPLE), ("C_gd,n", 2.0, PURPLE)], "fF", title="The pieces of C_load = 53.3 fF (no wire here)".replace("C_load", sub("C_load")))
+
+
+def fig_dq3():
+    VDD = 3.3
+    f = discharge(300, 200, 0.6, VDD, VDD, 4, 2e-3)
+    r = rise_pts(300, 80, 0.7, VDD, 4)
+    p = Plot(640, 320, (0, 4), (0, 3.5), (92, 20, 20, 44))
+    p.hline(1.65)
+    p.curve(f, BLUE, 2.8); p.curve(r, ORANGE, 2.8)
+    p.add(dot(p.X(0.703), p.Y(1.65), BLUE, 5) + text(p.X(0.703) - 8, p.Y(1.65) + 22, sub("τ_PHL") + " = 0.703 ns", BLUE, 13, "end", 700))
+    p.add(dot(p.X(1.882), p.Y(1.65), ORANGE, 5) + text(p.X(1.882) + 10, p.Y(1.65) + 22, sub("τ_PLH") + " = 1.88 ns", ORANGE, 13, "start", 700))
+    p.add(text(p.X(3.9), p.Y(0.35), "fall (NMOS, k = 200)", BLUE, 12, "end", 600))
+    p.add(text(p.X(3.9), p.Y(3.0), "rise (PMOS, k = 80): slower", ORANGE, 12, "end", 600))
+    p.axes("time after the input step (ns)", sub("V_out") + " (V)", [(0, "0"), (1, "1"), (2, "2"), (3, "3"), (4, "4")], [(0, "0"), (1.65, "1.65 (50%)"), (3.3, "3.3")])
+    return p.render()
+
+
+def fig_dq4():
+    VDD = 3.3
+    f = discharge(300, 200, 0.6, VDD, VDD, 7, 2e-3)
+    r = rise_pts(300, 80, 0.7, VDD, 7)
+    p = Plot(640, 320, (0, 7), (0, 3.5), (92, 20, 20, 44))
+    p.hline(0.33); p.hline(2.97)
+    p.curve(f, BLUE, 2.8); p.curve(r, ORANGE, 2.8)
+    f90 = next(t for t, v in f if v <= 2.97); f10 = next(t for t, v in f if v <= 0.33)
+    r10 = next(t for t, v in r if v >= 0.33); r90 = next(t for t, v in r if v >= 2.97)
+    for a, b, y, c, lab in ((f90, f10, 1.2, BLUE, "t_fall = 1.63 ns"), (r10, r90, 2.2, ORANGE, "t_rise = 4.29 ns")):
+        p.add(arrow(p.X(a), p.Y(y), p.X(b), p.Y(y), c, 1.8) + arrow(p.X(b), p.Y(y), p.X(a), p.Y(y), c, 1.8))
+        p.add(text(p.X(b) + 8, p.Y(y) + 4, sub(lab), c, 13, "start", 700))
+        p.add(line(p.X(a), p.Y(y) - 8, p.X(a), p.Y(y) + 8, c, 1.5) + line(p.X(b), p.Y(y) - 8, p.X(b), p.Y(y) + 8, c, 1.5))
+    p.axes("time after the input step (ns)", sub("V_out") + " (V)", [(0, "0"), (2, "2"), (4, "4"), (6, "6")], [(0, "0"), (0.33, "0.33 (10%)"), (2.97, "2.97 (90%)")])
+    return p.render()
+
+
+def fig_dq5():
+    from math import log
+    Bn = 2 * 0.6 / 2.7 + log(4 * 2.7 / 3.3 - 1); Bp = 2 * 0.7 / 2.6 + log(4 * 2.6 / 3.3 - 1)
+    tn = lambda wl: 200 / (100 * wl * 2.7) * Bn
+    tp = lambda wl: 200 / (40 * wl * 2.6) * Bp
+    p = Plot(600, 320, (0.5, 8), (0, 2.2), (60, 20, 20, 44))
+    p.hline(0.5, RED)
+    p.curve([(w / 20, tn(w / 20)) for w in range(10, 161)], BLUE, 2.8)
+    p.curve([(w / 20, tp(w / 20)) for w in range(16, 161)], ORANGE, 2.8)
+    p.add(dot(p.X(1.875), p.Y(0.5), BLUE, 5) + text(p.X(1.875), p.Y(0.5) + 22, sub("(W/L)_n") + " = 1.87", BLUE, 13, "middle", 700))
+    p.add(dot(p.X(5.018), p.Y(0.5), ORANGE, 5) + text(p.X(5.018), p.Y(0.5) + 22, sub("(W/L)_p") + " = 5.02", ORANGE, 13, "middle", 700))
+    p.add(text(p.X(7.9), p.Y(0.5) - 8, "target 0.5 ns", RED, 12, "end"))
+    p.add(text(p.X(1.6), p.Y(1.9), sub("τ_PLH") + " (PMOS, weaker per µm)", ORANGE, 12, "start", 600))
+    p.add(text(p.X(3.0), p.Y(0.13), sub("τ_PHL") + " (NMOS)", BLUE, 12, "start", 600))
+    p.axes("W/L", "delay (ns)", [(1, "1"), (2, "2"), (4, "4"), (6, "6"), (8, "8")], [(0, "0"), (0.5, "0.5"), (1, "1"), (2, "2")])
+    return p.render()
+
+
+def fig_dq6():
+    return barh([("τ_PHL (NMOS, fixed)", 0.703, BLUE), ("τ_PLH, k_p = 80", 1.882, ORANGE), ("τ_PLH, k_p = 200 (×2.5)", 0.753, ORANGE),
+                 ("τ_PLH, k_p = 214 (×2.68)", 0.703, GREEN)], "ns", w=640, title="Widening the PMOS until its edge matches the NMOS edge")
+
+
+def fig_dq9():
+    s = defs(*ALLC)
+    tp, x0, sc = 1, 110, 50   # one τ_P = 50 px
+    s += text(320, 20, "Nodes of a 5-stage ring: each node flips one τ_P after the one before it".replace("τ_P", sub("τ_P")), INK, 12.5, "middle", 700)
+    for n in range(3):
+        y = 50 + n * 54
+        s += text(x0 - 12, y + 22, f"node {n+1}", INK, 12, "end", 600)
+        pts = []
+        lvl = (n % 2 == 0)
+        t = n
+        pts.append((x0, y + (6 if lvl else 34)))
+        cur = lvl
+        for k in range(12):
+            edge = n + 5 * k
+            if edge > 10:
+                break
+            xe = x0 + edge * sc / 1.0 * 0.95
+            pts += [(xe, y + (6 if cur else 34)), (xe, y + (34 if cur else 6))]
+            cur = not cur
+        pts.append((x0 + 10.5 * sc * 0.95, y + (6 if cur else 34)))
+        s += poly(pts, [BLUE, ORANGE, GREEN][n], 2.4)
+    xa, xb = x0, x0 + 10 * sc * 0.95
+    s += arrow(xa, 222, xb, 222, PURPLE, 1.8) + arrow(xb, 222, xa, 222, PURPLE, 1.8)
+    s += text((xa + xb) / 2, 242, "period T = 2 × 5 × τ_P = 10 τ_P (node 1 rises, falls, rises again)".replace("τ_P", sub("τ_P")), PURPLE, 12.5, "middle", 700)
+    return svg(660, 252, s)
+
+
+def fig_dq10():
+    return barh([("supply gives C·V_DD²", 450, INK), ("burned in PMOS (charging)", 225, ORANGE), ("burned in NMOS (discharging)", 225, GREEN)],
+                "fJ", w=640, title="Energy per cycle at 50 fF and 3 V   (× 1 GHz → 0.45 mW)")
+
+
+def fig_capstone():
+    VDD = 2.5
+    a = vtc(VDD, 0.5, -0.5, 300, 150)
+    b = vtc(VDD, 0.5, -0.5, 300, 300)
+    p = Plot(600, 340, (0, 2.5), (0, 2.7), (60, 20, 20, 44))
+    p.curve([(0, 0), (2.5, 2.5)], "#c3c8d2", 1.4, "5 4")
+    p.curve(b, GREEN, 2.4, "7 4")
+    p.curve(a, BLUE, 2.8)
+    p.add(dot(p.X(1.121), p.Y(1.121), BLUE, 5) + text(p.X(1.121) - 10, p.Y(1.121) + 4, sub("V_th") + " = 1.12 V (k_p = 150)".replace("k_p", sub("k_p")), BLUE, 12.5, "end", 700))
+    p.add(dot(p.X(1.25), p.Y(1.25), GREEN, 5) + text(p.X(1.25) + 10, p.Y(1.25) + 4, sub("V_th") + " = 1.25 V after doubling (W/L)_p".replace("(W/L)_p", sub("(W/L)_p")), GREEN, 12.5, "start", 700))
+    p.axes(sub("V_in") + " (V)", sub("V_out") + " (V)", [(0, "0"), (1.25, "1.25"), (2.5, "2.5")], [(0, "0"), (1.25, "1.25"), (2.5, "2.5")])
+    return p.render()
+
+
+
+
+def fig_master():
+    s = defs(*ALLC)
+    x0, x1 = 60, 600
+    X = lambda v: x0 + v / 3.3 * (x1 - x0)
+    y = 90
+    s += text(330, 22, "x = |V_DS| of the driving transistor = distance of V_out from that transistor's rail".replace("V_DS", sub("V_DS")).replace("V_out", sub("V_out")), INK, 12.5, "middle", 700)
+    s += f'<rect x="{X(0)}" y="{y-14}" width="{X(2.7)-X(0)}" height="28" fill="{GREEN}" opacity="0.13"/>'
+    s += f'<rect x="{X(2.7)}" y="{y-14}" width="{X(3.3)-X(2.7)}" height="28" fill="{BLUE}" opacity="0.15"/>'
+    s += line(x0, y + 14, x1, y + 14, INK, 2)
+    s += text(X(1.35), y + 5, "LINEAR  (x < u)", GREEN, 12.5, "middle", 700) + text(X(3.0), y + 5, "SAT", BLUE, 12.5, "middle", 700)
+    for v, lab in ((0, "0"), (2.7, "u"), (3.3, "V_DD")):
+        s += line(X(v), y - 20, X(v), y + 20, INK, 1.5) + text(X(v), y + 38, sub(lab), INK, 13, "middle", 700)
+    s += text(X(2.7), y - 26, "boundary: x = u = V_GS − |V_T|".replace("V_GS", sub("V_GS")).replace("V_T", sub("V_T")), MUTE, 12, "middle")
+    # start/end markers
+    s += arrow(X(3.3), y + 62, X(1.65), y + 62, PURPLE, 2.2) + text(X(1.65) - 6, y + 66, "x shrinks from x_i to x_f".replace("x_i", sub("x_i")).replace("x_f", sub("x_f")), PURPLE, 12.5, "end", 700)
+    s += text(330, y + 98, "Cut the trip at x = u. Time the SAT piece with the bucket formula, the LINEAR piece with the ln formula, add.", INK, 12.5, "middle")
+    return svg(660, y + 110, s)
+
+
+
+
+def fig_ring3():
+    s = defs(*ALLC)
+    xs = [120, 300, 480]
+    for i, x in enumerate(xs):
+        s += poly([(x - 25, 60), (x - 25, 110), (x + 20, 85), (x - 25, 60)], INK, 2)
+        s += f'<circle cx="{x+25}" cy="85" r="5" fill="white" stroke="{INK}" stroke-width="2"/>'
+        s += text(x - 8, 50, str(i + 1), MUTE, 12, "middle")
+        nx = x + 75
+        s += line(x + 30, 85, (xs[i + 1] - 25) if i < 2 else x + 110, 85)
+        s += dot(nx, 85) + cap(nx, 85, [BLUE, ORANGE, GREEN][i], sub(f"C_{i+1}")) + gnd(nx, 125, [BLUE, ORANGE, GREEN][i])
+    s += poly([(xs[-1] + 110, 85), (xs[-1] + 110, 25), (60, 25), (60, 85), (xs[0] - 25, 85)], ORANGE, 2.2)
+    s += arrow(300, 25, 260, 25, ORANGE, 2.2)
+    s += text(320, 178, "Each stage charges and discharges its own capacitor: bigger C_i → that stage is slower".replace("C_i", sub("C_i")), INK, 12.5, "middle")
+    s += text(320, 198, "T = Σ (τ_PHL,i + τ_PLH,i)".replace("τ_PHL,i", sub("τ_{PHL,i}")).replace("τ_PLH,i", sub("τ_{PLH,i}")), ORANGE, 13, "middle", 700)
+    return svg(640, 208, s)
+
+
 FIGS = {
     "FIG_BUCKET": fig_bucket, "FIG_LOAD": fig_load, "FIG_TWO": fig_two_cases, "FIG_DEF": fig_definitions,
     "FIG_JOURNEY": fig_journey, "FIG_CURRENT": fig_current, "FIG_LONE": fig_lone_nmos, "FIG_LONECURVES": fig_follow_curves,
-    "FIG_RING": fig_ring, "FIG_T8VTC": fig_t8_vtc, "FIG_T8FB": fig_t8_feedback, "FIG_T8RANGE": fig_t8_range, "FIG_T9Q1": fig_t9q1, "FIG_T9Q2": fig_t9q2, "FIG_T9Q3": fig_t9q3, "FIG_T9Q5": fig_t9q5, "FIG_SLOPE": fig_slope, "FIG_ENERGY": fig_energy, "FIG_DRAIN": fig_drain, "FIG_FLOW": fig_flow,
+    "FIG_RING": fig_ring, "FIG_T8VTC": fig_t8_vtc, "FIG_T8FB": fig_t8_feedback, "FIG_T8RANGE": fig_t8_range, "FIG_T9Q1": fig_t9q1, "FIG_T9Q2": fig_t9q2, "FIG_T9Q3": fig_t9q3, "FIG_T9Q5": fig_t9q5, "FIG_SLOPE": fig_slope, "FIG_MASTER": fig_master, "FIG_RING3": fig_ring3, "FIG_T8Q1": fig_t8q1_regions, "FIG_T8Q2": fig_t8q2_vtc, "FIG_T8Q3": fig_t8q3_tug, "FIG_T9Q4": fig_t9q4, "FIG_DQ1": fig_dq1, "FIG_DQ2": fig_dq2, "FIG_DQ3": fig_dq3, "FIG_DQ4": fig_dq4, "FIG_DQ5": fig_dq5, "FIG_DQ6": fig_dq6, "FIG_DQ9": fig_dq9, "FIG_DQ10": fig_dq10, "FIG_CAP": fig_capstone, "FIG_ENERGY": fig_energy, "FIG_DRAIN": fig_drain, "FIG_FLOW": fig_flow,
 }
 
 if __name__ == "__main__":
