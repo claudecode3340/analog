@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lectures 25–26 Made Simple</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});document.body.dataset.ready='1'"></script>
+<style>
+:root{--ink:#1f2633;--ink2:#4a5263;--mute:#7b8394;--line:#e3e7ee;--soft:#f6f8fb;
+--blue:#2563eb;--blueS:#eef4ff;--orange:#ea580c;--orangeS:#fff6ed;--green:#059669;--greenS:#ecfdf5;
+--purple:#7c3aed;--purpleS:#f5f3ff;--red:#dc2626;--redS:#fef2f2;--amber:#b45309;--amberS:#fffbeb}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font-family:Inter,"Segoe UI",system-ui,sans-serif;font-size:15.5px;line-height:1.65}
+.wrap{max-width:820px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:38px;line-height:1.1;margin:8px 0 8px;letter-spacing:-.02em}
+h2{font-size:26px;margin:56px 0 6px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+h3{font-size:19px;margin:32px 0 6px}
+h4{font-size:16px;margin:20px 0 4px}
+p{margin:10px 0}
+.kicker{font-size:12px;letter-spacing:.14em;font-weight:700;color:var(--blue);text-transform:uppercase}
+.lede{font-size:17px;color:var(--ink2)}
+.box{border-radius:12px;padding:12px 18px;margin:18px 0;border:1px solid var(--line);background:var(--soft);break-inside:avoid}
+.box .tag{font-size:11.5px;letter-spacing:.12em;font-weight:750;text-transform:uppercase;display:block;margin-bottom:2px}
+.blue{background:var(--blueS);border-color:#cfdcfb}.blue .tag{color:var(--blue)}
+.green{background:var(--greenS);border-color:#bfe9d8}.green .tag{color:var(--green)}
+.red{background:var(--redS);border-color:#f7c9c9}.red .tag{color:var(--red)}
+.purple{background:var(--purpleS);border-color:#ddd3fb}.purple .tag{color:var(--purple)}
+.orange{background:var(--orangeS);border-color:#fbd9bd}.orange .tag{color:var(--orange)}
+.amber{background:var(--amberS);border-color:#f3e0b5}.amber .tag{color:var(--amber)}
+figure{margin:18px 0;text-align:center;break-inside:avoid}
+figure svg{max-width:100%;height:auto}
+figcaption{font-size:13px;color:var(--ink2);text-align:left;margin-top:4px}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:12px 0;break-inside:avoid}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.story{counter-reset:s;list-style:none;padding:0}
+.story>li{counter-increment:s;position:relative;padding:8px 0 8px 46px;border-bottom:1px dashed var(--line)}
+.story>li::before{content:counter(s);position:absolute;left:0;top:8px;width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+.q{border:2px solid var(--line);border-radius:14px;padding:4px 18px 10px;margin:28px 0}
+.q h3{margin-top:14px}
+.step{display:grid;grid-template-columns:120px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.step>.lab{font-size:11.5px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;padding-top:3px}
+.s1 .lab{color:var(--purple)}.s2 .lab{color:var(--green)}.s3 .lab{color:var(--amber)}.s4 .lab{color:var(--blue)}.s5 .lab{color:var(--red)}
+.ans{display:inline-block;background:var(--blueS);border:1px solid #cfdcfb;border-radius:8px;padding:0 8px;font-weight:700;color:var(--blue)}
+ol.calc{margin:6px 0;padding-left:22px}ol.calc li{margin:4px 0}
+.toc{columns:2;font-size:14px}.toc a{color:var(--ink);text-decoration:none}.toc a:hover{color:var(--blue)}
+.small{font-size:13px;color:var(--ink2)}
+.katex-display{margin:10px 0;overflow-x:auto;overflow-y:hidden}
+@media (max-width:600px){table{display:block;overflow-x:auto}.step{grid-template-columns:1fr}.toc{columns:1}h1{font-size:30px}}
+@media print{body{font-size:12.5px}.wrap{max-width:none;padding:0}h2{break-before:page;margin-top:0}h2.nobreak{break-before:auto}.q{break-inside:auto}a{color:inherit}}
+@page{size:A4;margin:14mm 13mm}
+</style>
+</head>
+<body><div class="wrap">
+
+<div class="kicker">Analog Lab · Lectures 25–26 · switching and delay · Tutorials 8 and 9</div>
+<h1>Lectures 25–26, made simple</h1>
+<p class="lede">First the whole lecture as one short story. Then each idea, one at a time, with a picture. Then a playbook that tells you which kind of question you are looking at, every question of Tutorials 8 and 9 solved, and ten more worked questions. Each question is solved in the same five steps: <b>what it says → which theory → plan → solve → check</b>.</p>
+
+<div class="box"><span class="tag">Contents</span>
+<div class="toc">
+<a href="#A">A · Lecture 25 in 10 minutes</a><br>
+<a href="#B1">B1 · Where the capacitor comes from</a><br>
+<a href="#B2">B2 · What happens when the input switches</a><br>
+<a href="#B3">B3 · The definitions (delay, rise, fall)</a><br>
+<a href="#B4">B4 · Method 1: average current</a><br>
+<a href="#B5">B5 · Method 2: exact formula</a><br>
+<a href="#B6">B6 · Rise and fall time</a><br>
+<a href="#B7">B7 · One MOSFET + one capacitor</a><br>
+<a href="#B8">B8 · Design: making it faster</a><br>
+<a href="#B9">B9 · Ring oscillator and power</a><br>
+<a href="#B10">B10 · What Lecture 26 adds</a><br>
+<a href="#R">R · Lectures 23–24 refresher</a><br>
+<a href="#C">C · Which type of question is it?</a><br>
+<a href="#T8">Tutorial 8 · all 4 questions</a><br>
+<a href="#T9">Tutorial 9 · all 5 questions</a><br>
+<a href="#D">D · More practice (10 questions)</a><br>
+<a href="#E">E · Open-book page: formulas and traps</a>
+</div></div>
+
+<!-- ===================================================== A -->
+<h2 id="A" class="nobreak">A · Lecture 25 in 10 minutes</h2>
+
+<p>Lectures 23 and 24 were about <b>DC</b>: which output voltage you get for each input voltage (the VTC). They never asked <i>how long</i> it takes. Lecture 25 asks exactly that: <b>when the input switches, how long until the output follows?</b></p>
+
+<figure>{{FIG_BUCKET}}
+<figcaption><b>Fig. A.1</b> The whole lecture in one picture. The output node is a capacitor (a bucket). The PMOS is a tap that fills it from $V_{DD}$. The NMOS is a plug that empties it into ground. Delay is how long the filling or emptying takes.</figcaption></figure>
+
+<ol class="story">
+<li><b>The output is a capacitor.</b> Wires, transistor junctions and the next gate all connect to $V_{out}$, so $V_{out}$ is the voltage on a capacitor $C_{load}$. A capacitor's voltage cannot jump. To change it, you must move charge $Q = C\,V$, and that takes time.</li>
+<li><b>Only one transistor works at a time.</b> Input goes up → PMOS off, NMOS on → NMOS pulls charge out → output falls. Input goes down → NMOS off, PMOS on → PMOS pushes charge in → output rises.</li>
+<li><b>The one equation:</b> time = charge to move ÷ current. $$\tau \approx \frac{C\,\Delta V}{I}$$ Bigger bucket ($C$) → slower. Bigger tap ($I$, so bigger $k$ or $V_{DD}$) → faster. <b>Every question in this lecture is "find $C$" or "find $I$" or both.</b></li>
+<li><b>What we measure.</b> Delay $\tau_{PHL}$ (output going High→Low) and $\tau_{PLH}$ (Low→High) are measured from the input's 50% point to the output's 50% point. So the output only has to travel <b>half way</b>: $\Delta V = V_{DD}/2$. The average delay is $\tau_P = (\tau_{PHL}+\tau_{PLH})/2$.</li>
+<li><b>The difficulty.</b> The current $I$ is not constant. As the output falls, the NMOS starts in saturation (constant current), then goes linear (current shrinks). So "$C\Delta V/I$" has no single $I$.</li>
+<li><b>Two ways around it.</b> <b>Method 1 (average current):</b> work out $I$ at the start and at the 50% point, average them, then use $C\Delta V/I_{avg}$. <b>Method 2 (exact):</b> integrate $C\,dV/dt = -I$ in two pieces. The result is one formula you can plug numbers into.</li>
+<li><b>What the formula tells you.</b> $\tau \propto C/k$. Make the PMOS about 2.5× wider than the NMOS and rise = fall (that is the symmetric inverter of Lecture 24).</li>
+<li><b>Two extras.</b> A loop of an odd number $N$ of inverters oscillates with $f = 1/(2N\tau_P)$. Every full switch costs energy $C V_{DD}^2$, so power is $P = C V_{DD}^2 f$.</li>
+</ol>
+
+<div class="box purple"><span class="tag">The one sentence to remember</span>
+"A gate is slow because its output is a <b>bucket</b> and its transistors are a <b>tap</b>." Delay = water ÷ flow = $C\Delta V / I$. Everything else is detail about finding $C$ and finding $I$.</div>
+
+<div class="box blue"><span class="tag">What you already know (from Lectures 23–24) that we reuse</span>
+$k_n = \mu_n C_{ox}(W/L)_n$, $k_p = \mu_p C_{ox}(W/L)_p$. With overdrive $u = |V_{GS}| - |V_T|$ and $v = |V_{DS}|$:
+$$\text{saturation } (v \ge u):\; I = \tfrac{k}{2}u^2 \qquad\qquad \text{linear } (v < u):\; I = \tfrac{k}{2}\big[2uv - v^2\big]$$
+That is all the device physics Lecture 25 needs.</div>
+
+<!-- ===================================================== B1 -->
+<h2 id="B1">B1 · Where the capacitor comes from</h2>
+
+<p>A capacitor is just <b>two conductors with an insulator between them</b>. Nobody solders capacitors into a chip. They appear by themselves wherever this shape exists. Around the output of an inverter there are six of them.</p>
+
+<figure>{{FIG_LOAD}}
+<figcaption><b>Fig. B1.1</b> Inverter 1 drives inverter 2. Count a capacitor if <b>one of its plates is on $V_{out}$</b>. A capacitor to $V_{DD}$ counts just like one to ground, because $V_{DD}$ is also a fixed voltage.</figcaption></figure>
+
+<div class="box blue"><span class="tag">The load capacitance (write this first in every delay question)</span>
+$$C_{load} = \underbrace{C_{gd,n} + C_{gd,p}}_{\text{overlaps}} + \underbrace{C_{db,n} + C_{db,p}}_{\text{drain junctions}} + \underbrace{C_{int}}_{\text{wire}} + \underbrace{C_g}_{\text{next gate}}$$</div>
+
+<table>
+<tr><th>Term</th><th>What it physically is</th><th>Formula</th></tr>
+<tr><td>$C_{gd}$ (overlap)</td><td>The drain spreads a little ($L_D$) under the gate. Gate over drain with oxide between = small capacitor.</td><td>$C_{ox}\,W\,L_D$ &nbsp;or&nbsp; $C_{GDO}\times W$ (if given "per µm of width")</td></tr>
+<tr><td>$C_{db}$ (junction)</td><td>The n⁺ drain sits in p substrate: a reverse-biased diode. Its depletion region is the insulator.</td><td>$W E\,C_j + 2(W+E)\,C_{jsw}$ (area + perimeter, Fig. B1.2)</td></tr>
+<tr><td>$C_{int}$</td><td>The metal wire to the next gate.</td><td>usually given as a number</td></tr>
+<tr><td>$C_g$ (next gate)</td><td>Gate oxide of both transistors in the next inverter. <b>Usually the biggest term.</b></td><td>$C_{ox}\big[(WL)_n + (WL)_p\big]$ of the next stage</td></tr>
+</table>
+
+<figure>{{FIG_DRAIN}}
+<figcaption><b>Fig. B1.2</b> Top view of a drain. The bottom face is $W\times E$ (use $C_j$, fF/µm²). The side walls run all around: perimeter $2(W+E)$ (use $C_{jsw}$, fF/µm). Use each transistor's own $C_j$ and $C_{jsw}$.</figcaption></figure>
+
+<div class="box red"><span class="tag">Three classic mistakes</span>
+① Adding this inverter's own $C_{gs}$. It sits between $V_{in}$ and a rail, so it loads the <i>previous</i> stage, not this output.<br>
+② Forgetting the next stage's gate $C_g$. It is usually the largest term.<br>
+③ Mixing units: $C_{ox}$ in fF/µm² × µm × µm gives fF. Keep everything in fF and µm.</div>
+
+<div class="box amber"><span class="tag">Only if the question asks "why" (theory from the lecture)</span>
+The gate–channel part of the capacitance depends on the region. Off: $C_{GS}=C_{GD}=$ overlap only. Linear: each gets $\tfrac12 WLC_{ox}$ + overlap. Saturation: $C_{GS} = \tfrac23 WLC_{ox}$ + overlap, but $C_{GD}$ = overlap only, because the channel is pinched off at the drain. For $C_{load}$ the lecture keeps it simple: overlap for $C_{gd}$, full $WLC_{ox}$ for the next gate. More reverse bias → wider depletion → smaller $C_j$. "Zero-bias" in a question means: just use the given $C_{j}$.</div>
+
+<!-- ===================================================== B2 -->
+<h2 id="B2">B2 · What happens when the input switches</h2>
+
+<p>Put all those capacitors together into one $C_{load}$. Now Kirchhoff's current law at the output node gives the only equation of the lecture:</p>
+$$C_{load}\,\frac{dV_{out}}{dt} = i_{D,p} - i_{D,n}\qquad\text{(current in from PMOS minus current out through NMOS)}$$
+<p>With a sudden (step) input, only one transistor is on, so one of the two currents is zero.</p>
+
+<figure>{{FIG_TWO}}
+<figcaption><b>Fig. B2.1</b> Left: the falling output is set by the NMOS alone. Right: the rising output is set by the PMOS alone. The gate voltage of the working transistor is the full $V_{DD}$ the whole time. Only $V_{DS}$ changes, because $V_{DS}$ is tied to $V_{out}$.</figcaption></figure>
+
+<h3>The key question: which region is the working transistor in?</h3>
+<p>Take the falling output. The NMOS has $V_{GS} = V_{DD}$, so its overdrive is $u = V_{DD} - V_{T,n}$, a constant. Its $V_{DS} = V_{out}$, which falls. The saturation test is $V_{DS} \ge u$:</p>
+<ul>
+<li><b>At the start</b> $V_{out} = V_{DD}$, which is bigger than $V_{DD} - V_T$ → <b>saturated</b>. Current is constant $\tfrac{k}{2}u^2$.</li>
+<li><b>When $V_{out}$ drops below $V_{DD} - V_T$</b> → <b>linear</b>. Current gets smaller as $V_{out}$ falls.</li>
+<li><b>At the 50% point</b> $V_{out} = V_{DD}/2$. This is below $V_{DD}-V_T$ whenever $V_T < V_{DD}/2$ (always, in normal inverters) → <b>linear</b>.</li>
+</ul>
+
+<figure>{{FIG_JOURNEY}}
+<figcaption><b>Fig. B2.2</b> The real fall of Worked Example 25.2 ($V_{DD}=3.3$ V, $V_{T,n}=0.6$ V, $k_n=200$ µA/V², $C=300$ fF), computed by solving the equation above. First the output drops by exactly $V_T$ in a straight line (saturated, constant current). Then it curves (linear). We stop the clock at the 50% point.</figcaption></figure>
+
+<div class="box green"><span class="tag">Intuition</span>
+The rise is the same story with the PMOS: $|V_{DS,p}| = V_{DD} - V_{out}$. It starts saturated (output near 0), and goes linear once the output has risen by $|V_{T,p}|$. So <b>both edges = "saturated for the first $V_T$ volts, then linear"</b>.</div>
+
+<!-- ===================================================== B3 -->
+<h2 id="B3">B3 · The definitions</h2>
+
+<figure>{{FIG_DEF}}
+<figcaption><b>Fig. B3.1</b> Delays (purple) are measured between <b>two signals</b>, input and output, at their 50% points. Rise and fall times (green, orange) are measured on <b>one signal</b>, the output, between 10% and 90%.</figcaption></figure>
+
+<table>
+<tr><th>Symbol</th><th>Meaning</th><th>Formula</th></tr>
+<tr><td>$V_{50\%}$</td><td>halfway voltage</td><td>$\frac{V_{OH}+V_{OL}}{2} = \frac{V_{DD}}{2}$ for CMOS</td></tr>
+<tr><td>$\tau_{PHL}$</td><td>delay, output going <b>H</b>igh → <b>L</b>ow (NMOS does the work)</td><td>$t_{out,50\%} - t_{in,50\%}$</td></tr>
+<tr><td>$\tau_{PLH}$</td><td>delay, output going <b>L</b>ow → <b>H</b>igh (PMOS does the work)</td><td>same, on the other edge</td></tr>
+<tr><td>$\tau_P$</td><td>average propagation delay</td><td>$\tfrac12(\tau_{PHL}+\tau_{PLH})$</td></tr>
+<tr><td>$t_{fall}$, $t_{rise}$</td><td>how steep the output edge is</td><td>time between 90% and 10% of the output swing</td></tr>
+</table>
+
+<div class="box purple"><span class="tag">Memory hook</span>
+Read $\tau_{PHL}$ as "<b>P</b>ropagation, output <b>H</b>igh to <b>L</b>ow". The letters always describe the <b>output</b>. Output falling → NMOS → use $k_n$, $V_{T,n}$. Output rising → PMOS → use $k_p$, $|V_{T,p}|$.</div>
+
+<!-- ===================================================== B4 -->
+<h2 id="B4">B4 · Method 1: the average-current method</h2>
+
+<p><b>The idea:</b> the current changes during the fall, but not by much. So pretend it is constant at the average of its value at the start and its value at the 50% point. Then the bucket formula works directly:</p>
+$$\tau_{PHL} = \frac{C_{load}\,(V_{DD}/2)}{I_{avg}},\qquad I_{avg} = \frac{I(\text{start}) + I(\text{50\% point})}{2}$$
+
+<figure>{{FIG_CURRENT}}
+<figcaption><b>Fig. B4.1</b> The NMOS current during the fall (Example 25.2). The output starts at the right (3.3 V) and moves left. The method replaces the blue curve between 3.3 V and 1.65 V by the orange line at the average of the two black dots.</figcaption></figure>
+
+<div class="box blue"><span class="tag">The recipe: 4 steps, every time</span>
+<ol class="calc">
+<li><b>Overdrive</b> of the working transistor: $u = V_{DD} - |V_T|$.</li>
+<li><b>Start point</b> ($|V_{DS}| = V_{DD}$, saturated): $I_1 = \frac{k}{2}u^2$.</li>
+<li><b>50% point</b> ($|V_{DS}| = V_{DD}/2$, linear): $I_2 = \frac{k}{2}\big[2u\,\tfrac{V_{DD}}{2} - (\tfrac{V_{DD}}{2})^2\big]$.</li>
+<li>$I_{avg} = (I_1+I_2)/2$, then $\tau = C\,(V_{DD}/2)/I_{avg}$.</li>
+</ol></div>
+
+<div class="box red"><span class="tag">Mistake number 1 in this lecture</span>
+Using the saturation formula at <b>both</b> ends. At the 50% point the transistor is <b>linear</b>. Check: is $V_{DD}/2 < V_{DD} - |V_T|$? Yes whenever $|V_T| < V_{DD}/2$.</div>
+
+<p class="small">This method is always a few percent <b>too slow</b> (≈ 4% in Example 25.2), because the real current curve bulges above the straight average. Use it when the question says "average current", or as a quick check.</p>
+
+<!-- ===================================================== B5 -->
+<h2 id="B5">B5 · Method 2: the exact formula</h2>
+
+<p>Here we do the integral properly. You need the <b>result</b> in the exam. Read the derivation once so the formula makes sense.</p>
+
+<h3>Step 1: separate the variables</h3>
+<p>For the fall, only the NMOS works: $C\,\dfrac{dV}{dt} = -I(V)$, so $dt = -\dfrac{C\,dV}{I(V)}$. Time = add up (integrate) $C\,dV/I$ over the voltage range. That is the bucket formula, done in thin slices.</p>
+
+<h3>Step 2: segment 1, saturated, from $V_{DD}$ down to $V_{DD}-V_T$</h3>
+<p>The current is constant, so no integral is needed. The output drops by exactly $V_T$:</p>
+$$t_{sat} = \frac{C\cdot V_T}{\tfrac{k}{2}u^2} = \frac{2C\,V_T}{k\,u^2}$$
+
+<h3>Step 3: segment 2, linear, from $u$ down to $V_{DD}/2$</h3>
+<p>Now $I = \tfrac{k}{2}V(2u - V)$. One standard integral (partial fractions):</p>
+$$\int\frac{dV}{V(2u-V)} = \frac{1}{2u}\ln\frac{V}{2u-V}$$
+<p>Put in the limits $V = u$ (start, where the log is $\ln 1 = 0$) and $V = V_{DD}/2$ (end):</p>
+$$t_{lin} = \frac{C}{k\,u}\,\ln\!\left(\frac{2u}{V_{DD}/2} - 1\right) = \frac{C}{k\,u}\,\ln\!\left(\frac{4u}{V_{DD}} - 1\right)$$
+
+<h3>Step 4: add them</h3>
+<div class="box blue"><span class="tag">Memorise: exact delay of a CMOS inverter (step input)</span>
+$$\boxed{\;\tau = \frac{C_{load}}{k\,u}\left[\frac{2|V_T|}{u} + \ln\!\left(\frac{4u}{V_{DD}} - 1\right)\right],\qquad u = V_{DD} - |V_T|\;}$$
+$\tau_{PHL}$: use $k_n$ and $V_{T,n}$. &nbsp;&nbsp; $\tau_{PLH}$: use $k_p$ and $|V_{T,p}|$.</div>
+
+<div class="box purple"><span class="tag">Say it out loud</span>
+"<b>C over k-u, times [sat bit + log bit]</b>." &nbsp;Sat bit = $2V_T/u$ (the straight-line part). Log bit = $\ln(4u/V_{DD} - 1)$ (the curved part). The front factor $C/(ku)$ is an $RC$ time constant, because a linear MOSFET near $V_{DS}=0$ is a resistor $R_{on} = 1/(ku)$.</div>
+
+<div class="box amber"><span class="tag">Your lecture writes it with V_OH and V_OL</span>
+$$\tau_{PHL} = \frac{C_{load}}{k_n(V_{OH}-V_{T0,n})}\left[\frac{2V_{T0,n}}{V_{OH}-V_{T0,n}} + \ln\!\left(\frac{4(V_{OH}-V_{T0,n})}{V_{OH}+V_{OL}}-1\right)\right]$$
+For CMOS, $V_{OH} = V_{DD}$ and $V_{OL} = 0$, and it becomes the boxed formula. Same thing.</div>
+
+<div class="box red"><span class="tag">Rare case: if |V_T| ≥ V_DD/2</span>
+Then the transistor is still saturated at the 50% point, so there is no linear segment. The whole half-swing is constant current: $\tau = \dfrac{C\,(V_{DD}/2)}{\tfrac{k}{2}u^2} = \dfrac{C\,V_{DD}}{k\,u^2}$. (This is the second line of your formula sheet's $D(k,T)$.)</div>
+
+<!-- ===================================================== B6 -->
+<h2 id="B6">B6 · Rise and fall time (10% ↔ 90%)</h2>
+<p>Same integral, different limits: the fall time runs from $0.9V_{DD}$ down to $0.1V_{DD}$, not from $V_{DD}$ to $V_{DD}/2$.</p>
+<ul>
+<li>Saturated piece: from $0.9V_{DD}$ down to $u$. Only exists if $0.9V_{DD} > u$, i.e. $|V_T| > 0.1V_{DD}$ (normal case). It lasts $\dfrac{C(0.9V_{DD} - u)}{\tfrac{k}{2}u^2} = \dfrac{C}{ku}\cdot\dfrac{2(|V_T| - 0.1V_{DD})}{u}$.</li>
+<li>Linear piece: from $u$ down to $0.1V_{DD}$: $\dfrac{C}{ku}\ln\!\left(\dfrac{2u}{0.1V_{DD}} - 1\right) = \dfrac{C}{ku}\ln\!\left(\dfrac{20u}{V_{DD}}-1\right)$.</li>
+</ul>
+<div class="box blue"><span class="tag">Fall time (and rise time with the PMOS values)</span>
+$$t_{fall} = \frac{C}{k\,u}\left[\frac{2(|V_T| - 0.1V_{DD})}{u} + \ln\!\left(\frac{20u}{V_{DD}} - 1\right)\right]$$
+Same shape as the delay formula. Only the numbers inside change: $V_T \to V_T - 0.1V_{DD}$ and $4 \to 20$.</div>
+
+<!-- ===================================================== B7 -->
+<h2 id="B7">B7 · One MOSFET + one capacitor (Razavi-type questions)</h2>
+<p>Sometimes there is no inverter: just one NMOS charging or discharging a capacitor from some starting voltage. The method is the same as B5, but you <b>must decide the region yourself</b>, and the limits are whatever the question gives.</p>
+
+<div class="box blue"><span class="tag">General recipe</span>
+<ol class="calc">
+<li>Write $V_{GS}$ and $V_{DS}$ in terms of the capacitor voltage $V_X$. (Which terminal is the capacitor on?)</li>
+<li>Find the overdrive $u = V_{GS} - V_T$ and check the region: saturated if $V_{DS} \ge u$.</li>
+<li>Write $C\,dV_X/dt = \pm I$ and separate: $dt = C\,dV_X / I$.</li>
+<li>Integrate between the start and end voltages. If the region changes on the way, split at the boundary.</li>
+</ol></div>
+
+<table>
+<tr><th>Situation</th><th>Region</th><th>Time from $V_i$ to $V_f$</th></tr>
+<tr><td>Cap on drain, gate fixed, $V_{DS}=V_X \ge u$</td><td>saturated</td><td>$\dfrac{C\,(V_i - V_f)}{\tfrac{k}{2}u^2}$ (straight line)</td></tr>
+<tr><td>Cap on drain, gate fixed, $V_X < u$ the whole time</td><td>linear</td><td>$\dfrac{C}{k\,u}\ln\dfrac{V_i\,(2u - V_f)}{V_f\,(2u - V_i)}$</td></tr>
+<tr><td>Cap on source (follower), $V_{GS} = V_G - V_X$</td><td>saturated always (drain at $V_{DD}$)</td><td>$\dfrac{2C}{k}\left[\dfrac{1}{V_G - V_T - V_f} - \dfrac{1}{V_G - V_T - V_i}\right]$</td></tr>
+</table>
+<p class="small">The follower slows down as it gets close to $V_G - V_T$, because its overdrive is shrinking to zero. It never quite gets there.</p>
+
+<!-- ===================================================== B8 -->
+<h2 id="B8">B8 · Design: what makes the gate faster</h2>
+<p>Every delay formula has the shape $\tau \propto \dfrac{C_{load}}{k\,(V_{DD} - |V_T|)}$. So there are three knobs:</p>
+<table>
+<tr><th>Knob</th><th>Effect</th><th>Catch</th></tr>
+<tr><td>smaller $C_{load}$</td><td>τ goes down in proportion</td><td>shorter wires, fewer gates driven</td></tr>
+<tr><td>bigger $k$ (wider $W/L$)</td><td>more current, τ ∝ 1/k</td><td>a wider transistor has a bigger drain $C_{db}$, and a bigger gate that slows the previous stage</td></tr>
+<tr><td>bigger $V_{DD}$</td><td>more current</td><td>power $\propto V_{DD}^2$ goes up</td></tr>
+</table>
+
+<div class="box blue"><span class="tag">Two design rules you will use</span>
+<b>Rule 1 (scaling):</b> with $C$ and voltages fixed, $\tau \propto 1/k$. To change a delay by a factor, change $k$ (so $W/L$) by the inverse factor.<br>
+<b>Rule 2 (equal edges):</b> $\tau_{PHL} = \tau_{PLH}$ needs $k_p = k_n$ (if $|V_{T,p}| = V_{T,n}$). Since $\mu_n \approx 2.5\mu_p$, that means $(W/L)_p \approx 2.5\,(W/L)_n$. That is <b>exactly the symmetric inverter of Lecture 24</b> ($V_{th} = V_{DD}/2$, equal noise margins). So "sized for equal rise and fall delays" means "symmetric".</div>
+
+<!-- ===================================================== B9 -->
+<h2 id="B9">B9 · Ring oscillator and dynamic power</h2>
+<h3>Ring oscillator</h3>
+<figure>{{FIG_RING}}
+<figcaption><b>Fig. B9.1</b> An odd number of inverters in a loop. Each stage adds one delay. To return to the starting state, the edge must go round once as a rising edge and once as a falling edge.</figcaption></figure>
+<div class="box blue"><span class="tag">Ring oscillator</span>
+$$T = 2N\tau_P,\qquad f = \frac{1}{2N\tau_P},\qquad N\text{ odd}$$
+Used backwards to <b>measure</b> $\tau_P$: measure $f$, then $\tau_P = \dfrac{1}{2Nf}$.</div>
+
+<h3>Dynamic power</h3>
+<figure>{{FIG_ENERGY}}
+<figcaption><b>Fig. B9.2</b> Charging $C$ to $V_{DD}$ takes $C V_{DD}^2$ from the supply. Half is stored, half is burned as heat in the PMOS, whatever its size. Discharging burns the stored half in the NMOS.</figcaption></figure>
+<div class="box blue"><span class="tag">Memorise</span>
+$$E_{cycle} = C_{load}V_{DD}^2,\qquad P_{dyn} = C_{load}V_{DD}^2 f,\qquad E_{PMOS} = E_{NMOS} = \tfrac12 C_{load}V_{DD}^2$$
+Static power ≈ 0 in CMOS, because one transistor is always off when the output is steady.</div>
+
+<div class="box green"><span class="tag">Unit shortcut that saves calculator errors</span>
+<b>fF × V ÷ µA = ns</b> &nbsp;and&nbsp; <b>fF × V ÷ mA = ps</b>. Put $C$ in fF, $k$ in µA/V², $I$ in µA and the delay comes out in ns directly. Example: $\dfrac{300\text{ fF}}{200\,\mu\text{A/V}^2 \times 2.7\text{ V}} = 0.556$ ns.<br>
+Calculator: use <b>ln</b>, not log. Type the bracket in one line, e.g. <code>1.2÷2.7+ln(10.8÷3.3−1)</code> → 1.2654.</div>
+
+<!-- ===================================================== B10 -->
+<h2 id="B10">B10 · What Lecture 26 adds</h2>
+<p>Most of Lecture 26 repeats the Lecture 25 derivation, this time written out in full for $\tau_{PLH}$ as well. Three things are new or stated more clearly.</p>
+
+<h3>1 · The PLH formula, written out</h3>
+$$\tau_{PLH} = \frac{C_{load}}{k_p(V_{DD}-|V_{T0,p}|)}\left[\frac{2|V_{T0,p}|}{V_{DD}-|V_{T0,p}|} + \ln\!\left(\frac{4(V_{DD}-|V_{T0,p}|)}{V_{DD}} - 1\right)\right]$$
+<p>This is the boxed formula of B5 with the PMOS numbers. The PMOS stays saturated while $V_{out} < |V_{T0,p}|$, then goes linear. It is the mirror image of the NMOS story.</p>
+
+<h3>2 · Equal delays</h3>
+<div class="box blue"><span class="tag">Condition for τ<sub>PHL</sub> = τ<sub>PLH</sub></span>
+$$k_n = k_p \quad\text{and}\quad V_{T0,n} = |V_{T0,p}|$$
+Same $k$ and same threshold give the same formula, so the same delay. This is the symmetric inverter.</div>
+
+<h3>3 · A real input is not a perfect step</h3>
+<figure>{{FIG_SLOPE}}<figcaption><b>Fig. B10.1</b> The lecture formulas assume the input jumps instantly. A real input takes some time $\tau_r$ (rise) or $\tau_f$ (fall) to change.</figcaption></figure>
+<div class="box blue"><span class="tag">Delay with a slow input (Lecture 26)</span>
+$$\tau_{PHL}(\text{actual}) = \sqrt{\tau_{PHL}^2(\text{step input}) + \left(\frac{\tau_r}{2}\right)^2}\qquad
+\tau_{PLH}(\text{actual}) = \sqrt{\tau_{PLH}^2(\text{step input}) + \left(\frac{\tau_f}{2}\right)^2}$$
+$\tau_r$ is the <b>input's</b> rise time (the input rising makes the output fall: PHL). $\tau_f$ is the <b>input's</b> fall time.</div>
+<p><b>Example:</b> the inverter of Q3 ($\tau_{PHL} = 0.703$ ns) gets an input with $\tau_r = 0.5$ ns: $\sqrt{0.703^2 + 0.25^2} = \sqrt{0.4942 + 0.0625} = 0.746$ ns. That is a little slower than with a perfect step.</p>
+
+<h3>4 · Ring oscillator</h3>
+<p>The lecture ends with three inverters in a loop, each driving a capacitor ($C_1, C_2, C_3$). That is the ring oscillator of B9: $f = 1/(2N\tau_P)$ with $N = 3$.</p>
+
+<!-- ===================================================== R -->
+<h2 id="R">R · Lectures 23–24 refresher (what Tutorial 8 needs)</h2>
+<p>Tutorial 8 is about the <b>DC</b> behaviour (Lectures 23–24), not delay. Here is the minimum you need, in the same notation as your guide.</p>
+
+<figure>{{FIG_T8VTC}}<figcaption><b>Fig. R.1</b> The VTC of the Tutorial 8 Q1 inverter (computed). $V_{IL}$ and $V_{IH}$ are the two points where the slope is −1. $V_{th}$ is where the curve crosses the line $V_{out} = V_{in}$.</figcaption></figure>
+
+<table>
+<tr><th>Point</th><th>Which transistor is in which region</th><th>Equations to use (formula sheet)</th></tr>
+<tr><td>$V_{IL}$ (input low, output still high)</td><td>NMOS <b>saturated</b> (just on), PMOS <b>linear</b></td><td>① current balance + ② $V_{IL} = \dfrac{2V_{out} + V_{T0,p} - V_{DD} + k_RV_{T0,n}}{1+k_R}$</td></tr>
+<tr><td>$V_{th}$ (middle)</td><td>both <b>saturated</b></td><td>$V_{th} = \dfrac{V_{T0,n} + \sqrt{1/k_R}\,(V_{DD} + V_{T0,p})}{1 + \sqrt{1/k_R}}$</td></tr>
+<tr><td>$V_{IH}$ (input high, output nearly low)</td><td>NMOS <b>linear</b>, PMOS <b>saturated</b></td><td>③ current balance + ④ $V_{IH} = \dfrac{V_{DD} + V_{T0,p} + k_R(2V_{out} + V_{T0,n})}{1+k_R}$</td></tr>
+</table>
+<div class="box blue"><span class="tag">The two current balances</span>
+① at $V_{IL}$: $\;k_R(V_{in}-V_{T0,n})^2 = 2(V_{in}-V_{DD}-V_{T0,p})(V_{out}-V_{DD}) - (V_{out}-V_{DD})^2$<br>
+③ at $V_{IH}$: $\;k_R\big[2(V_{in}-V_{T0,n})V_{out} - V_{out}^2\big] = (V_{in}-V_{DD}-V_{T0,p})^2$<br>
+$k_R = k_n/k_p$. Noise margins: $NM_L = V_{IL} - V_{OL}$, $NM_H = V_{OH} - V_{IH}$, with $V_{OH} = V_{DD}$, $V_{OL} = 0$.</div>
+<div class="box green"><span class="tag">How to solve ① + ② (or ③ + ④) by hand</span>
+Put ② into ① (replace every $V_{in}$ by its expression in $V_{out}$). You get a <b>quadratic in $V_{out}$</b>. Solve it, keep the root that makes sense (near $V_{DD}$ for $V_{IL}$, near 0 for $V_{IH}$), then put $V_{out}$ back into ② to get $V_{IL}$. On a Casio, the equation mode solves the quadratic for you.</div>
+<div class="box blue"><span class="tag">Designing for a target V<sub>th</sub> (backwards)</span>
+$$k_R = \left(\frac{V_{DD} + V_{T0,p} - V_{th}}{V_{th} - V_{T0,n}}\right)^2,\qquad \frac{(W/L)_n}{(W/L)_p} = k_R\cdot\frac{\mu_pC_{ox}}{\mu_nC_{ox}}$$</div>
+
+<!-- ===================================================== C -->
+<h2 id="C">C · Which type of question is it?</h2>
+<p>Read the question once. Find its row below. The row tells you the theory and the worked question to copy.</p>
+<figure>{{FIG_FLOW}}
+<figcaption><b>Fig. C.1</b> The seven question types in Lecture 25. Many exam questions chain two or three of them: find $C_{load}$ → find the delay → size the PMOS.</figcaption></figure>
+
+<div class="box orange"><span class="tag">The 5-step routine for every question</span>
+<b>1. What it says:</b> redraw the circuit. Mark which transistor does the work and what changes.<br>
+<b>2. Which theory:</b> name the section (B1–B9) and its formula.<br>
+<b>3. Plan:</b> list the numbers you need first (overdrive $u$, $V_{DD}/2$, $C$ in fF, $k$ in µA/V²).<br>
+<b>4. Solve:</b> region check first, then plug in.<br>
+<b>5. Check:</b> right transistor for the edge? linear at 50%? units? Does the answer make sense (PMOS edge slower if $k_p < k_n$)?</div>
+
+<!-- ===================================================== T8 -->
+<h2 id="T8">Tutorial 8 · solved step by step</h2>
+<p class="lede">Tutorial 8 uses Lectures 23–24 (the refresher R). Each question has the same five steps. Cover the "Solve" part and try it yourself first.</p>
+
+<div class="q">
+<h3>T8 · Q1 · Noise margins of a non-symmetric inverter</h3>
+<p><i>$V_{DD} = 3.3$ V, $V_{T0,n} = 0.6$ V, $V_{T0,p} = -0.7$ V, $k_n = 200$, $k_p = 80$ µA/V². Find the noise margins. ($k_R = 2.5$, not symmetric.)</i></p>
+<div class="step s1"><div class="lab">In plain words</div><div>"How much noise can sit on a logic 0 or a logic 1 before the next gate gets confused?" We need $V_{IL}$ and $V_{IH}$, the two slope = −1 points of the VTC (Fig. R.1).</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Refresher R. At $V_{IL}$ use ① + ②. At $V_{IH}$ use ③ + ④. Not symmetric, so the shortcut $(3V_{DD}+2V_T)/8$ is <b>not</b> allowed.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Write ② and ④ with numbers → substitute → solve two quadratics → back-substitute.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>
+<b>V<sub>IL</sub></b> (NMOS sat, PMOS linear)<ol class="calc">
+<li>②: $V_{IL} = \dfrac{2V_{out} - 0.7 - 3.3 + 2.5(0.6)}{3.5} = \dfrac{2V_{out} - 2.5}{3.5}$</li>
+<li>Put it into ①: $2.5(V_{in} - 0.6)^2 = 2(V_{in} - 2.6)(V_{out} - 3.3) - (V_{out} - 3.3)^2$. Expanding gives $V_{out}^2 + 0.0667\,V_{out} - 9.898 = 0$.</li>
+<li>Positive root: $V_{out} = 3.113$ V (high, as expected).</li>
+<li>$V_{IL} = (2 \times 3.113 - 2.5)/3.5 =$ <span class="ans">1.064 V</span></li></ol>
+<b>V<sub>IH</sub></b> (NMOS linear, PMOS sat)<ol class="calc">
+<li>④: $V_{IH} = \dfrac{3.3 - 0.7 + 2.5(2V_{out} + 0.6)}{3.5} = \dfrac{4.1 + 5V_{out}}{3.5}$</li>
+<li>Put it into ③: $2.5[2(V_{in} - 0.6)V_{out} - V_{out}^2] = (V_{in} - 2.6)^2$. This gives $V_{out}^2 + 2.667\,V_{out} - 0.7843 = 0$.</li>
+<li>Positive root: $V_{out} = 0.2673$ V (low, as expected).</li>
+<li>$V_{IH} = (4.1 + 5 \times 0.2673)/3.5 =$ <span class="ans">1.553 V</span></li></ol>
+<b>Noise margins:</b> $NM_L = V_{IL} - 0 =$ <span class="ans">1.06 V</span> &nbsp; $NM_H = 3.3 - 1.553 =$ <span class="ans">1.75 V</span>
+</div></div>
+<div class="step s5"><div class="lab">Check</div><div>Regions: at $V_{IL}$, NMOS $V_{DS} = 3.11 \ge 1.064 - 0.6$ ✓ sat; PMOS $|V_{DS}| = 0.19 < 3.3 - 1.064 - 0.7$ ✓ linear. $NM_L < NM_H$ because the strong NMOS ($k_R = 2.5$) pulls the switching point left ✓. I also swept the VTC numerically: slope −1 at 1.064 V and 1.553 V ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>T8 · Q2 · Noise margins and V<sub>th</sub> from µC<sub>ox</sub> and W/L</h3>
+<p><i>nMOS: $V_{T0,n} = 0.6$ V, $\mu_nC_{ox} = 60$ µA/V², $(W/L)_n = 8$. pMOS: $V_{T0,p} = -0.7$ V, $\mu_pC_{ox} = 25$ µA/V², $(W/L)_p = 12$. $V_{DD} = 3.3$ V. Find the noise margins and $V_{th}$.</i></p>
+<div class="step s1"><div class="lab">In plain words</div><div>Same job as Q1, but first build $k_n$ and $k_p$ yourself.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>$k = \mu C_{ox}(W/L)$, then refresher R: ①–④ and the $V_{th}$ formula.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>$k_n = 60 \times 8 = 480$, $k_p = 25 \times 12 = 300$ µA/V² → $k_R = 1.6$. Then exactly as Q1.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$V_{th}$: $\sqrt{1/1.6} = 0.7906$. $V_{th} = \dfrac{0.6 + 0.7906(3.3 - 0.7)}{1 + 0.7906} = \dfrac{2.6555}{1.7906} =$ <span class="ans">1.483 V</span></li>
+<li>$V_{IL} = \dfrac{2V_{out} - 4 + 0.96}{2.6} = \dfrac{2V_{out} - 3.04}{2.6}$ → into ①: $V_{out}^2 + 4.067V_{out} - 21.99 = 0$ → $V_{out} = 3.078$ V → $V_{IL} =$ <span class="ans">1.198 V</span></li>
+<li>$V_{IH} = \dfrac{2.6 + 1.6(2V_{out} + 0.6)}{2.6} = \dfrac{3.56 + 3.2V_{out}}{2.6}$ → into ③: $V_{out}^2 + 6.667V_{out} - 1.839 = 0$ → $V_{out} = 0.2653$ V → $V_{IH} =$ <span class="ans">1.696 V</span></li>
+<li>$NM_L =$ <span class="ans">1.20 V</span>, &nbsp; $NM_H = 3.3 - 1.696 =$ <span class="ans">1.60 V</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>$V_{IL} < V_{th} < V_{IH}$ ✓ (1.198 < 1.483 < 1.696). $k_R$ is closer to 1 than in Q1, so the two margins are closer together ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>T8 · Q3 · Design for V<sub>th</sub> = 1.4 V, then process variation</h3>
+<p><i>$V_{T0,n} = 0.6$, $V_{T0,p} = -0.7$ V, $\mu_nC_{ox} = 60$, $\mu_pC_{ox} = 25$ µA/V², $V_{DD} = 3.3$ V, $L_n = L_p = 0.8$ µm. (a) Find $W_n/W_p$ for $V_{th} = 1.4$ V. (b) $V_{T0,n}$ varies ±15 %, $V_{T0,p}$ varies ±20 %. Find the highest and lowest $V_{th}$.</i></p>
+<div class="step s1"><div class="lab">In plain words</div><div>(a) We choose the sizes so the inverter flips at 1.4 V. (b) The factory cannot make the thresholds exactly. How far can $V_{th}$ wander?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>(a) The backwards $V_{th}$ formula (refresher R). (b) The forward $V_{th}$ formula with the extreme thresholds. A tug-of-war picture: a stronger (lower-threshold) NMOS wins earlier → lower $V_{th}$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>(a) $k_R = \left(\dfrac{3.3 - 0.7 - 1.4}{1.4 - 0.6}\right)^2 = \left(\dfrac{1.2}{0.8}\right)^2 = 2.25$.</li>
+<li>Same $L$, so $k_R = \dfrac{60\,W_n}{25\,W_p}$ → $\dfrac{W_n}{W_p} = 2.25 \times \dfrac{25}{60} =$ <span class="ans">0.9375</span></li>
+<li>(b) $\sqrt{1/k_R} = 2/3$ stays fixed (widths do not change). Ranges: $V_{T0,n} \in [0.51, 0.69]$ V; $V_{T0,p} \in [-0.84, -0.56]$ V.</li>
+<li>$V_{th}$ goes <b>up</b> when $V_{T0,n}$ goes up (weaker NMOS) and when $|V_{T0,p}|$ goes down (stronger PMOS).</li>
+<li>Max: $\dfrac{0.69 + \tfrac23(3.3 - 0.56)}{5/3} = \dfrac{0.69 + 1.8267}{1.6667} =$ <span class="ans">1.510 V</span></li>
+<li>Min: $\dfrac{0.51 + \tfrac23(3.3 - 0.84)}{5/3} = \dfrac{0.51 + 1.64}{1.6667} =$ <span class="ans">1.290 V</span></li>
+</ol></div></div>
+<figure>{{FIG_T8RANGE}}<figcaption><b>Fig. T8.1</b> The switching threshold can land anywhere in the purple band, 1.29 V to 1.51 V, about ±0.11 V around the design value.</figcaption></figure>
+<div class="step s5"><div class="lab">Check</div><div>Nominal values give back exactly 1.400 V ✓. The two corners are the "both push the same way" combinations ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>T8 · Q4 · Inverter with an NMOS feedback switch</h3>
+<p><i>The inverter of Q3 has an NMOS M3 (W/L = 2/0.8, gate at 3.3 V) connected from its output back to its input. (a) Find $V_{out}$. (b) Does the $V_{T0,n}$ variation of M3 change $V_{out}$? (c) Find the supply current and its variation.</i></p>
+<figure>{{FIG_T8FB}}<figcaption><b>Fig. T8.2</b> M3 connects the output back to the input. Its gate is at 3.3 V, so it is a closed switch.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>We tie the inverter's output to its own input through a switch. The inverter wants to make the output the "opposite" of the input, but they are now the same wire. The only place where "output = input" is allowed is the middle point $V_{th}$.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Two facts. ① A MOSFET gate draws <b>no DC current</b>, so nothing flows through M3. A transistor that is on but carries no current has $V_{DS} = 0$, so $V_{in} = V_{out}$. ② On the VTC, $V_{out} = V_{in}$ happens only at $V_{th}$, where both transistors are saturated (Lecture 24).</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>(a) $V_{out} = V_{in} = V_{th} =$ <span class="ans">1.4 V</span></li>
+<li>(b) <b>No.</b> M3 carries no current, so it drops no voltage, whatever its threshold. It only has to stay on: $V_{GS,3} = 3.3 - 1.4 = 1.9$ V, which is above even $0.69$ V ✓. (The inverter's own threshold variation does move $V_{out}$, through $V_{th}$: 1.29 V to 1.51 V as in Q3.)</li>
+<li>(c) At $V_{th}$ both transistors are saturated and carry the same current from $V_{DD}$ to ground:
+$I = \dfrac{\mu_nC_{ox}}{2}\dfrac{W_n}{L}(V_{th} - V_{T0,n})^2 = \dfrac{60}{2}\cdot\dfrac{W_n}{0.8}(0.8)^2 = 24\,W_n$ µA (with $W_n$ in µm).</li>
+<li>Variation: put each corner of Q3(b) in. Lowest: $V_{T0,n} = 0.69$, $V_{T0,p} = -0.84$ → $V_{th} = 1.398$ V → $18.8\,W_n$ µA. Highest: $V_{T0,n} = 0.51$, $V_{T0,p} = -0.56$ → $V_{th} = 1.402$ V → $29.8\,W_n$ µA. So the current changes by about <span class="ans">−22 % to +24 %</span>.</li>
+<li>Example: if $W_p = 2$ µm then $W_n = 1.875$ µm and $I \approx$ <span class="ans">45 µA</span> (range 35 µA to 56 µA).</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Note</div><div>The tutorial does not give the actual widths, only the ratio from Q3. So the current can only be given per µm of $W_n$, or for a width you choose. Say this in your answer.</div></div>
+</div>
+
+<!-- ===================================================== T9 -->
+<h2 id="T9">Tutorial 9 · solved step by step</h2>
+<p class="lede">Tutorial 9 is Lectures 25–26: delay, fall and rise time, and design. The theory is in B4–B8.</p>
+
+<div class="q">
+<h3>T9 · Q1 · Fall time by both methods</h3>
+<p><i>$V_{DD} = 5$ V, $C_{load} = 1$ pF, $\mu_nC_{ox} = 20$ µA/V², $(W/L)_n = 10$, $V_{Tn} = 1$ V. Find $\tau_{fall}$ from $V_{out} = 4.5$ V to $0.5$ V by the average-current method and by the differential-equation method.</i></p>
+<div class="step s1"><div class="lab">In plain words</div><div>The input jumps high. The NMOS empties a 1 pF bucket. How long does the water level take to go from 4.5 V down to 0.5 V?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B6 (rise/fall time) and B7 (integrate in pieces). The same as the delay, but the limits are 90 % and 10 %, not 100 % and 50 %.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>$k_n = 20 \times 10 = 200$ µA/V². Overdrive $u = 5 - 1 = 4$ V. The NMOS is saturated while $V_{out} \ge 4$ V, linear below. So 4.5 → 4 V is saturated and 4 → 0.5 V is linear. $C = 1000$ fF.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>
+<b>Average-current method</b><ol class="calc">
+<li>At 4.5 V ($V_{DS} = 4.5 \ge 4$, sat): $I_1 = 100 \times 4^2 = 1600$ µA.</li>
+<li>At 0.5 V (linear): $I_2 = 100\,[2(4)(0.5) - 0.5^2] = 100 \times 3.75 = 375$ µA.</li>
+<li>$I_{avg} = (1600 + 375)/2 = 987.5$ µA.</li>
+<li>$\tau_{fall} = \dfrac{1000\text{ fF} \times (4.5 - 0.5)\text{ V}}{987.5\text{ µA}} =$ <span class="ans">4.05 ns</span></li></ol>
+<b>Differential-equation method</b><ol class="calc">
+<li>Saturated piece, 4.5 → 4 V (constant current 1600 µA): $\dfrac{1000 \times 0.5}{1600} = 0.3125$ ns.</li>
+<li>Linear piece, 4 → 0.5 V: $\dfrac{C}{ku}\ln\dfrac{V_i(2u - V_f)}{V_f(2u - V_i)} = \dfrac{1000}{200 \times 4}\ln\dfrac{4 \times 7.5}{0.5 \times 4} = 1.25 \times \ln 15 = 1.25 \times 2.708 = 3.385$ ns.</li>
+<li>$\tau_{fall} = 0.3125 + 3.385 =$ <span class="ans">3.70 ns</span></li></ol>
+</div></div>
+<figure>{{FIG_T9Q1}}<figcaption><b>Fig. T9.1</b> The real fall (blue, computed). It is saturated for only 0.31 ns, then spends a long time in the linear tail. The orange line is the average-current answer.</figcaption></figure>
+<div class="step s5"><div class="lab">Check</div><div>The B6 one-line formula gives the same: $1.25[2(1 - 0.5)/4 + \ln(20 \times 4/5 - 1)] = 1.25 \times 2.958 = 3.70$ ns ✓. The average method is 10 % too slow here, much worse than for the delay, because the current changes a lot (1600 → 375 µA) over this long swing.</div></div>
+</div>
+
+<div class="q">
+<h3>T9 · Q2 · Delay from a measured I–V curve</h3>
+<p><i>$V_{DD} = 3.3$ V. With $V_{GS} = 3.3$ V the NMOS reaches $I_{sat} = 2$ mA for $V_{DS} \ge 2.5$ V. Step input 0 → 3.3 V. Find the time for the output to fall from 3.3 V to 1.65 V with $C = 300$ fF.</i></p>
+<div class="step s1"><div class="lab">In plain words</div><div>We are not told $k$ or $V_T$. We are told what the transistor's current looks like. First work out $k$ and $V_T$ from it, then it is an ordinary $\tau_{PHL}$ question.</div></div>
+<figure>{{FIG_T9Q2}}<figcaption><b>Fig. T9.2</b> The given data in a picture. The current stops rising (saturates) at the corner $V_{DS} = V_{GS} - V_T$.</figcaption></figure>
+<div class="step s2"><div class="lab">Theory</div><div>Square law: saturation starts at $V_{DS} = V_{GS} - V_T$, and $I_{sat} = \tfrac{k}{2}(V_{GS} - V_T)^2$. Then B5 (exact $\tau_{PHL}$).</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Corner: $3.3 - V_T = 2.5$ → $V_T = 0.8$ V, so $u = 2.5$ V.</li>
+<li>$2\text{ mA} = \tfrac{k}{2}(2.5)^2$ → $k = \dfrac{4}{6.25} = 0.64$ mA/V² $= 640$ µA/V².</li>
+<li>Front: $\dfrac{C}{ku} = \dfrac{300}{640 \times 2.5} = 0.1875$ ns.</li>
+<li>Sat bit $= \dfrac{2(0.8)}{2.5} = 0.64$. Log bit $= \ln\!\left(\dfrac{4 \times 2.5}{3.3} - 1\right) = \ln 2.0303 = 0.708$.</li>
+<li>$\tau_{PHL} = 0.1875 \times 1.348 =$ <span class="ans">0.253 ns</span></li>
+</ol>(Average-current check: $I_1 = 2000$ µA, $I_2 = 320[2(2.5)(1.65) - 1.65^2] = 1769$ µA, so $\tau \approx 300 \times 1.65/1884 = 0.263$ ns.)</div></div>
+<div class="step s5"><div class="lab">Check</div><div>The quick bucket estimate $C\Delta V/I_{sat} = 300 \times 1.65/2000 = 0.248$ ns is close but a bit low, because the current drops in the linear part ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>T9 · Q3 · Design an inverter for V<sub>th</sub> and three timing specs</h3>
+<p><i>$\mu_nC_{ox} = 120$, $\mu_pC_{ox} = 60$ µA/V², $L = 0.6$ µm, $V_{T0,n} = 0.8$ V, $V_{T0,p} = -1$ V, $W_{min} = 1.2$ µm, $V_{DD} = 3$ V, $C = 300$ fF. Find $W_n$, $W_p$ for: $V_{th} = 1.5$ V; $\tau_{PHL} \le 0.2$ ns and $\tau_{PLH} \le 0.15$ ns; a fall from 2 V to 0.5 V in 0.35 ns.</i></p>
+<div class="step s1"><div class="lab">In plain words</div><div>Four rules, two unknowns. The $V_{th}$ rule fixes the <b>ratio</b> of the widths. The timing rules each say "the NMOS (or PMOS) must be at least this strong". Find the smallest sizes that obey every rule.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Refresher R (backwards $V_{th}$ → $k_R$). B5 exact delay, solved for $k$. B7 linear-only integral for the 2 V → 0.5 V fall.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>① $k_R$ from $V_{th}$. ② Minimum $k_n$ from each timing rule. ③ The biggest minimum wins. ④ $k$ → $W$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$k_R = \left(\dfrac{3 - 1 - 1.5}{1.5 - 0.8}\right)^2 = \left(\dfrac{0.5}{0.7}\right)^2 = 0.510$. So $k_p = k_n/0.510 = 1.96\,k_n$.</li>
+<li>$\tau_{PHL} \le 0.2$ ns: $u_n = 2.2$, bracket $= \frac{1.6}{2.2} + \ln(\frac{8.8}{3} - 1) = 0.727 + 0.659 = 1.387$. $k_n \ge \dfrac{300}{0.2 \times 2.2} \times 1.387 = 945$ µA/V².</li>
+<li>$\tau_{PLH} \le 0.15$ ns: $u_p = 2$, bracket $= \frac{2}{2} + \ln(\frac{8}{3} - 1) = 1 + 0.511 = 1.511$. $k_p \ge \dfrac{300}{0.15 \times 2} \times 1.511 = 1511$ µA/V², so $k_n \ge 1511 \times 0.510 = 771$ µA/V².</li>
+<li>Fall 2 V → 0.5 V: $2 < u_n = 2.2$, so <b>linear the whole way</b>. $t = \dfrac{C}{k_n u}\ln\dfrac{2(4.4 - 0.5)}{0.5(4.4 - 2)} = \dfrac{300}{2.2\,k_n}\ln 6.5 \le 0.35$ ns → $k_n \ge 729$ µA/V².</li>
+<li>Strictest: $k_n \ge 945$ µA/V² (Fig. T9.3). Then $k_p = 945/0.510 = 1853$ µA/V².</li>
+<li>$W_n = \dfrac{k_n L}{\mu_nC_{ox}} = \dfrac{945 \times 0.6}{120} = 4.73$ µm; $W_p = \dfrac{1853 \times 0.6}{60} = 18.5$ µm. Round up: <span class="ans">W<sub>n</sub> ≈ 4.8 µm, W<sub>p</sub> ≈ 18.8 µm</span></li>
+</ol></div></div>
+<figure>{{FIG_T9Q3}}<figcaption><b>Fig. T9.3</b> Each spec sets a minimum NMOS strength. Only the strictest one matters.</figcaption></figure>
+<div class="step s5"><div class="lab">Check</div><div>With 4.8 / 18.8 µm: $\tau_{PHL} = 0.197$ ns ✓, $\tau_{PLH} = 0.121$ ns ✓, 2 → 0.5 V in 0.266 ns ✓, $V_{th} = 1.500$ V ✓. Both widths are above $W_{min} = 1.2$ µm ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>T9 · Q4 · Design for V<sub>th</sub> = 2.2 V and τ<sub>rise</sub> = 5 ns; then lower V<sub>DD</sub></h3>
+<p><i>nMOS $V_{T0,n} = 0.8$ V, $\mu_nC_{ox} = 50$; pMOS $V_{T0,p} = -1$ V, $\mu_pC_{ox} = 20$ µA/V². $V_{DD} = 5$ V, $L = 1$ µm, $C_{out} = 2$ pF. (a) $W_n$, $W_p$ for $V_{th} = 2.2$ V and $\tau_{rise} = 5$ ns. (b) $\tau_P$. (c) What changes at $V_{DD} = 3.3$ V?</i></p>
+<div class="step s1"><div class="lab">In plain words</div><div>The rise time is set by the PMOS alone, so it fixes $W_p$. The $V_{th}$ rule then fixes $W_n$ through the ratio.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B6 rise-time formula (10 % → 90 %, PMOS numbers). Refresher R for $k_R$. B5 for the delays.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>PMOS: $u = 5 - 1 = 4$ V, $0.1V_{DD} = 0.5$ V. Bracket $= \dfrac{2(1 - 0.5)}{4} + \ln\!\left(\dfrac{20 \times 4}{5} - 1\right) = 0.25 + \ln 15 = 2.958$.</li>
+<li>$\tau_{rise} = \dfrac{2000}{k_p \times 4} \times 2.958 = 5$ ns → $k_p = 295.8$ µA/V² → $W_p = 295.8/20 =$ <span class="ans">14.8 µm</span></li>
+<li>$k_R = \left(\dfrac{5 - 1 - 2.2}{2.2 - 0.8}\right)^2 = \left(\dfrac{1.8}{1.4}\right)^2 = 1.653$ → $k_n = 1.653 \times 295.8 = 489$ µA/V² → $W_n = 489/50 =$ <span class="ans">9.8 µm</span></li>
+<li>(b) $\tau_{PHL} = \dfrac{2000}{489 \times 4.2}\Big[\dfrac{1.6}{4.2} + \ln(3.36 - 1)\Big] = 0.974 \times 1.240 = 1.21$ ns.<br>$\tau_{PLH} = \dfrac{2000}{295.8 \times 4}\big[0.5 + \ln 2.2\big] = 1.690 \times 1.289 = 2.18$ ns. &nbsp; $\tau_P =$ <span class="ans">1.69 ns</span></li>
+<li>(c) Same sizes, $V_{DD} = 3.3$ V. $V_{th} = \dfrac{0.8 + 0.778(3.3 - 1)}{1.778} =$ <span class="ans">1.46 V</span>. $\tau_{PHL} = 2.21$ ns, $\tau_{PLH} = 4.26$ ns, $\tau_P =$ <span class="ans">3.23 ns</span> (about 1.9× slower).</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Interpretation (c)</div><div>$V_{th}$ scales down with the supply: $2.2/5 = 0.44$ and $1.46/3.3 = 0.44$, so the inverter still switches at about the same <i>fraction</i> of $V_{DD}$. The delays almost double: the charge to move ($CV_{DD}$) shrinks only in proportion to $V_{DD}$, but the current shrinks like $(V_{DD} - V_T)^2$. Less supply means a weaker tap. (If your class uses the average-current method for $\tau_{rise}$, you get $k_p = 324$ µA/V², $W_p = 16.2$ µm, $W_n = 10.7$ µm. Say which method you used.)</div></div>
+</div>
+
+<div class="q">
+<h3>T9 · Q5 · Sizing when the transistors add to their own load</h3>
+<p><i>$V_{th} = 2.4$ V, $V_{DD} = 5$ V, nMOS $0.8$ V and 50 µA/V², pMOS $-1$ V and 20 µA/V², $L = 1$ µm. $C_{out} = 500\text{ fF} + C_{db,n} + C_{db,p}$, with $C_{db,n} = 100\text{ fF} + 9W_n$ and $C_{db,p} = 80\text{ fF} + 7W_p$ ($W$ in µm). (a) Find the widths so that $\tau_{PHL} < 0.825$ ns. (b) With $(W/L)_n = 6$, $(W/L)_p = 15$ and $C = 250$ fF, find the rise and fall times by the average-current method.</i></p>
+<div class="step s1"><div class="lab">In plain words</div><div>Making the NMOS wider gives more current, but it also makes the bucket bigger (its drain capacitance grows with $W$). So we must find the width where these two effects balance at 0.825 ns.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Refresher R ($k_R$ from $V_{th}$), B1 ($C_{load}$ adds up), B5 exact delay. (b) is B4 with the 10 % / 90 % points.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$k_R = \left(\dfrac{5 - 1 - 2.4}{2.4 - 0.8}\right)^2 = \left(\dfrac{1.6}{1.6}\right)^2 = 1$ → $k_n = k_p$ → $50W_n = 20W_p$ → $W_p = 2.5\,W_n$.</li>
+<li>$C_{out} = 500 + 100 + 9W_n + 80 + 7(2.5W_n) = 680 + 26.5\,W_n$ fF.</li>
+<li>Bracket (NMOS, $u = 4.2$): $\dfrac{1.6}{4.2} + \ln(3.36 - 1) = 0.381 + 0.859 = 1.2396$.</li>
+<li>$\tau_{PHL} = \dfrac{680 + 26.5W_n}{50W_n \times 4.2} \times 1.2396 < 0.825$ → $843.0 + 32.85W_n < 173.25W_n$ → $W_n > 6.00$ µm.</li>
+<li>So <span class="ans">W<sub>n</sub> ≥ 6 µm, W<sub>p</sub> ≥ 15 µm</span> (that is why part (b) uses 6 and 15).</li>
+<li>(b) $k_n = 50 \times 6 = 300$, $k_p = 20 \times 15 = 300$ µA/V². 10 % = 0.5 V, 90 % = 4.5 V, swing 4 V, $C = 250$ fF.</li>
+<li>Fall (NMOS, $u = 4.2$): at 4.5 V sat: $150 \times 4.2^2 = 2646$ µA; at 0.5 V linear: $150[2(4.2)(0.5) - 0.25] = 592.5$ µA; average 1619 µA. $\tau_{fall} = \dfrac{250 \times 4}{1619} =$ <span class="ans">0.62 ns</span></li>
+<li>Rise (PMOS, $u = 4$): at $V_{out} = 0.5$ ($|V_{DS}| = 4.5$, sat): $150 \times 16 = 2400$ µA; at $V_{out} = 4.5$ ($|V_{DS}| = 0.5$, linear): $150[2(4)(0.5) - 0.25] = 562.5$ µA; average 1481 µA. $\tau_{rise} = \dfrac{1000}{1481} =$ <span class="ans">0.68 ns</span></li>
+</ol></div></div>
+<figure>{{FIG_T9Q5}}<figcaption><b>Fig. T9.4</b> Delay against NMOS width when the transistors load themselves. Wider helps at first, then flattens: the delay can never drop below 0.156 ns, because each extra µm adds both current and capacitance.</figcaption></figure>
+<div class="step s5"><div class="lab">Check</div><div>At $W_n = 6$: $C = 839$ fF and $\tau_{PHL} = 0.825$ ns ✓. Rise is slower than fall because the PMOS has the bigger threshold (less overdrive) ✓.</div></div>
+</div>
+
+<div class="box amber"><span class="tag">What in these tutorials goes beyond your lecture notes</span>
+<ol class="calc">
+<li><b>10 %–90 % rise and fall times</b> (T9 Q1, Q4, Q5b). The lectures define them but only derive the 50 % delay. You get them with the same integral and different limits (section B6). This is the most important "extra".</li>
+<li><b>Average-current method for rise/fall time</b> (T9 Q1, Q5b). Same idea as B4, but average the currents at the 90 % and 10 % points.</li>
+<li><b>A fall between any two voltages</b> (T9 Q3: 2 V → 0.5 V). Uses the lone-segment integral of B7.</li>
+<li><b>Reading $k$ and $V_T$ from an I–V description</b> (T9 Q2). No new theory, just the square law read backwards.</li>
+<li><b>T8 Q4</b> uses the fact that a MOSFET gate draws no DC current, and its part (c) cannot give a number in µA without a width the tutorial does not state.</li>
+<li><b>Lecture 26's slow-input formula</b> is not needed in either tutorial, but it could appear in the quiz.</li>
+</ol></div>
+
+<!-- ===================================================== D -->
+<h2 id="D">D · More practice: ten more worked questions</h2>
+
+<!-- Q1 -->
+<div class="q">
+<h3>Q1 · Find C<sub>load</sub> (Type 1)</h3>
+<p><i>$C_{ox} = 3.8$ fF/µm², $L_D = 0.08$ µm, $L = 0.5$ µm, $W_n = 1$ µm, $W_p = 2.5$ µm, $C_{db,n} = 2$ fF, $C_{db,p} = 4$ fF, $C_{int} = 5$ fF. The next stage is identical. Find $C_{load}$. Which term is biggest?</i></p>
+<div class="step s1"><div class="lab">What it says</div><div>An inverter drives an identical inverter (Fig. B1.1). We must add up every capacitor that touches the output. The junction caps and the wire are given. We must work out the overlaps and the next gate.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B1: the plate test. $C_{gd} = C_{ox}WL_D$ for each transistor; $C_g = C_{ox}(W_nL + W_pL)$ for the next stage.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Compute 3 missing terms, then add 6 terms.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$C_{gd,n} = 3.8 \times 1 \times 0.08 = 0.304$ fF</li>
+<li>$C_{gd,p} = 3.8 \times 2.5 \times 0.08 = 0.76$ fF</li>
+<li>$C_g = 3.8 \times (1 + 2.5) \times 0.5 = 6.65$ fF</li>
+<li>$C_{load} = 0.304 + 0.76 + 2 + 4 + 5 + 6.65 =$ <span class="ans">18.7 fF</span></li>
+</ol>Biggest: the next stage's gate (6.65 fF), then the wire (5 fF).</div></div>
+<div class="step s5"><div class="lab">Check</div><div>No $C_{gs}$ of this stage added ✓. Units fF/µm² × µm × µm = fF ✓. (Some books count $C_{gd}$ twice for the Miller effect → 19.8 fF. The lecture counts it once.)</div></div>
+</div>
+
+<!-- Q2 -->
+<div class="q">
+<h3>Q2 · C<sub>load</sub> from a process table, then a quick delay (Type 1)</h3>
+<p><i>$(W/L)_n = 5/0.5$, $(W/L)_p = 10/0.5$, driving an identical inverter. $C_{ox} = 3.84$ fF/µm². $C_{GDO}$ = 0.4 (n), 0.3 (p) fF/µm. $C_j$ = 0.56 (n), 0.94 (p) fF/µm². $C_{jsw}$ = 0.035 (n), 0.032 (p) fF/µm. Drain length $E = 1.5$ µm, zero bias, no wire. Find $C_{load}$, then estimate the delay with $T_d \approx C V_{DD}/I$ using the NMOS saturation current ($V_{DD} = 3$ V, $\mu_nC_{ox} = 134.3$ µA/V², $V_{TH} = 0.7$ V).</i></p>
+<div class="step s1"><div class="lab">What it says</div><div>Same as Q1, but nothing is given directly: every term comes from per-µm or per-µm² numbers. Then a rough "bucket" delay.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B1: $C_{gd} = C_{GDO}W$; $C_{db} = WEC_j + 2(W+E)C_{jsw}$ (Fig. B1.2); $C_g = C_{ox}[(WL)_n + (WL)_p]$. Then A.3: $\tau \approx C\Delta V/I$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>5 terms (no wire), using n values for the NMOS and p values for the PMOS. Then $I = \tfrac{k}{2}u^2$ with $k = \mu_nC_{ox}(W/L)$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Overlaps: $C_{gd,n} = 0.4 \times 5 = 2.0$ fF; $C_{gd,p} = 0.3 \times 10 = 3.0$ fF.</li>
+<li>$C_{db,n} = 5(1.5)(0.56) + 2(5 + 1.5)(0.035) = 4.2 + 0.455 = 4.66$ fF.</li>
+<li>$C_{db,p} = 10(1.5)(0.94) + 2(10 + 1.5)(0.032) = 14.1 + 0.736 = 14.84$ fF.</li>
+<li>$C_g = 3.84 \times (5\times0.5 + 10\times0.5) = 3.84 \times 7.5 = 28.8$ fF.</li>
+<li>$C_{load} = 2 + 3 + 4.66 + 14.84 + 28.8 =$ <span class="ans">53.3 fF</span></li>
+<li>$k_n = 134.3 \times 10 = 1343$ µA/V²; $I = \tfrac{1343}{2}(3 - 0.7)^2 = 671.5 \times 5.29 = 3552$ µA $= 3.55$ mA.</li>
+<li>$T_d \approx \dfrac{53.3\text{ fF} \times 3\text{ V}}{3.55\text{ mA}} =$ <span class="ans">≈ 45 ps</span> (fF·V/mA = ps).</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>$W/L = 5/0.5 = 10$, so multiply $\mu_nC_{ox}$ by 10 ✓. PMOS used 0.94 and 0.032 ✓. The PMOS drain junction is the 2nd-biggest term: wide transistors are not free.</div></div>
+</div>
+
+<!-- Q3 -->
+<div class="q">
+<h3>Q3 · Delays by both methods (Type 2) · Worked Example 25.2</h3>
+<p><i>$V_{DD} = 3.3$ V, $C_{load} = 0.3$ pF, $k_n = 200$ µA/V², $k_p = 80$ µA/V², $V_{T0,n} = 0.6$ V, $V_{T0,p} = -0.7$ V. Find $\tau_{PHL}$, $\tau_{PLH}$ and $\tau_P$ by the average-current method and by the exact method.</i></p>
+<div class="step s1"><div class="lab">What it says</div><div>A CMOS inverter drives a 300 fF bucket. Falling edge: NMOS empties it (Fig. B2.1 left). Rising edge: PMOS fills it (right). Find how long each takes to reach 1.65 V.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B4 (average current) and B5 (exact formula). Region check from B2: saturated at the start, linear at 50%.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Numbers first: $u_n = 3.3 - 0.6 = 2.7$ V; $u_p = 3.3 - 0.7 = 2.6$ V; $V_{DD}/2 = 1.65$ V; $C = 300$ fF. Answers come out in ns.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>
+<b>A · Average current, fall (NMOS)</b><ol class="calc">
+<li>Start, $V_{DS} = 3.3 \ge 2.7$ → sat: $I_1 = 100 \times 2.7^2 = 729$ µA.</li>
+<li>50%, $V_{DS} = 1.65 < 2.7$ → linear: $I_2 = 100\,[2(2.7)(1.65) - 1.65^2] = 100 \times 6.1875 = 618.75$ µA.</li>
+<li>$I_{avg} = 673.9$ µA → $\tau_{PHL} = 300 \times 1.65 / 673.9 =$ <span class="ans">0.734 ns</span></li></ol>
+<b>B · Average current, rise (PMOS)</b><ol class="calc">
+<li>Start: $I_1 = 40 \times 2.6^2 = 270.4$ µA. 50%: $I_2 = 40\,[2(2.6)(1.65) - 2.7225] = 234.3$ µA.</li>
+<li>$I_{avg} = 252.35$ µA → $\tau_{PLH} = 495/252.35 =$ <span class="ans">1.96 ns</span></li></ol>
+<b>C · Exact, fall</b><ol class="calc">
+<li>Front: $\dfrac{C}{k_nu} = \dfrac{300}{200 \times 2.7} = 0.5556$ ns.</li>
+<li>Sat bit $= 2(0.6)/2.7 = 0.4444$. Log bit $= \ln(4 \times 2.7/3.3 - 1) = \ln 2.2727 = 0.8210$.</li>
+<li>$\tau_{PHL} = 0.5556 \times 1.2654 =$ <span class="ans">0.703 ns</span> (0.247 ns sat + 0.456 ns linear)</li></ol>
+<b>D · Exact, rise</b><ol class="calc">
+<li>Front: $\dfrac{300}{80 \times 2.6} = 1.4423$ ns. Sat bit $= 1.4/2.6 = 0.5385$. Log bit $= \ln(10.4/3.3 - 1) = \ln 2.1515 = 0.7662$.</li>
+<li>$\tau_{PLH} = 1.4423 \times 1.3047 =$ <span class="ans">1.88 ns</span></li></ol>
+<b>E · Average:</b> $\tau_P = \tfrac12(0.703 + 1.882) =$ <span class="ans">1.29 ns</span> (exact). By average current: $\tfrac12(0.734+1.96) = 1.35$ ns.
+</div></div>
+<div class="step s5"><div class="lab">Check</div><div>Average-current is ≈ 4% above exact on both edges ✓ (it always overestimates). The rise is slower because $k_p < k_n$ ✓. I checked 0.703 and 1.882 ns by solving the differential equation numerically.</div></div>
+</div>
+
+<!-- Q4 -->
+<div class="q">
+<h3>Q4 · Fall time and rise time (Type 3)</h3>
+<p><i>For the inverter of Q3, find the output fall time (90% → 10%) and rise time (10% → 90%).</i></p>
+<div class="step s1"><div class="lab">What it says</div><div>Now we time only the output, from 2.97 V to 0.33 V (fall), and from 0.33 V to 2.97 V (rise). No input involved.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B6: same integral as the delay, but new limits. Check $|V_T| > 0.1V_{DD} = 0.33$ V → yes for both, so both edges have a saturated piece.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Reuse $C/(ku)$ from Q3. New sat bit $2(V_T - 0.33)/u$. New log bit $\ln(20u/V_{DD} - 1)$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Fall: sat bit $= 2(0.6 - 0.33)/2.7 = 0.200$; log bit $= \ln(20 \times 2.7/3.3 - 1) = \ln 15.364 = 2.732$.<br>$t_{fall} = 0.5556 \times 2.932 =$ <span class="ans">1.63 ns</span></li>
+<li>Rise: sat bit $= 2(0.7 - 0.33)/2.6 = 0.2846$; log bit $= \ln(20 \times 2.6/3.3 - 1) = \ln 14.758 = 2.692$.<br>$t_{rise} = 1.4423 \times 2.976 =$ <span class="ans">4.29 ns</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Fall time > delay (0.703 ns) ✓, because 10% is deep in the slow linear tail. Ratio $t_{rise}/t_{fall} ≈ 2.6$, close to $\tau_{PLH}/\tau_{PHL}$ ✓. Verified by numerical simulation.</div></div>
+</div>
+
+<!-- Q5 -->
+<div class="q">
+<h3>Q5 · Design for a target delay (Type 4)</h3>
+<p><i>$V_{DD} = 3.3$ V, $V_{T0,n} = 0.6$ V, $V_{T0,p} = -0.7$ V, $\mu_nC_{ox} = 100$ µA/V², $\mu_pC_{ox} = 40$ µA/V², $C_{load} = 200$ fF. Find $(W/L)_n$ and $(W/L)_p$ so that $\tau_{PHL} = \tau_{PLH} = 0.5$ ns (exact method).</i></p>
+<div class="step s1"><div class="lab">What it says</div><div>The delay is now given and $k$ is the unknown. Work the exact formula backwards.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B5 exact formula, rearranged: $k = \dfrac{C}{\tau\,u}\big[\text{sat bit} + \text{log bit}\big]$. Then $W/L = k/(\mu C_{ox})$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>The bracket depends only on voltages, so compute it first for each transistor.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>NMOS: $u = 2.7$, bracket $= 0.4444 + 0.8210 = 1.2654$ (same as Q3).<br>$k_n = \dfrac{200}{0.5 \times 2.7} \times 1.2654 = 187.5$ µA/V² → $(W/L)_n = 187.5/100 =$ <span class="ans">1.87</span></li>
+<li>PMOS: $u = 2.6$, bracket $= 1.3047$.<br>$k_p = \dfrac{200}{0.5 \times 2.6} \times 1.3047 = 200.7$ µA/V² → $(W/L)_p = 200.7/40 =$ <span class="ans">5.02</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Units: fF ÷ (ns × V) = µA/V² (the bracket has no units) ✓. Plug $k_n$ back into Q3's formula: $\frac{200}{187.5 \times 2.7}\times1.2654 = 0.500$ ns ✓. Ratio $5.02/1.87 = 2.68$, a bit more than $\mu_n/\mu_p = 2.5$ because the PMOS has the bigger threshold ✓.</div></div>
+</div>
+
+<!-- Q6 -->
+<div class="q">
+<h3>Q6 · Equal rise and fall (Type 4)</h3>
+<p><i>For the inverter of Q3, by what factor must $(W/L)_p$ change so that $\tau_{PLH} = \tau_{PHL}$? Assume $C_{load}$ does not change.</i></p>
+<div class="step s1"><div class="lab">What it says</div><div>The PMOS edge (1.882 ns) is too slow. Make the PMOS wider until it matches the NMOS edge (0.703 ns).</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B8 rule 1: with $C$ and voltages fixed, $\tau_{PLH} \propto 1/k_p$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Factor = old delay ÷ target delay.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>Factor $= 1.882/0.703 =$ <span class="ans">2.68</span> → $k_p = 80 \times 2.68 = 214$ µA/V², so $(W/L)_p$ is 2.68× bigger.</div></div>
+<div class="step s5"><div class="lab">Check (trap)</div><div>Why not just $k_p = k_n$ (2.5×)? With $k_p = 200$: $\tau_{PLH} = \frac{300}{200 \times 2.6} \times 1.3047 = 0.753$ ns, still slower than 0.703. The PMOS has the bigger threshold, so it needs a bit more width. If the thresholds were equal, $k_p = k_n$ would be exact.</div></div>
+</div>
+
+<!-- Q7 -->
+<div class="q">
+<h3>Q7 · An NMOS discharging a capacitor (Type 5) · Razavi 2.11(b)</h3>
+<p><i>NMOS: $W/L = 50/0.5$, $\mu_nC_{ox} = 134.3$ µA/V², $V_{TH} = 0.7$ V, $\lambda = \gamma = 0$. Source grounded, drain is node X. $C_1 = 1$ pF from X to ground, starting at 1 V. At $t=0$ the gate steps from 0 to 3 V. Sketch $V_X(t)$ and find when $V_X = 0.5$ V.</i></p>
+<figure>{{FIG_LONE}}
+<figcaption><b>Fig. Q7.1</b> (b) is this question. (a) is Q8. The only difference: is the capacitor on the drain or on the source?</figcaption></figure>
+<div class="step s1"><div class="lab">What it says</div><div>The cap is on the drain. The gate is fixed at 3 V, so $V_{GS} = 3$ V does not change. Only $V_{DS} = V_X$ changes, from 1 V to 0.5 V.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B7. Region check: $u = 3 - 0.7 = 2.3$ V. $V_{DS} \le 1 < 2.3$ → <b>linear the whole time</b>. So it is "segment 2 only", with a start of 1 V.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>$t = \dfrac{C}{ku}\ln\dfrac{V_i(2u - V_f)}{V_f(2u - V_i)}$ with $V_i = 1$, $V_f = 0.5$. First find $k$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$k = 134.3 \times \frac{50}{0.5} = 134.3 \times 100 = 13\,430$ µA/V² $= 13.43$ mA/V².</li>
+<li>$\dfrac{C}{ku} = \dfrac{1\text{ pF}}{13.43 \times 2.3\text{ mA/V}} = 32.4$ ps.</li>
+<li>$\ln\dfrac{1 \times (4.6 - 0.5)}{0.5 \times (4.6 - 1)} = \ln\dfrac{4.1}{1.8} = \ln 2.278 = 0.823$.</li>
+<li>$t = 32.4 \times 0.823 =$ <span class="ans">26.6 ps</span></li>
+</ol>Sketch: starts at 1 V, falls toward 0 like an exponential with time constant $R_{on}C = 32.4$ ps (blue curve below).</div></div>
+<div class="step s5"><div class="lab">Check (trap)</div><div>$W/L = 100$, not 50 ✓. Close to a pure RC fall ($32.4 \ln 2 = 22.4$ ps) but a bit slower, because the $-V^2$ term reduces the current ✓.</div></div>
+</div>
+
+<!-- Q8 -->
+<div class="q">
+<h3>Q8 · A source follower charging a capacitor (Type 5) · Razavi 2.11(a)</h3>
+<p><i>Same NMOS. Now the drain is at $V_{DD} = 3$ V and $C_1$ (starting at 1 V) is on the source, node X. The gate steps from 0 to 3 V. Sketch $V_X(t)$, give its final value, and find when $V_X = 2$ V.</i></p>
+<div class="step s1"><div class="lab">What it says</div><div>Fig. Q7.1(a). The cap is on the <b>source</b>. As X rises, $V_{GS} = 3 - V_X$ gets smaller, so the transistor slowly turns itself off.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B7. Region: $V_{DS} = 3 - V_X = V_{GS} \ge V_{GS} - V_{TH}$ always → <b>saturated throughout</b>. Current $= \tfrac{k}{2}(2.3 - V_X)^2$, which reaches 0 at $V_X = 2.3$ V.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>$C\,\dfrac{dV_X}{dt} = \dfrac{k}{2}(2.3 - V_X)^2$ → separate → integrate $(2.3-V)^{-2}$, which gives $\dfrac{1}{2.3 - V}$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$t = \dfrac{2C}{k}\left[\dfrac{1}{2.3 - V_X} - \dfrac{1}{2.3 - 1}\right]$.</li>
+<li>At $V_X = 2$: bracket $= \dfrac{1}{0.3} - \dfrac{1}{1.3} = 3.333 - 0.769 = 2.564$ V⁻¹.</li>
+<li>$\dfrac{2C}{k} = \dfrac{2 \times 1\text{ pF}}{13.43\text{ mA/V}^2} = 148.9$ ps·V.</li>
+<li>$t = 148.9 \times 2.564 =$ <span class="ans">0.38 ns</span>. Final value: <span class="ans">2.3 V</span> ($= V_G - V_{TH}$), approached but never reached.</li>
+</ol></div></div>
+<figure>{{FIG_LONECURVES}}
+<figcaption><b>Fig. Q8.1</b> The two answers on one time axis. The discharge (blue, Q7) is over in tens of ps. The follower (orange, Q8) is about 14× slower and creeps toward 2.3 V.</figcaption></figure>
+<div class="step s5"><div class="lab">Check</div><div>The follower slows down near the end because its current falls as a square ✓. With body effect ($\gamma > 0$), $V_{TH}$ rises as X rises, so the final value would be lower than 2.3 V.</div></div>
+</div>
+
+<!-- Q9 -->
+<div class="q">
+<h3>Q9 · Ring oscillator (Type 6)</h3>
+<p><i>(a) A ring of 5 inverters, each with $\tau_P = 50$ ps. Find the frequency. (b) A 7-stage ring oscillates at 400 MHz. Find $\tau_P$.</i></p>
+<div class="step s1"><div class="lab">What it says</div><div>Fig. B9.1. (a) forwards: delay → frequency. (b) backwards: frequency → delay.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>B9: $T = 2N\tau_P$ (the edge goes round twice).</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>(a) $T = 2 \times 5 \times 50 = 500$ ps → $f = 1/500\text{ ps} =$ <span class="ans">2 GHz</span><br>
+(b) $\tau_P = \dfrac{1}{2Nf} = \dfrac{1}{2 \times 7 \times 400\times10^6} =$ <span class="ans">179 ps</span></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Forgot the 2? You'd get double the frequency. $N$ must be odd, otherwise the ring just latches.</div></div>
+</div>
+
+<!-- Q10 -->
+<div class="q">
+<h3>Q10 · Dynamic power (Type 7)</h3>
+<p><i>$V_{DD} = 3$ V, $C_{load} = 50$ fF, clock $f = 1$ GHz (one full 0→1→0 cycle per period). Find the dynamic power, and the energy burned in the PMOS each cycle.</i></p>
+<div class="step s2"><div class="lab">Theory</div><div>B9: $E = CV_{DD}^2$ per cycle; half burned in each transistor.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$E = 50\text{ fF} \times 3^2 = 450$ fJ $= 0.45$ pJ per cycle.</li>
+<li>$P = E \times f = 0.45\text{ pJ} \times 10^9 =$ <span class="ans">0.45 mW</span></li>
+<li>PMOS: $\tfrac12 CV_{DD}^2 =$ <span class="ans">0.225 pJ</span> per cycle (the NMOS burns the other 0.225 pJ).</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>The PMOS size does not appear: a weaker PMOS is slower, not more wasteful.</div></div>
+</div>
+
+<!-- Capstone -->
+<div class="q">
+<h3>Mixed quiz question (Lectures 23 + 24 + 25)</h3>
+<p><i>$V_{DD} = 2.5$ V, $V_{T0,n} = 0.5$ V, $V_{T0,p} = -0.5$ V, $k_n = 300$, $k_p = 150$ µA/V², $C_{load} = 50$ fF. (a) $V_{th}$. (b) Exact $\tau_{PHL}$, $\tau_{PLH}$, $\tau_P$. (c) How do you make the edges equal, and what happens to $V_{th}$?</i></p>
+<div class="step s2"><div class="lab">Theory</div><div>(a) Lecture 24 $V_{th}$ formula. (b) B5. (c) B8 rule 2 → symmetric inverter.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>(a) $k_R = 2$, $\sqrt{1/k_R} = 0.7071$. $V_{th} = \dfrac{0.5 + 0.7071 \times 2.0}{1.7071} =$ <span class="ans">1.121 V</span> (left of 1.25 V: the NMOS is stronger).</li>
+<li>(b) Both have $u = 2.0$ V, so the same bracket: $\frac{2(0.5)}{2.0} + \ln(4 \times 2.0/2.5 - 1) = 0.5 + \ln 2.2 = 1.2885$.<br>
+$\tau_{PHL} = \frac{50}{300 \times 2} \times 1.2885 =$ <span class="ans">107 ps</span>; $\tau_{PLH} = \frac{50}{150 \times 2} \times 1.2885 =$ <span class="ans">215 ps</span>; $\tau_P =$ <span class="ans">161 ps</span>.</li>
+<li>(c) Double $(W/L)_p$ so $k_p = k_n$. Then $\tau_{PLH} \approx 107$ ps (if $C_{load}$ stays the same), $k_R = 1$, and $V_{th}$ moves to $V_{DD}/2 = 1.25$ V with equal noise margins.</li>
+</ol></div></div>
+</div>
+
+<!-- ===================================================== E -->
+<h2 id="E">E · Open-book page: formulas and traps</h2>
+<table>
+<tr><th>Question asks…</th><th>Formula</th><th>Notes</th></tr>
+<tr><td>$C_{load}$</td><td>$C_{gd,n}+C_{gd,p}+C_{db,n}+C_{db,p}+C_{int}+C_g$</td><td>plate on $V_{out}$; no own $C_{gs}$</td></tr>
+<tr><td>overlap</td><td>$C_{ox}WL_D$ or $C_{GDO}W$</td><td>each transistor</td></tr>
+<tr><td>junction</td><td>$WEC_j + 2(W+E)C_{jsw}$</td><td>n and p values differ</td></tr>
+<tr><td>next gate</td><td>$C_{ox}[(WL)_n + (WL)_p]$</td><td>usually the biggest</td></tr>
+<tr><td>quick estimate</td><td>$\tau \approx CV_{DD}/I$ or $C\Delta V/I$</td><td>Razavi style</td></tr>
+<tr><td>average current</td><td>$\tau = \dfrac{C\,V_{DD}/2}{(I_{sat} + I_{lin,50\%})/2}$</td><td>sat at start, <b>linear at 50%</b></td></tr>
+<tr><td>exact delay</td><td>$\dfrac{C}{ku}\Big[\dfrac{2|V_T|}{u} + \ln\big(\tfrac{4u}{V_{DD}} - 1\big)\Big]$</td><td>$u = V_{DD} - |V_T|$</td></tr>
+<tr><td>exact, $|V_T| \ge V_{DD}/2$</td><td>$\dfrac{CV_{DD}}{ku^2}$</td><td>saturated all the way</td></tr>
+<tr><td>fall / rise time</td><td>$\dfrac{C}{ku}\Big[\dfrac{2(|V_T| - 0.1V_{DD})}{u} + \ln\big(\tfrac{20u}{V_{DD}} - 1\big)\Big]$</td><td>if $|V_T| > 0.1V_{DD}$</td></tr>
+<tr><td>lone NMOS, linear</td><td>$\dfrac{C}{ku}\ln\dfrac{V_i(2u - V_f)}{V_f(2u - V_i)}$</td><td>only if $V \le u$ throughout</td></tr>
+<tr><td>lone NMOS, saturated</td><td>$\dfrac{C(V_i - V_f)}{\tfrac{k}{2}u^2}$</td><td>straight line</td></tr>
+<tr><td>follower charging C</td><td>$\dfrac{2C}{k}\Big[\dfrac{1}{V_G - V_T - V_f} - \dfrac{1}{V_G - V_T - V_i}\Big]$</td><td>final value $V_G - V_T$</td></tr>
+<tr><td>sizing</td><td>$\tau \propto 1/k$; equal edges: $k_p = k_n$</td><td>$(W/L)_p \approx 2.5(W/L)_n$</td></tr>
+<tr><td>ring oscillator</td><td>$f = 1/(2N\tau_P)$</td><td>N odd</td></tr>
+<tr><td>slow input (L26)</td><td>$\sqrt{\tau_{step}^2 + (\tau_{r,f}/2)^2}$</td><td>input rise → PHL</td></tr>
+<tr><td>power</td><td>$P = CV_{DD}^2f$; $\tfrac12CV_{DD}^2$ per transistor per cycle</td><td>static ≈ 0</td></tr>
+</table>
+
+<div class="box red"><span class="tag">Top 7 traps</span>
+<ol class="calc">
+<li>Saturation formula at the 50% point. It is <b>linear</b> there.</li>
+<li>Wrong transistor: $\tau_{PHL}$ (output falls) uses the <b>NMOS</b>; $\tau_{PLH}$ uses the <b>PMOS</b>.</li>
+<li>Using $\mu C_{ox}$ as $k$. Multiply by $W/L$ first.</li>
+<li>Adding the driver's own $C_{gs}$, or forgetting the next gate.</li>
+<li><b>log</b> instead of <b>ln</b> on the calculator.</li>
+<li>Delay (50%, input → output) mixed up with rise/fall time (10–90%, output only).</li>
+<li>Forgetting the 2 in $T = 2N\tau_P$.</li>
+</ol></div>
+
+<div class="box green"><span class="tag">Units</span>
+fF·V/µA = ns &nbsp;·&nbsp; fF·V/mA = ps &nbsp;·&nbsp; pF·V/mA = ns &nbsp;·&nbsp; fF × V² = fJ &nbsp;·&nbsp; fJ × GHz = µW</div>
+
+<p class="small">All numerical answers were recomputed and checked against a numerical solution of $C\,dV/dt = i_p - i_n$ (square-law model, λ = 0). Tutorial answers were checked the same way (and the Tutorial 8 noise margins by sweeping the VTC). Notation follows your Lecture 23–25 guide.</p>
+
+</div></body></html>
