@@ -1,0 +1,29 @@
+<div class="q">
+<h3>T10 · Q2 · FO4 delay with τ = 3 ps <span class="badge b-in">In lectures</span></h3>
+<p><i>Use the linear delay model to estimate the delay of the fanout-of-4 (FO4) inverter. Assume the inverter is built in a 65 nm process with τ = 3 ps.</i></p>
+<figure>{{F_FO4}}<figcaption><b>Fig. T10.2</b> FO4: one inverter driving four copies of itself.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>One inverter drives four identical inverters. How many τ does that take, and how many ps is that?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>"Linear delay model" = $d = gh + p$ (section 4.3). Inverter: $g = 1$, $p = 1$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Find $h$ (fanout), then $d$, then multiply by τ.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Each load has the same input cap as the driver, four of them: $h = \dfrac{4\times3C}{3C} = 4$.</li>
+<li>$d = 1\times4 + 1 = 5$.</li>
+<li>$t = d\,\tau = 5\times3\text{ ps} =$ <span class="ans">15 ps</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Same as Q1, because there $\tau = 3RC = 3\times1\text{ ps} = 3$ ps too ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>T10 · Q3 · Ring oscillator with N stages, then N = 31 <span class="badge b-in">In lectures</span></h3>
+<p><i>A ring oscillator is built from an odd number of inverters, as in the figure. Estimate the frequency of an N-stage ring oscillator. What is the frequency of a 31-stage ring oscillator if τ = 3 ps in a 65 nm process?</i></p>
+<figure>{{F_RINGLE}}<figcaption><b>Fig. T10.3</b> Each stage drives exactly one inverter like itself.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>An edge runs round the loop. For one full period it must go round twice (once rising, once falling), as in Lecture 25.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>$T = 2N t_{pd}$ (Lecture 25) and $t_{pd} = d\tau$ with $d = gh + p$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Find one stage's $d$ (each stage drives one inverter, so $h = 1$), then $T$, then $f = 1/T$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$d = 1\cdot1 + 1 = 2$ → $t_{pd} = 2\tau$.</li>
+<li>$T = 2N\cdot 2\tau = 4N\tau$ → <span class="ans">f = 1/(4Nτ)</span></li>
+<li>$N = 31$: $f = \dfrac{1}{4 \times 31 \times 3\text{ ps}} = \dfrac{1}{372\text{ ps}} =$ <span class="ans">2.69 GHz</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>$h = 1$, not 0: each stage drives one inverter ✓. Forgetting the "2 laps" gives 5.4 GHz, which is wrong.</div></div>
+</div>

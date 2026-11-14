@@ -1,0 +1,45 @@
+<div class="q">
+<h3>T10 · Q7 · Worst-case Elmore parasitic delay of an n-input NOR <span class="badge b-in">In lectures</span></h3>
+<p><i>Find the worst-case Elmore parasitic delay of an n-input NOR gate (no external load).</i></p>
+<figure>{{F_NORN}}<figcaption><b>Fig. T10.7</b> The NOR-n pull-up: n PMOS in series, each width 2n, with n − 1 internal nodes.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>A NOR-n has n PMOS in series: the rising edge through that long stack is the slow one. "Parasitic" = no external load, only the gate's own capacitances.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>3.5 (series stacks N× wider; counting caps) and 3.6 (Elmore). Worst case: the PMOS nearest $V_{DD}$ switches last, so every internal node starts low.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Sizes → cap at each node → resistance from $V_{DD}$ to each node → Elmore sum.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Sizing: n PMOS in series → each width $2n$ (resistance $R/n$). NMOS width 1.</li>
+<li>Output: PMOS drain $2nC$ + n NMOS drains $n\cdot C$ = $3nC$.</li>
+<li>Internal PMOS nodes: $n-1$ of them, each $2nC$ (shared diffusion). Node $i$ (counted from $V_{DD}$) is $i\cdot R/n$ from the rail.</li>
+<li>$t_{pdr} = \sum_{i=1}^{n-1}\frac{iR}{n}\,2nC + R\cdot 3nC = 2RC\cdot\frac{n(n-1)}{2} + 3nRC =$ <span class="ans">(n² + 2n) RC</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>n = 2: $8RC$. That equals Q5 with h = 0 when the internal node is counted once ($4C$) ✓. Grows like $n^2$: why wide NOR gates are avoided.</div></div>
+</div>
+
+<div class="q">
+<h3>T10 · Q8 · A 4x inverter <span class="badge b-in">In lectures</span></h3>
+<p><i>Let a 4x inverter have transistors four times as wide as those of a unit inverter. If a unit inverter has three units of input capacitance and parasitic delay $p_{inv}$, what is the input capacitance of a 4x inverter? What is the logical effort? What is the parasitic delay?</i></p>
+<figure>{{F_4X}}<figcaption><b>Fig. T10.8</b> The unit and the 4x inverter. Every width, capacitance and current is ×4.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Make every transistor 4× wider. What happens to its input cap, its "effort" and its built-in delay?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>4.2: width $w$ → resistance $R/w$, every capacitance $\times w$; "parasitic delay is independent of size". 4.3: $g$ compares input cap to an inverter of the same drive.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Scale each quantity by 4 and see which ratios stay the same.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Input cap: $4 \times 3 =$ <span class="ans">12 units</span></li>
+<li>Logical effort: it is still an inverter: input cap and output current both ×4, same ratio → <span class="ans">g = 1</span></li>
+<li>Parasitic delay: own diffusion ×4 but resistance ÷4 → <span class="ans">p = p<sub>inv</sub></span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Lecture 31: $t_{pd} = (1 + \frac mw)3RC$. The "1" (parasitic part) has no $w$ in it ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>T10 · Q9 · Logical effort when the PMOS is 3× weaker <span class="badge b-beyond">Beyond lectures</span></h3>
+<p><i>Consider a process in which pMOS transistors have three times the effective resistance of nMOS transistors. Calculate the logical efforts of a 2-input NAND gate and a 2-input NOR gate if they are designed with equal rising and falling delays.</i></p>
+<figure>{{F_WEAKP}}<figcaption><b>Fig. T10.9</b> Same sizing method as Fig. 4.3, with PMOS width 3 per unit NMOS.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Same method as Fig. 4.3, but a PMOS now needs width 3 (not 2) to match one NMOS.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>4.3: $g$ = input cap of the gate ÷ input cap of an inverter with the same drive. Sizing rule of 3.5.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Size the reference inverter, then the NAND2 and NOR2 for equal rise/fall, then divide input caps.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Reference inverter: NMOS 1, PMOS 3 → input cap $4$.</li>
+<li>NAND2: NMOS in series → width 2; PMOS in parallel → width 3. Input cap $2 + 3 = 5$ → <span class="ans">g = 5/4</span></li>
+<li>NOR2: NMOS width 1; PMOS in series → width 6. Input cap $1 + 6 = 7$ → <span class="ans">g = 7/4</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>With the usual 2× PMOS you get 4/3 and 5/3 ✓. A weaker PMOS makes NOR even worse: prefer NAND.</div></div>
+</div>

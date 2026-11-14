@@ -75,7 +75,7 @@ def nmos(x, y, c=INK, label=None):
     """Channel line at x. Gate input at (x-30,y). Drain top (x+18,y-35). Source bottom (x+18,y+35)."""
     s = line(x, y - 18, x, y + 18, c, 3) + line(x - 7, y - 16, x - 7, y + 16, c, 2) + line(x - 30, y, x - 7, y, c)
     s += poly([(x, y - 12), (x + 18, y - 12), (x + 18, y - 35)], c) + poly([(x, y + 12), (x + 18, y + 12), (x + 18, y + 35)], c)
-    s += arrow(x + 16, y + 12, x + 3, y + 12, c, 1.6)
+    s += arrow(x + 3, y + 12, x + 17, y + 12, c, 1.6)  # source arrow points OUT (NMOS)
     if label:
         s += text(x + 26, y + 5, label, c, 12)
     return s
@@ -86,6 +86,7 @@ def pmos(x, y, c=INK, label=None):
     s = line(x, y - 18, x, y + 18, c, 3) + line(x - 7, y - 16, x - 7, y + 16, c, 2) + line(x - 30, y, x - 16, y, c)
     s += f'<circle cx="{x-11.5}" cy="{y}" r="4.5" fill="white" stroke="{c}" stroke-width="2"/>'
     s += poly([(x, y - 12), (x + 18, y - 12), (x + 18, y - 35)], c) + poly([(x, y + 12), (x + 18, y + 12), (x + 18, y + 35)], c)
+    s += arrow(x + 17, y - 12, x + 3, y - 12, c, 1.6)  # source arrow points IN (PMOS)
     if label:
         s += text(x + 26, y + 5, label, c, 12)
     return s

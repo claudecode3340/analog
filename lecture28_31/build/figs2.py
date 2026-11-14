@@ -680,6 +680,194 @@ def fig_ring_le():
     return svg(640, 194, s)
 
 
+
+
+# ---------- pass-3 figures (one per question) ----------
+def fig_norn():
+    s = defs(*ALLC)
+    x = 160
+    s += vdd(x + 18, 30) + text(x + 140, 22, "NOR-n pull-up", INK, 13, "start", 700)
+    names = ["A₁ (2n)", "A₂ (2n)", "⋮", "Aₙ (2n)"]
+    y = 65
+    for i, nm in enumerate(names):
+        if nm == "⋮":
+            s += line(x + 18, y - 35, x + 18, y + 10) + text(x + 30, y - 5, "⋮", INK, 16, "start", 700)
+            y += 45
+            continue
+        s += pmos(x, y, ORANGE) + text(x - 36, y + 5, nm, ORANGE, 12.5, "end", 700)
+        if i < len(names) - 1:
+            s += line(x + 18, y + 35, x + 18, y + 45) + dot(x + 18, y + 40) + line(x + 18, y + 40, x + 70, y + 40, MUTE, 1.2)
+            s += text(x + 76, y + 45, f"internal node {i+1}: 2nC, R to V_DD = {i+1}·R/n".replace("V_DD", sub("V_DD")), GREEN, 12, "start", 600)
+        y += 80
+    s += dot(x + 18, y - 45) + line(x + 18, y - 45, x + 120, y - 45) + text(x + 126, y - 40, "Y: 2nC + n·C = 3nC", GREEN, 12.5, "start", 700)
+    s += text(330, y - 5, "each PMOS: width 2n → resistance 2R/2n = R/n; the n of them in series = R", INK, 12.5, "middle")
+    return svg(660, y + 8, s)
+
+
+def fig_4x():
+    s = defs(*ALLC)
+    for i, (title, wp, wn, cin, r) in enumerate((("unit inverter (1x)", 2, 1, "3", "R"), ("4x inverter", 8, 4, "12", "R/4"))):
+        ox = 140 + i * 320
+        s += text(ox + 10, 22, title, INK, 13, "middle", 700)
+        s += inverter(ox, 140, ORANGE, BLUE) + text(ox + 26, 95, str(wp), ORANGE, 13, "start", 700) + text(ox + 26, 195, str(wn), BLUE, 13, "start", 700)
+        s += line(ox - 70, 140, ox - 30, 140) + line(ox + 18, 140, ox + 70, 140)
+        s += text(ox + 10, 260, f"input cap {cin} units · pull resistance {r}", PURPLE, 12.5, "middle", 700)
+    s += text(320, 285, "4× the input cap, but 4× the current: same ratio → same g = 1; own diffusion ×4 but R ÷4 → same p", INK, 12, "middle")
+    return svg(660, 295, s)
+
+
+def fig_weak_p():
+    s = defs(*ALLC)
+    # NAND2 with PMOS 3 / NMOS 2 and NOR2 with PMOS 6 / NMOS 1, simple labelled blocks
+    blocks = [("inverter", "1", "3", "4", "1"), ("NAND2", "2 (series)", "3 (parallel)", "5", "5/4"), ("NOR2", "1 (parallel)", "6 (series)", "7", "7/4")]
+    for i, (nm, n, pw, cin, g) in enumerate(blocks):
+        ox = 30 + i * 215
+        s += f'<rect x="{ox}" y="30" width="190" height="150" rx="12" fill="#f6f8fb" stroke="#e3e7ee"/>'
+        s += text(ox + 95, 55, nm, INK, 14, "middle", 700)
+        s += text(ox + 95, 85, "PMOS width " + pw, ORANGE, 12.5, "middle", 600)
+        s += text(ox + 95, 108, "NMOS width " + n, BLUE, 12.5, "middle", 600)
+        s += text(ox + 95, 135, "input cap = " + cin, PURPLE, 12.5, "middle", 700)
+        s += text(ox + 95, 162, "g = " + cin + "/4 = " + g if nm != "inverter" else "reference: 4", GREEN, 13, "middle", 700)
+    s += text(330, 205, "PMOS is 3× weaker → a PMOS needs width 3 to match one unit NMOS (instead of 2)", INK, 12.5, "middle")
+    return svg(660, 215, s)
+
+
+def fig_p2_bars():
+    from math import sqrt
+    rows = []
+    need = 1.05 / 0.95
+    for nm, f, c in (("inverter", 1, INK), ("NOR2", 0.5, BLUE), ("NAND2", 2, ORANGE)):
+        kR = (f / need) ** 2
+        rows.append((nm, round(2.4 / kR, 2), c))
+    return F.barh(rows, "", w=620, title="(W/L)p / (W/L)n needed for V_th = V_DD/2 = 1.65 V".replace("V_th", sub("V_th")).replace("V_DD", sub("V_DD")))
+
+
+def fig_p3_vtc():
+    VDD = 3.3
+    inv = vtc(VDD, 0.6, -0.6, 100, 100)
+    nor = vtc(VDD, 0.6, -0.6, 200, 50)
+    nand = vtc(VDD, 0.6, -0.6, 50, 200)
+    p = Plot(560, 320, (0, 3.3), (0, 3.5), (60, 20, 20, 44))
+    p.curve([(0, 0), (3.3, 3.3)], GREY, 1.4, "5 4")
+    p.curve(nor, BLUE, 2.6); p.curve(inv, INK, 2.2, "6 4"); p.curve(nand, ORANGE, 2.6)
+    for v, c, lab in ((1.3, BLUE, "NOR2 1.30 V"), (1.65, INK, "INV 1.65 V"), (2.0, ORANGE, "NAND2 2.00 V")):
+        p.add(dot(p.X(v), p.Y(v), c, 5) + text(p.X(v) + 10, p.Y(v) + 4, lab, c, 12.5, "start", 700))
+    p.axes(sub("V_in") + " (V)", sub("V_out") + " (V)", [(0, "0"), (1.3, "1.3"), (2, "2"), (3.3, "3.3")], [(0, "0"), (1, "1"), (2, "2"), (3.3, "3.3")])
+    return p.render()
+
+
+def fig_p4():
+    s = defs(*ALLC)
+    def nm(x, y, g, on):
+        c = BLUE if on else GREY
+        return nfet(x, y, g, c, None) + text(x + 24, y + 5, "2", MUTE, 12, "start", 700) + text(x + 24, y + 20, "ON" if on else "off", GREEN if on else MUTE, 11, "start", 700)
+    for k, (title, on) in enumerate((("(a) all inputs 1", dict(A=1, D=1, E=1, B=1, C=1)), ("(b) worst case: A = D = 1 only", dict(A=1, D=1, E=0, B=0, C=0)))):
+        ox = 20 + k * 330
+        s += text(ox + 150, 22, title, INK, 13, "middle", 700)
+        s += line(ox + 108, 50, ox + 292, 50) + dot(ox + 200, 50) + line(ox + 200, 50, ox + 200, 38) + text(ox + 206, 40, "Y", INK, 13, "start", 700)
+        s += nm(ox + 90, 85, "A", on["A"])
+        s += line(ox + 108, 120, ox + 108, 130) + line(ox + 60, 130, ox + 140, 130)
+        s += nm(ox + 42, 165, "D", on["D"]) + nm(ox + 122, 165, "E", on["E"])
+        s += line(ox + 60, 200, ox + 140, 200) + gnd(ox + 100, 200)
+        s += nm(ox + 274, 85, "B", on["B"]) + nm(ox + 274, 155, "C", on["C"]) + gnd(ox + 292, 190)
+    s += text(330, 240, "(a) 1/(1/2 + 1/4) + 1/(1/2 + 1/2) = 4/3 + 1 = 7/3      (b) 1/(1/2 + 1/2) = 1", PURPLE, 13, "middle", 700)
+    return svg(660, 252, s)
+
+
+def fig_aoi22_euler():
+    s = defs(*ALLC)
+
+    def node(x, y, lab, dx=0, dy=22):
+        return f'<circle cx="{x}" cy="{y}" r="6" fill="white" stroke="{INK}" stroke-width="2.2"/>' + text(x + dx, y + dy, sub({"VDD": "V_DD"}.get(lab, lab)), INK, 12, "middle", 700)
+
+    def edge(p1, p2, lab, c, bend, num):
+        (x1, y1), (x2, y2) = p1, p2
+        qx, qy = (x1 + x2) / 2 + bend, (y1 + y2) / 2
+        cx, cy = (x1 + x2) / 2 + bend / 2, (y1 + y2) / 2
+        sg = 1 if bend >= 0 else -1
+        e = f'<path d="M{x1},{y1} Q{qx},{qy} {x2},{y2}" fill="none" stroke="{c}" stroke-width="2.4"/>'
+        e += text(cx + sg * 13, cy + 5, lab, c, 14, "middle", 700)
+        e += f'<circle cx="{cx + sg*30}" cy="{cy}" r="9" fill="{PURPLE}"/>' + text(cx + sg * 30, cy + 4, str(num), "white", 11, "middle", 700)
+        return e
+    s += text(160, 22, "Pull-down (NMOS)", BLUE, 13, "middle", 700)
+    Y, n1, n2, G = (160, 50), (90, 150), (230, 150), (160, 260)
+    s += edge(Y, n1, "A", BLUE, -10, 1) + edge(n1, G, "B", BLUE, -10, 2) + edge(G, n2, "D", BLUE, 10, 3) + edge(n2, Y, "C", BLUE, 10, 4)
+    s += node(*Y, "Y", 0, -12) + node(*n1, "n1", -22, 4) + node(*n2, "n2", 24, 4) + node(*G, "GND", 0, 22)
+    s += text(480, 22, "Pull-up (PMOS)", ORANGE, 13, "middle", 700)
+    V, P, Y2 = (480, 55), (480, 155), (480, 260)
+    s += edge(P, V, "A", ORANGE, -50, 1) + edge(V, P, "B", ORANGE, 50, 2) + edge(P, Y2, "D", ORANGE, 50, 3) + edge(Y2, P, "C", ORANGE, -50, 4)
+    s += node(*V, "VDD", 0, -12) + node(*P, "p", -22, 4) + node(*Y2, "Y", 0, 22)
+    s += text(320, 300, "Same order A → B → D → C traces every edge once in both graphs", PURPLE, 13, "middle", 700)
+    return svg(660, 312, s)
+
+
+def fig_p7():
+    s = defs(*ALLC)
+    s += line(110, 35, 330, 35) + vdd(220, 35)
+    s += pfet(110, 75, "A", ORANGE, 4)
+    s += pfet(270, 60, "D", ORANGE, 6) + pfet(270, 130, "E", ORANGE, 6)
+    s += line(128, 40, 128, 35) + line(288, 25, 288, 35)
+    s += line(128, 110, 128, 175) + line(288, 165, 288, 175) + line(128, 175, 288, 175)
+    s += pfet(110, 215, "B", ORANGE, 6) + pfet(270, 215, "C", ORANGE, 6)
+    s += line(128, 250, 128, 265) + line(288, 250, 288, 265) + line(128, 265, 288, 265)
+    s += dot(208, 265) + line(288, 265, 400, 265) + dot(400, 265) + text(408, 270, "Y", INK, 15, "start", 700)
+    s += line(208, 265, 208, 285) + line(128, 285, 330, 285)
+    s += nfet(110, 320, "A", BLUE, 2) + line(128, 355, 128, 365) + line(80, 365, 160, 365)
+    s += nfet(62, 400, "D", BLUE, 2) + nfet(142, 400, "E", BLUE, 2) + line(80, 435, 160, 435) + gnd(120, 435)
+    s += nfet(294, 320, "B", BLUE, 2) + nfet(294, 390, "C", BLUE, 2) + gnd(312, 425)
+    s += text(470, 60, "Longest path through each transistor:", INK, 12.5, "start", 700)
+    s += text(470, 85, "NMOS: every path has 2 → all width 2", BLUE, 12.5, "start")
+    s += text(470, 110, "PMOS D, E: path D–E–B has 3 → width 6", ORANGE, 12.5, "start")
+    s += text(470, 130, "PMOS B, C: also on D–E–B/C → width 6", ORANGE, 12.5, "start")
+    s += text(470, 150, "PMOS A: paths A–B, A–C have 2 → width 4", ORANGE, 12.5, "start")
+    s += text(470, 190, "Input caps: A 6C, D/E/B/C 8C", PURPLE, 12.5, "start", 700)
+    s += text(470, 210, "g: A = 2, others = 8/3", PURPLE, 12.5, "start", 700)
+    return svg(700, 470, s)
+
+
+def fig_p8():
+    s = defs(*ALLC)
+    g1, o1 = gate_shape("inv", 60, 80, "1")
+    s += line(20, 80, 60, 80) + g1
+    g2, o2 = gate_shape("nand", 230, 80, "1", BLUE)
+    s += line(o1, 80, 230, 80) + line(200, 92, 230, 92, MUTE, 1.4) + text(195, 96, "1", MUTE, 11, "end")
+    s += g2 + line(o2, 80, 400, 80) + dot(380, 80) + line(380, 80, 380, 95) + cap(380, 95, INK) + gnd(380, 135) + text(398, 120, "12C", INK, 13, "start", 700)
+    s += text(150, 140, "stage 1: inverter drives NAND2 input 4C", INK, 12, "middle")
+    s += text(150, 158, "h₁ = 4C/3C = 4/3,  d₁ = 4/3 + 1 = 2.33", PURPLE, 12.5, "middle", 700)
+    s += text(470, 30, "stage 2: NAND2 drives 12C", INK, 12, "middle")
+    s += text(470, 48, "h₂ = 12C/4C = 3,  d₂ = (4/3)·3 + 2 = 6", PURPLE, 12.5, "middle", 700)
+    s += text(330, 190, "path delay D = d₁ + d₂ = 8.33 τ  (= 25 ps when τ = 3 ps)", INK, 13, "middle", 700)
+    return svg(660, 200, s)
+
+
+def fig_ron():
+    p = Plot(520, 260, (0, 42), (0, 1700), (70, 20, 20, 44))
+    p.curve([(w / 10, 1 / (134.3e-6 * (w / 10) / 0.5 * 2.3)) for w in range(20, 421)], BLUE, 2.8)
+    for w in (10, 20):
+        r = 1 / (134.3e-6 * w / 0.5 * 2.3)
+        p.add(dot(p.X(w), p.Y(r), ORANGE, 5) + text(p.X(w) + 8, p.Y(r) - 8, f"W = {w} µm: {r:.0f} Ω", ORANGE, 12.5, "start", 700))
+    p.axes("W (µm), L = 0.5 µm", sub("R_on") + " (Ω)", [(2, "2"), (10, "10"), (20, "20"), (40, "40")], [(0, "0"), (500, "500"), (1000, "1000"), (1500, "1500")])
+    return p.render()
+
+
+def fig_fold():
+    s = defs(*ALLC)
+    s += text(150, 22, "one finger, W = 20 µm", INK, 13, "middle", 700)
+    s += f'<rect x="60" y="40" width="60" height="200" fill="{BLUE}" opacity="0.15" stroke="{BLUE}"/>' + text(90, 145, "S", BLUE, 13, "middle", 700)
+    s += f'<rect x="120" y="30" width="18" height="220" fill="{RED}" opacity="0.4"/>'
+    s += f'<rect x="138" y="40" width="60" height="200" fill="{GREEN}" opacity="0.25" stroke="{GREEN}" stroke-width="2.5"/>' + text(168, 145, "D", GREEN, 13, "middle", 700)
+    s += text(150, 268, "C_DB = 18.3 fF".replace("C_DB", sub("C_DB")), GREEN, 13, "middle", 700)
+    s += text(470, 22, "two fingers, W = 10 µm each, shared drain", INK, 13, "middle", 700)
+    ox = 360
+    s += f'<rect x="{ox}" y="90" width="50" height="100" fill="{BLUE}" opacity="0.15" stroke="{BLUE}"/>' + text(ox + 25, 145, "S", BLUE, 13, "middle", 700)
+    s += f'<rect x="{ox+50}" y="80" width="18" height="120" fill="{RED}" opacity="0.4"/>'
+    s += f'<rect x="{ox+68}" y="90" width="60" height="100" fill="{GREEN}" opacity="0.25" stroke="{GREEN}" stroke-width="2.5"/>' + text(ox + 98, 145, "D", GREEN, 13, "middle", 700)
+    s += f'<rect x="{ox+128}" y="80" width="18" height="120" fill="{RED}" opacity="0.4"/>'
+    s += f'<rect x="{ox+146}" y="90" width="50" height="100" fill="{BLUE}" opacity="0.15" stroke="{BLUE}"/>' + text(ox + 171, 145, "S", BLUE, 13, "middle", 700)
+    s += text(470, 268, "C_DB = 9.2 fF (drain area halved)".replace("C_DB", sub("C_DB")), GREEN, 13, "middle", 700)
+    return svg(660, 280, s)
+
+
 FIGS2 = {
     "F_SWITCH": fig_switches, "F_PUNPDN": fig_pun_pdn, "F_PSEUDO": fig_pseudo, "F_NOR2": fig_nor2, "F_NAND2": fig_nand2,
     "F_WL": fig_wl, "F_COLLAPSE": fig_nor2_collapse, "F_VTHCMP": fig_vth_compare, "F_STNOR": fig_stick_nor2, "F_STNAND": fig_stick_nand2,
@@ -687,7 +875,7 @@ FIGS2 = {
     "F_MOSRC": fig_mos_rc, "F_INVRC": fig_inv_rc, "F_NAND2C": lambda: fig_nand_caps(2), "F_NAND3C": lambda: fig_nand_caps(3),
     "F_ELMORE": fig_elmore, "F_NAND3E": fig_nand3_elmore, "F_FANOUT": lambda: fig_fanout(), "F_FO4": lambda: fig_fanout(fo4=True),
     "F_DPARTS": fig_d_parts, "F_LEGATES": fig_le_gates, "F_T10Q4": fig_t10q4, "F_NOR2S": fig_nor2_sized, "F_AOI": fig_aoi21,
-    "F_RINGLE": fig_ring_le,
+    "F_RINGLE": fig_ring_le, "F_NORN": fig_norn, "F_4X": fig_4x, "F_WEAKP": fig_weak_p, "F_P2": fig_p2_bars, "F_P3": fig_p3_vtc, "F_P4": fig_p4, "F_AOI22": fig_aoi22_euler, "F_P7": fig_p7, "F_P8": fig_p8, "F_RON": fig_ron, "F_FOLD": fig_fold,
 }
 
 if __name__ == "__main__":

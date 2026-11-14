@@ -59,6 +59,7 @@ ol.calc{margin:6px 0;padding-left:22px}ol.calc li{margin:4px 0}
 .b-beyond{background:#fef2f2;color:#dc2626;border:1px solid #f7c9c9}
 .glo td:first-child{white-space:nowrap;font-weight:650}
 th .katex{text-transform:none;letter-spacing:0}
+@media print{h2,h3,h4{break-after:avoid}}
 </style>
 </head>
 <body><div class="wrap">
@@ -130,6 +131,8 @@ Lectures 28–29 decide <b>which switches</b> connect the output to which rail. 
 
 <h3>1.1 A transistor is a switch</h3>
 <figure>{{F_SWITCH}}<figcaption><b>Fig. 1.1</b> For logic we only care whether each transistor is ON or OFF. The gate voltage decides.</figcaption></figure>
+<div class="box green"><span class="tag">How to read the symbol</span>
+The <b>arrow sits on the source</b> and points the way current flows: <b>out of</b> the source for an NMOS (source at the bottom, toward ground), <b>into</b> the source for a PMOS (source at the top, from $V_{DD}$). The small <b>circle (bubble)</b> on the PMOS gate means "turns ON when the gate is 0". In many lecture sketches the arrow is left out; the bubble alone tells you it is a PMOS.</div>
 
 <h3>1.2 Why not pseudo-NMOS?</h3>
 <p>The lecture starts with one PMOS whose gate is tied to ground, so it is always on, above an NMOS. It works as an inverter, but it is wasteful.</p>
@@ -144,7 +147,8 @@ Lectures 28–29 decide <b>which switches</b> connect the output to which rail. 
 <li><b>Pull-down (NMOS)</b>: AND (·) → transistors in <b>series</b>; OR (+) → in <b>parallel</b>.</li>
 <li><b>Pull-up (PMOS)</b>: the <b>dual</b>: every series becomes parallel and every parallel becomes series. Same input letters.</li>
 <li>Check one input pattern where Y should be 0 and one where Y should be 1.</li>
-</ol></div>
+</ol>
+<b>No bar in the function?</b> (e.g. $Y = A\cdot B$ or $Y = A + BC$). A single CMOS stage can only make <b>inverting</b> functions. Build the inverted gate (NAND2 for $A\cdot B$) and add an inverter after it. Transistor count: a static CMOS gate with N inputs uses $2N$ transistors; the extra inverter adds 2.</div>
 
 <h3>1.4 NOR2 and NAND2</h3>
 <p>In these schematics a letter next to a transistor's gate means "this gate is wired to input A (or B)". The input wires are left out so the picture stays clean.</p>
@@ -213,8 +217,9 @@ $$\Big(\frac{W}{L}\Big)_{eq} = \underbrace{\frac{1}{\frac{1}{(W/L)_A} + \frac{1}
 <li>Draw the pull-up graph the same way ($V_{DD}$, Y, internal nodes).</li>
 <li>Find an order of letters that traces every edge once <b>without lifting the pen</b>, in <b>both</b> graphs. Try starting at a node with an odd number of edges.</li>
 <li>That letter order is the left-to-right order of the gate lines in the layout. Consecutive transistors share their diffusion.</li>
-</ol></div>
-<p>For our gate, E → D → A → B → C works. Check the pull-down: n1 –E– GND –D– n1 –A– Y –B– n2 –C– GND: every NMOS once, no jumps ✓.</p>
+</ol>
+<b>Where to start (the quick test):</b> count the edges touching each node. A node with an <b>odd</b> count must be the start or the end of the path. 0 or 2 odd nodes → a path exists (start at an odd one). More than 2 odd nodes → no single path: the row must be broken into two diffusion strips.</div>
+<p>For our gate, pull-down node counts: Y 2 (A, B), n1 3 (A, D, E), GND 3 (D, E, C), n2 2 (B, C). Odd: n1 and GND, so start at n1. E → D → A → B → C works. Check the pull-down: n1 –E– GND –D– n1 –A– Y –B– n2 –C– GND: every NMOS once, no jumps ✓.</p>
 
 <h3>2.4 The stick diagram</h3>
 <figure>{{F_STCPX}}<figcaption><b>Fig. 2.3</b> Layout with gate order E D A B C. The two n1 pieces and the three p1 pieces are joined by a second metal layer (purple), because the same node appears more than once in the row.</figcaption></figure>
@@ -256,7 +261,8 @@ Width $k$ = $k$ unit transistors side by side (parallel pipes): $k$ times the cu
 <figure>{{F_NAND2C}}<figcaption><b>Fig. 3.5</b> NAND2X1 (lecture): NMOS width 2, PMOS width 2. Every terminal gets $2C$.</figcaption></figure>
 <figure>{{F_NAND3C}}<figcaption><b>Fig. 3.6</b> NAND3 (Lecture 31): NMOS width 3, PMOS width 2. Output $9C$, internal nodes $3C$ each.</figcaption></figure>
 <div class="box blue"><span class="tag">Sizing rule (for unit drive)</span>
-<b>N transistors in series → each N times wider</b> (NMOS width N; PMOS width 2N). Transistors in parallel keep the unit width (one ON alone must give R).</div>
+<b>N transistors in series → each N times wider</b> (NMOS width N; PMOS width 2N). Transistors in parallel keep the unit width (one ON alone must give R).<br>
+<b>Any gate (complex gates too):</b> for each transistor, find the <b>longest</b> series path (rail to Y) that goes through it, with $L$ transistors. Give it width $L$ (NMOS) or $2L$ (PMOS). Then every path has resistance $\le R$. Example: practice P7.</div>
 <div class="box amber"><span class="tag">Counting capacitance at a node</span>
 Add $(\text{width})\times C$ for every source/drain that touches the node. Two series transistors that share an uncontacted diffusion (like the NAND internal nodes) count it <b>once</b>: width × C. A question that says "fully contacted diffusion" wants each source/drain counted separately.</div>
 
@@ -290,11 +296,18 @@ Inverter: $g = 1$, $p = 1$ → $d = h + 1$ (lecture: $d = \frac{m}{w} + 1$, sinc
 <p>The lecture only uses the inverter ($g = 1$). Tutorial 10 also needs NAND and NOR. <span class="badge b-beyond">Beyond lectures</span></p>
 <figure>{{F_LEGATES}}<figcaption><b>Fig. 4.3</b> Logical effort $g$ = input capacitance of the gate ÷ input capacitance of an inverter with the same drive ($3C$).</figcaption></figure>
 <table>
-<tr><th>Gate (unit drive)</th><th>$g$</th><th>$p$ (in units of $p_{inv} = 1$)</th><th>where it comes from</th></tr>
-<tr><td>inverter</td><td>1</td><td>1</td><td>$3C$ in, $3C$ diffusion</td></tr>
-<tr><td>NAND2 / NAND3 / NAND-n</td><td>4/3 / 5/3 / $(n+2)/3$</td><td>2 / 3 / $n$</td><td>NMOS width n, PMOS width 2</td></tr>
-<tr><td>NOR2 / NOR3 / NOR-n</td><td>5/3 / 7/3 / $(2n+1)/3$</td><td>2 / 3 / $n$</td><td>NMOS width 1, PMOS width 2n</td></tr>
+<tr><th>Gate (unit drive)</th><th>sizes (NMOS, PMOS)</th><th>input cap</th><th>$g$ = input cap ÷ 3C</th><th>$p$ ≈ output diffusion ÷ 3C</th></tr>
+<tr><td>inverter</td><td>1, 2</td><td>3C</td><td>1</td><td>3C/3C = 1</td></tr>
+<tr><td>NAND2</td><td>2, 2</td><td>4C</td><td>4/3</td><td>6C/3C = 2</td></tr>
+<tr><td>NAND3</td><td>3, 2</td><td>5C</td><td>5/3</td><td>9C/3C = 3</td></tr>
+<tr><td>NAND-n</td><td>n, 2</td><td>(n+2)C</td><td>(n+2)/3</td><td>n</td></tr>
+<tr><td>NOR2</td><td>1, 4</td><td>5C</td><td>5/3</td><td>6C/3C = 2</td></tr>
+<tr><td>NOR3</td><td>1, 6</td><td>7C</td><td>7/3</td><td>9C/3C = 3</td></tr>
+<tr><td>NOR-n</td><td>1, 2n</td><td>(2n+1)C</td><td>(2n+1)/3</td><td>n</td></tr>
 </table>
+<p>So for <b>any</b> gate: size it for unit drive, then $g$ = (its input cap)/3C and $p$ ≈ (diffusion cap on its output)/3C.</p>
+<div class="box amber"><span class="tag">Two ways to count capacitance (don't mix them)</span>
+Lectures 30–31 count in $C$ (one unit transistor): an inverter input is $3C$. Tutorial 10 Q4 and Weste &amp; Harris count in "unit inverters": an inverter input is $1$. To convert, divide by 3: a NAND2 input $4C$ = $4/3$ units. Ratios like $h = C_{out}/C_{in}$ come out the same either way, as long as top and bottom use the same unit.</div>
 
 <h3>4.4 FO4: the fanout-of-4 inverter</h3>
 <figure>{{F_FO4}}<figcaption><b>Fig. 4.4</b> FO4 is the standard "speed of a process" number.</figcaption></figure>
@@ -307,11 +320,18 @@ Inverter: $g = 1$, $p = 1$ → $d = h + 1$ (lecture: $d = \frac{m}{w} + 1$, sinc
 <tr><td>$t_{pdf}$ (slowest)</td><td>A=0, B=1, C=1 → A=1</td><td>output 9C and both internal 3C nodes</td><td>$9C(\tfrac R3+\tfrac R3+\tfrac R3) + 3C(\tfrac R3+\tfrac R3) + 3C\cdot\tfrac R3 = 12RC$</td></tr>
 <tr><td>$t_{cdf}$ (fastest)</td><td>A=1, B=1, C=0 → C=1</td><td>only the output (internal nodes already at 0 through A, B)</td><td>$9C(\tfrac R3+\tfrac R3+\tfrac R3) = 9RC$</td></tr>
 </table>
+<p><b>Contamination delay of a rising edge</b> (same idea, other network): a NAND's PMOS are in parallel. If all inputs fall <b>together</b>, all PMOS turn on at once and the resistance drops to $R/N$. NAND3: $t_{cdr} = \tfrac R3\cdot 9C = 3RC$ (vs $t_{pdr} = R\cdot 9C = 9RC$ with one PMOS). Fastest case = as many parallel transistors ON as possible.</p>
 <div class="box green"><span class="tag">Rule for "which capacitors count"</span>
 A capacitor counts if its node is connected to the output through ON transistors of the network that is pulling, <b>and</b> it starts at the wrong voltage. Worst case = the input <b>farthest from the output</b> (nearest the rail) switches last. Best case = the input <b>nearest the output</b> switches last.</div>
 
 <!-- ===================================================== M -->
 <h2 id="M">5 · Which type of question is it? (recipes)</h2>
+<div class="box orange"><span class="tag">The first 60 seconds of any question (5 steps)</span>
+<b>1. In plain words:</b> redraw the circuit; underline what is given and circle what is asked.<br>
+<b>2. Spot the type:</b> find the row in the table below (keywords!).<br>
+<b>3. Write the formula</b> of that recipe before putting numbers in.<br>
+<b>4. Solve:</b> sizes → capacitances → resistances → formula → units.<br>
+<b>5. Check:</b> right network (NMOS for falling, PMOS for rising)? own diffusion counted? units?</div>
 <p>Find the row that matches the question. Each row tells you the section and the recipe.</p>
 <table>
 <tr><th>The question says…</th><th>Type</th><th>Go to</th></tr>
@@ -322,6 +342,8 @@ A capacitor counts if its node is connected to the output through ON transistors
 <tr><td>"Elmore", "RC model", "rising/falling delay", "contamination delay", "unloaded"</td><td>E · Elmore delay</td><td>3.3–3.6, 4.5, T10 Q5–Q7</td></tr>
 <tr><td>"fanout", "FO4", "drives m inverters", "d = gh + p", "logical effort", "parasitic delay"</td><td>F · normalised delay</td><td>4.1–4.4, T10 Q1, Q2, Q8, Q9</td></tr>
 <tr><td>"ring oscillator", "N stages"</td><td>G · ring</td><td>T10 Q3, R5</td></tr>
+<tr><td>"size the gate for equal rise/fall", "unit drive", "same drive as an inverter"</td><td>B2 · sizing</td><td>3.5, P7, T10 Q5</td></tr>
+<tr><td>"delay of the path", "chain of gates", "total delay from A to Y"</td><td>H · path delay</td><td>P8</td></tr>
 <tr><td>"arrival time", "optimise the sizes of a path"</td><td>H · path optimisation</td><td>T10 Q4 <span class="badge b-beyond">Beyond lectures</span></td></tr>
 </table>
 
@@ -339,6 +361,13 @@ A capacitor counts if its node is connected to the output through ON transistors
 <li>Factor $f$: NOR-N → $1/N$; NAND-N → $N$; inverter → 1.</li>
 <li>$V_{th} = \dfrac{V_{T0,n} + f\sqrt{1/k_R}\,(V_{DD}+V_{T0,p})}{1 + f\sqrt{1/k_R}}$.</li>
 <li>Backwards (design): $f\sqrt{1/k_R} = \dfrac{V_{th}-V_{T0,n}}{V_{DD}+V_{T0,p}-V_{th}}$, then solve for $k_R$ and the width ratio.</li>
+</ol></div>
+
+<div class="box blue"><span class="tag">Recipe B2 · size a gate for unit drive</span>
+<ol class="calc">
+<li>For each transistor, find the longest rail-to-Y series path through it: $L$ transistors.</li>
+<li>Width = $L$ (NMOS) or $2L$ (PMOS).</li>
+<li>Input cap of input X = (NMOS width + PMOS width of X) × C. Then $g = $ input cap / 3C if asked.</li>
 </ol></div>
 
 <div class="box blue"><span class="tag">Recipe C · equivalent W/L</span>
@@ -363,7 +392,7 @@ A capacitor counts if its node is connected to the output through ON transistors
 <li><b>Pick the edge</b>: falling → pull-down (NMOS, $R/k$). Rising → pull-up (PMOS, $2R/k$).</li>
 <li><b>Pick the worst case</b>: the transistor nearest the rail switches last, so internal nodes start at the wrong voltage. (Best case for $t_{cd}$: the one nearest the output switches last.)</li>
 <li><b>For each capacitor</b>: multiply by the resistance between it and the rail.</li>
-<li><b>Add</b>. Answer like "$(12 + 5h)RC$". Divide by $3RC$ if they want $d$.</li>
+<li><b>Add</b>. Answer like "$(12 + 5h)RC$". Divide by $3RC$ if they want $d$. For seconds, put numbers in: <b>kΩ × fF = ps</b> (e.g. 10 kΩ × 0.1 fF = 1 ps).</li>
 </ol></div>
 
 <div class="box blue"><span class="tag">Recipe F · fanout / logical effort</span>
@@ -375,7 +404,7 @@ A capacitor counts if its node is connected to the output through ON transistors
 
 <div class="box blue"><span class="tag">Recipe G · ring oscillator · Recipe H · path arrival time</span>
 <b>G:</b> stage delay $t_{pd} = d\tau$ (unit inverters: $d = 2$); $T = 2Nt_{pd}$; $f = 1/T$.<br>
-<b>H:</b> for each gate, $a_{out} = a_{in} + C_{load}/x + p$; where paths meet, take the max; the total is the function to minimise.</div>
+<b>H:</b> a path of gates in a row: total delay = sum of each stage's $d = gh + p$ (practice P8). With branches: for each gate $a_{out} = a_{in} + C_{load}/x + p$, take the max where paths meet; the total is the function to minimise.</div>
 
 <div class="box orange"><span class="tag">Spot the type (cover the right column, then check)</span>
 <table>
@@ -388,6 +417,10 @@ A capacitor counts if its node is connected to the output through ON transistors
 <tr><td>"What is the contamination delay of NAND3?"</td><td>E → input nearest the output switches last: $9RC$</td></tr>
 <tr><td>"An 11-stage ring, τ = 4 ps: frequency?"</td><td>G → $1/(4\cdot11\cdot4\text{ ps}) = 5.7$ GHz</td></tr>
 <tr><td>"Two NMOS of W/L 3 in series, then parallel with one of W/L 2: W/L?"</td><td>C → $1.5 + 2 = 3.5$</td></tr>
+<tr><td>"Implement $Y = A\cdot B$ in CMOS. How many transistors?"</td><td>A → NAND2 + inverter = 6</td></tr>
+<tr><td>"Choose widths so the AOI21 has the drive of a unit inverter."</td><td>B2 → longest path rule (Fig. T10.6)</td></tr>
+<tr><td>"Unit inverter drives a NAND2 that drives 12C. Path delay?"</td><td>H → $d_1 + d_2$ (P8)</td></tr>
+<tr><td>"Fastest rising delay of NAND3 when all inputs fall together?"</td><td>E → $\tfrac R3\cdot9C = 3RC$</td></tr>
 </table></div>
 
 <!-- ===================================================== T10 -->
@@ -400,6 +433,7 @@ A capacitor counts if its node is connected to the output through ON transistors
 <figure>{{F_FANOUT}}<figcaption><b>Fig. T10.1</b> The circuit.</figcaption></figure>
 <div class="step s1"><div class="lab">In plain words</div><div>One inverter fills (or empties) its own drains plus the gates of m others. How long does that take?</div></div>
 <div class="step s2"><div class="lab">Theory</div><div>Section 4.1–4.2: RC model (R for unit pull-up and pull-down, 3C per unit input, 3C own diffusion).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Load = own diffusion + all the driven inputs; delay = (driver's resistance) × (load). Then put in numbers: kΩ × fF = ps.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
 <li>Unit driver: $C_{load} = 3C + 3mC$ → $t_{pd} = R(3+3m)C =$ <span class="ans">(1 + m)·3RC</span></li>
 <li>w-sized driver: $R/w$ and own diffusion $3wC$ → $t_{pd} = \frac Rw(3wC + 3mC) =$ <span class="ans">(1 + m/w)·3RC</span></li>
@@ -410,21 +444,29 @@ A capacitor counts if its node is connected to the output through ON transistors
 
 <div class="q">
 <h3>T10 · Q2 · FO4 delay with τ = 3 ps <span class="badge b-in">In lectures</span></h3>
-<p><i>Use the linear delay model to estimate the FO4 inverter delay in a 65 nm process with τ = 3 ps.</i></p>
+<p><i>Use the linear delay model to estimate the delay of the fanout-of-4 (FO4) inverter. Assume the inverter is built in a 65 nm process with τ = 3 ps.</i></p>
 <figure>{{F_FO4}}<figcaption><b>Fig. T10.2</b> FO4: one inverter driving four copies of itself.</figcaption></figure>
-<div class="step s2"><div class="lab">Theory</div><div>"Linear delay model" = $d = gh + p$ (section 4.3).</div></div>
-<div class="step s4"><div class="lab">Solve</div><div>$g = 1$, $h = 4$, $p = 1$ → $d = 5$ → $t = 5\tau = 5 \times 3 =$ <span class="ans">15 ps</span></div></div>
-<div class="step s5"><div class="lab">Check</div><div>Same as Q1, because $\tau = 3RC = 3$ ps there too ✓.</div></div>
+<div class="step s1"><div class="lab">In plain words</div><div>One inverter drives four identical inverters. How many τ does that take, and how many ps is that?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>"Linear delay model" = $d = gh + p$ (section 4.3). Inverter: $g = 1$, $p = 1$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Find $h$ (fanout), then $d$, then multiply by τ.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Each load has the same input cap as the driver, four of them: $h = \dfrac{4\times3C}{3C} = 4$.</li>
+<li>$d = 1\times4 + 1 = 5$.</li>
+<li>$t = d\,\tau = 5\times3\text{ ps} =$ <span class="ans">15 ps</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Same as Q1, because there $\tau = 3RC = 3\times1\text{ ps} = 3$ ps too ✓.</div></div>
 </div>
 
 <div class="q">
 <h3>T10 · Q3 · Ring oscillator with N stages, then N = 31 <span class="badge b-in">In lectures</span></h3>
-<p><i>Estimate the frequency of an N-stage ring oscillator. What is the frequency of a 31-stage ring if τ = 3 ps?</i></p>
+<p><i>A ring oscillator is built from an odd number of inverters, as in the figure. Estimate the frequency of an N-stage ring oscillator. What is the frequency of a 31-stage ring oscillator if τ = 3 ps in a 65 nm process?</i></p>
 <figure>{{F_RINGLE}}<figcaption><b>Fig. T10.3</b> Each stage drives exactly one inverter like itself.</figcaption></figure>
 <div class="step s1"><div class="lab">In plain words</div><div>An edge runs round the loop. For one full period it must go round twice (once rising, once falling), as in Lecture 25.</div></div>
-<div class="step s2"><div class="lab">Theory</div><div>$T = 2N t_{pd}$ (Lecture 25) and $t_{pd} = d\tau$ with $d = gh + p = 1\cdot1 + 1 = 2$.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>$T = 2N t_{pd}$ (Lecture 25) and $t_{pd} = d\tau$ with $d = gh + p$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Find one stage's $d$ (each stage drives one inverter, so $h = 1$), then $T$, then $f = 1/T$.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
-<li>$t_{pd} = 2\tau$ → $T = 2N\cdot 2\tau = 4N\tau$ → <span class="ans">f = 1/(4Nτ)</span></li>
+<li>$d = 1\cdot1 + 1 = 2$ → $t_{pd} = 2\tau$.</li>
+<li>$T = 2N\cdot 2\tau = 4N\tau$ → <span class="ans">f = 1/(4Nτ)</span></li>
 <li>$N = 31$: $f = \dfrac{1}{4 \times 31 \times 3\text{ ps}} = \dfrac{1}{372\text{ ps}} =$ <span class="ans">2.69 GHz</span></li>
 </ol></div></div>
 <div class="step s5"><div class="lab">Check</div><div>$h = 1$, not 0: each stage drives one inverter ✓. Forgetting the "2 laps" gives 5.4 GHz, which is wrong.</div></div>
@@ -455,6 +497,7 @@ A capacitor counts if its node is connected to the output through ON transistors
 <figure>{{F_NOR2S}}<figcaption><b>Fig. T10.5</b> NOR2 sized like a unit inverter: PMOS width 4 (two in series), NMOS width 1.</figcaption></figure>
 <div class="step s1"><div class="lab">In plain words</div><div>Size the gate so its worst pull-up and pull-down are both $R$. Then count capacitors and apply Elmore for each edge.</div></div>
 <div class="step s2"><div class="lab">Theory</div><div>3.5 (sizing), 3.5 amber box (counting caps), Recipe E.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Widths → input cap (for the load) → cap at Y and at the internal node → falling with one NMOS → rising through the PMOS stack, worst case.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
 <li>Widths: two PMOS in series must total $R$ → each $R/2 = 2R/w$ → $w = 4$. NMOS alone must give $R$ → width 1.</li>
 <li>Input cap per input: $4C + 1C = 5C$. Load: $h \times 5C$.</li>
@@ -471,6 +514,7 @@ A capacitor counts if its node is connected to the output through ON transistors
 <p><i>Find the rising and falling delays of an unloaded AOI gate using Elmore. Estimate diffusion capacitance from a stick diagram. (We take the AOI21: $Y = \overline{AB + C}$, the usual textbook AOI.)</i></p>
 <figure>{{F_AOI}}<figcaption><b>Fig. T10.6</b> AOI21 sized for unit drive. Pull-down: (A series B) ∥ C. Pull-up: (A ∥ B) series C.</figcaption></figure>
 <div class="step s1"><div class="lab">In plain words</div><div>Same as Q5, but first build the gate (Recipe A), then lay it out (Euler path) to see which diffusions are shared.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Recipe A (build), Recipe D (Euler path, shared diffusions), Recipe B2 (sizing), Recipe E (Elmore).</div></div>
 <div class="step s3"><div class="lab">Plan</div><div>Euler path: order A, B, C. Pull-down row: Y –A– n1 –B– GND –C– Y. Pull-up row: p1 –A– $V_{DD}$ –B– p1 –C– Y.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
 <li>Widths: NMOS A, B = 2 (series), C = 1. PMOS all 4 (two in series on every path).</li>
@@ -484,8 +528,11 @@ A capacitor counts if its node is connected to the output through ON transistors
 
 <div class="q">
 <h3>T10 · Q7 · Worst-case Elmore parasitic delay of an n-input NOR <span class="badge b-in">In lectures</span></h3>
-<p><i>Find the worst-case Elmore parasitic delay (no load) of an n-input NOR gate.</i></p>
-<div class="step s1"><div class="lab">In plain words</div><div>A NOR-n has n PMOS in series: the rising edge through that long stack is the slow one. "Parasitic" = no external load, only the gate's own caps.</div></div>
+<p><i>Find the worst-case Elmore parasitic delay of an n-input NOR gate (no external load).</i></p>
+<figure>{{F_NORN}}<figcaption><b>Fig. T10.7</b> The NOR-n pull-up: n PMOS in series, each width 2n, with n − 1 internal nodes.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>A NOR-n has n PMOS in series: the rising edge through that long stack is the slow one. "Parasitic" = no external load, only the gate's own capacitances.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>3.5 (series stacks N× wider; counting caps) and 3.6 (Elmore). Worst case: the PMOS nearest $V_{DD}$ switches last, so every internal node starts low.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Sizes → cap at each node → resistance from $V_{DD}$ to each node → Elmore sum.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
 <li>Sizing: n PMOS in series → each width $2n$ (resistance $R/n$). NMOS width 1.</li>
 <li>Output: PMOS drain $2nC$ + n NMOS drains $n\cdot C$ = $3nC$.</li>
@@ -497,18 +544,26 @@ A capacitor counts if its node is connected to the output through ON transistors
 
 <div class="q">
 <h3>T10 · Q8 · A 4x inverter <span class="badge b-in">In lectures</span></h3>
-<p><i>A 4x inverter has transistors four times as wide as a unit inverter (3 units of input cap, parasitic delay $p_{inv}$). Find its input capacitance, logical effort and parasitic delay.</i></p>
+<p><i>Let a 4x inverter have transistors four times as wide as those of a unit inverter. If a unit inverter has three units of input capacitance and parasitic delay $p_{inv}$, what is the input capacitance of a 4x inverter? What is the logical effort? What is the parasitic delay?</i></p>
+<figure>{{F_4X}}<figcaption><b>Fig. T10.8</b> The unit and the 4x inverter. Every width, capacitance and current is ×4.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Make every transistor 4× wider. What happens to its input cap, its "effort" and its built-in delay?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>4.2: width $w$ → resistance $R/w$, every capacitance $\times w$; "parasitic delay is independent of size". 4.3: $g$ compares input cap to an inverter of the same drive.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Scale each quantity by 4 and see which ratios stay the same.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
 <li>Input cap: $4 \times 3 =$ <span class="ans">12 units</span></li>
-<li>Logical effort: same shape, same ratio of input cap to drive → <span class="ans">g = 1</span></li>
-<li>Parasitic delay: own diffusion ×4 but resistance ÷4 → <span class="ans">p = p<sub>inv</sub></span> (lecture: "parasitic delay is independent of size")</li>
+<li>Logical effort: it is still an inverter: input cap and output current both ×4, same ratio → <span class="ans">g = 1</span></li>
+<li>Parasitic delay: own diffusion ×4 but resistance ÷4 → <span class="ans">p = p<sub>inv</sub></span></li>
 </ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Lecture 31: $t_{pd} = (1 + \frac mw)3RC$. The "1" (parasitic part) has no $w$ in it ✓.</div></div>
 </div>
 
 <div class="q">
 <h3>T10 · Q9 · Logical effort when the PMOS is 3× weaker <span class="badge b-beyond">Beyond lectures</span></h3>
-<p><i>pMOS have 3× the resistance of nMOS. Find the logical efforts of NAND2 and NOR2 designed for equal rise and fall.</i></p>
+<p><i>Consider a process in which pMOS transistors have three times the effective resistance of nMOS transistors. Calculate the logical efforts of a 2-input NAND gate and a 2-input NOR gate if they are designed with equal rising and falling delays.</i></p>
+<figure>{{F_WEAKP}}<figcaption><b>Fig. T10.9</b> Same sizing method as Fig. 4.3, with PMOS width 3 per unit NMOS.</figcaption></figure>
 <div class="step s1"><div class="lab">In plain words</div><div>Same method as Fig. 4.3, but a PMOS now needs width 3 (not 2) to match one NMOS.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>4.3: $g$ = input cap of the gate ÷ input cap of an inverter with the same drive. Sizing rule of 3.5.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Size the reference inverter, then the NAND2 and NOR2 for equal rise/fall, then divide input caps.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
 <li>Reference inverter: NMOS 1, PMOS 3 → input cap $4$.</li>
 <li>NAND2: NMOS in series → width 2; PMOS in parallel → width 3. Input cap $2 + 3 = 5$ → <span class="ans">g = 5/4</span></li>
@@ -519,76 +574,142 @@ A capacitor counts if its node is connected to the output through ON transistors
 
 <!-- ===================================================== P -->
 <h2 id="P">7 · More practice (all in your lectures)</h2>
+<p class="lede">Each question below is a full exam-style question with a figure and the same five steps. Cover the "Solve" step, try it, then check.</p>
 
 <div class="q">
 <h3>P1 · V<sub>th</sub> of INV, NOR2 and NAND2 from the same transistors <span class="badge b-in">In lectures</span></h3>
-<p><i>$V_{DD} = 3.3$ V, $V_{T0,n} = 0.6$ V, $V_{T0,p} = -0.7$ V, $\mu_nC_{ox} = 60$, $\mu_pC_{ox} = 25$ µA/V², every transistor $W/L = 2$. Find $V_{th}$ of an inverter, a NOR2 and a NAND2 (inputs tied).</i></p>
+<p><i>A process has $V_{DD} = 3.3$ V, $V_{T0,n} = 0.6$ V, $V_{T0,p} = -0.7$ V, $\mu_nC_{ox} = 60$ µA/V², $\mu_pC_{ox} = 25$ µA/V². Every transistor has $W/L = 2$. Find the switching threshold $V_{th}$ of (a) an inverter, (b) a NOR2 and (c) a NAND2, with all inputs switching together.</i></p>
+<figure>{{F_VTHCMP}}<figcaption><b>Fig. P1</b> The three VTCs of this question (computed). Each $V_{th}$ is where a curve crosses the dashed line $V_{out} = V_{in}$.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Same transistors, three different wirings. Where does each one flip?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>1.6: $V_{th} = \dfrac{V_{T0,n} + f\sqrt{1/k_R}(V_{DD}+V_{T0,p})}{1 + f\sqrt{1/k_R}}$ with $f = 1$ (INV), ½ (NOR2), 2 (NAND2).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Compute $k_R$ for one NMOS and one PMOS, then plug in three values of $f$.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
 <li>$k_R = \frac{60\times2}{25\times2} = 2.4$, $\sqrt{1/k_R} = 0.6455$, $V_{DD}+V_{T0,p} = 2.6$ V.</li>
 <li>Inverter (f = 1): $\frac{0.6 + 0.6455\times2.6}{1.6455} =$ <span class="ans">1.385 V</span></li>
 <li>NOR2 (f = ½): $\frac{0.6 + 0.3227\times2.6}{1.3227} =$ <span class="ans">1.088 V</span></li>
 <li>NAND2 (f = 2): $\frac{0.6 + 1.291\times2.6}{2.291} =$ <span class="ans">1.727 V</span></li>
 </ol></div></div>
-<div class="step s5"><div class="lab">Check</div><div>Order NOR2 < INV < NAND2 ✓ (Fig. 1.8 is this exact example, computed).</div></div>
+<div class="step s5"><div class="lab">Check</div><div>Order NOR2 < INV < NAND2 ✓. NOR2 has two strong NMOS in parallel pulling down early.</div></div>
 </div>
 
 <div class="q">
 <h3>P2 · Size a NOR2 and a NAND2 for V<sub>th</sub> = V<sub>DD</sub>/2 <span class="badge b-in">In lectures</span></h3>
-<p><i>Same process. Find $(W/L)_p/(W/L)_n$ so that $V_{th} = 1.65$ V, for a NOR2 and for a NAND2.</i></p>
+<p><i>Using the process of P1, find the ratio $(W/L)_p/(W/L)_n$ that gives $V_{th} = V_{DD}/2 = 1.65$ V for (a) an inverter, (b) a NOR2 and (c) a NAND2 (all inputs together).</i></p>
+<figure>{{F_P2}}<figcaption><b>Fig. P2</b> The answer as bars: the NOR2 needs PMOS about 12× wider than its NMOS.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>We want each gate to flip exactly in the middle. How big must the PMOS be compared with the NMOS?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Recipe B, step 4 (backwards): $f\sqrt{1/k_R} = \dfrac{V_{th}-V_{T0,n}}{V_{DD}+V_{T0,p}-V_{th}}$, then $\dfrac{(W/L)_p}{(W/L)_n} = \dfrac{\mu_nC_{ox}/\mu_pC_{ox}}{k_R}$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>The right side is the same for all three gates. Divide by $f$, square, invert to get $k_R$, then the width ratio.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
-<li>Need $f\sqrt{1/k_R} = \frac{1.65 - 0.6}{2.6 - 1.65} = \frac{1.05}{0.95} = 1.105$.</li>
-<li>NOR2 ($f = \tfrac12$): $\sqrt{1/k_R} = 2.211$ → $k_R = 0.2046$ → $\frac{(W/L)_p}{(W/L)_n} = \frac{60/25}{0.2046} =$ <span class="ans">11.7</span></li>
+<li>$f\sqrt{1/k_R} = \frac{1.65 - 0.6}{2.6 - 1.65} = \frac{1.05}{0.95} = 1.105$.</li>
+<li>Inverter ($f = 1$): $k_R = 1/1.105^2 = 0.819$ → ratio $= \frac{2.4}{0.819} =$ <span class="ans">2.93</span></li>
+<li>NOR2 ($f = \tfrac12$): $\sqrt{1/k_R} = 2.211$ → $k_R = 0.2046$ → ratio $= \frac{2.4}{0.2046} =$ <span class="ans">11.7</span></li>
 <li>NAND2 ($f = 2$): $\sqrt{1/k_R} = 0.5526$ → $k_R = 3.274$ → ratio $= \frac{2.4}{3.274} =$ <span class="ans">0.73</span></li>
 </ol></div></div>
-<div class="step s5"><div class="lab">Check</div><div>The NOR2 needs huge PMOS (two weak holes-devices in series): one more reason designers prefer NAND ✓.</div></div>
+<div class="step s5"><div class="lab">Check</div><div>NOR2 needs a huge PMOS (two weak hole-devices in series); NAND2 needs one smaller than its NMOS. One more reason designers prefer NAND ✓.</div></div>
 </div>
 
 <div class="q">
 <h3>P3 · Symmetric NOR2 and NAND2 <span class="badge b-in">In lectures</span></h3>
-<p><i>$k_R = 1$, $V_{T0,n} = |V_{T0,p}| = 0.6$ V, $V_{DD} = 3.3$ V. Find $V_{th}$ of the NOR2 and NAND2.</i></p>
-<div class="step s4"><div class="lab">Solve</div><div>NOR2: $\frac{V_{DD}+V_T}{3} = \frac{3.9}{3} =$ <span class="ans">1.30 V</span>. &nbsp; NAND2: $\frac{2V_{DD}-V_T}{3} = \frac{6.0}{3} =$ <span class="ans">2.00 V</span>.</div></div>
-<div class="step s5"><div class="lab">Check</div><div>The inverter would be at 1.65 V, right between them ✓.</div></div>
+<p><i>An inverter is symmetric: $k_R = 1$ and $V_{T0,n} = |V_{T0,p}| = 0.6$ V, with $V_{DD} = 3.3$ V. The same transistor sizes are used to build a NOR2 and a NAND2. Find the switching threshold of each.</i></p>
+<figure>{{F_P3}}<figcaption><b>Fig. P3</b> Symmetric inverter (dashed) at $V_{DD}/2$; the NOR2 and NAND2 made from the same transistors are not symmetric (computed).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>The inverter flips at 1.65 V. Does a NOR2 or NAND2 built from the same transistors still flip there?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>1.6 symmetric case: $V_{th,NOR2} = \dfrac{V_{DD}+V_T}{3}$, $V_{th,NAND2} = \dfrac{2V_{DD}-V_T}{3}$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Plug in directly.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>NOR2: $\frac{3.3 + 0.6}{3} =$ <span class="ans">1.30 V</span>. &nbsp; NAND2: $\frac{6.6 - 0.6}{3} =$ <span class="ans">2.00 V</span>.</div></div>
+<div class="step s5"><div class="lab">Check</div><div>The inverter's 1.65 V lies between them ✓. Using the general formula with $f = ½$: $\frac{0.6 + 0.5\times2.7}{1.5} = 1.30$ ✓.</div></div>
 </div>
 
 <div class="q">
 <h3>P4 · Equivalent W/L of the complex gate <span class="badge b-in">In lectures</span></h3>
-<p><i>In $Y=\overline{A(D+E)+BC}$ every NMOS has $W/L = 2$. Find $(W/L)_{eq}$ of the pull-down (a) with all inputs 1, (b) in the worst case where Y is pulled low.</i></p>
+<p><i>In the pull-down network of $Y=\overline{A(D+E)+BC}$ every NMOS has $W/L = 2$. Find $(W/L)_{eq}$ (a) when all inputs are 1, and (b) in the worst case in which the network still pulls Y low.</i></p>
+<figure>{{F_P4}}<figcaption><b>Fig. P4</b> The pull-down network in both cases. Grey transistors are OFF and are left out.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Replace the whole network by one equivalent transistor. How wide is it with everything on, and with the weakest path that still works?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>1.5 and 2.2: parallel → add; series → $1/\sum(1/x)$. Only ON transistors count.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Combine D ∥ E first, then series with A; B series C; then the two branches in parallel.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
-<li>(a) Left: $\frac{1}{\frac12 + \frac1{2+2}} = \frac43$. Right: $\frac{1}{\frac12+\frac12} = 1$. Total <span class="ans">7/3 ≈ 2.33</span></li>
-<li>(b) Weakest pattern that still pulls down: only one branch, with one of D/E: e.g. A = D = 1, others 0: $\frac{1}{\frac12+\frac12} =$ <span class="ans">1</span></li>
+<li>(a) D ∥ E = 4. Left: $\frac{1}{\frac12 + \frac14} = \frac43$. Right: $\frac{1}{\frac12+\frac12} = 1$. Total <span class="ans">7/3 ≈ 2.33</span></li>
+<li>(b) Weakest pattern that still pulls down: one branch with only two series devices, e.g. A = D = 1, all others 0: $\frac{1}{\frac12+\frac12} =$ <span class="ans">1</span></li>
 </ol></div></div>
-<div class="step s5"><div class="lab">Check</div><div>To make the worst case match an inverter NMOS of $(W/L)_n = 1$, width 2 for each series device is exactly right ✓ (the sizing rule of 3.5).</div></div>
+<div class="step s5"><div class="lab">Check</div><div>Worst case 1 = a unit inverter NMOS ✓. That is exactly why each series device gets width 2 (sizing rule in 3.5).</div></div>
 </div>
 
 <div class="q">
-<h3>P5 · Euler path for an AOI22, $Y = \overline{AB + CD}$ <span class="badge b-in">In lectures</span></h3>
+<h3>P5 · Euler path and stick order for an AOI22 <span class="badge b-in">In lectures</span></h3>
+<p><i>For $Y = \overline{AB + CD}$: (a) draw the pull-down and pull-up networks, (b) draw their graphs, (c) find a common Euler path and give the gate order for the layout.</i></p>
+<figure>{{F_AOI22}}<figcaption><b>Fig. P5</b> Graphs of both networks. The numbers show the order of the common Euler path A → B → D → C.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Build the gate, then find one order of the four gate lines so both diffusion rows are unbroken.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Recipe A (build) and Recipe D / 2.3 (Euler path, odd-node rule).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Networks → graphs → count edges per node → start at an odd node → trace.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
-<li>Pull-down: Y –A– n1 –B– GND and Y –C– n2 –D– GND.</li>
-<li>Pull-up (dual): $V_{DD}$ –A– p, $V_{DD}$ –B– p, p –C– Y, p –D– Y.</li>
+<li>Pull-down: (A series B) ∥ (C series D): Y –A– n1 –B– GND and Y –C– n2 –D– GND.</li>
+<li>Pull-up (dual): (A ∥ B) series (C ∥ D): $V_{DD}$ –A– p, $V_{DD}$ –B– p, p –C– Y, p –D– Y.</li>
+<li>Edge counts, pull-down: Y 2, n1 2, n2 2, GND 2 → all even → a closed path; start anywhere. Pull-up: $V_{DD}$ 2, p 4, Y 2 → all even.</li>
 <li>Try A B D C. Pull-down: Y→n1 (A) → GND (B) → n2 (D) → Y (C) ✓. Pull-up: p→$V_{DD}$ (A) → p (B) → Y (D) → p (C) ✓. Order: <span class="ans">A B D C</span></li>
 </ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Each letter used once in each graph, and no jump ✓. (A B C D fails in the pull-down: after B you are at GND, and C does not touch GND.)</div></div>
 </div>
 
 <div class="q">
 <h3>P6 · NAND2 driving h NAND2s: Elmore, and where g and p come from <span class="badge b-in">In lectures</span></h3>
+<p><i>A NAND2 sized for unit drive (NMOS width 2, PMOS width 2) drives h identical NAND2 gates. Using the Elmore model, find the worst-case falling and rising propagation delays. Then write the rising result as $d = gh + p$.</i></p>
+<figure>{{F_NAND2C}}<figcaption><b>Fig. P6</b> The NAND2 with every capacitance labelled. The load adds $h\times4C$ at Y.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Count the capacitors, pick the worst input pattern, apply Elmore. Then divide by $3RC$.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Recipe E (Elmore) and 4.3 ($d = t/3RC$).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Output cap $6C + 4hC$; internal node $2C$. Falling: A (bottom) switches last. Rising: one PMOS on.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
-<li>Sizing (Fig. 3.5): NMOS 2, PMOS 2. Input cap $4C$; load $h\cdot4C$. Output $6C$; internal n1 $2C$.</li>
-<li>$t_{pdf}$ (A, bottom, switches last): $\tfrac R2\cdot2C + R(6+4h)C =$ <span class="ans">(7 + 4h) RC</span></li>
-<li>$t_{pdr}$ (one PMOS, R; n1 belongs to the NMOS network, which is not pulling, so it does not count): <span class="ans">(6 + 4h) RC</span></li>
-<li>In $\tau$ units: $(6+4h)/3 = \frac43h + 2$ → $g = 4/3$, $p = 2$ ✓ (the NAND2 row of the table).</li>
+<li>Output: two PMOS drains $2C + 2C$ + top NMOS $2C$ = $6C$; load $h\cdot4C$. Internal n1: $2C$.</li>
+<li>$t_{pdf}$: before, A = 0, B = 1 (n1 charged high). A rises: $\tfrac R2\cdot2C + R(6+4h)C =$ <span class="ans">(7 + 4h) RC</span></li>
+<li>$t_{pdr}$: one PMOS (resistance $2R/2 = R$); n1 is in the NMOS network, which is not pulling, so it does not count: <span class="ans">(6 + 4h) RC</span></li>
+<li>Divide the rising result by $3RC$: $\frac{6+4h}{3} = \frac43h + 2$ → $g = 4/3$, $p = 2$ ✓.</li>
 </ol></div></div>
-<div class="step s5"><div class="lab">Check</div><div>$d = gh + p$ is just Elmore divided by $3RC$. This is the link between Lecture 30 and Lecture 31.</div></div>
+<div class="step s5"><div class="lab">Check</div><div>$d = gh + p$ is just Elmore divided by $3RC$: the link between Lecture 30 and Lecture 31 ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>P7 · Size a complex gate for unit drive <span class="badge b-in">In lectures</span></h3>
+<p><i>Choose transistor widths for $Y=\overline{A(D+E)+BC}$ so that its worst-case pull-up and pull-down resistances equal those of a unit inverter (NMOS 1, PMOS 2). Give the input capacitance of each input. (Optional: the logical effort of each input.)</i></p>
+<figure>{{F_P7}}<figcaption><b>Fig. P7</b> The gate with its widths. Each transistor's width = 1× or 2× the length of the longest path through it.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Every possible path from a rail to Y must be no slower than one unit transistor.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Recipe B2: longest series path through each transistor has $L$ devices → width $L$ (NMOS) or $2L$ (PMOS).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>List every rail-to-Y path in each network, with its length.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Pull-down paths: A–D, A–E, B–C: all length 2 → <span class="ans">every NMOS width 2</span></li>
+<li>Pull-up paths: A–B, A–C (length 2), D–E–B, D–E–C (length 3).</li>
+<li>D, E, B, C lie on a length-3 path → <span class="ans">width 6</span>; A only on length-2 paths → <span class="ans">width 4</span></li>
+<li>Input caps: A: $2 + 4 = 6C$; D, E, B, C: $2 + 6 = 8C$.</li>
+<li><span class="badge b-beyond">Beyond lectures</span> $g_A = 6/3 = 2$; $g_{D,E,B,C} = 8/3$.</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Path D–E–B: $3\times\frac{2R}{6} = R$ ✓. Path A–B: $\frac{2R}{4} + \frac{2R}{6} = \frac56R \le R$ ✓ (a bit faster, fine).</div></div>
+</div>
+
+<div class="q">
+<h3>P8 · Delay of a two-gate path <span class="badge b-in">In lectures</span></h3>
+<p><i>A unit inverter drives one input of a unit NAND2 (input cap $4C$). The NAND2 drives a load of $12C$. Using $d = gh + p$, find the total path delay in units of τ, and in ps if τ = 3 ps. Check the result with Elmore.</i></p>
+<figure>{{F_P8}}<figcaption><b>Fig. P8</b> The path, with each stage's effort worked out.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Two gates in a row: the total delay is the sum of the two stage delays.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>4.3: $d = gh + p$ per stage; Recipe H (path = sum of stages).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>For each stage: what does it drive ($C_{out}$), what is its own input cap ($C_{in}$), then $h$, then $d$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Stage 1 (inverter): $h_1 = 4C/3C = 4/3$ → $d_1 = 1\cdot\frac43 + 1 = 2.33$.</li>
+<li>Stage 2 (NAND2): $h_2 = 12C/4C = 3$ → $d_2 = \frac43\cdot3 + 2 = 6$.</li>
+<li>$D = 2.33 + 6 =$ <span class="ans">8.33 τ</span> $= 8.33\times3 =$ <span class="ans">25 ps</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Elmore: inverter $R(3C + 4C) = 7RC$; NAND2 rising $R(6C + 12C) = 18RC$; total $25RC = 8.33\times3RC$ ✓.</div></div>
 </div>
 
 <!-- ===================================================== RZ -->
 <h2 id="RZ">8 · Razavi-style problems</h2>
-<p>Razavi's <i>Design of Analog CMOS Integrated Circuits</i> does not cover logic gates, Euler paths or Elmore delay. These problems use the parts of Razavi that support the lectures: on-resistance (Ch. 2), device capacitance (Ch. 2), layout folding (Ex. 2.10) and ring oscillators (§15.2).</p>
+<p>Razavi's <i>Design of Analog CMOS Integrated Circuits</i> does not cover logic gates, Euler paths or Elmore delay. These problems use the parts of Razavi that support the lectures: on-resistance (Ch. 2), device capacitance (Ch. 2), layout folding (Ex. 2.10) and ring oscillators (§15.2). Problems marked <span class="badge b-opt">Optional</span> go beyond your lectures.</p>
 
 <div class="q">
 <h3>R1 · Where "R" comes from: R = V<sub>DS,avg</sub>/I<sub>DS,avg</sub> <span class="badge b-in">In lectures</span></h3>
-<p><i>Lecture 25's inverter: $V_{DD} = 3.3$ V, $k_n = 200$ µA/V², $V_{T0,n} = 0.6$ V, $C = 300$ fF. Find the NMOS's average resistance during the fall to 50%, then estimate $\tau_{PHL} = 0.69RC$. Compare with the exact 0.703 ns.</i></p>
+<p><i>The Lecture 25 inverter has $V_{DD} = 3.3$ V, $k_n = 200$ µA/V², $V_{T0,n} = 0.6$ V and $C = 300$ fF. Find the NMOS's average resistance $R = V_{DS,avg}/I_{DS,avg}$ during the fall from $V_{DD}$ to $V_{DD}/2$, then estimate $\tau_{PHL} = 0.69RC$. Compare with the exact value 0.703 ns.</i></p>
+<figure>{{FIG_CURRENT}}<figcaption><b>Fig. R1</b> The NMOS current during the fall (from the Lecture 25 guide). The two black dots are the end points we average.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Replace the real transistor by one resistor that gives the same average current, then use the RC formula.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>3.3: $R = V_{DS,avg}/I_{DS,avg}$; 3.2: 50% time $= 0.69RC$. Currents from the square law (Lecture 25).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Current at both ends → average; voltage at both ends → average; divide; multiply by $0.69C$.</div></div>
 <div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
-<li>Currents (Lecture 25): 729 µA at 3.3 V, 618.75 µA at 1.65 V → $I_{avg} = 673.9$ µA.</li>
+<li>Currents: 729 µA at 3.3 V (sat), 618.75 µA at 1.65 V (linear) → $I_{avg} = 673.9$ µA.</li>
 <li>$V_{DS,avg} = (3.3 + 1.65)/2 = 2.475$ V → $R = 2.475/673.9\,\mu = 3.67$ kΩ.</li>
 <li>$\tau_{PHL} \approx 0.69 \times 3.67\text{ kΩ} \times 300\text{ fF} =$ <span class="ans">0.76 ns</span> (exact 0.703 ns).</li>
 </ol></div></div>
@@ -597,28 +718,48 @@ A capacitor counts if its node is connected to the output through ON transistors
 
 <div class="q">
 <h3>R2 · Triode on-resistance and the "R/k" rule <span class="badge b-opt">Optional</span></h3>
-<p><i>Razavi Ch. 2: in deep triode, $R_{on} = \dfrac{1}{\mu_nC_{ox}\frac WL(V_{GS}-V_{TH})}$. Find $R_{on}$ for $W/L = 10/0.5$, $\mu_nC_{ox} = 134.3$ µA/V², $V_{GS} = 3$ V, $V_{TH} = 0.7$ V. What happens if W doubles?</i></p>
-<div class="step s4"><div class="lab">Solve</div><div>$R_{on} = \dfrac{1}{134.3\,\mu \times 20 \times 2.3} =$ <span class="ans">162 Ω</span>. Doubling W halves it to 81 Ω: exactly Lecture 30's "width k → R/k".</div></div>
+<p><i>Razavi Ch. 2: in deep triode a MOSFET is a resistor $R_{on} = \dfrac{1}{\mu_nC_{ox}\frac WL(V_{GS}-V_{TH})}$. Find $R_{on}$ for $W/L = 10/0.5$, $\mu_nC_{ox} = 134.3$ µA/V², $V_{GS} = 3$ V, $V_{TH} = 0.7$ V. What happens if W doubles?</i></p>
+<figure>{{F_RON}}<figcaption><b>Fig. R2</b> $R_{on}$ falls as $1/W$: double the width, half the resistance.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>How big is the "R" of a real transistor, and how does width change it?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Razavi's triode resistance; Lecture 30's "width k → R/k".</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Plug in; then repeat with W/L doubled.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>$R_{on} = \dfrac{1}{134.3\,\mu \times 20 \times 2.3} =$ <span class="ans">162 Ω</span>. With $W = 20$ µm: <span class="ans">81 Ω</span>.</div></div>
+<div class="step s5"><div class="lab">Check</div><div>Exactly the "R/k" rule of Lecture 30 ✓.</div></div>
 </div>
 
 <div class="q">
 <h3>R3 · Why every terminal gets "C" <span class="badge b-opt">Optional</span></h3>
-<p><i>Razavi Table 2.1: $C_{ox} = 3.84$ fF/µm², $C_j = 0.56$ fF/µm², $C_{jsw} = 0.035$ fF/µm. A unit NMOS has W = 1 µm, L = 0.5 µm, drain length E = 1.5 µm. Compare the gate cap and the drain junction cap.</i></p>
-<div class="step s4"><div class="lab">Solve</div><div>Gate: $3.84 \times 1 \times 0.5 =$ <span class="ans">1.92 fF</span>. Drain: $1\times1.5\times0.56 + 2(1+1.5)\times0.035 = 0.84 + 0.175 =$ <span class="ans">1.02 fF</span>. Same order of magnitude, so the lecture's "C on every terminal" is a fair simplification.</div></div>
+<p><i>Razavi Table 2.1: $C_{ox} = 3.84$ fF/µm², $C_j = 0.56$ fF/µm², $C_{jsw} = 0.035$ fF/µm. A unit NMOS has W = 1 µm, L = 0.5 µm and drain length E = 1.5 µm. Compare its gate capacitance with its drain junction capacitance.</i></p>
+<figure>{{FIG_DRAIN}}<figcaption><b>Fig. R3</b> Drain geometry (from the Lecture 25 guide): bottom area $W\times E$, perimeter $2(W+E)$.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Is it fair to give the gate, source and drain the same "C"?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Gate: $C_{ox}WL$. Junction: $WEC_j + 2(W+E)C_{jsw}$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Compute both and compare.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>Gate: $3.84 \times 1 \times 0.5 =$ <span class="ans">1.92 fF</span>. Drain: $1\times1.5\times0.56 + 2(1+1.5)\times0.035 = 0.84 + 0.175 =$ <span class="ans">1.02 fF</span>.</div></div>
+<div class="step s5"><div class="lab">Check</div><div>Same order of magnitude, so "C on every terminal" is a fair simplification ✓.</div></div>
 </div>
 
 <div class="q">
-<h3>R4 · Folding / sharing diffusion (Razavi Ex. 2.10) <span class="badge b-opt">Optional</span></h3>
-<p><i>A transistor with W = 20 µm, E = 1.5 µm (Table 2.1 values). Find $C_{DB}$, then fold it into two 10 µm fingers that share one drain.</i></p>
-<div class="step s4"><div class="lab">Solve</div><div>Unfolded: $20(1.5)(0.56) + 2(21.5)(0.035) =$ <span class="ans">18.3 fF</span>. Folded (one shared drain 10 µm wide): $10(1.5)(0.56) + 2(11.5)(0.035) =$ <span class="ans">9.2 fF</span>. Sharing diffusion halves the drain cap. This is the same reason the Euler-path layout (shared diffusions) makes gates faster.</div></div>
+<h3>R4 · Folding and shared diffusion (Razavi Ex. 2.10) <span class="badge b-opt">Optional</span></h3>
+<p><i>A transistor has W = 20 µm and drain length E = 1.5 µm (Table 2.1 values as in R3). Find its drain junction capacitance $C_{DB}$. Then fold it into two 10 µm fingers that share one drain and find $C_{DB}$ again.</i></p>
+<figure>{{F_FOLD}}<figcaption><b>Fig. R4</b> Folding: the same total width, but one drain shared by two gates.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Same transistor, different layout. Does sharing a drain make it faster?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>$C_{DB} = WEC_j + 2(W+E)C_{jsw}$, with the drain width that is actually drawn.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Unfolded drain is 20 µm wide; folded shared drain is 10 µm wide.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>Unfolded: $20(1.5)(0.56) + 2(21.5)(0.035) =$ <span class="ans">18.3 fF</span>. Folded: $10(1.5)(0.56) + 2(11.5)(0.035) =$ <span class="ans">9.2 fF</span>.</div></div>
+<div class="step s5"><div class="lab">Check</div><div>Half the drain cap ✓. Same reason the Euler-path layout (shared diffusions) makes gates faster.</div></div>
 </div>
 
 <div class="q">
 <h3>R5 · Three-stage ring oscillator (Razavi §15.2) <span class="badge b-in">In lectures</span></h3>
-<p><i>A ring of three inverters, each with delay $T_D = 50$ ps. Find the period and frequency. Why must N be odd?</i></p>
-<div class="step s4"><div class="lab">Solve</div><div>$T = 2NT_D = 6T_D = 300$ ps → <span class="ans">f = 3.33 GHz</span>. With an even N the ring has a stable state (alternating 0/1) and just latches.</div></div>
-<div class="step s5"><div class="lab">Note <span class="badge b-opt">Optional</span></div><div>Razavi also shows that a 3-stage ring needs a small-signal gain of at least 2 per stage to start oscillating. That is not in your lectures.</div></div>
+<p><i>A ring oscillator has three inverters, each with delay $T_D = 50$ ps. Find the period and the frequency. Why must the number of stages be odd?</i></p>
+<figure>{{FIG_RING3}}<figcaption><b>Fig. R5</b> A 3-stage ring (from the Lecture 25 guide).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>An edge chases itself round three inverters. How long is one full cycle?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>$T = 2NT_D$ (two laps per period).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Plug N = 3 and $T_D$ = 50 ps.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>$T = 6T_D = 300$ ps → <span class="ans">f = 3.33 GHz</span>. With an even N the ring has a stable state (alternating 0/1) and just latches.</div></div>
+<div class="step s5"><div class="lab">Check</div><div>Razavi's own statement: "three stages give a period of $6T_D$" ✓. <span class="badge b-opt">Optional</span> Razavi also shows a 3-stage ring needs a small-signal gain of at least 2 per stage to start.</div></div>
 </div>
+
 
 <!-- ===================================================== OT -->
 <h2 id="OT">9 · Tutorials 8 and 9</h2>
