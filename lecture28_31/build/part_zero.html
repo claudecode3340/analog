@@ -1,0 +1,39 @@
+<!-- ===================================================== Z -->
+<h2 id="Z" class="nobreak">00 · Start from zero (no background needed)</h2>
+<p class="lede">If words like "capacitor", "NAND" or "$V_{th}$" feel shaky, read this page first. Everything else in the guide is built on these few ideas.</p>
+
+<h3>Z.1 Voltage, current, resistance, capacitance</h3>
+<table>
+<tr><th>Word</th><th>Water picture</th><th>Formula</th><th>Unit</th></tr>
+<tr><td>voltage $V$</td><td>height of the water</td><td>—</td><td>volt (V)</td></tr>
+<tr><td>current $I$</td><td>how fast water flows</td><td>$I = Q/t$</td><td>ampere (A); µA = $10^{-6}$ A</td></tr>
+<tr><td>resistance $R$</td><td>a narrow pipe</td><td>$I = V/R$</td><td>ohm (Ω); kΩ = $10^{3}$ Ω</td></tr>
+<tr><td>capacitance $C$</td><td>width of a bucket</td><td>$Q = CV$</td><td>farad (F); fF = $10^{-15}$ F</td></tr>
+<tr><td>RC</td><td>time to fill the bucket through the pipe</td><td>$t \approx RC$</td><td>kΩ × fF = ps ($10^{-12}$ s)</td></tr>
+</table>
+<figure>{{FIG_BUCKET}}<figcaption><b>Fig. Z.1</b> A gate's output is a bucket (capacitor). Transistors are taps that fill it from $V_{DD}$ or empty it to ground. Delay = how long that takes.</figcaption></figure>
+<div class="box green"><span class="tag">Resistors in series and in parallel (used all the time)</span>
+<b>Series</b> (one after another): $R = R_1 + R_2$ (longer pipe, harder). <b>Parallel</b> (side by side): $R = \dfrac{1}{1/R_1 + 1/R_2}$ (two pipes, easier). Two equal resistors: series $2R$, parallel $R/2$.</div>
+
+<h3>Z.2 Logic: 0, 1 and the five gates</h3>
+<p>In digital circuits a voltage near $0$ V means <b>0</b> and a voltage near $V_{DD}$ means <b>1</b>.</p>
+<table>
+<tr><th>A</th><th>B</th><th>NOT A</th><th>A AND B</th><th>A OR B</th><th>NAND = NOT(AND)</th><th>NOR = NOT(OR)</th></tr>
+<tr><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+<tr><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+<tr><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+<tr><td>1</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+</table>
+<p>Notation: $\bar A$ or $A'$ = NOT A; $A\cdot B$ or $AB$ = AND; $A + B$ = OR. <b>De Morgan</b>: $\overline{A+B} = \bar A\cdot\bar B$ and $\overline{A\cdot B} = \bar A + \bar B$ ("break the bar, swap the sign").</p>
+
+<h3>Z.3 The MOSFET in one paragraph</h3>
+<p>A MOSFET has a <b>gate</b> (G), a <b>source</b> (S) and a <b>drain</b> (D). The gate voltage opens or closes a channel between source and drain. It turns on when the gate–source voltage passes the <b>threshold</b> $V_T$ (NMOS: $V_{GS} > V_{T0,n}$; PMOS: $V_{GS} < V_{T0,p}$, which is negative). How much current it carries is set by $k = \mu C_{ox}\,(W/L)$: a wider ($W$) or shorter ($L$) transistor gives more current.</p>
+
+<h3>Z.4 The inverter and its switching threshold (Lectures 23–24)</h3>
+<figure>{{FIG_T8VTC}}<figcaption><b>Fig. Z.2</b> The voltage transfer characteristic (VTC) of an inverter: output against input. $V_{th}$ (the switching threshold) is where the curve crosses $V_{out} = V_{in}$.</figcaption></figure>
+<div class="box blue"><span class="tag">The one formula Lecture 28 borrows</span>
+$$V_{th} = \frac{V_{T0,n} + \sqrt{1/k_R}\,(V_{DD} + V_{T0,p})}{1 + \sqrt{1/k_R}},\qquad k_R = \frac{k_n}{k_p} = \frac{\mu_nC_{ox}(W/L)_n}{\mu_pC_{ox}(W/L)_p}$$
+Stronger NMOS (bigger $k_R$) → $V_{th}$ moves <b>down</b>. Stronger PMOS → $V_{th}$ moves <b>up</b>.</div>
+
+<div class="box orange"><span class="tag">How to use this guide</span>
+Read 00 and 0 once. Then lectures 28 → 34 (sections 1–6). Then section 7 tells you how to spot each question type. Then do the tutorial and practice questions with the "Solve" step covered.</div>

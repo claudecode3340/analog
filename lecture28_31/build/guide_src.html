@@ -59,37 +59,80 @@ ol.calc{margin:6px 0;padding-left:22px}ol.calc li{margin:4px 0}
 .b-beyond{background:#fef2f2;color:#dc2626;border:1px solid #f7c9c9}
 .glo td:first-child{white-space:nowrap;font-weight:650}
 th .katex{text-transform:none;letter-spacing:0}
-@media print{h2,h3,h4{break-after:avoid}}
+@media print{h2,h3,h4{break-after:avoid} table{break-inside:auto} tr{break-inside:avoid}}
 </style>
 </head>
 <body><div class="wrap">
 
-<div class="kicker">Analog Lab · Lectures 28–31 · logic gates, layout, RC delay · Tutorial 10</div>
+<div class="kicker">Analog Lab · Lectures 28–34 · logic gates, layout, RC delay, logical effort · Tutorial 10</div>
 <h1>Logic gates and their delay, made simple</h1>
-<p class="lede">Lectures 28–31 move from one inverter to real logic gates. First we build NAND, NOR and bigger gates out of switches. Then we lay them out on silicon. Then we find out how fast they are. Every idea starts with a picture, every formula comes with a "say it out loud" sentence, and every question is solved in the same five steps.</p>
+<p class="lede">Lectures 28–34 move from one inverter to real logic gates. First we build NAND, NOR and bigger gates out of switches. Then we lay them out on silicon. Then we find out how fast one gate is, and finally how to size a whole chain of gates for the shortest delay. Every idea starts with a picture, every formula comes with a "say it out loud" sentence, and every question is solved in the same five steps.</p>
 
 <div class="box"><span class="tag">Contents</span>
 <div class="toc">
+<a href="#Z">00 · Start from zero</a><br>
 <a href="#S0">0 · The whole story on one page</a><br>
 <a href="#GL">0 · Words and symbols that confuse</a><br>
 <a href="#L28">1 · Lecture 28: NAND, NOR and their V<sub>th</sub></a><br>
 <a href="#L29">2 · Lecture 29: complex gates and Euler paths</a><br>
 <a href="#L30">3 · Lecture 30: a transistor is an R and some C's</a><br>
-<a href="#L31">4 · Lecture 31: delay with fanout, d = gh + p</a><br>
-<a href="#M">5 · Which type of question is it? (recipes)</a><br>
-<a href="#T10">6 · Tutorial 10, all 9 questions</a><br>
-<a href="#P">7 · More practice (in your lectures)</a><br>
-<a href="#RZ">8 · Razavi-style problems</a><br>
-<a href="#OT">9 · Tutorials 8 and 9</a><br>
-<a href="#E">10 · Open-book sheet and traps</a>
+<a href="#L31">4 · Lectures 31–32: delay with fanout, NAND3/NOR3</a><br>
+<a href="#L33">5 · Lecture 33: linear delay model, drive</a><br>
+<a href="#L34">6 · Lecture 34: paths, branching, minimum delay</a><br>
+<a href="#M">7 · Which type of question is it? (recipes)</a><br>
+<a href="#T10">8 · Tutorial 10, all 9 questions</a><br>
+<a href="#P">9 · More practice (in your lectures)</a><br>
+<a href="#RZ">10 · Razavi-style problems</a><br>
+<a href="#OT">11 · Tutorials 8 and 9</a><br>
+<a href="#E">12 · Open-book sheet and traps</a>
 </div></div>
 
 <div class="box orange"><span class="tag">Labels used in this guide</span>
-<span class="badge b-in">In lectures</span> taught in Lectures 28–31: must know.<br>
+<span class="badge b-in">In lectures</span> taught in Lectures 28–34: must know.<br>
 <span class="badge b-beyond">Beyond lectures</span> asked in Tutorial 10 but not taught in the lectures. It is explained here from scratch, so you can still solve it.<br>
 <span class="badge b-opt">Optional</span> extra Razavi material. Nice for understanding, not needed for the quiz.</div>
 
 <!-- ===================================================== S0 -->
+<!-- ===================================================== Z -->
+<h2 id="Z" class="nobreak">00 · Start from zero (no background needed)</h2>
+<p class="lede">If words like "capacitor", "NAND" or "$V_{th}$" feel shaky, read this page first. Everything else in the guide is built on these few ideas.</p>
+
+<h3>Z.1 Voltage, current, resistance, capacitance</h3>
+<table>
+<tr><th>Word</th><th>Water picture</th><th>Formula</th><th>Unit</th></tr>
+<tr><td>voltage $V$</td><td>height of the water</td><td>—</td><td>volt (V)</td></tr>
+<tr><td>current $I$</td><td>how fast water flows</td><td>$I = Q/t$</td><td>ampere (A); µA = $10^{-6}$ A</td></tr>
+<tr><td>resistance $R$</td><td>a narrow pipe</td><td>$I = V/R$</td><td>ohm (Ω); kΩ = $10^{3}$ Ω</td></tr>
+<tr><td>capacitance $C$</td><td>width of a bucket</td><td>$Q = CV$</td><td>farad (F); fF = $10^{-15}$ F</td></tr>
+<tr><td>RC</td><td>time to fill the bucket through the pipe</td><td>$t \approx RC$</td><td>kΩ × fF = ps ($10^{-12}$ s)</td></tr>
+</table>
+<figure>{{FIG_BUCKET}}<figcaption><b>Fig. Z.1</b> A gate's output is a bucket (capacitor). Transistors are taps that fill it from $V_{DD}$ or empty it to ground. Delay = how long that takes.</figcaption></figure>
+<div class="box green"><span class="tag">Resistors in series and in parallel (used all the time)</span>
+<b>Series</b> (one after another): $R = R_1 + R_2$ (longer pipe, harder). <b>Parallel</b> (side by side): $R = \dfrac{1}{1/R_1 + 1/R_2}$ (two pipes, easier). Two equal resistors: series $2R$, parallel $R/2$.</div>
+
+<h3>Z.2 Logic: 0, 1 and the five gates</h3>
+<p>In digital circuits a voltage near $0$ V means <b>0</b> and a voltage near $V_{DD}$ means <b>1</b>.</p>
+<table>
+<tr><th>A</th><th>B</th><th>NOT A</th><th>A AND B</th><th>A OR B</th><th>NAND = NOT(AND)</th><th>NOR = NOT(OR)</th></tr>
+<tr><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+<tr><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+<tr><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+<tr><td>1</td><td>1</td><td>0</td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+</table>
+<p>Notation: $\bar A$ or $A'$ = NOT A; $A\cdot B$ or $AB$ = AND; $A + B$ = OR. <b>De Morgan</b>: $\overline{A+B} = \bar A\cdot\bar B$ and $\overline{A\cdot B} = \bar A + \bar B$ ("break the bar, swap the sign").</p>
+
+<h3>Z.3 The MOSFET in one paragraph</h3>
+<p>A MOSFET has a <b>gate</b> (G), a <b>source</b> (S) and a <b>drain</b> (D). The gate voltage opens or closes a channel between source and drain. It turns on when the gate–source voltage passes the <b>threshold</b> $V_T$ (NMOS: $V_{GS} > V_{T0,n}$; PMOS: $V_{GS} < V_{T0,p}$, which is negative). How much current it carries is set by $k = \mu C_{ox}\,(W/L)$: a wider ($W$) or shorter ($L$) transistor gives more current.</p>
+
+<h3>Z.4 The inverter and its switching threshold (Lectures 23–24)</h3>
+<figure>{{FIG_T8VTC}}<figcaption><b>Fig. Z.2</b> The voltage transfer characteristic (VTC) of an inverter: output against input. $V_{th}$ (the switching threshold) is where the curve crosses $V_{out} = V_{in}$.</figcaption></figure>
+<div class="box blue"><span class="tag">The one formula Lecture 28 borrows</span>
+$$V_{th} = \frac{V_{T0,n} + \sqrt{1/k_R}\,(V_{DD} + V_{T0,p})}{1 + \sqrt{1/k_R}},\qquad k_R = \frac{k_n}{k_p} = \frac{\mu_nC_{ox}(W/L)_n}{\mu_pC_{ox}(W/L)_p}$$
+Stronger NMOS (bigger $k_R$) → $V_{th}$ moves <b>down</b>. Stronger PMOS → $V_{th}$ moves <b>up</b>.</div>
+
+<div class="box orange"><span class="tag">How to use this guide</span>
+Read 00 and 0 once. Then lectures 28 → 34 (sections 1–6). Then section 7 tells you how to spot each question type. Then do the tutorial and practice questions with the "Solve" step covered.</div>
+
 <h2 id="S0" class="nobreak">0 · The whole story on one page</h2>
 <ol class="story">
 <li><b>A transistor is a switch.</b> An NMOS closes when its gate is 1. A PMOS closes when its gate is 0 (Fig. 1.1).</li>
@@ -100,16 +143,18 @@ th .katex{text-transform:none;letter-spacing:0}
 <li><b>Delay without square-law maths.</b> Replace each ON transistor by a resistor and each terminal by a capacitor. A width-$k$ NMOS is $R/k$; a width-$k$ PMOS is $2R/k$; each terminal has $kC$ (Lecture 30).</li>
 <li><b>Elmore delay.</b> For a chain of R's and C's: delay = sum over every capacitor of (C × all the resistance between it and the rail). This is how NAND3's $12RC$ comes out (Lecture 31).</li>
 <li><b>Normalised delay.</b> Divide by $\tau = 3RC$ and every gate obeys $d = g\,h + p$: effort × fanout + a fixed parasitic part. An inverter driving 4 copies of itself (FO4) has $d = 5$.</li>
+<li><b>Logical effort and drive</b> (Lectures 32–33). $g$ = how much harder a gate is to drive than an inverter (NAND3 5/3, NOR3 7/3). Drive $x = C_{in}/g$, and then $d = C_{out}/x + p$.</li>
+<li><b>Paths</b> (Lecture 34). For a chain of gates, multiply: $F = GBH$. The path is fastest when every stage has the same effort $\hat f = F^{1/N}$, giving $D = NF^{1/N} + P$. Then size the gates backwards from the load.</li>
 </ol>
 
 <div class="box purple"><span class="tag">The one sentence to remember</span>
-Lectures 28–29 decide <b>which switches</b> connect the output to which rail. Lectures 30–31 decide <b>how fast</b>, by turning those switches into resistors and adding up "R × C" for every capacitor that has to change.</div>
+Lectures 28–29 decide <b>which switches</b> connect the output to which rail. Lectures 30–32 decide <b>how fast</b> one gate is, by turning switches into resistors and adding up "R × C". Lectures 33–34 turn that into one line, $d = gh + p$, and use it to size whole paths.</div>
 
 <!-- ===================================================== GL -->
-<h2 id="GL">0 · Words and symbols that confuse (read this first)</h2>
-<p>Lectures 28–31 reuse letters from Lectures 23–25 with <b>different meanings</b>. This table is where most students get stuck, so keep it open.</p>
+<h2 id="GL" class="nobreak">0 · Words and symbols that confuse (read this first)</h2>
+<p>Lectures 28–34 reuse letters from Lectures 23–25 with <b>different meanings</b>. This table is where most students get stuck, so keep it open.</p>
 <table class="glo">
-<tr><th>Symbol</th><th>Meaning in Lectures 28–31</th><th>Watch out</th></tr>
+<tr><th>Symbol</th><th>Meaning in Lectures 28–34</th><th>Watch out</th></tr>
 <tr><td>$k_n,\ k_p,\ k_R$</td><td>(Lecture 28) the same as before: $k = \mu C_{ox}(W/L)$, $k_R = k_n/k_p$</td><td>used only for $V_{th}$</td></tr>
 <tr><td>$k$ in Lecture 30</td><td>a <b>width multiplier</b>: "a transistor of width $k$" is $k$ times a unit transistor</td><td>NOT $\mu C_{ox}W/L$! Same letter, different meaning</td></tr>
 <tr><td>numbers next to transistors (1, 2, 3, 4)</td><td>widths in units of the smallest NMOS</td><td>not µm, not W/L values</td></tr>
@@ -124,6 +169,11 @@ Lectures 28–29 decide <b>which switches</b> connect the output to which rail. 
 <tr><td>$m$, $h$</td><td>$m$ = number of gates driven; $h$ = electrical effort (fanout) = $C_{out}/C_{in}$</td><td>for identical loads $h = m$</td></tr>
 <tr><td>$w$</td><td>drive (size) of a gate relative to unit</td><td>a "4x inverter" has $w = 4$</td></tr>
 <tr><td>$g$, $p$</td><td>logical effort (inverter = 1) and parasitic delay (inverter = 1)</td><td>$p$ does not depend on size</td></tr>
+<tr><td>$f$</td><td>effort delay = stage effort = $gh$</td><td>$d = f + p$</td></tr>
+<tr><td>$x$</td><td>drive of a gate = $C_{in}/g$ (Lecture 33)</td><td>INVX2 has $x = 2$</td></tr>
+<tr><td>$G, H, B, F$</td><td>path logical effort $\prod g$, path electrical effort $C_{load}/C_{in}$, path branching $\prod b$, path effort $F = GBH$</td><td>capital = whole path</td></tr>
+<tr><td>$D, P$</td><td>path delay $\sum d_i$, path parasitic delay $\sum p_i$</td><td>$D = \sum f_i + P$</td></tr>
+<tr><td>$\hat f$, $\hat D$</td><td>best stage effort $F^{1/N}$ and minimum path delay</td><td>hat = "optimum"</td></tr>
 </table>
 
 <!-- ===================================================== L28 -->
@@ -275,7 +325,7 @@ $C_i$ = capacitance at node $i$. &nbsp; $R_{i\to\text{rail}}$ = total resistance
 "Every capacitor pays for every resistor between it and the rail." A capacitor far from ground (the output) pays for the whole stack; one next to ground pays for one resistor.</div>
 
 <!-- ===================================================== L31 -->
-<h2 id="L31">4 · Lecture 31: delay with fanout, d = gh + p <span class="badge b-in">In lectures</span></h2>
+<h2 id="L31">4 · Lectures 31–32: delay with fanout, d = gh + p <span class="badge b-in">In lectures</span></h2>
 
 <h3>4.1 Unit inverter driving m inverters</h3>
 <figure>{{F_FANOUT}}<figcaption><b>Fig. 4.1</b> The load is the inverter's own diffusion ($3C$) plus $m$ input capacitances ($3C$ each). Rise and fall are equal because both resistances are $R$.</figcaption></figure>
@@ -293,7 +343,7 @@ The "1" (the delay of charging its own diffusion) does <b>not</b> change with $w
 $$d = \frac{t_{pd}}{\tau} = g\,h + p,\qquad \tau = 3RC,\qquad h = \frac{C_{out}}{C_{in}}$$
 Inverter: $g = 1$, $p = 1$ → $d = h + 1$ (lecture: $d = \frac{m}{w} + 1$, since $h = \frac{3mC}{3wC} = \frac mw$).</div>
 <figure>{{F_DPARTS}}<figcaption><b>Fig. 4.2</b> Delay grows in a straight line with fanout. The slope is the logical effort $g$; the starting value is the parasitic delay $p$.</figcaption></figure>
-<p>The lecture only uses the inverter ($g = 1$). Tutorial 10 also needs NAND and NOR. <span class="badge b-beyond">Beyond lectures</span></p>
+<p>Lecture 31 uses the inverter ($g = 1$); Lectures 32–33 add NAND and NOR:</p>
 <figure>{{F_LEGATES}}<figcaption><b>Fig. 4.3</b> Logical effort $g$ = input capacitance of the gate ÷ input capacitance of an inverter with the same drive ($3C$).</figcaption></figure>
 <table>
 <tr><th>Gate (unit drive)</th><th>sizes (NMOS, PMOS)</th><th>input cap</th><th>$g$ = input cap ÷ 3C</th><th>$p$ ≈ output diffusion ÷ 3C</th></tr>
@@ -324,8 +374,100 @@ Lectures 30–31 count in $C$ (one unit transistor): an inverter input is $3C$. 
 <div class="box green"><span class="tag">Rule for "which capacitors count"</span>
 A capacitor counts if its node is connected to the output through ON transistors of the network that is pulling, <b>and</b> it starts at the wrong voltage. Worst case = the input <b>farthest from the output</b> (nearest the rail) switches last. Best case = the input <b>nearest the output</b> switches last.</div>
 
+<h3>4.6 NAND3 and NOR3 driving h identical gates (Lecture 32)</h3>
+<p>Lecture 32 repeats the NAND3 example with a load: the NAND3 drives $h$ copies of itself. Each copy has input cap $5C$, so the load is $5hC$ and the output node has $9C + 5hC$. Every delay comes from Elmore; only the <b>input pattern</b> changes which resistors and capacitors take part.</p>
+<figure>{{F_NAND3C}}<figcaption><b>Fig. 4.6</b> The NAND3 (NMOS width 3, PMOS width 2). Add $5hC$ at Y for the load.</figcaption></figure>
+<figure>{{F_NAND3H}}<figcaption><b>Fig. 4.7</b> The four cases as RC ladders. Falling: the NMOS stack pulls Y to ground. Rising: PMOS (one, or all three in parallel) pulls Y to $V_{DD}$.</figcaption></figure>
+<table>
+<tr><th>Delay</th><th>initial → later inputs (lecture)</th><th>Elmore</th><th>$d = t/3RC$</th></tr>
+<tr><td>$t_{pdf}$ worst fall</td><td>A=0, B=C=1 → A=1</td><td>$(9+5h)C\,R + 3C\frac{2R}{3} + 3C\frac R3 = (12+5h)RC$</td><td>$4 + \frac53h$</td></tr>
+<tr><td>$t_{cdf}$ best fall</td><td>A=B=1, C=0 → C=1</td><td>$(9+5h)C\,R$</td><td>$3 + \frac53h$</td></tr>
+<tr><td>$t_{pdr}$ worst rise</td><td>A=B=C=1 → A=0</td><td>$(9+5h)C\,R + 3C\,R + 3C\,R = (15+5h)RC$</td><td>$5 + \frac53h$</td></tr>
+<tr><td>$t_{cdr}$ best rise</td><td>A=B=C=1 → all 0</td><td>$(9+5h)C\cdot\frac R3$</td><td>$1 + \frac59h$</td></tr>
+</table>
+<div class="box amber"><span class="tag">Why t<sub>pdr</sub> has two extra 3C·R terms</span>
+Only A turns off; B and C stay ON. So the two internal NMOS nodes are still connected to Y and must be charged up too. The lecture charges them through the PMOS resistance $R$ and ignores the small NMOS resistances on the way (an approximation).</div>
+
+<figure>{{F_NOR3H}}<figcaption><b>Fig. 4.8</b> NOR3 driving $h$ NOR3s. PMOS width 6 (three in series: $2R/6 = R/3$ each), NMOS width 1. Input cap $7C$, so the load is $7hC$.</figcaption></figure>
+<table>
+<tr><th>Delay</th><th>initial → later inputs</th><th>Elmore</th><th>$d$</th></tr>
+<tr><td>$t_{pdf}$ worst fall</td><td>internal PMOS nodes charged, one NMOS turns on</td><td>$(9+7h)C\,R + 6C\,R + 6C\,R = (21+7h)RC$</td><td>$7 + \frac73h$</td></tr>
+<tr><td>$t_{cdf}$ best fall</td><td>all three NMOS turn on</td><td>$(9+7h)C\cdot\frac R3$</td><td>$1 + \frac79h$</td></tr>
+<tr><td>$t_{pdr}$ worst rise</td><td>A=B=0, C=1 → C=0</td><td>$(9+7h)C\,R + 6C\frac{2R}{3} + 6C\frac R3 = (15+7h)RC$</td><td>$5 + \frac73h$</td></tr>
+</table>
+<div class="box green"><span class="tag">Pattern to notice</span>
+In every case the <b>$h$ term</b> has the same slope: $\frac53h$ for NAND3 and $\frac73h$ for NOR3 (the best-case ones divide it by 3). That slope is the <b>logical effort</b> $g$: $g_{NAND3} = 5C/3C = 5/3$, $g_{NOR3} = 7C/3C = 7/3$. The constant part is the <b>parasitic delay</b> $p$; it depends on the input pattern.</div>
+<div class="box amber"><span class="tag">Which p should I use?</span>
+The logical-effort table (section 5) uses the simple value $p = n$ for an n-input NAND/NOR (output diffusion only). Elmore's worst case is bigger (NAND3: 4 or 5) because it also counts internal nodes. <b>Rule:</b> if the question says "Elmore" or "find $t_{pdf}$", use Elmore. If it says "logical effort", "linear delay model" or "path delay", use the table.</div>
+
+<!-- ===================================================== L33 -->
+<h2 id="L33">5 · Lecture 33: the linear delay model and gate drive <span class="badge b-in">In lectures</span></h2>
+<h3>5.1 d = f + p</h3>
+<div class="box blue"><span class="tag">Memorise</span>
+$$d = \frac{t_{pd}}{\tau} = \underbrace{g\,h}_{f}\; + \;p,\qquad \tau = 3RC$$
+$g$ = logical effort, $h = C_{out}/C_{in}$ = electrical effort (fanout), $f = gh$ = <b>effort delay</b> (also called stage effort), $p$ = parasitic delay.<br>
+$C_{out}$ = the load the gate drives, <b>not counting its own diffusion</b> (that is inside $p$).</div>
+<figure>{{F_LDM}}<figcaption><b>Fig. 5.1</b> The linear delay model (lecture sketch, NAND2 numbers). The line starts at $p$; the part above $p$ is the effort delay $f = gh$.</figcaption></figure>
+<p>Inverter: $g = 1$, $p = 1$ (in units of $p_{inv}$), so $d = h + 1$. A unit inverter driving $h$ inverters: $t_{pdf} = 3RC + 3hRC$, so $d = 1 + h$ ✓.</p>
+
+<h3>5.2 Logical effort of common gates (Lecture 33 table)</h3>
+<figure>{{F_XOR}}<figcaption><b>Fig. 5.2</b> Logical effort per input. Definition: $g$ = (input capacitance of the gate) ÷ (input capacitance of an inverter that gives the same output current).</figcaption></figure>
+<div class="box green"><span class="tag">Where the numbers come from (no memorising needed)</span>
+Size the gate for unit drive, then divide its input cap by $3C$. NAND-n: NMOS width n + PMOS width 2 → $(n+2)/3$. NOR-n: NMOS 1 + PMOS 2n → $(2n+1)/3$.</div>
+
+<h3>5.3 Drive of a gate</h3>
+<figure>{{F_DRIVE}}<figcaption><b>Fig. 5.3</b> Drive $x$ = how many unit inverters' worth of current a gate delivers. INVX2 has every transistor twice as wide, so it drives twice as hard.</figcaption></figure>
+<div class="box blue"><span class="tag">Memorise</span>
+$$x = \frac{C_{in}}{g}\qquad(C_{in}\text{ normalised: divide by }3C)\qquad\Longrightarrow\qquad d = \frac{C_{out}}{x} + p,\qquad f = \frac{C_{out}}{x}$$
+Proof: $f = gh = g\dfrac{C_{out}}{C_{in}} = g\dfrac{C_{out}}{g\,x} = \dfrac{C_{out}}{x}$. Example: NAND2X1 has $C_{in} = 4C$ → $4/3$, $x = \frac{4/3}{4/3} = 1$. NAND2X2: $8C$ → $8/3$, $x = 2$.</div>
+
+<!-- ===================================================== L34 -->
+<h2 id="L34">6 · Lecture 34: limits of the model and multistage paths <span class="badge b-in">In lectures</span></h2>
+<h3>6.1 Limitations of the linear delay model</h3>
+<figure>{{F_LIMITS}}<figcaption><b>Fig. 6.1</b> Three things $d = gh + p$ ignores.</figcaption></figure>
+<ol class="calc">
+<li><b>Input rise/fall time.</b> The model assumes a sharp input. A slow input edge turns the transistor on gradually, so the delay grows (Lecture 26: $\tau = \sqrt{\tau_{step}^2 + (\tau_r/2)^2}$).</li>
+<li><b>Input arrival time.</b> When several inputs switch, which one arrives last changes the delay (the Elmore worst/best cases of 4.5–4.6).</li>
+<li><b>Velocity saturation.</b> In short-channel transistors the carriers stop speeding up at high electric field. Razavi (§11.2, §17.2.3): in the extreme case $I_D = WC_{ox}(V_{GS}-V_{TH})\,v_{sat}$: current grows <b>linearly</b> with overdrive, not as a square, and saturates at a lower $V_{DS}$. So a real transistor gives less current than the square law, and series stacks are a bit less bad than the model predicts.</li>
+</ol>
+
+<h3>6.2 A path of several gates</h3>
+<figure>{{F_PATH4}}<figcaption><b>Fig. 6.2</b> Lecture 34's path. The numbers inside the gates are input capacitances (units of a unit inverter's input cap). $x, y, z$ are unknown sizes.</figcaption></figure>
+<div class="box blue"><span class="tag">Path quantities (capital letters = whole path)</span>
+<table>
+<tr><th>Name</th><th>Formula</th><th>Meaning</th></tr>
+<tr><td>path logical effort</td><td>$G = \prod g_i$</td><td>multiply the g of every stage</td></tr>
+<tr><td>path electrical effort</td><td>$H = \dfrac{C_{load}(\text{path})}{C_{in}(\text{path})}$</td><td>last load ÷ first input cap</td></tr>
+<tr><td>branching effort</td><td>$b = \dfrac{C_{on\text{-}path} + C_{off\text{-}path}}{C_{on\text{-}path}}$, &nbsp;$B = \prod b_i$</td><td>how much current leaks to side branches</td></tr>
+<tr><td>path effort</td><td>$F = \prod f_i = G\,B\,H$</td><td>the product of all stage efforts</td></tr>
+<tr><td>path delay</td><td>$D = \sum d_i = D_F + P$, $D_F = \sum f_i$, $P = \sum p_i$</td><td>add the stages</td></tr>
+</table></div>
+
+<h3>6.3 Why the branching effort is needed</h3>
+<figure>{{F_BRANCH}}<figcaption><b>Fig. 6.3</b> Lecture 34's example: an inverter of size 5 drives two inverters of size 15, each driving 90.</figcaption></figure>
+<p>Following the top path: $f_1 = 1\times\frac{15+15}{5} = 6$ (the first inverter must charge <b>both</b> branches), $f_2 = 1\times\frac{90}{15} = 6$, so $F = 36$. But $G = 1$ and $H = 90/5 = 18$ give only $GH = 18$. The missing factor 2 is the branching: half the current goes to the other branch. $b = \frac{15+15}{15} = 2$ and $F = GBH = 36$ ✓.</p>
+
+<h3>6.4 Minimum delay: make every stage work equally hard</h3>
+<p>$F$ is fixed by the path (it does not depend on $x, y, z$), and $P$ is fixed too. So minimising $D$ means minimising $\sum f_i$ while $\prod f_i = F$ stays constant. That happens when all stage efforts are <b>equal</b>.</p>
+<div class="box blue"><span class="tag">Memorise (N-stage path)</span>
+$$\hat f = F^{1/N} = (GBH)^{1/N},\qquad \hat D = N\,F^{1/N} + P$$
+Then size the gates <b>from the output backwards</b>: $\;C_{in,i} = \dfrac{g_i\,C_{out,i}}{\hat f}$ (from $\hat f = g\,C_{out}/C_{in}$).</div>
+<div class="box purple"><span class="tag">Say it out loud</span>
+"Multiply to get F, take the N-th root to get f̂, then walk backwards: each input cap = g × what it drives ÷ f̂."</div>
+<div class="box orange"><span class="tag">Worked: the Lecture 34 path (Fig. 6.2)</span>
+<ol class="calc">
+<li>$G = 1\cdot\frac53\cdot\frac43\cdot1 = \frac{20}{9} = 2.22$; $H = 45/10 = 4.5$; $B = 1$ → $F = 10$.</li>
+<li>$\hat f = 10^{1/4} = 1.78$; $P = 1 + 2 + 2 + 1 = 6$ → $\hat D = 4\times1.78 + 6 =$ <span class="ans">13.1 τ</span></li>
+<li>Backwards: $z = \frac{1\times45}{1.78} = 25.3$; $y = \frac{\frac43\times25.3}{1.78} = 19.0$; $x = \frac{\frac53\times19.0}{1.78} = 17.8$.</li>
+<li>Check the first stage: $\frac{1\times17.8}{1.78} = 10$ = the given input cap ✓.</li>
+</ol></div>
+
+<h3>6.5 How many stages are best? <span class="badge b-opt">Optional</span></h3>
+<figure>{{F_STAGES}}<figcaption><b>Fig. 6.4</b> Driving a load 1000× the input with a chain of inverters. Too few stages: each works too hard. Too many: parasitic delay piles up.</figcaption></figure>
+<p>Weste &amp; Harris show the best stage effort is about 4 (between 3 and 6 is fine), so $\hat N \approx \log_4 F$. For $F = 1000$: $\log_4 1000 = 5.0$ stages, $D = 5\times1000^{1/5} + 5 = 24.9\,\tau$. Not in your lectures.</p>
+
 <!-- ===================================================== M -->
-<h2 id="M">5 · Which type of question is it? (recipes)</h2>
+<h2 id="M">7 · Which type of question is it? (recipes)</h2>
 <div class="box orange"><span class="tag">The first 60 seconds of any question (5 steps)</span>
 <b>1. In plain words:</b> redraw the circuit; underline what is given and circle what is asked.<br>
 <b>2. Spot the type:</b> find the row in the table below (keywords!).<br>
@@ -344,6 +486,10 @@ A capacitor counts if its node is connected to the output through ON transistors
 <tr><td>"ring oscillator", "N stages"</td><td>G · ring</td><td>T10 Q3, R5</td></tr>
 <tr><td>"size the gate for equal rise/fall", "unit drive", "same drive as an inverter"</td><td>B2 · sizing</td><td>3.5, P7, T10 Q5</td></tr>
 <tr><td>"delay of the path", "chain of gates", "total delay from A to Y"</td><td>H · path delay</td><td>P8</td></tr>
+<tr><td>"NAND3/NOR3 driving h gates", "all four delays", "$t_{cdr}$"</td><td>E · Elmore delay</td><td>4.6, P9, P10</td></tr>
+<tr><td>"drive", "X2 / X4 gate", "linear delay model", "effort delay"</td><td>F · normalised delay</td><td>5, P11</td></tr>
+<tr><td>"path effort", "branching effort", "minimum delay", "size the gates of the path", "best stage effort"</td><td>I · path optimisation</td><td>6, P12–P14</td></tr>
+<tr><td>"limitations of the linear delay model"</td><td>theory</td><td>6.1, R6</td></tr>
 <tr><td>"arrival time", "optimise the sizes of a path"</td><td>H · path optimisation</td><td>T10 Q4 <span class="badge b-beyond">Beyond lectures</span></td></tr>
 </table>
 
@@ -406,6 +552,15 @@ A capacitor counts if its node is connected to the output through ON transistors
 <b>G:</b> stage delay $t_{pd} = d\tau$ (unit inverters: $d = 2$); $T = 2Nt_{pd}$; $f = 1/T$.<br>
 <b>H:</b> a path of gates in a row: total delay = sum of each stage's $d = gh + p$ (practice P8). With branches: for each gate $a_{out} = a_{in} + C_{load}/x + p$, take the max where paths meet; the total is the function to minimise.</div>
 
+<div class="box blue"><span class="tag">Recipe I · minimum-delay path (Lecture 34)</span>
+<ol class="calc">
+<li>Write $g_i$ and $p_i$ under every gate on the path.</li>
+<li>$G = \prod g_i$; $H = C_{load}/C_{in}$ of the path; $B = \prod b_i$ with $b = (C_{on}+C_{off})/C_{on}$ (equal branches: $b$ = number of branches).</li>
+<li>$F = GBH$, $\hat f = F^{1/N}$, $\hat D = N\hat f + \sum p_i$.</li>
+<li>Size backwards from the load: $C_{in} = g\,C_{out}/\hat f$ (with branches, $C_{out}$ = all the branch inputs it drives).</li>
+<li>Check: the first stage must come out equal to the given input cap.</li>
+</ol></div>
+
 <div class="box orange"><span class="tag">Spot the type (cover the right column, then check)</span>
 <table>
 <tr><th>Question</th><th>Type → first formula</th></tr>
@@ -421,11 +576,14 @@ A capacitor counts if its node is connected to the output through ON transistors
 <tr><td>"Choose widths so the AOI21 has the drive of a unit inverter."</td><td>B2 → longest path rule (Fig. T10.6)</td></tr>
 <tr><td>"Unit inverter drives a NAND2 that drives 12C. Path delay?"</td><td>H → $d_1 + d_2$ (P8)</td></tr>
 <tr><td>"Fastest rising delay of NAND3 when all inputs fall together?"</td><td>E → $\tfrac R3\cdot9C = 3RC$</td></tr>
+<tr><td>"Find the drive of a NAND3X2."</td><td>F → $C_{in} = 10C$ → $10/3$; $x = \frac{10/3}{5/3} = 2$</td></tr>
+<tr><td>"Inverter 1 → NAND2 → load 20. Size the NAND2 for minimum delay."</td><td>I → $F = \frac43\cdot20$, $\hat f = \sqrt F$, $C_{in} = \frac43\cdot20/\hat f$</td></tr>
+<tr><td>"One gate drives 4 equal branches; path effort?"</td><td>I → include $b = 4$ in $F = GBH$</td></tr>
 </table></div>
 
 <!-- ===================================================== T10 -->
-<h2 id="T10">6 · Tutorial 10, all 9 questions</h2>
-<p class="lede">Tutorial 10 comes from Weste &amp; Harris (the book behind Lectures 30–31). Questions 1–3, 5–8 use only lecture ideas. Questions 4 and 9 need logical effort of NAND/NOR, which section 4.3 teaches.</p>
+<h2 id="T10">8 · Tutorial 10, all 9 questions</h2>
+<p class="lede">Tutorial 10 comes from Weste &amp; Harris (the book behind Lectures 30–31). Questions 1–3 and 5–9 use only lecture ideas (Lectures 30–34). Question 4 also needs "take the later of two arriving signals" for reconverging paths, which goes a little beyond Lecture 34.</p>
 
 <div class="q">
 <h3>T10 · Q1 · Unit inverter driving m inverters; w-sized driver; h = 4 <span class="badge b-in">In lectures</span></h3>
@@ -558,7 +716,7 @@ A capacitor counts if its node is connected to the output through ON transistors
 </div>
 
 <div class="q">
-<h3>T10 · Q9 · Logical effort when the PMOS is 3× weaker <span class="badge b-beyond">Beyond lectures</span></h3>
+<h3>T10 · Q9 · Logical effort when the PMOS is 3× weaker <span class="badge b-in">In lectures</span></h3>
 <p><i>Consider a process in which pMOS transistors have three times the effective resistance of nMOS transistors. Calculate the logical efforts of a 2-input NAND gate and a 2-input NOR gate if they are designed with equal rising and falling delays.</i></p>
 <figure>{{F_WEAKP}}<figcaption><b>Fig. T10.9</b> Same sizing method as Fig. 4.3, with PMOS width 3 per unit NMOS.</figcaption></figure>
 <div class="step s1"><div class="lab">In plain words</div><div>Same method as Fig. 4.3, but a PMOS now needs width 3 (not 2) to match one NMOS.</div></div>
@@ -573,8 +731,8 @@ A capacitor counts if its node is connected to the output through ON transistors
 </div>
 
 <!-- ===================================================== P -->
-<h2 id="P">7 · More practice (all in your lectures)</h2>
-<p class="lede">Each question below is a full exam-style question with a figure and the same five steps. Cover the "Solve" step, try it, then check.</p>
+<h2 id="P">9 · More practice (all in your lectures)</h2>
+<p class="lede">P1–P8 cover Lectures 28–31, P9–P15 cover Lectures 32–34. Each question below is a full exam-style question with a figure and the same five steps. Cover the "Solve" step, try it, then check.</p>
 
 <div class="q">
 <h3>P1 · V<sub>th</sub> of INV, NOR2 and NAND2 from the same transistors <span class="badge b-in">In lectures</span></h3>
@@ -697,9 +855,116 @@ A capacitor counts if its node is connected to the output through ON transistors
 <div class="step s5"><div class="lab">Check</div><div>Elmore: inverter $R(3C + 4C) = 7RC$; NAND2 rising $R(6C + 12C) = 18RC$; total $25RC = 8.33\times3RC$ ✓.</div></div>
 </div>
 
+<div class="q">
+<h3>P9 · NAND3 driving h NAND3s: all four delays <span class="badge b-in">In lectures</span></h3>
+<p><i>A unit-drive NAND3 (NMOS width 3, PMOS width 2) drives $h = 4$ identical NAND3 gates. Using the Elmore model, find $t_{pdf}$, $t_{cdf}$, $t_{pdr}$ and $t_{cdr}$ in terms of $RC$, and the normalised delays $d$. State the input pattern for each.</i></p>
+<figure>{{F_NAND3H}}<figcaption><b>Fig. P9</b> The four RC ladders (general $h$).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Same gate, four input patterns. For each, ask: which transistors pull, and which capacitors start at the wrong voltage?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>4.6 (NAND3 table) and Recipe E. Load per gate $5C$ → $5hC = 20C$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Output cap $9C + 20C = 29C$; internal nodes $3C$ each. Put $h = 4$ into each formula.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$t_{pdf}$ (A=0, B=C=1 → A=1): $29C\cdot R + 3C\cdot\frac{2R}{3} + 3C\cdot\frac R3 =$ <span class="ans">32 RC</span>, $d = 4 + \frac{20}{3} = 10.7$</li>
+<li>$t_{cdf}$ (A=B=1, C=0 → C=1): $29C\cdot R =$ <span class="ans">29 RC</span>, $d = 9.67$</li>
+<li>$t_{pdr}$ (all 1 → A=0): $29C\cdot R + 3C\cdot R + 3C\cdot R =$ <span class="ans">35 RC</span>, $d = 11.7$</li>
+<li>$t_{cdr}$ (all 1 → all 0): $29C\cdot\frac R3 =$ <span class="ans">9.67 RC</span>, $d = 3.22$</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Best ≤ worst for each edge ✓. Each $d$ has the slope $\frac53h$ (or $\frac59h$ with 3 PMOS on) ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>P10 · NOR3 driving h NOR3s <span class="badge b-in">In lectures</span></h3>
+<p><i>A unit-drive NOR3 (PMOS width 6, NMOS width 1) drives $h$ identical NOR3 gates. Find $t_{pdf}$, $t_{cdf}$ and $t_{pdr}$ and the corresponding $d$. Evaluate for $h = 1$.</i></p>
+<figure>{{F_NOR3H}}<figcaption><b>Fig. P10</b> NOR3 with its capacitances; the load is $7hC$.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Same method as P9 for the NOR3. The slow edge is now the rising one through three series PMOS.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>4.6 (NOR3 table), Recipe E.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Output $9C + 7hC$; internal PMOS nodes $6C$ each, at $\frac R3$ and $\frac{2R}{3}$ from $V_{DD}$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$t_{pdf} = (9+7h)RC + 6RC + 6RC = (21+7h)RC$ → $d = 7 + \frac73h$; $h = 1$: <span class="ans">28 RC, d = 9.33</span></li>
+<li>$t_{cdf} = (9+7h)C\cdot\frac R3$ → $d = 1 + \frac79h$; $h = 1$: <span class="ans">5.33 RC, d = 1.78</span></li>
+<li>$t_{pdr} = (9+7h)RC + 6C\cdot\frac{2R}{3} + 6C\cdot\frac R3 = (15+7h)RC$ → $d = 5 + \frac73h$; $h = 1$: <span class="ans">22 RC, d = 7.33</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Slope $\frac73$ = $g_{NOR3}$ ✓. Compare P9: NOR3 is slower than NAND3 for the same $h$, which is why designers prefer NANDs.</div></div>
+</div>
+
+<div class="q">
+<h3>P11 · Drive and input capacitance of sized gates <span class="badge b-in">In lectures</span></h3>
+<p><i>Find the normalised input capacitance and the drive $x$ of (a) INVX4, (b) NAND2X2, (c) NOR3X2, (d) NAND3X4. Then find $d$ for the NAND2X2 driving a load of 12 (in unit-inverter input caps).</i></p>
+<figure>{{F_DRIVE}}<figcaption><b>Fig. P11</b> Drive of the X1 and X2 versions (Lecture 33).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>"X2" means every transistor is twice as wide as the unit-drive version. How much input cap, and how much current?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>5.3: $x = C_{in}/g$ with $C_{in}$ in units of $3C$; $d = C_{out}/x + p$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Unit-drive input cap × size → divide by 3 → divide by $g$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>INVX4: $C_{in} = 4\times3C = 12C$ → 4; $x = 4/1 =$ <span class="ans">4</span></li>
+<li>NAND2X2: $2\times4C = 8C$ → $8/3$; $x = \frac{8/3}{4/3} =$ <span class="ans">2</span></li>
+<li>NOR3X2: $2\times7C = 14C$ → $14/3$; $x = \frac{14/3}{7/3} =$ <span class="ans">2</span></li>
+<li>NAND3X4: $4\times5C = 20C$ → $20/3$; $x = \frac{20/3}{5/3} =$ <span class="ans">4</span></li>
+<li>NAND2X2 driving 12: $d = \frac{12}{2} + 2 =$ <span class="ans">8</span> (check: $h = 12/(8/3) = 4.5$, $gh = \frac43\times4.5 = 6$ ✓)</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>The drive is always the "X" number: that is what X means ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>P12 · Path effort with branching (Lecture 34 example) <span class="badge b-in">In lectures</span></h3>
+<p><i>An inverter of input capacitance 5 drives two inverters of input capacitance 15. Each of those drives a load of 90. For the path through one branch find $f_1$, $f_2$, $F$, $G$, $H$ and $B$, and show that $F = GBH$. Find the path delay.</i></p>
+<figure>{{F_BRANCH}}<figcaption><b>Fig. P12</b> The circuit (Lecture 34).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>The first inverter feeds two branches, but we only care about one path. Does $F = GH$ still work?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>6.2–6.3: $F = \prod f_i$; $b = (C_{on}+C_{off})/C_{on}$; $F = GBH$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Stage efforts from the real loads, then compare with $G\cdot H$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$f_1 = 1\times\frac{15+15}{5} = 6$; $f_2 = 1\times\frac{90}{15} = 6$ → $F = 36$.</li>
+<li>$G = 1\times1 = 1$; $H = 90/5 = 18$ → $GH = 18 \ne F$.</li>
+<li>$b_1 = \frac{15+15}{15} = 2$, $b_2 = 1$ → $B = 2$ → $GBH = 36 = F$ ✓</li>
+<li>$D = f_1 + f_2 + p_1 + p_2 = 6 + 6 + 1 + 1 =$ <span class="ans">14 τ</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Both stages already have $f = 6 = \sqrt{36}$: this path is already optimally sized ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>P13 · Is sizing worth it? Unsized vs optimised path <span class="badge b-in">In lectures</span></h3>
+<p><i>For the Lecture 34 path (inverter 10 → NOR2 x → NAND2 y → inverter z → load 45), find the delay if all gates are left at input capacitance 10 ($x = y = z = 10$), and compare with the optimum.</i></p>
+<figure>{{F_PATH4}}<figcaption><b>Fig. P13</b> The path.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>What if we don't bother sizing? Add up the four stage delays with every input cap = 10.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>$d_i = g_ih_i + p_i$; 6.4 for the optimum ($\hat D = 13.1\tau$).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>For each stage: $h = $ next input cap ÷ own input cap.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>Stage 1: $1\times\frac{10}{10} + 1 = 2$. &nbsp; Stage 2: $\frac53\times\frac{10}{10} + 2 = 3.67$.</li>
+<li>Stage 3: $\frac43\times\frac{10}{10} + 2 = 3.33$. &nbsp; Stage 4: $1\times\frac{45}{10} + 1 = 5.5$.</li>
+<li>$D = 2 + 3.67 + 3.33 + 5.5 =$ <span class="ans">14.5 τ</span>, vs <span class="ans">13.1 τ</span> optimised (about 10% faster).</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>The unsized path makes the last stage work hardest ($f = 4.5$) while the others loaf ($f \approx 1$–$1.7$). Equalising them to $1.78$ each is what saves time ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>P14 · Size a path with branching <span class="badge b-in">In lectures</span></h3>
+<p><i>An inverter with input capacitance 10 drives a NAND2. The NAND2 drives three identical NOR2 gates; the path continues through one of them, which drives a load of 120. Find $G$, $B$, $H$, $F$, the best stage effort, the minimum delay, and the input capacitance of the NAND2 and NOR2.</i></p>
+<figure>{{F_PATH3B}}<figcaption><b>Fig. P14</b> The path; grey NOR2s are off-path but load the NAND2 equally.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>A three-stage path where the middle gate also feeds two side branches. Size it for minimum delay.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>6.2–6.4: $F = GBH$, $\hat f = F^{1/N}$, $\hat D = N\hat f + P$, $C_{in} = gC_{out}/\hat f$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Path numbers → $\hat f$ → walk backwards from the 120 load.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$G = 1\times\frac43\times\frac53 = \frac{20}{9}$; $B = 3$ (three equal branches); $H = 120/10 = 12$.</li>
+<li>$F = \frac{20}{9}\times3\times12 = 80$; $\hat f = 80^{1/3} = 4.31$; $P = 1 + 2 + 2 = 5$.</li>
+<li>$\hat D = 3\times4.31 + 5 =$ <span class="ans">17.9 τ</span></li>
+<li>NOR2: $C_{in} = \frac{\frac53\times120}{4.31} =$ <span class="ans">46.4</span>. NAND2 drives $3\times46.4$: $C_{in} = \frac{\frac43\times139.2}{4.31} =$ <span class="ans">43.1</span>.</li>
+<li>Check the inverter: $\frac{1\times43.1}{4.31} = 10$ ✓</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Forgetting $B$ gives $F = 26.7$ and gates that are too small ✓ (a classic mistake).</div></div>
+</div>
+
+<div class="q">
+<h3>P15 · How many inverters to drive a big load? <span class="badge b-opt">Optional</span></h3>
+<p><i>A unit inverter (input cap 1) must drive a load of 1000 through a chain of inverters. Find the delay for N = 2, 3, 4, 5, 6 stages and the best N.</i></p>
+<figure>{{F_STAGES}}<figcaption><b>Fig. P15</b> $D(N) = N\cdot1000^{1/N} + N$.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>More stages share the work, but each adds its own parasitic delay. Find the sweet spot.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>6.4: $F = H = 1000$, $G = B = 1$, $\hat D = NF^{1/N} + N\,p_{inv}$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Evaluate for each N.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div>N = 2: 65.2; 3: 33.0; 4: 26.5; 5: <span class="ans">24.9 τ (best)</span>; 6: 25.0. Best stage effort $1000^{1/5} = 3.98 \approx 4$.</div></div>
+<div class="step s5"><div class="lab">Check</div><div>$\log_4 1000 = 4.98 \approx 5$ ✓ (the "stage effort ≈ 4" rule).</div></div>
+</div>
+
 <!-- ===================================================== RZ -->
-<h2 id="RZ">8 · Razavi-style problems</h2>
-<p>Razavi's <i>Design of Analog CMOS Integrated Circuits</i> does not cover logic gates, Euler paths or Elmore delay. These problems use the parts of Razavi that support the lectures: on-resistance (Ch. 2), device capacitance (Ch. 2), layout folding (Ex. 2.10) and ring oscillators (§15.2). Problems marked <span class="badge b-opt">Optional</span> go beyond your lectures.</p>
+<h2 id="RZ">10 · Razavi-style problems</h2>
+<p>Razavi's <i>Design of Analog CMOS Integrated Circuits</i> does not cover logic gates, Euler paths or Elmore delay. These problems use the parts of Razavi that support the lectures: on-resistance (Ch. 2), device capacitance (Ch. 2), layout folding (Ex. 2.10), ring oscillators (§15.2) and velocity saturation (§11.2, §17.2.3). Problems marked <span class="badge b-opt">Optional</span> go beyond your lectures.</p>
 
 <div class="q">
 <h3>R1 · Where "R" comes from: R = V<sub>DS,avg</sub>/I<sub>DS,avg</sub> <span class="badge b-in">In lectures</span></h3>
@@ -761,12 +1026,26 @@ A capacitor counts if its node is connected to the output through ON transistors
 </div>
 
 
+<div class="q">
+<h3>R6 · Velocity saturation vs the square law (Razavi §11.2, §17.2.3) <span class="badge b-opt">Optional</span></h3>
+<p><i>Lecture 34 lists velocity saturation as a limitation of the delay model. A short NMOS has W = 1 µm, L = 40 nm, $C_{ox} = 3.84$ fF/µm², $\mu_nC_{ox} = 134.3$ µA/V², $v_{sat} = 10^7$ cm/s. Compare the square-law current with the fully velocity-saturated current $I_D = WC_{ox}(V_{GS}-V_{TH})v_{sat}$ for overdrives of 0.3 V and 0.6 V.</i></p>
+<figure>{{F_LIMITS}}<figcaption><b>Fig. R6</b> Panel 3 redraws Razavi Fig. 11.4: velocity saturation makes the current saturate early and grow only linearly with overdrive.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Does doubling the overdrive really give four times the current in a tiny transistor?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Square law $I = \frac12\mu C_{ox}\frac WL V_{ov}^2$; velocity saturation $I = WC_{ox}V_{ov}v_{sat}$ (Razavi Eq. 11.1 / 17.25).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Use SI units: $C_{ox} = 3.84\times10^{-3}$ F/m², $v_{sat} = 10^5$ m/s, $W = 10^{-6}$ m.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$V_{ov} = 0.3$ V: square law $\frac12\times134.3\,\mu\times25\times0.09 = 151$ µA; saturated $10^{-6}\times3.84\times10^{-3}\times0.3\times10^5 =$ <span class="ans">115 µA</span>.</li>
+<li>$V_{ov} = 0.6$ V: square law $604$ µA (×4); saturated <span class="ans">230 µA</span> (×2 only).</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>The real current is smaller and grows more slowly, so real gates are slower than $d = gh + p$ predicts at high $V_{DD}$, exactly the lecture's point ✓.</div></div>
+</div>
+
 <!-- ===================================================== OT -->
-<h2 id="OT">9 · Tutorials 8 and 9</h2>
+<h2 id="OT">11 · Tutorials 8 and 9</h2>
 <p>You attached Tutorials 8 and 9 again. They are the same files as before and are fully solved, with figures, in the Lectures 25–26 guide (<code>lecture25/Lecture25_Guide.pdf</code>): Tutorial 8 in its "Tutorial 8" section, Tutorial 9 in its "Tutorial 9" section. Tutorial 8 (inverter $V_{th}$ and noise margins) is the base for section 1.6 here: the NAND/NOR $V_{th}$ formula is the same formula with $\sqrt{1/k_R}$ scaled.</p>
 
 <!-- ===================================================== E -->
-<h2 id="E">10 · Open-book sheet and traps</h2>
+<h2 id="E">12 · Open-book sheet and traps</h2>
 <table>
 <tr><th>Topic</th><th>Formula / rule</th></tr>
 <tr><td>build a gate</td><td>NMOS: AND → series, OR → parallel; PMOS: dual</td></tr>
@@ -786,6 +1065,14 @@ A capacitor counts if its node is connected to the output through ON transistors
 <tr><td>NAND3 (no load)</td><td>$t_{pdf} = 12RC$, $t_{cdf} = 9RC$</td></tr>
 <tr><td>NOR-n parasitic (worst)</td><td>$(n^2+2n)RC$</td></tr>
 <tr><td>ring of N (unit inv)</td><td>$f = 1/(2Nt_{pd}) = 1/(4N\tau)$</td></tr>
+<tr><td>NAND3 driving h (Elmore)</td><td>$d$: pdf $4+\frac53h$, cdf $3+\frac53h$, pdr $5+\frac53h$, cdr $1+\frac59h$</td></tr>
+<tr><td>NOR3 driving h (Elmore)</td><td>$d$: pdf $7+\frac73h$, cdf $1+\frac79h$, pdr $5+\frac73h$</td></tr>
+<tr><td>linear delay model</td><td>$d = f + p$, $f = gh$</td></tr>
+<tr><td>g table</td><td>tristate/mux 2; XOR2 4 per input; XOR3 6, 12, 6</td></tr>
+<tr><td>drive</td><td>$x = C_{in}/g$; $d = C_{out}/x + p$</td></tr>
+<tr><td>path</td><td>$G = \prod g$, $H = C_{load}/C_{in}$, $b = \frac{C_{on}+C_{off}}{C_{on}}$, $B = \prod b$, $F = GBH$</td></tr>
+<tr><td>minimum delay</td><td>$\hat f = F^{1/N}$, $\hat D = NF^{1/N} + P$; size backwards $C_{in} = gC_{out}/\hat f$</td></tr>
+<tr><td>best N (optional)</td><td>$\hat N \approx \log_4 F$ (stage effort ≈ 4)</td></tr>
 </table>
 <div class="box red"><span class="tag">Top traps</span>
 <ol class="calc">
@@ -797,6 +1084,10 @@ A capacitor counts if its node is connected to the output through ON transistors
 <li>Worst case: input <b>nearest the rail</b> switches last. Contamination: input <b>nearest the output</b> switches last.</li>
 <li>Count the inverter's <b>own</b> diffusion (the "1" in $1+m$).</li>
 <li>Ring oscillator: $T = 2N t_{pd}$, and each stage has $h = 1$ (so $d = 2$).</li>
+<li>$h$ uses the load <b>without</b> the gate's own diffusion; that is in $p$.</li>
+<li>Path effort: forgetting the branching effort $B$ ($F = GBH$, not $GH$).</li>
+<li>Sizing: walk <b>backwards</b> from the load, and with branches use the total cap of all branches.</li>
+<li>Elmore $p$ (4 or 5 for NAND3) ≠ table $p$ (3). Use the one the question's method asks for.</li>
 </ol></div>
 <p class="small">All numbers were checked by computer (VTCs by sweeping the square-law model; the Tutorial 10 Q4 optimum numerically).</p>
 

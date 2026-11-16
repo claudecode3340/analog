@@ -1,0 +1,13 @@
+<div class="q">
+<h3>R6 · Velocity saturation vs the square law (Razavi §11.2, §17.2.3) <span class="badge b-opt">Optional</span></h3>
+<p><i>Lecture 34 lists velocity saturation as a limitation of the delay model. A short NMOS has W = 1 µm, L = 40 nm, $C_{ox} = 3.84$ fF/µm², $\mu_nC_{ox} = 134.3$ µA/V², $v_{sat} = 10^7$ cm/s. Compare the square-law current with the fully velocity-saturated current $I_D = WC_{ox}(V_{GS}-V_{TH})v_{sat}$ for overdrives of 0.3 V and 0.6 V.</i></p>
+<figure>{{F_LIMITS}}<figcaption><b>Fig. R6</b> Panel 3 redraws Razavi Fig. 11.4: velocity saturation makes the current saturate early and grow only linearly with overdrive.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Does doubling the overdrive really give four times the current in a tiny transistor?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Square law $I = \frac12\mu C_{ox}\frac WL V_{ov}^2$; velocity saturation $I = WC_{ox}V_{ov}v_{sat}$ (Razavi Eq. 11.1 / 17.25).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Use SI units: $C_{ox} = 3.84\times10^{-3}$ F/m², $v_{sat} = 10^5$ m/s, $W = 10^{-6}$ m.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$V_{ov} = 0.3$ V: square law $\frac12\times134.3\,\mu\times25\times0.09 = 151$ µA; saturated $10^{-6}\times3.84\times10^{-3}\times0.3\times10^5 =$ <span class="ans">115 µA</span>.</li>
+<li>$V_{ov} = 0.6$ V: square law $604$ µA (×4); saturated <span class="ans">230 µA</span> (×2 only).</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>The real current is smaller and grows more slowly, so real gates are slower than $d = gh + p$ predicts at high $V_{DD}$, exactly the lecture's point ✓.</div></div>
+</div>
