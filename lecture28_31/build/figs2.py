@@ -8,7 +8,7 @@ from math import exp, log, sqrt
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "lecture25", "build"))
 import figs as F  # noqa: E402
-from figs import (svg, line, poly, text, dot, arrow, defs, nmos, pmos, gnd, vdd, cap, inverter, Plot, sub,
+from figs import (svg, line, poly, text, dot, arrow, defs, nmos, pmos, gnd, vdd, cap, inverter, Plot, sub, i_d, bis,
                   vtc, BLUE, ORANGE, GREEN, PURPLE, RED, AMBER, INK, MUTE, ALLC)  # noqa: E402
 
 GREY = "#c3c8d2"
@@ -1099,6 +1099,413 @@ def fig_xor():
     return svg(690, 226, s)
 
 
+
+
+# ---------- Lectures 35-37 figures ----------
+def fig_l35path():
+    s = defs(*ALLC)
+    g1, o1 = gate_shape("nand", 70, 150, "8", BLUE)
+    s += line(20, 150, 70, 150) + line(40, 162, 70, 162, MUTE, 1.2) + text(16, 146, "A", INK, 13, "end", 700) + g1
+    s += line(o1, 150, 170, 150) + dot(170, 150)
+    for k, yy in enumerate((50, 100, 150)):
+        on = k == 2
+        c = ORANGE if on else MUTE
+        g2, o2 = gate_shape("nand", 210, yy, "x", c)
+        s += line(170, 150, 170, yy) + line(170, yy, 210, yy) + line(190, yy - 10, 210, yy - 10, MUTE, 1.2) + line(190, yy + 10, 210, yy + 10, MUTE, 1.2) + g2
+        if not on:
+            s += line(o2, yy, o2 + 25, yy, MUTE)
+        else:
+            s += line(o2, yy, 360, yy) + dot(360, yy)
+    for k, yy in enumerate((90, 150)):
+        on = k == 1
+        c = GREEN if on else MUTE
+        g3, o3 = gate_shape("nor", 400, yy, "y", c)
+        s += line(360, 150, 360, yy) + line(360, yy, 402, yy) + line(385, yy + 10, 402, yy + 10, MUTE, 1.2) + g3
+        if on:
+            s += line(o3, yy, 560, yy) + dot(540, yy) + line(540, yy, 540, yy + 10) + cap(540, yy + 10, INK) + gnd(540, yy + 50) + text(558, yy + 36, "45", INK, 13, "start", 700)
+            s += text(565, yy + 4, "B", INK, 13, "start", 700)
+        else:
+            s += line(o3, yy, o3 + 25, yy, MUTE)
+    s += text(95, 205, "NAND2: g = 4/3, p = 2", BLUE, 12, "middle", 700)
+    s += text(240, 205, "NAND3: g = 5/3, p = 3", ORANGE, 12, "middle", 700)
+    s += text(430, 205, "NOR2: g = 5/3, p = 2", GREEN, 12, "middle", 700)
+    s += text(170, 228, "b₁ = (x + 2x)/x = 3", PURPLE, 12.5, "middle", 700)
+    s += text(380, 228, "b₂ = (y + y)/y = 2", PURPLE, 12.5, "middle", 700)
+    s += text(320, 252, "Grey gates are off-path: they load the node but are not on the A → B path.", MUTE, 12, "middle")
+    return svg(640, 262, s)
+
+
+def sized_gate(kind, k, ox, title):
+    s = text(ox + 60, -8, title, INK, 12.5, "middle", 700)
+    if kind == "nor2":
+        s += pfet(ox + 40, 70, "B", ORANGE, f"4×{k} = {4*k}") + pfet(ox + 40, 140, "A", ORANGE, f"4×{k} = {4*k}") + vdd(ox + 58, 35)
+        s += line(ox + 58, 175, ox + 58, 195) + line(ox + 18, 195, ox + 150, 195)
+        s += nfet(ox, 230, "A", BLUE) + nfet(ox + 132, 230, "B", BLUE)
+        s += text(ox + 24, 262, f"1×{k}={k}", BLUE, 11, "start", 700) + text(ox + 156, 262, f"{k}", BLUE, 11, "start", 700)
+        s += line(ox + 18, 265, ox + 150, 265) + gnd(ox + 84, 265)
+    elif kind == "nand3":
+        xs = [ox - 30, ox + 50, ox + 130]
+        s += line(xs[0] + 18, 35, xs[2] + 18, 35) + vdd(ox + 68, 35)
+        for i, nm in enumerate("ABC"):
+            s += pfet(xs[i], 70, nm, ORANGE)
+        s += text(ox + 76, 125, f"PMOS 2×{k} = {2*k}", ORANGE, 11.5, "start", 700)
+        s += line(xs[0] + 18, 105, xs[2] + 18, 105) + line(ox + 68, 105, ox + 68, 140)
+        for i, nm in enumerate("CBA"):
+            s += nmos(ox + 50, 175 + i * 50 - 15, BLUE) if False else ""
+        s += nfet(ox + 50, 160, "C", BLUE) + nfet(ox + 50, 210, "B", BLUE) + nfet(ox + 50, 260, "A", BLUE)
+        s += text(ox + 110, 215, f"NMOS 3×{k} = {3*k}", BLUE, 11.5, "start", 700) + gnd(ox + 68, 295)
+    else:
+        s += line(ox + 8, 35, ox + 128, 35) + vdd(ox + 68, 35)
+        s += pfet(ox - 10, 70, "A", ORANGE) + pfet(ox + 110, 70, "B", ORANGE)
+        s += text(ox + 76, 125, f"PMOS 2×{k} = {2*k}", ORANGE, 11.5, "start", 700)
+        s += line(ox + 8, 105, ox + 128, 105) + line(ox + 68, 105, ox + 68, 140)
+        s += nfet(ox + 50, 175, "B", BLUE) + nfet(ox + 50, 245, "A", BLUE) + gnd(ox + 68, 280)
+        s += text(ox + 110, 215, f"NMOS 2×{k} = {2*k}", BLUE, 11.5, "start", 700)
+    return s
+
+
+def fig_l35size():
+    s = defs(*ALLC)
+    s += '<g transform="translate(0,34)">'
+    s += sized_gate("nand2", 2, 60, "NAND2: C_in = 8 → 4k = 8 → k = 2".replace("C_in", sub("C_in")))
+    s += sized_gate("nand3", 2, 310, "NAND3: C_in = 10 → 5k = 10 → k = 2".replace("C_in", sub("C_in")))
+    s += sized_gate("nor2", 3, 570, "NOR2: C_in = 15 → 5k = 15 → k = 3".replace("C_in", sub("C_in"))) + "</g>"
+    s += text(400, 330, "Unit-drive gate has input cap 4 (NAND2), 5 (NAND3), 5 (NOR2). Scale every width by k = C_in ÷ that number.".replace("C_in", sub("C_in")), INK, 12.5, "middle")
+    return svg(820, 380, s).replace('y="330"', 'y="372"')
+
+
+def fig_chains():
+    s = defs(*ALLC)
+    cols = [("A: N = 1", [1], 65.0), ("B: N = 2", [1, 8], 18.0), ("C: N = 3", [1, 4, 16], 15.0), ("D: N = 4", [1, 2.83, 8, 22.6], 15.3)]
+    for i, (t, sizes, D) in enumerate(cols):
+        x = 80 + i * 160
+        s += text(x, 22, t, INK, 13, "middle", 700)
+        y = 50
+        for sz in sizes:
+            g, o = gate_shape("inv", x - 20, y + 15, f"{sz:g}")
+            s += f'<g transform="rotate(90 {x} {y+15})">{g}</g>'
+            y += 60
+        s += line(x, y - 10, x, 310) + cap(x, 300, INK) + gnd(x, 340) + text(x + 18, 326, "64", INK, 12.5, "start", 700)
+        s += text(x, 375, f"D = {D:g} τ", BLUE if D != 15.0 else RED, 13, "middle", 700)
+    s += text(320, 400, "Path effort F = 64 in every case. Best: 3 stages, each with effort 64^(1/3) = 4.", PURPLE, 12.5, "middle", 700)
+    return svg(660, 410, s)
+
+
+def fig_rho():
+    p = Plot(600, 300, (0, 3.2), (2.4, 5.0), (60, 20, 20, 44))
+    import math
+    def rho(pv):
+        lo, hi = 1.0001, 20
+        for _ in range(100):
+            m = (lo + hi) / 2
+            if m * (1 - math.log(m)) + pv > 0:
+                lo = m
+            else:
+                hi = m
+        return lo
+    p.band(0, 3.2, GREEN, 0.0)
+    p.add(f'<rect x="{p.X(0)}" y="{p.Y(4.0)}" width="{p.X(3.2)-p.X(0)}" height="{p.Y(3.0)-p.Y(4.0)}" fill="{GREEN}" opacity="0.08"/>')
+    p.curve([(v / 100, rho(v / 100)) for v in range(0, 321)], BLUE, 2.8)
+    for pv, lab in ((0, "e = 2.72"), (1, "3.59"), (2, "4.32")):
+        r = rho(pv)
+        p.add(dot(p.X(pv), p.Y(r), ORANGE, 5) + text(p.X(pv) + 10, p.Y(r) + 18, f"ρ = {lab}", ORANGE, 12.5, "start", 700))
+    p.add(text(p.X(2.2), p.Y(3.1), "use ρ = 4 by hand", GREEN, 12.5, "start", 700))
+    p.axes("parasitic delay of an inverter p_inv".replace("p_inv", sub("p_inv")), "best stage effort ρ", [(0, "0"), (1, "1"), (2, "2"), (3, "3")], [(2.5, "2.5"), (3, "3"), (4, "4"), (5, "5")])
+    return p.render()
+
+
+def fig_bubble():
+    s = defs(*ALLC)
+    rows = [("1 · AND–OR (what you write)", [("and", "A B"), ("and", "C D")], "or", None),
+            ("2 · NAND–NAND (push the bubbles)", [("nand", "A B"), ("nand", "C D")], "nand", None),
+            ("3 · AOI22 + inverter (one complex gate)", None, None, None)]
+    def andg(x, y, c=INK):
+        return f'<path d="M{x},{y-15} L{x+18},{y-15} A15,15 0 0 1 {x+18},{y+15} L{x},{y+15} Z" fill="none" stroke="{c}" stroke-width="2"/>'
+    def org(x, y, c=INK):
+        return f'<path d="M{x},{y-16} Q{x+20},{y-16} {x+36},{y} Q{x+20},{y+16} {x},{y+16} Q{x+10},{y} {x},{y-16} Z" fill="none" stroke="{c}" stroke-width="2"/>'
+    def bub(x, y, c=INK):
+        return f'<circle cx="{x}" cy="{y}" r="4.5" fill="white" stroke="{c}" stroke-width="2"/>'
+    # row 1
+    s += text(20, 24, rows[0][0], INK, 13, "start", 700)
+    s += andg(60, 55) + andg(60, 105) + line(93, 55, 120, 55) + line(93, 105, 120, 105) + line(120, 55, 120, 70) + line(120, 105, 120, 90)
+    s += line(120, 70, 135, 70) + line(120, 90, 135, 90) + org(133, 80) + line(169, 80, 200, 80) + text(206, 85, "F = AB + CD", INK, 13, "start", 700)
+    for yy, lab in ((48, "A"), (62, "B"), (98, "C"), (112, "D")):
+        s += line(40, yy, 60, yy) + text(36, yy + 4, lab, INK, 11, "end")
+    # row 2
+    oy = 150
+    s += text(20, oy - 6, rows[1][0], INK, 13, "start", 700)
+    s += andg(60, oy + 25) + bub(97, oy + 25) + andg(60, oy + 75) + bub(97, oy + 75)
+    s += line(102, oy + 25, 120, oy + 25) + line(102, oy + 75, 120, oy + 75) + line(120, oy + 25, 120, oy + 40) + line(120, oy + 75, 120, oy + 60)
+    s += line(120, oy + 40, 140, oy + 40) + line(120, oy + 60, 140, oy + 60) + andg(140, oy + 50) + bub(177, oy + 50) + line(182, oy + 50, 200, oy + 50)
+    s += text(206, oy + 55, "(AB)'·(CD)' then NOT = AB + CD ✓", INK, 12.5, "start", 700)
+    for yy, lab in ((oy + 18, "A"), (oy + 32, "B"), (oy + 68, "C"), (oy + 82, "D")):
+        s += line(40, yy, 60, yy) + text(36, yy + 4, lab, INK, 11, "end")
+    # row 3
+    oy = 290
+    s += text(20, oy - 6, rows[2][0], INK, 13, "start", 700)
+    s += f'<rect x="60" y="{oy+5}" width="120" height="70" rx="12" fill="{PURPLE}" opacity="0.10" stroke="{PURPLE}"/>' + text(120, oy + 45, "AOI22", PURPLE, 13, "middle", 700)
+    s += bub(185, oy + 40)
+    g, o = gate_shape("inv", 200, oy + 40)
+    s += line(190, oy + 40, 200, oy + 40) + g + line(o, oy + 40, o + 20, oy + 40) + text(o + 26, oy + 45, "F", INK, 13, "start", 700)
+    for yy, lab in ((oy + 17, "A"), (oy + 32, "B"), (oy + 48, "C"), (oy + 63, "D")):
+        s += line(40, yy, 60, yy) + text(36, yy + 4, lab, INK, 11, "end")
+    s += text(470, 60, "De Morgan as 'bubble pushing':", INK, 12.5, "middle", 700)
+    s += text(470, 82, "a NAND = an OR with bubbles on its inputs", INK, 12, "middle")
+    s += text(470, 102, "a NOR = an AND with bubbles on its inputs", INK, 12, "middle")
+    s += text(470, 124, "two bubbles on one wire cancel", INK, 12, "middle")
+    s += text(470, 330, "AOI = And-Or-Invert: Y = (AB + CD)'", PURPLE, 12.5, "middle", 700)
+    return svg(660, 372, s)
+
+
+def fig_aoi22():
+    s = defs(*ALLC)
+    # PUN: (A||B) series (C||D), widths 4 ; PDN: (A-B) || (C-D) widths 2
+    s += line(110, 35, 290, 35) + vdd(200, 35)
+    s += pfet(110, 70, "A", ORANGE, 4) + pfet(255, 70, "B", ORANGE, 4)
+    s += line(128, 105, 273, 105) + dot(200, 105) + line(200, 105, 200, 120) + line(128, 120, 273, 120)
+    s += pfet(110, 155, "C", ORANGE, 4) + pfet(255, 155, "D", ORANGE, 4)
+    s += line(128, 190, 273, 190) + dot(200, 190) + line(200, 190, 200, 205) + line(110, 205, 330, 205) + dot(330, 205)
+    s += nfet(92, 240, "A", BLUE, 2) + nfet(92, 310, "B", BLUE, 2) + gnd(110, 345)
+    s += nfet(294, 240, "C", BLUE, 2) + nfet(294, 310, "D", BLUE, 2) + gnd(312, 345)
+    g, o = gate_shape("inv", 370, 205)
+    s += line(330, 205, 370, 205) + g + line(o, 205, o + 30, 205) + text(o + 36, 210, "Y", INK, 14, "start", 700)
+    s += text(560, 50, "AOI22: (AB + CD)'", INK, 13.5, "middle", 700)
+    s += text(560, 78, "NMOS: two in series → width 2", BLUE, 12.5, "middle")
+    s += text(560, 98, "PMOS: two in series → width 4", ORANGE, 12.5, "middle")
+    s += text(560, 128, "input cap per input = 2 + 4 = 6 → g = 6/3 = 2", PURPLE, 12.5, "middle", 700)
+    s += text(560, 150, "output: 4 + 4 + 2 + 2 = 12 → p = 12/3 = 4", GREEN, 12.5, "middle", 700)
+    s += text(560, 172, "then inverter: g = 1, p = 1", INK, 12.5, "middle")
+    return svg(700, 370, s)
+
+
+def fig_cpx36():
+    s = defs(*ALLC)
+    # PUN: [A(3) || (B6 - C6)] series [D6 || E6]
+    s += line(110, 35, 330, 35) + vdd(220, 35)
+    s += pfet(110, 110, "A", ORANGE, 3)
+    s += line(128, 75, 128, 35)
+    s += pfet(270, 70, "B", ORANGE, 6) + pfet(270, 140, "C", ORANGE, 6) + line(288, 35, 288, 35)
+    s += line(128, 145, 128, 175) + line(288, 175, 288, 175) + line(128, 175, 288, 175) + dot(208, 175) + line(208, 175, 208, 190)
+    s += line(128, 190, 288, 190)
+    s += pfet(110, 225, "D", ORANGE, 6) + pfet(270, 225, "E", ORANGE, 6)
+    s += line(128, 260, 288, 260) + dot(208, 260) + line(208, 260, 208, 280) + line(110, 280, 330, 280) + line(330, 280, 420, 280) + dot(420, 280) + text(428, 285, "Y", INK, 15, "start", 700)
+    # PDN: (E2 series D2) || (A2 series (B2 || C2))
+    s += nfet(92, 315, "E", BLUE, 2) + nfet(92, 385, "D", BLUE, 2) + gnd(110, 420)
+    s += nfet(294, 315, "A", BLUE, 2) + line(312, 350, 312, 360) + line(270, 360, 350, 360)
+    s += nfet(252, 395, "B", BLUE, 2) + nfet(332, 395, "C", BLUE, 2) + line(270, 430, 350, 430) + gnd(310, 430)
+    s += text(560, 50, "Y = [A(B + C) + DE]'", INK, 13.5, "middle", 700)
+    s += text(560, 80, "Pull-up paths (each must total R):", ORANGE, 12, "middle", 700)
+    s += text(560, 100, "B–C–D: R/3 + R/3 + R/3 = R ✓", ORANGE, 12, "middle")
+    s += text(560, 118, "A–D: 2R/3 + R/3 = R ✓", ORANGE, 12, "middle")
+    s += text(560, 146, "Pull-down: every path has 2 → width 2", BLUE, 12, "middle", 700)
+    s += text(560, 176, "g_A = (2+3)/3 = 5/3".replace("g_A", sub("g_A")), PURPLE, 12.5, "middle", 700)
+    s += text(560, 196, "g_B = g_C = g_D = g_E = (2+6)/3 = 8/3".replace("g_B", sub("g_B")).replace("g_C", sub("g_C")).replace("g_D", sub("g_D")).replace("g_E", sub("g_E")), PURPLE, 12.5, "middle", 700)
+    s += text(560, 220, "output: 6 + 6 + 2 + 2 = 16 → p = 16/3", GREEN, 12.5, "middle", 700)
+    return svg(700, 445, s)
+
+
+def fig_asym():
+    s = defs(*ALLC)
+    s += line(108, 35, 278, 35) + vdd(193, 35)
+    s += pfet(90, 70, "RESET'", ORANGE, 1) + pfet(240, 70, "A", ORANGE, 2)
+    s += line(108, 105, 258, 105) + dot(193, 105) + line(193, 105, 193, 140) + line(258, 105, 330, 105) + dot(330, 105)
+    g, o = gate_shape("inv", 350, 105)
+    s += line(330, 105, 350, 105) + g + line(o, 105, o + 30, 105) + text(o + 36, 110, "Y", INK, 14, "start", 700)
+    s += nfet(175, 175, "A", BLUE, "4/3") + nfet(175, 245, "RESET'", BLUE, 4) + gnd(193, 280)
+    s += text(610, 50, "Asymmetric NAND2 (A with RESET')", INK, 13, "middle", 700)
+    s += text(610, 78, "RESET' rarely switches → give it a wide NMOS", INK, 12, "middle")
+    s += text(610, 98, "so the busy input A can be small (fast to drive)", INK, 12, "middle")
+    s += text(610, 125, "series check: 3R/4 + R/4 = R ✓", BLUE, 12.5, "middle", 700)
+    s += text(610, 152, "g_A = (4/3 + 2)/3 = 10/9 (vs 4/3 normal)".replace("g_A", sub("g_A")), PURPLE, 12.5, "middle", 700)
+    s += text(610, 172, "g_RESET = (4 + 1)/3 = 5/3".replace("g_RESET", sub("g_{RESET}")), PURPLE, 12.5, "middle", 700)
+    s += text(610, 196, "p = (1 + 2 + 4/3)/3 = 13/9", GREEN, 12.5, "middle", 700)
+    return svg(760, 300, s)
+
+
+def fig_inpos():
+    s = defs(*ALLC)
+    x = 150
+    s += line(x - 22, 35, x + 128, 35) + vdd(x + 53, 35)
+    s += pfet(x - 40, 70, "A", ORANGE) + pfet(x + 110, 70, "B", ORANGE)
+    s += line(x - 22, 105, x + 128, 105) + dot(x + 53, 105) + line(x + 53, 105, x + 53, 140) + line(x + 128, 105, x + 180, 105) + text(x + 186, 110, "Y", INK, 14, "start", 700)
+    s += nfet(x + 35, 175, "B", GREEN) + nfet(x + 35, 245, "A", RED) + gnd(x + 53, 280)
+    s += text(x + 85, 180, "outer input (near Y)", GREEN, 12, "start", 700) + text(x + 85, 250, "inner input (near GND)", RED, 12, "start", 700)
+    s += dot(x + 53, 210) + line(x + 53, 210, x + 75, 210, MUTE, 1.2) + text(x + 80, 215, "n1", MUTE, 11)
+    s += text(530, 60, "Which input should arrive last?", INK, 13, "middle", 700)
+    s += text(520, 88, "If A (inner) is early, n1 is already at 0 V", INK, 12, "middle")
+    s += text(520, 106, "when B (outer) arrives: only Y must discharge", INK, 12, "middle")
+    s += text(520, 130, "→ put the LATEST (critical) input on the OUTER", GREEN, 12.5, "middle", 700)
+    s += text(520, 148, "transistor, nearest the output", GREEN, 12.5, "middle", 700)
+    s += text(520, 180, "NAND3 numbers (4.5): late outer → 9RC,", PURPLE, 12, "middle")
+    s += text(520, 198, "late inner → 12RC", PURPLE, 12, "middle")
+    return svg(680, 300, s)
+
+
+def fig_skew():
+    s = defs(*ALLC)
+    items = [("unskewed", "2", "1", "g = 1 (both edges)", ""), ("HI-skew", "2", "½", "g_u = 5/6, g_d = 5/3", "rising edge favoured"), ("LO-skew", "1", "1", "g_u = 4/3, g_d = 2/3", "falling edge favoured")]
+    for i, (t, wp, wn, g, note) in enumerate(items):
+        ox = 80 + i * 210
+        s += text(ox + 10, 22, t, [INK, ORANGE, BLUE][i], 13.5, "middle", 700)
+        s += inverter(ox, 130, ORANGE, BLUE) + text(ox + 26, 85, wp, ORANGE, 13, "start", 700) + text(ox + 26, 185, wn, BLUE, 13, "start", 700)
+        s += text(ox + 10, 250, g.replace("g_u", sub("g_u")).replace("g_d", sub("g_d")), PURPLE, 12.5, "middle", 700)
+        s += text(ox + 10, 270, note, MUTE, 11.5, "middle")
+    s += text(320, 300, "Compare each edge with an unskewed inverter giving the SAME current on that edge.", INK, 12.5, "middle")
+    return svg(660, 310, s)
+
+
+def fig_skewgates():
+    rows = [("HI-skew NAND2", "2, 2 (parallel)", "1, 1 (series)", "1", "2", "5/3, 10/3"),
+            ("LO-skew NAND2", "1, 1 (parallel)", "2, 2 (series)", "2", "1", "—"),
+            ("HI-skew NOR2", "4, 4 (series)", "½, ½ (parallel)", "3/2", "3", "5/3, 10/3"),
+            ("HI-skew inverter", "2", "½", "5/6", "5/3", "5/6, 5/3"),
+            ("LO-skew inverter", "1", "1", "4/3", "2/3", "—")]
+    s = defs(*ALLC)
+    hdr = ["gate", "PMOS widths", "NMOS widths", "g_u", "g_d", "p_u, p_d"]
+    xs = [16, 170, 310, 450, 510, 570]
+    for j, h in enumerate(hdr):
+        s += text(xs[j], 24, sub(h), MUTE, 12, "start", 700)
+    for i, r in enumerate(rows):
+        y = 54 + i * 30
+        s += line(10, y - 20, 670, y - 20, "#e3e7ee", 1)
+        for j, v in enumerate(r):
+            s += text(xs[j], y, v, [INK, ORANGE, BLUE, PURPLE, PURPLE, GREEN][j], 12.5, "start", 700 if j in (0, 3, 4) else 500)
+    s += text(340, 210, "Reference for g_u: unskewed gate with the same PMOS current; for g_d: the same NMOS current.".replace("g_u", sub("g_u")).replace("g_d", sub("g_d")), MUTE, 11.5, "middle")
+    return svg(680, 220, s)
+
+
+def fig_ratioed():
+    s = defs(*ALLC)
+    titles = ["resistor load", "NMOS load (gate at V_GG)", "PMOS load (gate grounded)"]
+    for i, t in enumerate(titles):
+        ox = 100 + i * 210
+        s += text(ox + 18, 22, t.replace("V_GG", sub("V_GG")), INK, 13, "middle", 700)
+        s += vdd(ox + 18, 50)
+        if i == 0:
+            s += res(ox + 18, 50, ORANGE, "R", 55)
+        elif i == 1:
+            s += nmos(ox, 85, ORANGE) + line(ox - 30, 85, ox - 50, 85, ORANGE) + text(ox - 54, 89, sub("V_GG"), ORANGE, 12, "end", 700)
+            s += line(ox + 18, 50, ox + 18, 50)
+        else:
+            s += pmos(ox, 85, ORANGE) + line(ox - 30, 85, ox - 46, 85, ORANGE) + gnd(ox - 46, 85, ORANGE)
+        s += line(ox + 18, 105 if i == 0 else 120, ox + 18, 140) + dot(ox + 18, 140) + line(ox + 18, 140, ox + 70, 140) + text(ox + 76, 145, sub("V_out"), INK, 12, "start", 700)
+        s += nmos(ox, 175, BLUE) + line(ox - 30, 175, ox - 54, 175) + text(ox - 58, 179, sub("V_in"), INK, 12, "end", 700) + gnd(ox + 18, 210)
+    s += text(320, 262, "Ratioed: the load is always on, so the output low level is set by the RATIO of the two strengths (V_OL > 0).".replace("V_OL", sub("V_OL")), INK, 12.5, "middle")
+    return svg(660, 274, s)
+
+
+def fig_pseudovtc():
+    VDD = 3.3
+    cm = vtc(VDD, 0.6, -0.7, 100, 100)
+    def ps(kn, kp):
+        pts = []
+        for i in range(401):
+            vi = VDD * i / 400
+            f = lambda vo: i_d(kp, VDD - 0.7, VDD - vo) - i_d(kn, vi - 0.6, vo)
+            vo = VDD if vi <= 0.6 else bis(f, 0, VDD)
+            pts.append((vi, vo))
+        return pts
+    p = Plot(600, 320, (0, 3.3), (0, 3.5), (60, 20, 20, 44))
+    p.curve(cm, INK, 2.2, "6 4")
+    p.curve(ps(400, 100), BLUE, 2.8)
+    p.curve(ps(200, 100), ORANGE, 2.6)
+    vol4 = ps(400, 100)[-1][1]; vol2 = ps(200, 100)[-1][1]
+    p.add(text(p.X(3.25), p.Y(vol4) + 18, f"V_OL = {vol4:.2f} V".replace("V_OL", sub("V_OL")), BLUE, 12.5, "end", 700))
+    p.add(text(p.X(3.25), p.Y(vol2) - 20, f"V_OL = {vol2:.2f} V".replace("V_OL", sub("V_OL")), ORANGE, 12.5, "end", 700))
+    p.add(text(p.X(1.9), p.Y(3.1), "dashed: CMOS (V_OL = 0)".replace("V_OL", sub("V_OL")), INK, 12, "start"))
+    p.add(text(p.X(1.9), p.Y(2.85), "blue: pseudo-NMOS, k_n/k_p = 4".replace("k_n", sub("k_n")).replace("k_p", sub("k_p")), BLUE, 12, "start", 700))
+    p.add(text(p.X(1.9), p.Y(2.6), "orange: pseudo-NMOS, k_n/k_p = 2".replace("k_n", sub("k_n")).replace("k_p", sub("k_p")), ORANGE, 12, "start", 700))
+    p.axes(sub("V_in") + " (V)", sub("V_out") + " (V)", [(0, "0"), (1, "1"), (2, "2"), (3.3, "3.3")], [(0, "0"), (1, "1"), (2, "2"), (3.3, "3.3")])
+    return p.render()
+
+
+def fig_pseudosize():
+    s = defs(*ALLC)
+    x = 130
+    s += pmos(x, 70, ORANGE) + vdd(x + 18, 35) + line(x - 30, 70, x - 46, 70, ORANGE) + gnd(x - 46, 70, ORANGE)
+    s += text(x + 26, 75, "width x/2 → 2R/(x/2)", ORANGE, 12.5, "start", 700)
+    s += line(x + 18, 105, x + 18, 140) + dot(x + 18, 140) + line(x + 18, 140, x + 110, 140) + text(x + 116, 145, sub("V_DD") + "/2", INK, 12.5, "start", 700)
+    s += nmos(x, 175, BLUE) + line(x - 30, 175, x - 54, 175) + text(x - 58, 179, "1", INK, 12, "end", 700) + gnd(x + 18, 210)
+    s += text(x + 26, 180, "width x → R/x", BLUE, 12.5, "start", 700)
+    s += arrow(x + 70, 95, x + 70, 125, ORANGE, 1.6) + text(x + 76, 115, sub("I_P"), ORANGE, 12, "start", 700)
+    s += arrow(x + 50, 150, x + 50, 200, BLUE, 1.6) + text(x + 56, 200, sub("I_N"), BLUE, 12, "start", 700)
+    s += text(500, 50, "Goal: same net pull-down current", INK, 12.5, "middle", 700)
+    s += text(500, 70, "as a unit inverter's NMOS at V_out = V_DD/2".replace("V_out", sub("V_out")).replace("V_DD", sub("V_DD")), INK, 12.5, "middle", 700)
+    s += text(500, 110, "(V/2)/(R/x) − (V/2)/(2R/(x/2)) = (V/2)/R", PURPLE, 13, "middle", 700)
+    s += text(500, 134, "x − x/4 = 1  →  x = 4/3", PURPLE, 13, "middle", 700)
+    s += text(500, 164, "NMOS 4/3, PMOS 2/3", GREEN, 13, "middle", 700)
+    s += text(500, 186, "(PMOS kept 4× weaker so V_OL stays low)".replace("V_OL", sub("V_OL")), MUTE, 12, "middle")
+    return svg(660, 230, s)
+
+
+def fig_rload():
+    VDD, k, RD, VT = 3.0, 1343e-6, 2000, 0.7
+    pts = []
+    for i in range(301):
+        vi = VDD * i / 300
+        f = lambda vo: (VDD - vo) / RD - i_d(k, vi - VT, vo)
+        pts.append((vi, VDD if vi <= VT else bis(f, 0, VDD)))
+    p = Plot(560, 280, (0, 3), (0, 3.2), (60, 20, 20, 44))
+    p.curve(pts, BLUE, 2.8)
+    p.add(dot(p.X(3), p.Y(pts[-1][1]), RED, 5) + text(p.X(2.95), p.Y(pts[-1][1]) - 28, f"V_OL = {pts[-1][1]:.2f} V".replace("V_OL", sub("V_OL")), RED, 12.5, "end", 700))
+    p.add(text(p.X(1.2), p.Y(2.8), "Razavi Fig. 3.4(b) shape: resistor-load inverter", INK, 12, "start"))
+    p.axes(sub("V_in") + " (V)", sub("V_out") + " (V)", [(0, "0"), (0.7, "0.7"), (1.5, "1.5"), (3, "3")], [(0, "0"), (1, "1"), (2, "2"), (3, "3")])
+    return p.render()
+
+
+def fig_l35d():
+    p = Plot(560, 280, (1, 6), (10, 40), (60, 20, 20, 44))
+    p.curve([(N / 20, (N / 20) * 64 ** (20 / N) + N / 20) for N in range(20, 121)], BLUE, 2.6)
+    for N in range(1, 7):
+        D = N * 64 ** (1 / N) + N
+        if D < 40:
+            p.add(dot(p.X(N), p.Y(D), BLUE, 4) + text(p.X(N), p.Y(D) - 10, f"{D:.1f}", BLUE, 11.5, "middle", 700))
+    p.add(text(p.X(4.4), p.Y(35), "F = 64, p_inv = 1".replace("p_inv", sub("p_inv")), INK, 12.5, "start", 700))
+    p.add(text(p.X(4.4), p.Y(31), "N = 2 lies above (18)", MUTE, 11.5, "start"))
+    p.axes("number of stages N", "D (τ)", [(1, "1"), (2, "2"), (3, "3"), (4, "4"), (5, "5"), (6, "6")], [(10, "10"), (20, "20"), (30, "30"), (40, "40")])
+    return p.render()
+
+
+
+
+def fig_p16():
+    s = defs(*ALLC)
+    g1, o1 = gate_shape("inv", 60, 110, "6")
+    s += line(20, 110, 60, 110) + g1
+    g2, o2 = gate_shape("nor", 170, 110, "y", ORANGE, 1.1)
+    s += line(o1, 110, 175, 110) + line(150, 98, 175, 98, MUTE, 1.2) + line(150, 122, 175, 122, MUTE, 1.2) + g2
+    s += line(o2, 110, 300, 110) + dot(300, 110)
+    for k, yy in enumerate((60, 160)):
+        on = k == 1
+        c = BLUE if on else MUTE
+        g3, o3 = gate_shape("nand", 340, yy, "z", c)
+        s += line(300, 110, 300, yy) + line(300, yy, 340, yy) + line(320, yy + 12, 340, yy + 12, MUTE, 1.2) + g3
+        if on:
+            s += line(o3, yy, 520, yy) + dot(500, yy) + line(500, yy, 500, yy + 10) + cap(500, yy + 10, INK) + gnd(500, yy + 50) + text(518, yy + 36, "60", INK, 13, "start", 700)
+            s += text(440, yy - 10, "on-path", BLUE, 11, "middle", 700)
+        else:
+            s += line(o3, yy, o3 + 30, yy, MUTE) + text(o3 + 34, yy + 4, "off-path (same load)", MUTE, 11)
+    s += text(95, 165, "INV: g 1, p 1", INK, 12, "middle", 700) + text(200, 165, "NOR3: g 7/3, p 3", ORANGE, 12, "middle", 700) + text(370, 230, "NAND2: g 4/3, p 2", BLUE, 12, "middle", 700)
+    s += text(320, 262, "b = (z + z)/z = 2 at the NOR3 output", PURPLE, 12.5, "middle", 700)
+    return svg(660, 272, s)
+
+
+def fig_dn(F):
+    import math
+    p = Plot(560, 280, (1, 8), (15, 60), (60, 20, 20, 44))
+    p.curve([(N / 20, (N / 20) * F ** (20 / N) + N / 20) for N in range(26, 161)], BLUE, 2.6)
+    best = min(range(1, 9), key=lambda N: N * F ** (1 / N) + N)
+    for N in range(2, 9):
+        D = N * F ** (1 / N) + N
+        if D < 60:
+            c = RED if N == best else BLUE
+            p.add(dot(p.X(N), p.Y(D), c, 5 if N == best else 4) + text(p.X(N), p.Y(D) - 10, f"{D:.1f}", c, 11.5, "middle", 700))
+    p.add(text(p.X(5.2), p.Y(54), f"F = {F}, p_inv = 1".replace("p_inv", sub("p_inv")), INK, 12.5, "start", 700))
+    p.add(text(p.X(5.2), p.Y(49), f"log₄F = {math.log(F, 4):.2f}, log₃.₅₉F = {math.log(F) / math.log(3.59):.2f}", MUTE, 11.5, "start"))
+    p.axes("number of stages N", "D (τ)", [(N, str(N)) for N in range(1, 9)], [(20, "20"), (40, "40"), (60, "60")])
+    return p.render()
+
+
 FIGS2 = {
     "F_SWITCH": fig_switches, "F_PUNPDN": fig_pun_pdn, "F_PSEUDO": fig_pseudo, "F_NOR2": fig_nor2, "F_NAND2": fig_nand2,
     "F_WL": fig_wl, "F_COLLAPSE": fig_nor2_collapse, "F_VTHCMP": fig_vth_compare, "F_STNOR": fig_stick_nor2, "F_STNAND": fig_stick_nand2,
@@ -1106,7 +1513,7 @@ FIGS2 = {
     "F_MOSRC": fig_mos_rc, "F_INVRC": fig_inv_rc, "F_NAND2C": lambda: fig_nand_caps(2), "F_NAND3C": lambda: fig_nand_caps(3),
     "F_ELMORE": fig_elmore, "F_NAND3E": fig_nand3_elmore, "F_FANOUT": lambda: fig_fanout(), "F_FO4": lambda: fig_fanout(fo4=True),
     "F_DPARTS": fig_d_parts, "F_LEGATES": fig_le_gates, "F_T10Q4": fig_t10q4, "F_NOR2S": fig_nor2_sized, "F_AOI": fig_aoi21,
-    "F_RINGLE": fig_ring_le, "F_NORN": fig_norn, "F_4X": fig_4x, "F_WEAKP": fig_weak_p, "F_P2": fig_p2_bars, "F_P3": fig_p3_vtc, "F_P4": fig_p4, "F_AOI22": fig_aoi22_euler, "F_P7": fig_p7, "F_P8": fig_p8, "F_RON": fig_ron, "F_FOLD": fig_fold, "F_NAND3H": fig_nand3_cases, "F_NOR3H": fig_nor3_load, "F_LDM": fig_ldm, "F_LIMITS": fig_limits, "F_PATH4": fig_path4, "F_BRANCH": fig_branch, "F_DRIVE": fig_drive, "F_PATH3B": fig_path3b, "F_STAGES": fig_stages, "F_XOR": fig_xor,
+    "F_RINGLE": fig_ring_le, "F_NORN": fig_norn, "F_4X": fig_4x, "F_WEAKP": fig_weak_p, "F_P2": fig_p2_bars, "F_P3": fig_p3_vtc, "F_P4": fig_p4, "F_AOI22": fig_aoi22_euler, "F_P7": fig_p7, "F_P8": fig_p8, "F_RON": fig_ron, "F_FOLD": fig_fold, "F_NAND3H": fig_nand3_cases, "F_NOR3H": fig_nor3_load, "F_LDM": fig_ldm, "F_LIMITS": fig_limits, "F_PATH4": fig_path4, "F_BRANCH": fig_branch, "F_DRIVE": fig_drive, "F_PATH3B": fig_path3b, "F_STAGES": fig_stages, "F_XOR": fig_xor, "F_L35PATH": fig_l35path, "F_L35SIZE": fig_l35size, "F_CHAINS": fig_chains, "F_RHO": fig_rho, "F_L35D": fig_l35d, "F_BUBBLE": fig_bubble, "F_AOI22": fig_aoi22, "F_CPX36": fig_cpx36, "F_ASYM": fig_asym, "F_INPOS": fig_inpos, "F_SKEW": fig_skew, "F_SKEWG": fig_skewgates, "F_RATIOED": fig_ratioed, "F_PSVTC": fig_pseudovtc, "F_PSSIZE": fig_pseudosize, "F_RLOAD": fig_rload, "F_P16": fig_p16, "F_P17": lambda: fig_dn(500),
 }
 
 if __name__ == "__main__":
@@ -1120,6 +1527,6 @@ if __name__ == "__main__":
     left = re.findall(r"\{\{[A-Z0-9_]+\}\}", src)
     if left:
         print("UNFILLED", left)
-    out = os.path.join(HERE, "..", "Lectures28-34_Guide.html")
+    out = os.path.join(HERE, "..", "Lectures28-37_Guide.html")
     open(out, "w", encoding="utf-8").write(src)
     print("wrote", out)

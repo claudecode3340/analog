@@ -1,0 +1,13 @@
+<div class="q">
+<h3>R7 · V<sub>OL</sub> of a ratioed (resistor-load) inverter (Razavi §3.3.1) <span class="badge b-in">In lectures</span></h3>
+<p><i>A resistor-load inverter (Lecture 37's first ratioed gate; Razavi Fig. 3.4) has $V_{DD} = 3$ V, $R_D = 2$ kΩ and an NMOS with $\mu_nC_{ox}W/L = 1343$ µA/V², $V_{TH} = 0.7$ V. Estimate $V_{OL}$ for $V_{in} = 3$ V with Razavi's deep-triode formula, then compare with the exact square-law value.</i></p>
+<figure>{{F_RLOAD}}<figcaption><b>Fig. R7</b> The computed VTC of this inverter (same shape as Razavi Fig. 3.4(b)).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>The resistor and the ON transistor form a voltage divider. How low can the output get?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Razavi Eq. 3.6–3.7: $V_{out} = V_{DD}\frac{R_{on}}{R_{on}+R_D}$, $R_{on} = \frac{1}{\mu_nC_{ox}\frac WL(V_{in}-V_{TH})}$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>$R_{on}$ → divider → compare with the exact triode equation $\frac{V_{DD}-V}{R_D} = k[(V_{in}-V_{TH})V - V^2/2]$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$R_{on} = \frac{1}{1343\,\mu\times2.3} = 324$ Ω.</li>
+<li>$V_{OL} \approx 3\times\frac{324}{324+2000} =$ <span class="ans">0.42 V</span>; exact: <span class="ans">0.46 V</span>.</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>$V_{OL} > 0$: the defining weakness of ratioed logic ✓. A bigger $R_D$ (weaker load) lowers $V_{OL}$ but slows the rising edge, the same trade-off as pseudo-NMOS.</div></div>
+</div>

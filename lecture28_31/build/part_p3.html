@@ -1,0 +1,100 @@
+<div class="q">
+<h3>P16 · Size a branched path and give the transistor widths <span class="badge b-in">In lectures</span></h3>
+<p><i>An inverter with input capacitance 6 drives a NOR3. The NOR3 drives two identical NAND2 gates; the path continues through one of them, which drives a load of 60. (a) Find the minimum path delay. (b) Find the input capacitance of the NOR3 and NAND2. (c) Give the NMOS and PMOS widths of each.</i></p>
+<figure>{{F_P16}}<figcaption><b>Fig. P16</b> The path. The grey NAND2 is off-path but loads the NOR3 equally.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Same job as Lecture 35's example, with different gates: fastest A→B delay, then real transistor sizes.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>Recipe I (6.4, 7.1) and the C<sub>in</sub> → widths recipe (7.2).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>G, B, H → F → f̂ → D; then sizes backwards; then $k = C_{in}/(\text{unit cap})$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$G = 1\times\frac73\times\frac43 = \frac{28}{9}$; $B = 2$; $H = 60/6 = 10$ → $F = \frac{28}{9}\times2\times10 = 62.2$.</li>
+<li>$\hat f = 62.2^{1/3} = 3.96$; $P = 1 + 3 + 2 = 6$ → $\hat D = 3\times3.96 + 6 =$ <span class="ans">17.9 τ</span></li>
+<li>NAND2: $C_{in} = \frac{\frac43\times60}{3.96} =$ <span class="ans">20.2</span>. NOR3 drives $2\times20.2$: $C_{in} = \frac{\frac73\times40.4}{3.96} =$ <span class="ans">23.8</span>. Check: $\frac{1\times23.8}{3.96} = 6$ ✓</li>
+<li>NAND2: $k = 20.2/4 = 5.05$ → NMOS $2k = 10.1$, PMOS $2k = 10.1$. NOR3: $k = 23.8/7 = 3.40$ → NMOS $3.4$, PMOS $6k = 20.4$.</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Each stage has effort 3.96 ≈ 4: close to the best stage effort, so 3 stages is the right count ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>P17 · Best number of stages for F = 500 <span class="badge b-in">In lectures</span></h3>
+<p><i>A path has path effort F = 500 and you may add inverters ($p_{inv} = 1$). Estimate the best number of stages with the ρ rule, then confirm by computing D for N = 3 … 7.</i></p>
+<figure>{{F_P17}}<figcaption><b>Fig. P17</b> D against N for F = 500 (computed).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>How many equal stages should share an effort of 500?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>7.4: $\hat N = \ln F/\ln\rho$ with $\rho = 3.59$ (or 4 by hand); $D = NF^{1/N} + N$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Estimate, then check the neighbours.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$\hat N = \frac{\ln 500}{\ln 3.59} = \frac{6.21}{1.28} = 4.86$ (by hand: $\log_4 500 = 4.48$) → try 4, 5.</li>
+<li>D: N = 3: 26.8; N = 4: 22.9; N = 5: <span class="ans">22.3 τ (best)</span>; N = 6: 22.9; N = 7: 24.0.</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>The curve is flat near the optimum: 4, 5 or 6 stages are all within 3% ✓. Rounding to the nearest sensible N is fine.</div></div>
+</div>
+
+<div class="q">
+<h3>P18 · AOI22 + inverter or NAND–NAND? <span class="badge b-in">In lectures</span></h3>
+<p><i>Implement $F = AB + CD$ driving a path electrical effort H = 10, (a) as AOI22 + inverter and (b) as NAND2–NAND2. Find the minimum delay of each. Which is faster?</i></p>
+<figure>{{F_BUBBLE}}<figcaption><b>Fig. P18</b> The two implementations (rows 2 and 3).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Lecture 36's comparison with a heavier load.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>8.2: AOI22 $g = 2$, $p = 4$; inverter $1, 1$; NAND2 $\frac43, 2$. Two stages: $\hat D = 2\sqrt F + P$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>F = GH for each, then D.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>(a) $F = 2\times1\times10 = 20$; $D = 2\sqrt{20} + 5 =$ <span class="ans">13.9 τ</span></li>
+<li>(b) $F = \frac{16}{9}\times10 = 17.8$; $D = 2\sqrt{17.8} + 4 =$ <span class="ans">12.4 τ</span> → NAND–NAND is faster.</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Same winner as the lecture's H = 5 case (11.3 vs 9.96 τ) ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>P19 · An asymmetric NAND2 with a 4:1 split <span class="badge b-in">In lectures</span></h3>
+<p><i>In the reset NAND2 of Fig. 8.5, give RESET' only $R/5$ of the pull-down resistance. Find the NMOS widths and the logical effort of input A and of RESET'. (PMOS: A 2, RESET' 1, as before.)</i></p>
+<figure>{{F_ASYM}}<figcaption><b>Fig. P19</b> The lecture's version (3:1 split); here we change it to 4:1.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Make the A transistor even smaller, by making RESET' even bigger.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>8.5: series resistances must add to $R$; an NMOS of resistance $R/w$ has width $w$.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Split $R$ into $\frac45R + \frac15R$, then widths, then $g$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>A: $\frac45R$ → width $\frac54$. RESET': $\frac15R$ → width 5.</li>
+<li>$g_A = \frac{5/4 + 2}{3} =$ <span class="ans">13/12 ≈ 1.08</span>; $g_{RESET} = \frac{5 + 1}{3} =$ <span class="ans">2</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>$g_A$ falls from $\frac{10}{9} = 1.11$ only slightly: returns diminish, because the PMOS (width 2) dominates A's input cap ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>P20 · Logical effort of skewed gates <span class="badge b-in">In lectures</span></h3>
+<p><i>Find $g_u$, $g_d$ and $g_{avg}$ of (a) a HI-skew NOR2 (PMOS 4, 4; NMOS ½, ½) and (b) a LO-skew NAND2 (PMOS 1, 1; NMOS 2, 2).</i></p>
+<figure>{{F_SKEWG}}<figcaption><b>Fig. P20</b> The skewed-gate table (Lecture 37).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>For each edge, how much input cap does this gate need compared with an inverter giving the same current?</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>9.1: rising → reference inverter with the same pull-up current; falling → same pull-down current.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Find each edge's resistance, match it with an inverter (cap 3 for $R$, cap 1.5 for $2R$), divide.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>(a) Input cap $4 + \frac12 = 4.5$. Rise: two PMOS of $2R/4$ in series = $R$ → ref cap 3 → $g_u = 1.5$. Fall: one NMOS ½ = $2R$ → ref cap 1.5 → $g_d = 3$. $g_{avg} =$ <span class="ans">2.25</span></li>
+<li>(b) Input cap $1 + 2 = 3$. Rise: one PMOS of width 1 = $2R$ → ref 1.5 → $g_u = 2$. Fall: two NMOS of $R/2$ = $R$ → ref 3 → $g_d = 1$. $g_{avg} =$ <span class="ans">1.5</span></li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Matches the lecture's values ✓. The favoured edge always has the smaller $g$.</div></div>
+</div>
+
+<div class="q">
+<h3>P21 · Pseudo-NMOS with a weaker pull-up <span class="badge b-in">In lectures</span></h3>
+<p><i>Redo Lecture 37's pseudo-NMOS sizing, but make the PMOS 8× weaker than the NMOS (PMOS width $x/4$). Find x and the PMOS width. Will $V_{OL}$ be higher or lower than in the lecture's design?</i></p>
+<figure>{{F_PSSIZE}}<figcaption><b>Fig. P21</b> Lecture 37's sizing set-up (here with PMOS width x/4).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>A weaker load fights less, so the NMOS can be smaller; but the rising edge gets slower.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>9.3: net pull-down current at $V_{DD}/2$ = unit inverter's.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>PMOS width $x/4$ → resistance $2R/(x/4) = 8R/x$.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$\frac{V/2}{R/x} - \frac{V/2}{8R/x} = \frac{V/2}{R}$ → $x - \frac x8 = 1$ → $x = \frac87 =$ <span class="ans">1.14</span></li>
+<li>PMOS width $\frac x4 =$ <span class="ans">2/7 ≈ 0.29</span></li>
+<li>$k_n/k_p = 8$ (vs 4) → $V_{OL}$ is <span class="ans">lower</span> (Fig. 9.4 trend), but the pull-up current is only $\frac17$ of a unit → slower rising edge.</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>Setting the PMOS to zero gives $x = 1$, a plain unit NMOS ✓.</div></div>
+</div>
+
+<div class="q">
+<h3>P22 · Input positioning in a NAND3 <span class="badge b-in">In lectures</span></h3>
+<p><i>In a NAND3 driving h NAND3s, signal S arrives much later than the other two. Which NMOS should S drive, and what is the falling delay then? What if you connect it wrongly?</i></p>
+<figure>{{F_INPOS}}<figcaption><b>Fig. P22</b> Inner vs outer input (shown for NAND2; NAND3 is the same idea).</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>The two early inputs have already switched on their transistors. Put S where the least charge is left to remove.</div></div>
+<div class="step s2"><div class="lab">Theory</div><div>8.6 and the NAND3 table (4.6).</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Compare S on the top (outer) transistor with S on the bottom (inner).</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>S on the <b>outer</b> (top, nearest Y): internal nodes already at 0 → $t = (9+5h)RC$, $d = 3 + \frac53h$ <span class="ans">(fast)</span></li>
+<li>S on the <b>inner</b> (bottom): both internal nodes must also discharge → $(12+5h)RC$, $d = 4 + \frac53h$.</li>
+</ol></div></div>
+<div class="step s5"><div class="lab">Check</div><div>A free 1τ saving just by wiring ✓.</div></div>
+</div>

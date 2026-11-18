@@ -1,0 +1,133 @@
+<!-- ===================================================== L35 -->
+<h2 id="L35">7 · Lecture 35: sizing a branched path, and the best number of stages <span class="badge b-in">In lectures</span></h2>
+<p class="lede">Lecture 35 does a full worked example of Lecture 34's method on a path with branches, turns the answers into real transistor widths, and then asks: if I may add inverters, how many stages give the shortest delay?</p>
+
+<h3>7.1 The worked path: NAND2 → NAND3 → NOR2 → 45</h3>
+<figure>{{F_L35PATH}}<figcaption><b>Fig. 7.1</b> Lecture 35's circuit. Input A drives a NAND2 (input cap 8). The NAND2 drives three NAND3 gates of size x; the one on the path drives two NOR2 gates of size y; the one on the path drives the load 45 at B.</figcaption></figure>
+<div class="step s1"><div class="lab">In plain words</div><div>Find the fastest possible delay from A to B, and the sizes x and y that give it.</div></div>
+<div class="step s3"><div class="lab">Plan</div><div>Recipe I: write g and p under each gate → G, B, H → F → f̂ → D → walk backwards.</div></div>
+<div class="step s4"><div class="lab">Solve</div><div><ol class="calc">
+<li>$G = g_1g_2g_3 = \frac43\cdot\frac53\cdot\frac53 = \frac{100}{27}$.</li>
+<li>Branching: the NAND2 output feeds $x + 2x$ but only $x$ is on the path → $b_1 = \frac{x+2x}{x} = 3$. The NAND3 output feeds $y + y$ → $b_2 = 2$. So $B = 3\times2 = 6$.</li>
+<li>$H = \dfrac{C_{load}}{C_{in}} = \dfrac{45}{8}$.</li>
+<li>$F = GBH = \frac{100}{27}\times6\times\frac{45}{8} = 125$, so $\hat f = 125^{1/3} =$ <span class="ans">5</span>.</li>
+<li>$P = 2 + 3 + 2 = 7$, so $\hat D = 3\times5 + 7 =$ <span class="ans">22 τ</span>.</li>
+<li>Backwards, $C_{in} = g\,C_{out}/\hat f$:
+NOR2 $y = \frac{\frac53\times45}{5} =$ <span class="ans">15</span>;
+NAND3 drives $y + y = 30$: $x = \frac{\frac53\times30}{5} =$ <span class="ans">10</span>;
+check the NAND2: it drives $3x = 30$: $\frac{\frac43\times30}{5} = 8$ ✓ (the given input cap).</li>
+</ol></div></div>
+
+<h3>7.2 From input capacitance to transistor widths</h3>
+<p>A gate sized "k times unit" has every width multiplied by k, and its input cap multiplied by k. Unit-drive input caps: NAND2 $4$, NAND3 $5$, NOR2 $5$ (in units of $C$).</p>
+<figure>{{F_L35SIZE}}<figcaption><b>Fig. 7.2</b> Lecture 35's sizing. NAND2: $4k = 8$ → $k = 2$ → NMOS 4, PMOS 4. NAND3: $5k = 10$ → $k = 2$ → NMOS 6, PMOS 4. NOR2: $5k = 15$ → $k = 3$ → NMOS 3, PMOS 12.</figcaption></figure>
+<div class="box blue"><span class="tag">Recipe: C<sub>in</sub> → widths</span>
+<ol class="calc">
+<li>Unit-drive widths: NAND-n: NMOS n, PMOS 2; NOR-n: NMOS 1, PMOS 2n; inverter: NMOS 1, PMOS 2.</li>
+<li>Unit input cap = NMOS width + PMOS width (NAND2 4, NAND3 5, NOR2 5, NOR3 7, inverter 3).</li>
+<li>$k = C_{in}/(\text{unit input cap})$, then multiply every width by $k$.</li>
+</ol></div>
+<div class="box amber"><span class="tag">Units: watch out</span>
+In this lecture "8", "45", "15" are in units of $C$ (one unit transistor's gate cap): an inverter input is 3. In Tutorial 10 Q4 the unit is one inverter input. Both work, as long as $C_{in}$, $C_{out}$ and the widths use the same unit.</div>
+
+<h3>7.3 How many stages? Four ways to drive 64</h3>
+<figure>{{F_CHAINS}}<figcaption><b>Fig. 7.3</b> A unit inverter must drive a load of 64 (Lecture 35). We may use 1, 2, 3 or 4 inverters. Numbers inside the inverters are their sizes, chosen so all stages have equal effort.</figcaption></figure>
+<table>
+<tr><th>Option</th><th>N</th><th>$\hat f = 64^{1/N}$</th><th>$D = N\hat f + N\cdot1$</th><th>sizes</th></tr>
+<tr><td>A</td><td>1</td><td>64</td><td>$64 + 1 = 65$</td><td>1</td></tr>
+<tr><td>B</td><td>2</td><td>8</td><td>$16 + 2 = 18$</td><td>1, 8</td></tr>
+<tr><td>C</td><td>3</td><td>4</td><td>$12 + 3 =$ <span class="ans">15 (best)</span></td><td>1, 4, 16</td></tr>
+<tr><td>D</td><td>4</td><td>2.83</td><td>$11.3 + 4 = 15.3$</td><td>1, 2.83, 8, 22.6</td></tr>
+</table>
+<figure>{{F_L35D}}<figcaption><b>Fig. 7.4</b> D against N for F = 64. Too few stages: each works too hard. Too many: each extra inverter adds its parasitic delay.</figcaption></figure>
+<div class="box green"><span class="tag">Intuition</span>
+Adding an inverter costs a fixed $p_{inv} = 1$ but divides the work. While $\hat f$ is large (above about 4), splitting it helps more than the extra parasitic costs. Below about 3.6, it no longer pays.</div>
+
+<h3>7.4 The best stage effort ρ (derivation from Lecture 35)</h3>
+<p>Suppose a path of $n_1$ logic gates can be padded with extra inverters to reach $N$ stages. Then</p>
+$$D = N F^{1/N} + \sum_{i=1}^{n_1} p_i + (N - n_1)\,p_{inv}$$
+<p>Differentiate with respect to $N$ and set it to zero (with $\rho = F^{1/N}$, so $\frac{d}{dN}F^{1/N} = -\frac{\ln F}{N^2}F^{1/N}$):</p>
+$$\frac{\partial D}{\partial N} = -F^{1/N}\ln F^{1/N} + F^{1/N} + p_{inv} = 0\quad\Longrightarrow\quad \rho\,(1 - \ln\rho) + p_{inv} = 0$$
+<figure>{{F_RHO}}<figcaption><b>Fig. 7.5</b> The solution of $\rho(1-\ln\rho) + p_{inv} = 0$ (computed). With no parasitic delay, $\rho = e = 2.72$; with $p_{inv} = 1$, $\rho = 3.59$. By hand, use 4.</figcaption></figure>
+<div class="box blue"><span class="tag">Memorise</span>
+$$\rho = 3.59\ (p_{inv} = 1),\qquad \hat N = \log_\rho F = \frac{\ln F}{\ln\rho}\approx\log_4 F$$
+Example: $F = 64$: $\log_4 64 = 3$ stages ✓ (option C). Round $\hat N$ to a whole number; if the path must invert (or not), pick the nearest $N$ with the right parity.</div>
+<div class="box purple"><span class="tag">Say it out loud</span>
+"Best stage effort is about 4: so the number of stages is log base 4 of the path effort."</div>
+
+<!-- ===================================================== L36 -->
+<h2 id="L36">8 · Lecture 36: combinational logic, complex and asymmetric gates <span class="badge b-in">In lectures</span></h2>
+
+<h3>8.1 Many ways to build F = AB + CD</h3>
+<figure>{{F_BUBBLE}}<figcaption><b>Fig. 8.1</b> Lecture 36's three implementations of the same function. CMOS gates are naturally inverting, so AND–OR is rebuilt with NANDs or with one AOI gate plus an inverter.</figcaption></figure>
+<div class="box green"><span class="tag">Bubble pushing (De Morgan in pictures)</span>
+$\overline{A\cdot B} = \bar A + \bar B$: a NAND is an OR with bubbles on its inputs. $\overline{A + B} = \bar A\cdot\bar B$: a NOR is an AND with bubbles on its inputs. So AND → OR becomes NAND → (OR with bubbled inputs) = NAND → NAND.</div>
+
+<h3>8.2 Which version is faster? (Lecture 36 comparison)</h3>
+<figure>{{F_AOI22}}<figcaption><b>Fig. 8.2</b> AOI22 sized for unit drive, followed by an inverter.</figcaption></figure>
+<p>Both versions drive a load with path electrical effort $H = 5$ and have two stages:</p>
+<table>
+<tr><th>Version</th><th>$G$</th><th>$F = GH$</th><th>$P$</th><th>$\hat D = 2\sqrt F + P$</th></tr>
+<tr><td>AOI22 + inverter</td><td>$2\times1 = 2$</td><td>10</td><td>$4 + 1 = 5$</td><td>$2\sqrt{10} + 5 = 11.3\,\tau$</td></tr>
+<tr><td>NAND2 + NAND2</td><td>$\frac43\times\frac43 = \frac{16}{9}$</td><td>$\frac{80}{9}$</td><td>$2 + 2 = 4$</td><td>$2\sqrt{80/9} + 4 =$ <span class="ans">9.96 τ</span></td></tr>
+</table>
+<p>The NAND–NAND version wins: an AOI22 has big series stacks, so both its $g$ (2) and $p$ (4) are high. Complex gates save area and transistors, but are not always faster.</p>
+
+<h3>8.3 AOI21 and its average logical effort</h3>
+<figure>{{F_AOI}}<figcaption><b>Fig. 8.3</b> AOI21: $Y = \overline{AB + C}$ (same sizing as Tutorial 10 Q6).</figcaption></figure>
+<p>Input caps: A and B: $2 + 4 = 6$ → $g_A = g_B = 2$. C: $1 + 4 = 5$ → $g_C = 5/3$. Output diffusion: PMOS C 4 + NMOS A 2 + NMOS C 1 = 7 → $p = 7/3$. Average: $g_{avg} = \frac{2 + 2 + 5/3}{3} = \frac{17}{9} \approx 1.89$.</p>
+
+<h3>8.4 A bigger one: Y = [A(B + C) + DE]'</h3>
+<figure>{{F_CPX36}}<figcaption><b>Fig. 8.4</b> Lecture 36's sizing. The pull-up is $[A \parallel (B\text{–}C)]$ in series with $[D \parallel E]$.</figcaption></figure>
+<div class="box amber"><span class="tag">A smarter sizing than "longest path"</span>
+The longest-path rule (Recipe B2) would give B, C, D, E width 6 and A width 4. The lecture shares the resistance budget instead: D, E are 6 ($R/3$ each), so the top part may use $2R/3$. B and C in series each get $R/3$ (width 6); A alone gets $2R/3$, so width 3 is enough. Every path still totals exactly $R$, and A's input cap drops from 6 to 5. Both answers are valid; the lecture's is slightly better.</div>
+<p>Results: $g_A = \frac{2+3}{3} = \frac53$; $g_B = g_C = g_D = g_E = \frac{2+6}{3} = \frac83$; output diffusion $6 + 6 + 2 + 2 = 16$ → $p = \frac{16}{3}$.</p>
+
+<h3>8.5 Asymmetric gates</h3>
+<figure>{{F_ASYM}}<figcaption><b>Fig. 8.5</b> A NAND2 where one input (RESET') hardly ever switches. Make its NMOS wide so the busy input A can be small.</figcaption></figure>
+<div class="box blue"><span class="tag">Idea</span>
+A series stack only needs a <b>total</b> of $R$. Split it unevenly: A gets $3R/4$ (width 4/3), RESET' gets $R/4$ (width 4). Now $g_A = \frac{4/3 + 2}{3} = \frac{10}{9}$, lower than the normal $\frac43$, so the critical signal sees a lighter gate. RESET' pays: $g = \frac53$, but it is not timing-critical.</div>
+
+<h3>8.6 Input positioning</h3>
+<figure>{{F_INPOS}}<figcaption><b>Fig. 8.6</b> Inner and outer inputs of a NAND2.</figcaption></figure>
+<p>In a series stack the transistors are not equal. If the <b>inner</b> input (nearest ground) arrives early, the internal node is already discharged; when the <b>outer</b> input finally switches, only the output has to fall. That is the fast case ($t_{cd}$ in 4.5). So: <b>connect the latest-arriving (critical) signal to the transistor nearest the output.</b></p>
+
+<!-- ===================================================== L37 -->
+<h2 id="L37">9 · Lecture 37: skewed gates, ratioed gates and pseudo-NMOS <span class="badge b-in">In lectures</span></h2>
+
+<h3>9.1 Skewed gates: favour one edge</h3>
+<p>Sometimes only one edge is critical (for example, a rising edge that triggers something). A <b>skewed</b> gate shrinks the transistor of the unimportant edge. That lowers the input capacitance, so the important edge gets faster.</p>
+<figure>{{F_SKEW}}<figcaption><b>Fig. 9.1</b> Unskewed, HI-skew and LO-skew inverters (Lecture 37).</figcaption></figure>
+<div class="box blue"><span class="tag">How to find g<sub>u</sub> and g<sub>d</sub> (the lecture's method)</span>
+<b>Rising edge ($g_u$):</b> find an unskewed inverter with the <b>same PMOS</b> (same rising current), and divide input caps.<br>
+<b>Falling edge ($g_d$):</b> find an unskewed inverter with the <b>same NMOS</b> (same falling current), and divide input caps.<br>
+HI-skew inverter (PMOS 2, NMOS ½, input cap 2.5):
+<ul>
+<li>same PMOS as the unit inverter (cap 3) → $g_u = \frac{2.5}{3} = \frac56$</li>
+<li>same NMOS as an inverter (PMOS 1, NMOS ½), cap 1.5 → $g_d = \frac{2.5}{1.5} = \frac53$</li>
+<li>$g_{avg} = \frac{5/6 + 5/3}{2} = \frac54$; $p_u = \frac56$, $p_d = \frac53$ (same ratios, applied to the diffusion cap 2.5)</li>
+</ul>
+LO-skew inverter (PMOS 1, NMOS 1, cap 2): $g_u = \frac{2}{1.5} = \frac43$, $g_d = \frac23$.</div>
+<figure>{{F_SKEWG}}<figcaption><b>Fig. 9.2</b> Lecture 37's skewed gates (skew factor 2). Every edge is compared with an <b>unskewed inverter</b> that gives the same current on that edge: full current → inverter (PMOS 2, NMOS 1), cap 3; half current → inverter (PMOS 1, NMOS ½), cap 1.5.</figcaption></figure>
+<div class="box orange"><span class="tag">Worked: HI-skew NAND2 (lecture)</span>
+PMOS 2, 2; NMOS 1, 1 (series: $R + R = 2R$ → falling current halved). Input cap $2 + 1 = 3$.
+Rising: same current as the unit inverter (cap 3) → $g_u = 3/3 = 1$.
+Falling: current of an NMOS of width ½ → compare with the (1, ½) inverter (cap 1.5) → $g_d = 3/1.5 = 2$.
+Parasitic: output diffusion $2 + 2 + 1 = 5$ → $p_u = 5/3$, $p_d = 5/1.5 = 10/3$.</div>
+
+<h3>9.2 Ratioed gates</h3>
+<figure>{{F_RATIOED}}<figcaption><b>Fig. 9.3</b> The three loads of Lecture 37: a resistor, an NMOS with its gate at a fixed $V_{GG}$, and a PMOS with its gate grounded (pseudo-NMOS).</figcaption></figure>
+<p>In a ratioed gate the pull-up is <b>always on</b>. When the NMOS turns on, the two fight, and the output low level is set by the ratio of their strengths. This is exactly Razavi's common-source stage with a resistive load (§3.3.1): in deep triode $V_{out} = V_{DD}\dfrac{R_{on}}{R_{on} + R_D}$ (Razavi Eq. 3.6).</p>
+
+<h3>9.3 Pseudo-NMOS</h3>
+<figure>{{F_PSVTC}}<figcaption><b>Fig. 9.4</b> VTC of pseudo-NMOS inverters vs CMOS (computed, square law, $V_{DD} = 3.3$ V). The stronger the NMOS relative to the PMOS, the lower $V_{OL}$.</figcaption></figure>
+<div class="box green"><span class="tag">Pros and cons</span>
+<b>+</b> only N + 1 transistors for an N-input gate; low input capacitance (no PMOS on the inputs), so fast for wide NORs.<br>
+<b>−</b> $V_{OL} > 0$; static current flows whenever the output is low (power); the rising edge is slow because the PMOS is weak.</div>
+<figure>{{F_PSSIZE}}<figcaption><b>Fig. 9.5</b> Lecture 37's sizing of a pseudo-NMOS inverter.</figcaption></figure>
+<div class="box blue"><span class="tag">Lecture 37 sizing rule</span>
+Choose the PMOS 4× weaker than the NMOS (width $x/2$ against $x$, and PMOS mobility is half). At $V_{out} = V_{DD}/2$ the <b>net</b> pull-down current must equal a unit inverter's:
+$$\frac{V_{DD}/2}{R/x} - \frac{V_{DD}/2}{2R/(x/2)} = \frac{V_{DD}/2}{R}\;\Rightarrow\; x - \frac x4 = 1\;\Rightarrow\; x = \frac43$$
+NMOS $\frac43$, PMOS $\frac23$.</div>
+<div class="box amber"><span class="tag">Optional (Weste &amp; Harris): its g and p</span>
+Input cap $\frac43$. Falling: same net current as a unit inverter (cap 3) → $g_d = \frac{4/3}{3} = \frac49$. Rising: the PMOS gives $\frac13$ of a unit current → compare with an inverter of cap 1 → $g_u = \frac43$. Diffusion $\frac43 + \frac23 = 2$ → $p_d = \frac23$, $p_u = 2$.</div>
