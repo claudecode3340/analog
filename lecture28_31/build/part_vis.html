@@ -1,0 +1,84 @@
+<!--V60-->
+<h3>6.0 Picture first: what Lectures 34–37 are really doing</h3>
+<p class="lede">Up to Lecture 33 we timed <b>one</b> gate. From Lecture 34 on, the question changes to: <b>a signal has to pass through several gates in a row. How big should each gate be so that the whole trip is as fast as possible?</b> Everything after that is a few simple ideas, shown here as pictures before any formula.</p>
+<figure>{{V_MAP}}<figcaption><b>Fig. 6.0a</b> The whole story of Lectures 34–37 in six boxes. Read it left to right, top row then bottom row.</figcaption></figure>
+
+<h4>Idea 1 · One gate = a fixed overhead + the work of charging what it drives</h4>
+<figure>{{V_COST}}<figcaption><b>Fig. 6.0b</b> $d = p + gh$ as bars. Orange $p$ is paid even with no load (charging the gate's own drains). Blue $gh$ grows with the load: $h$ is "how many times my own input cap I must drive", $g$ is the handicap of the gate type (an inverter is 1, a NAND2 is 4/3).</figcaption></figure>
+<div class="box green"><span class="tag">Relay-race picture</span>
+A path is a relay race. Each runner (gate) takes $d_i = f_i + p_i$. The total time is the sum. You can make a runner bigger (stronger), but then the runner <b>before</b> it has to push a heavier load. Sizing is about sharing the work fairly.</div>
+
+<h4>Idea 2 · Why we multiply the efforts: the middle sizes cancel</h4>
+<figure>{{V_TELE}}<figcaption><b>Fig. 6.0c</b> Each $h_i$ is (next input cap) ÷ (my input cap). Multiply them and every middle cap appears once on top and once on the bottom, so they cancel. The product $F$ is fixed by the circuit, no matter how you size the middle gates.</figcaption></figure>
+
+<h4>Idea 3 · If the product is fixed, the sum is smallest when all parts are equal</h4>
+<figure>{{V_AMGM}}<figcaption><b>Fig. 6.0d</b> Two stages whose efforts must multiply to 36. Splitting 2 + 18 costs 20, 4 + 9 costs 13, but 6 + 6 costs only 12. Unequal stages always lose.</figcaption></figure>
+<div class="box purple"><span class="tag">Say it out loud</span>
+"Product fixed, sum smallest when equal." That one sentence is the whole reason for $\hat f = F^{1/N}$.</div>
+
+<h4>Idea 4 · Branching: current that leaks to a side branch</h4>
+<figure>{{V_PIPES}}<figcaption><b>Fig. 6.0e</b> When a gate drives two equal branches, only half of its effort reaches our path. $H$ (last load ÷ first input) cannot see that loss, so we multiply it in as $B$.</figcaption></figure>
+
+<div class="box orange"><span class="tag">Every Lecture 34–35 path question in 5 moves</span>
+<ol class="calc">
+<li>Under each gate write $g$ and $p$ (table in 5.2).</li>
+<li>Multiply: $F = G\cdot B\cdot H$ (idea 2 + idea 4).</li>
+<li>Share fairly: $\hat f = F^{1/N}$ (idea 3), $\hat D = N\hat f + P$.</li>
+<li>Walk backwards from the load: $C_{in} = g\,C_{out}/\hat f$ (Fig. 6.5 shows it step by step).</li>
+<li>Check that the first gate comes out equal to the given input cap.</li>
+</ol></div>
+<!--/V60-->
+
+<!--V64-->
+<h4>See it step by step</h4>
+<figure>{{V_STORY34}}<figcaption><b>Fig. 6.5</b> The Lecture 34 path solved as a storyboard. Grey "?" = not known yet; red = the gate being sized in that step.</figcaption></figure>
+<figure>{{V_EFFCMP}}<figcaption><b>Fig. 6.6</b> Why sizing helps: the same path with every gate left at 10 (left) and optimally sized (right). Unsized, the last inverter works hardest (f = 4.5) while the others loaf. Equalising the blue bars saves 1.4τ.</figcaption></figure>
+<div class="widget" id="w34"><div class="wtitle">Try it yourself: size the Lecture 34 path</div>
+<p class="small">Move the sliders (input caps of the NOR2, NAND2 and last inverter). Watch each stage's effort f (blue) and the total delay D. Can you beat 13.1τ? (You can't: that is the minimum.)</p>
+<div class="wrow"><label>x (NOR2) <input type="range" id="w34x" min="2" max="60" step="0.1" value="10"><span id="w34xv"></span></label></div>
+<div class="wrow"><label>y (NAND2) <input type="range" id="w34y" min="2" max="60" step="0.1" value="10"><span id="w34yv"></span></label></div>
+<div class="wrow"><label>z (last INV) <input type="range" id="w34z" min="2" max="60" step="0.1" value="10"><span id="w34zv"></span></label></div>
+<div class="wrow"><button id="w34opt">set optimum</button> <button id="w34ten">all 10</button></div>
+<div id="w34svg"></div></div>
+<!--/V64-->
+
+<!--V71-->
+<figure>{{V_STORY35}}<figcaption><b>Fig. 7.1b</b> The Lecture 35 example as a storyboard. The only new trick versus Lecture 34: when a gate drives several gates, its $C_{out}$ is the <b>total</b> of all of them.</figcaption></figure>
+<!--/V71-->
+
+<!--V73-->
+<figure>{{V_STAGEB}}<figcaption><b>Fig. 7.4b</b> The same four options as stacked bars. Blue (effort) drops quickly as stages are added; orange (one $p_{inv}$ per stage) grows by 1 each time. The sum is lowest at N = 3, where each stage has f = 4.</figcaption></figure>
+<div class="widget" id="wN"><div class="wtitle">Try it yourself: how many stages?</div>
+<p class="small">Pick a path effort F and slide N. The bar shows the effort part (blue) and parasitic part (orange) of $D = NF^{1/N} + N$.</p>
+<div class="wrow"><label>F <select id="wNF"><option>16</option><option selected>64</option><option>125</option><option>500</option><option>1000</option><option>4096</option></select></label>
+<label>N <input type="range" id="wNN" min="1" max="10" step="1" value="3"><span id="wNNv"></span></label></div>
+<div id="wNsvg"></div></div>
+<!--/V73-->
+
+<!--V80-->
+<h3>8.0 Picture first: Lecture 36 is about changing g and p</h3>
+<p>Lecture 36 asks "which way of building a function is fastest?" The tools are the same as Lecture 34: every gate is just its $g$ and $p$. A big complex gate saves a stage, but its long series stacks make $g$ and $p$ larger. Bars make the comparison obvious.</p>
+<figure>{{V_STYLE}}<figcaption><b>Fig. 8.0</b> Lecture 36's comparison as bars. The two-stage NAND–NAND wins because its parasitic part (orange) is smaller, even though both have two stages.</figcaption></figure>
+<p>For sizing, think of a <b>resistance budget</b>: every path from a rail to Y must add up to exactly $R$ (one unit transistor). How you split the budget between the transistors on a path is up to you, which is the whole idea behind the complex-gate sizing (8.4) and asymmetric gates (8.5).</p>
+<figure>{{V_BUDGET}}<figcaption><b>Fig. 8.0b</b> Resistance budgets. A transistor with a smaller share must be wider. In the asymmetric NAND, the busy input A takes the big share (so it can be narrow and cheap to drive).</figcaption></figure>
+<!--/V80-->
+
+<!--V91-->
+<figure>{{V_SKEWB}}<figcaption><b>Fig. 9.1b</b> What skewing trades. A HI-skew inverter keeps the full pull-up (same rising current) but halves the pull-down, so its input cap drops from 3 to 2.5. Same current for less input cap means the rising edge is cheaper to drive ($g_u = 2.5/3 = 5/6$), while the falling edge is worse ($g_d = 5/3$).</figcaption></figure>
+<!--/V91-->
+
+<!--V93-->
+<figure>{{V_LOADLINE}}<figcaption><b>Fig. 9.4b</b> Where $V_{OL}$ comes from. With the input high, both transistors are on. The output settles where the NMOS current (blue) equals the PMOS load current (orange). A weaker PMOS (solid) crosses lower, so $V_{OL}$ is smaller.</figcaption></figure>
+<div class="widget" id="wP"><div class="wtitle">Try it yourself: pseudo-NMOS strength ratio</div>
+<p class="small">Slide the ratio $k_n/k_p$. The VTC (blue) and the low output level $V_{OL}$ update. A stronger NMOS gives a lower $V_{OL}$, but a weak PMOS makes the rising edge slow.</p>
+<div class="wrow"><label>k<sub>n</sub>/k<sub>p</sub> <input type="range" id="wPr" min="1" max="12" step="0.5" value="4"><span id="wPrv"></span></label></div>
+<div id="wPsvg"></div></div>
+<!--/V93-->
+
+<!--V90-->
+<h3>9.0 Picture first: two separate ideas</h3>
+<div class="box green"><span class="tag">Skewed gates (9.1)</span>
+A normal gate is balanced: rising and falling are equally strong. If only <b>one</b> edge matters, shrink the transistors of the other edge. The gate gets a smaller input cap, so the stage before it is faster, and the important edge keeps its full strength. You pay with a slower unimportant edge.</div>
+<div class="box green"><span class="tag">Ratioed gates (9.2–9.3)</span>
+Replace the whole PMOS network by <b>one always-on pull-up</b> (a resistor, or a PMOS with its gate grounded). Fewer transistors and less input cap, but when the NMOS turns on the two fight. The output low level is a tug-of-war result (not 0 V), and current flows all the time the output is low.</div>
+<!--/V90-->

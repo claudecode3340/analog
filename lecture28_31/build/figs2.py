@@ -1506,6 +1506,280 @@ def fig_dn(F):
     return p.render()
 
 
+
+
+# ---------- "picture first" figures for Lectures 34-37 ----------
+def _bar(x, y, w, h, c, op=0.85):
+    return f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w,0):.1f}" height="{h:.1f}" rx="3" fill="{c}" opacity="{op}"/>'
+
+
+def fig_map34():
+    s = defs(*ALLC)
+    boxes = [
+        (20, 30, "ONE gate", "d = g·h + p", "Lecture 31–33", BLUE),
+        (250, 30, "a PATH of gates", "D = Σ d = Σ f + P", "Lecture 34", ORANGE),
+        (480, 30, "the path effort", "F = G·B·H (fixed!)", "Lecture 34", PURPLE),
+        (20, 160, "best split", "every f = F^(1/N)", "Lecture 34", GREEN),
+        (250, 160, "sizes", "C_in = g·C_out / f̂ (walk backwards)", "Lecture 34–35", RED),
+        (480, 160, "how many stages", "N ≈ log₄ F", "Lecture 35", AMBER),
+    ]
+    for x, y, t, f, l, c in boxes:
+        s += f'<rect x="{x}" y="{y}" width="200" height="95" rx="12" fill="{c}" opacity="0.10" stroke="{c}" stroke-width="2"/>'
+        s += text(x + 100, y + 26, t, c, 13.5, "middle", 700)
+        s += text(x + 100, y + 54, f.replace("C_in", sub("C_in")).replace("C_out", sub("C_out")), INK, 12.5, "middle", 700)
+        s += text(x + 100, y + 80, l, MUTE, 11, "middle")
+    s += arrow(222, 78, 248, 78, INK, 2) + arrow(452, 78, 478, 78, INK, 2)
+    s += poly([(580, 127), (580, 142), (120, 142), (120, 156)], INK, 2) + arrow(120, 150, 120, 158, INK, 2)
+    s += arrow(222, 208, 248, 208, INK, 2) + arrow(452, 208, 478, 208, INK, 2)
+    s += text(350, 285, "Lectures 36–37 then use the same tools to compare gate STYLES (they just change g and p).", INK, 12.5, "middle", 600)
+    return svg(700, 298, s)
+
+
+def fig_gate_cost():
+    """Stacked bars: delay of one inverter (g=1,p=1) driving 1, 2, 4, 8 copies of itself, and a NAND2 driving 4."""
+    s = defs(*ALLC)
+    rows = [("inverter → 1 copy", 1, 1, 1), ("inverter → 2 copies", 1, 2, 1), ("inverter → 4 copies (FO4)", 1, 4, 1), ("inverter → 8 copies", 1, 8, 1), ("NAND2 → 4 NAND2s", 4 / 3, 4, 2)]
+    sc = 36
+    x0 = 230
+    s += text(360, 20, "delay of ONE gate = p (fixed overhead) + g·h (the work of charging the load)", INK, 13, "middle", 700)
+    for i, (lab, g, h, p) in enumerate(rows):
+        y = 40 + i * 40
+        s += text(x0 - 10, y + 18, lab, INK, 12.5, "end")
+        s += _bar(x0, y, p * sc, 26, ORANGE) + _bar(x0 + p * sc, y, g * h * sc, 26, BLUE)
+        s += text(x0 + p * sc / 2, y + 18, "p", "white", 12, "middle", 700)
+        s += text(x0 + (p + g * h / 2) * sc, y + 18, "gh", "white", 12, "middle", 700)
+        s += text(x0 + (p + g * h) * sc + 8, y + 18, f"d = {p:g} + {g*h:.3g} = {p + g*h:.3g}", INK, 12.5, "start", 700)
+    s += text(360, 252, "Double the load → only the blue part doubles. A NAND2 has a longer orange part (p = 2) and a steeper blue part (g = 4/3).", MUTE, 11.5, "middle")
+    return svg(720, 262, s)
+
+
+def fig_telescope():
+    s = defs(*ALLC)
+    xs = [70, 230, 390]
+    caps = ["C₁", "C₂", "C₃"]
+    labs = ["10", "x", "y"]
+    for i, x in enumerate(xs):
+        g, o = gate_shape("inv", x, 70, None, [INK, ORANGE, BLUE][i])
+        s += g + line(o, 70, xs[i + 1] if i < 2 else 560, 70)
+        s += text(x + 18, 120, f"input cap {caps[i]}", [INK, ORANGE, BLUE][i], 12.5, "middle", 700)
+    s += line(20, 70, 70, 70) + dot(560, 70) + line(560, 70, 560, 80) + cap(560, 80, INK) + gnd(560, 120) + text(578, 106, "C_load", INK, 13, "start", 700).replace("C_load", sub("C_load"))
+    s += text(350, 170, "h₁ = C₂/C₁      h₂ = C₃/C₂      h₃ = C_load/C₃".replace("C_load", sub("C_load")), PURPLE, 14, "middle", 700)
+    s += text(350, 205, "h₁·h₂·h₃ = (C₂/C₁)·(C₃/C₂)·(C_load/C₃) = C_load / C₁ = H".replace("C_load", sub("C_load")), INK, 14, "middle", 700)
+    # strike-throughs
+    s += line(252, 196, 274, 212, RED, 2) + line(316, 196, 338, 212, RED, 2)
+    s += text(350, 240, "Every middle size cancels! So the PRODUCT of the efforts does not depend on how big the middle gates are.", GREEN, 12.5, "middle", 700)
+    s += text(350, 262, "F = f₁·f₂·f₃ = (g₁g₂g₃)·(h₁h₂h₃) = G·H  →  fixed by the circuit, before you size anything.", INK, 12.5, "middle")
+    return svg(700, 274, s)
+
+
+def fig_amgm():
+    p = Plot(600, 300, (1, 36), (6, 40), (60, 20, 20, 44))
+    p.curve([(f / 10, f / 10 + 36 / (f / 10)) for f in range(10, 361)], BLUE, 2.8)
+    for f1, dx, dy, anc in ((2, 8, -6, "start"), (4, -4, -12, "end"), (6, 0, 24, "middle"), (9, 6, -12, "start"), (18, 8, -8, "start")):
+        v = f1 + 36 / f1
+        c = RED if f1 == 6 else ORANGE
+        p.add(dot(p.X(f1), p.Y(v), c, 5) + text(p.X(f1) + dx, p.Y(v) + dy, f"{f1:g} + {36/f1:g} = {v:g}", c, 12, anc, 700))
+    p.add(text(p.X(13), p.Y(36), "two stages, f₁ · f₂ = 36 always", INK, 12.5, "start", 700))
+    p.add(text(p.X(13), p.Y(33), "the SUM f₁ + f₂ is smallest when f₁ = f₂ = 6", RED, 12.5, "start", 700))
+    p.axes("effort of stage 1, f₁ (stage 2 gets 36/f₁)", "f₁ + f₂ (τ)", [(1, "1"), (6, "6"), (12, "12"), (18, "18"), (36, "36")], [(6, "6"), (12, "12"), (20, "20"), (30, "30"), (40, "40")])
+    return p.render()
+
+
+def fig_pipes():
+    s = defs(*ALLC)
+    s += text(330, 22, "Branching: the first gate's current is shared between the branches", INK, 13, "middle", 700)
+    s += f'<rect x="40" y="70" width="180" height="40" rx="8" fill="{BLUE}" opacity="0.25" stroke="{BLUE}"/>' + text(130, 95, "current from gate 1", BLUE, 12.5, "middle", 700)
+    s += poly([(220, 90), (260, 90)], BLUE, 6) + poly([(260, 90), (300, 50), (450, 50)], GREEN, 6) + poly([(260, 90), (300, 130), (450, 130)], MUTE, 6)
+    s += arrow(380, 50, 440, 50, GREEN, 2) + arrow(380, 130, 440, 130, MUTE, 2)
+    s += text(470, 55, "half → our path (on-path, 15)", GREEN, 12.5, "start", 700)
+    s += text(470, 135, "half → other branch (off-path, 15)", MUTE, 12.5, "start", 700)
+    s += text(330, 180, "To get the same push into OUR branch, gate 1 must work twice as hard:  b = (15 + 15)/15 = 2", PURPLE, 13, "middle", 700)
+    s += text(330, 205, "That extra factor is invisible to H = C_load/C_in, so it must be multiplied in separately: F = G·B·H".replace("C_load", sub("C_load")).replace("C_in", sub("C_in")), INK, 12.5, "middle")
+    return svg(720, 218, s)
+
+
+def _path_row(s, y, gates, vals, hi, note, note_c=INK):
+    """Draw a path row with value boxes. gates: list of (kind, label). vals: list of strings (or '?')."""
+    x = 40
+    for i, (kind, lab) in enumerate(gates):
+        c = RED if i == hi else ([INK, ORANGE, BLUE, INK, GREEN][i % 5] if vals[i] != "?" else MUTE)
+        g, o = gate_shape(kind, x, y, None, c, 0.8)
+        s += g
+        nx = o + 40
+        s += line(o, y, nx, y, MUTE, 1.5)
+        s += f'<rect x="{x-6}" y="{y+18}" width="56" height="22" rx="6" fill="{c if vals[i] != "?" else "#f1f3f6"}" opacity="{0.15 if vals[i] != "?" else 1}" stroke="{c}"/>'
+        s += text(x + 22, y + 34, vals[i], c, 12, "middle", 700)
+        s += text(x + 22, y - 18, lab, MUTE, 11, "middle", 600)
+        x = nx
+    s += text(x + 2, y + 5, "load", MUTE, 11.5, "start")
+    s += text(40, y + 62, note, note_c, 13, "start", 700)
+    return s
+
+
+def fig_story34():
+    s = defs(*ALLC)
+    gates = [("inv", "INV"), ("nor", "NOR2"), ("nand", "NAND2"), ("inv", "INV")]
+    steps = [
+        (["10", "?", "?", "?"], -1, "Step 1  G = 1·5/3·4/3·1 = 2.22,  H = 45/10 = 4.5,  F = GH = 10"),
+        (["10", "?", "?", "?"], -1, "Step 2  f̂ = 10^(1/4) = 1.78 per stage;  P = 1+2+2+1 = 6;  D = 4·1.78 + 6 = 13.1τ"),
+        (["10", "?", "?", "25.3"], 3, "Step 3  last INV:  z = g·C_out/f̂ = 1·45/1.78 = 25.3"),
+        (["10", "?", "19.0", "25.3"], 2, "Step 4  NAND2:  y = (4/3)·25.3/1.78 = 19.0"),
+        (["10", "17.8", "19.0", "25.3"], 1, "Step 5  NOR2:  x = (5/3)·19.0/1.78 = 17.8"),
+        (["10 ✓", "17.8", "19.0", "25.3"], 0, "Step 6  check first:  1·17.8/1.78 = 10 ✓ (matches the given input)"),
+    ]
+    s += text(20, 16, "Lecture 34 path, solved one step at a time (box = input capacitance of that gate)", INK, 13, "start", 700)
+    s += text(20, 34, "g, p:  INV 1, 1   ·   NOR2 5/3, 2   ·   NAND2 4/3, 2   ·   INV 1, 1   ·   load 45", MUTE, 12, "start", 600)
+    y = 70
+    for vals, hi, note in steps:
+        s = _path_row(s, y, gates, vals, hi, note.replace("C_out", sub("C_out")), RED if hi >= 0 else PURPLE)
+        y += 100
+    s += text(20, y - 14, "Sizing goes BACKWARDS (right → left) because each gate's size depends on what it drives.", GREEN, 12.5, "start", 700)
+    return svg(660, y, s)
+
+
+def fig_effort_compare():
+    s = defs(*ALLC)
+    names = ["INV", "NOR2", "NAND2", "INV"]
+    uns = [(1, 1), (5 / 3, 2), (4 / 3, 2), (4.5, 1)]
+    opt = [(1.778, 1), (1.778, 2), (1.778, 2), (1.778, 1)]
+    sc = 26
+    for k, (title, data, tot) in enumerate((("all gates left at size 10", uns, 14.5), ("optimally sized (equal f)", opt, 13.1))):
+        ox = 30 + k * 350
+        s += text(ox + 150, 22, title, [ORANGE, GREEN][k], 13, "middle", 700)
+        base = 230
+        for i, (f, p) in enumerate(data):
+            x = ox + 20 + i * 70
+            s += _bar(x, base - p * sc, 40, p * sc, ORANGE, 0.55) + _bar(x, base - (p + f) * sc, 40, f * sc, BLUE)
+            s += text(x + 20, base - (p + f) * sc - 6, f"f={f:.2f}", BLUE, 11, "middle", 700)
+            s += text(x + 20, base + 16, names[i], INK, 11.5, "middle")
+        s += line(ox + 10, base, ox + 300, base, MUTE, 1.2)
+        s += text(ox + 150, base + 40, f"D = {tot} τ", [ORANGE, GREEN][k], 14, "middle", 700)
+    s += text(350, 300, "blue = effort part f = gh,  light orange = parasitic p (same in both). Equalising the blue bars lowers their total.", INK, 12, "middle")
+    return svg(700, 312, s)
+
+
+def fig_story35():
+    s = defs(*ALLC)
+    gates = [("nand", "NAND2"), ("nand", "NAND3"), ("nor", "NOR2")]
+    steps = [
+        (["8", "?", "?"], -1, "Step 1  G = 4/3·5/3·5/3 = 100/27,  B = 3·2 = 6,  H = 45/8  →  F = 125"),
+        (["8", "?", "?"], -1, "Step 2  f̂ = 125^(1/3) = 5;  P = 2+3+2 = 7;  D = 3·5 + 7 = 22τ"),
+        (["8", "?", "15"], 2, "Step 3  NOR2 drives 45:  y = (5/3)·45/5 = 15"),
+        (["8", "10", "15"], 1, "Step 4  NAND3 drives TWO NOR2s = 30:  x = (5/3)·30/5 = 10"),
+        (["8 ✓", "10", "15"], 0, "Step 5  NAND2 drives THREE NAND3s = 30:  (4/3)·30/5 = 8 ✓"),
+    ]
+    s += text(20, 16, "Lecture 35 path (on-path gates only; branches add their load in steps 4–5)", INK, 13, "start", 700)
+    s += text(20, 34, "g, p:  NAND2 4/3, 2  ·  NAND3 5/3, 3  ·  NOR2 5/3, 2  ·  load 45", MUTE, 12, "start", 600)
+    s += text(20, 52, "NAND2 output feeds 3 NAND3s (b = 3); NAND3 output feeds 2 NOR2s (b = 2)", MUTE, 12, "start", 600)
+    y = 88
+    for vals, hi, note in steps:
+        s = _path_row(s, y, gates, vals, hi, note, RED if hi >= 0 else PURPLE)
+        y += 100
+    s += text(20, y - 14, "With branches, C_out = total cap of ALL the gates being driven (on-path + off-path).".replace("C_out", sub("C_out")), GREEN, 12.5, "start", 700)
+    return svg(660, y, s)
+
+
+def fig_stage_bars(F=64):
+    s = defs(*ALLC)
+    sc = 3.0
+    base = 250
+    s += text(330, 22, f"Driving F = {F} with N inverters: effort part N·F^(1/N) (blue) + parasitic N (orange)", INK, 13, "middle", 700)
+    best = min(range(1, 7), key=lambda N: N * F ** (1 / N) + N)
+    for i, N in enumerate(range(1, 7)):
+        e = N * F ** (1 / N)
+        x = 60 + i * 95
+        hb = min(e, 70)
+        s += _bar(x, base - N * sc, 50, N * sc, ORANGE) + _bar(x, base - (N + hb) * sc, 50, hb * sc, BLUE)
+        if e > 70:
+            s += text(x + 25, base - (N + hb) * sc + 14, "↑ 64", "white", 11, "middle", 700)
+        s += text(x + 25, base - (N + hb) * sc - 8, f"{e + N:.1f}", RED if N == best else INK, 12.5, "middle", 700)
+        s += text(x + 25, base + 18, f"N = {N}", INK, 12, "middle")
+        s += text(x + 25, base + 34, f"f = {F ** (1 / N):.2f}", MUTE, 11, "middle")
+    s += line(50, base, 640, base, MUTE, 1.2)
+    s += text(330, base + 62, "More stages: the blue part shrinks fast at first, the orange part grows steadily. Best where f ≈ 4.", GREEN, 12.5, "middle", 700)
+    return svg(660, base + 74, s)
+
+
+def fig_style_bars():
+    s = defs(*ALLC)
+    sc = 26
+    data = [("AOI22 + INV", [(2 * 10 ** 0.5 / 2, 4, "AOI22"), (10 ** 0.5, 1, "INV")], 11.3, ORANGE),
+            ("NAND2 + NAND2", [((80 / 9) ** 0.5, 2, "NAND2"), ((80 / 9) ** 0.5, 2, "NAND2")], 9.96, GREEN)]
+    for k, (t, st, tot, c) in enumerate(data):
+        ox = 40 + k * 330
+        s += text(ox + 130, 22, t, c, 13.5, "middle", 700)
+        base = 210
+        for i, (f, p, nm) in enumerate(st):
+            x = ox + 40 + i * 110
+            s += _bar(x, base - p * sc, 60, p * sc, ORANGE, 0.55) + _bar(x, base - (p + f) * sc, 60, f * sc, BLUE)
+            s += text(x + 30, base - p * sc / 2 + 4, f"p={p}", INK, 11.5, "middle", 700)
+            s += text(x + 30, base - p * sc - f * sc / 2 + 4, f"f={f:.2f}", "white", 11.5, "middle", 700)
+            s += text(x + 30, base + 16, nm, INK, 12, "middle")
+        s += line(ox + 20, base, ox + 260, base, MUTE, 1.2) + text(ox + 130, base + 42, f"D = {tot} τ", c, 14, "middle", 700)
+    s += text(340, 286, "Same function, H = 5. The AOI22's big series stacks give it a large p (4): the extra orange outweighs the saved stage.", INK, 12, "middle")
+    return svg(680, 298, s)
+
+
+def fig_budget():
+    """Resistance budget bars for each pull-up / pull-down path."""
+    s = defs(*ALLC)
+    W = 360
+    x0 = 230
+    rows = [("Normal NAND2 (pull-down)", [("A", 0.5, BLUE), ("B", 0.5, BLUE)]),
+            ("Asymmetric NAND2", [("A", 0.75, BLUE), ("RESET'", 0.25, MUTE)]),
+            ("[A(B+C)+DE]' up: B–C–D", [("B", 1 / 3, ORANGE), ("C", 1 / 3, ORANGE), ("D", 1 / 3, AMBER)]),
+            ("[A(B+C)+DE]' up: A–D", [("A", 2 / 3, ORANGE), ("D", 1 / 3, AMBER)])]
+    s += text(x0 + W / 2, 22, "Every path from a rail to Y must add up to exactly R (= one unit transistor)", INK, 13, "middle", 700)
+    for i, (lab, segs) in enumerate(rows):
+        y = 44 + i * 46
+        s += text(x0 - 10, y + 19, lab, INK, 12, "end", 600)
+        x = x0
+        for nm, frac, c in segs:
+            w = frac * W
+            s += _bar(x, y, w - 2, 28, c, 0.75) + text(x + w / 2, y + 19, f"{nm}: {frac:.2g}R".replace("0.33R", "R/3").replace("0.67R", "2R/3").replace("0.5R", "R/2").replace("0.75R", "3R/4").replace("0.25R", "R/4"), "white", 11.5, "middle", 700)
+            x += w
+        s += text(x0 + W + 8, y + 19, "= R ✓", GREEN, 12.5, "start", 700)
+    s += text(x0 + W / 2, 240, "width = R ÷ (its share) for NMOS, 2R ÷ (its share) for PMOS: smaller share → wider transistor.", MUTE, 11.5, "middle")
+    return svg(660, 252, s)
+
+
+def fig_skew_bars():
+    s = defs(*ALLC)
+    rows = [("unskewed INV", 2, 1, 1, 1), ("HI-skew INV", 2, 0.5, 5 / 6, 5 / 3), ("LO-skew INV", 1, 1, 4 / 3, 2 / 3)]
+    s += text(340, 22, "What a skewed inverter trades: input cap (cost) vs pull-up / pull-down strength", INK, 13, "middle", 700)
+    for i, (nm, wp, wn, gu, gd) in enumerate(rows):
+        y = 50 + i * 70
+        s += text(150, y + 22, nm, INK, 13, "end", 700)
+        s += _bar(165, y, (wp + wn) * 40, 16, PURPLE, 0.7) + text(165 + (wp + wn) * 40 + 6, y + 13, f"input cap {wp + wn:g}", PURPLE, 11.5, "start", 600)
+        s += _bar(165, y + 20, wp * 40, 14, ORANGE, 0.8) + text(165 + wp * 40 + 6, y + 31, f"pull-up {wp:g}", ORANGE, 11, "start")
+        s += _bar(165, y + 38, wn * 80, 14, BLUE, 0.8) + text(165 + wn * 80 + 6, y + 49, f"pull-down {wn:g}", BLUE, 11, "start")
+        s += text(470, y + 22, sub("g_u") + f" = {gu:.3g}", ORANGE, 13, "start", 700) + text(570, y + 22, sub("g_d") + f" = {gd:.3g}", BLUE, 13, "start", 700)
+    s += text(340, 270, "HI-skew: cheaper input (2.5 vs 3) with the SAME pull-up → rising edge faster (g_u < 1); falling slower.".replace("g_u", sub("g_u")), GREEN, 12, "middle", 600)
+    return svg(680, 282, s)
+
+
+def fig_loadline():
+    VDD = 3.3
+    p = Plot(600, 320, (0, 3.3), (0, 1.15), (60, 20, 20, 44))
+    kn_unit = 1.0
+    In = [(v / 100, i_d(4, VDD - 0.6, v / 100) / i_d(4, 2.7, 3.3)) for v in range(0, 331)]
+    Ip4 = [(v / 100, i_d(1, VDD - 0.7, VDD - v / 100) / i_d(4, 2.7, 3.3)) for v in range(0, 331)]
+    Ip2 = [(v / 100, i_d(2, VDD - 0.7, VDD - v / 100) / i_d(4, 2.7, 3.3)) for v in range(0, 331)]
+    p.curve(In, BLUE, 2.8)
+    p.curve(Ip4, ORANGE, 2.6)
+    p.curve(Ip2, ORANGE, 2.0, "6 4")
+    def cross(Ip):
+        return min(range(331), key=lambda i: abs(In[i][1] - Ip[i][1]))
+    for Ip, lab in ((Ip4, "k_n/k_p = 4"), (Ip2, "k_n/k_p = 2")):
+        i = cross(Ip)
+        p.add(dot(p.X(In[i][0]), p.Y(In[i][1]), RED, 6) + text(p.X(In[i][0]) + 12, p.Y(In[i][1]) - 12, f"V_OL = {In[i][0]:.2f} V ({lab})".replace("V_OL", sub("V_OL")).replace("k_n", sub("k_n")).replace("k_p", sub("k_p")), RED, 12, "start", 700))
+    p.add(text(p.X(2.2), p.Y(1.07), "NMOS current (input high)", BLUE, 12, "start", 700))
+    p.add(text(p.X(1.4), p.Y(0.06), "PMOS load current (always on)", ORANGE, 12, "start", 700))
+    p.add(text(p.X(1.55), p.Y(0.62), "the output settles where", INK, 12, "start") + text(p.X(1.55), p.Y(0.55), "the two currents are equal", INK, 12, "start"))
+    p.axes(sub("V_out") + " (V)", "current (normalised)", [(0, "0"), (1, "1"), (2, "2"), (3.3, "3.3")], [(0, "0"), (0.5, "0.5"), (1, "1")])
+    return p.render()
+
+
 FIGS2 = {
     "F_SWITCH": fig_switches, "F_PUNPDN": fig_pun_pdn, "F_PSEUDO": fig_pseudo, "F_NOR2": fig_nor2, "F_NAND2": fig_nand2,
     "F_WL": fig_wl, "F_COLLAPSE": fig_nor2_collapse, "F_VTHCMP": fig_vth_compare, "F_STNOR": fig_stick_nor2, "F_STNAND": fig_stick_nand2,
@@ -1513,7 +1787,7 @@ FIGS2 = {
     "F_MOSRC": fig_mos_rc, "F_INVRC": fig_inv_rc, "F_NAND2C": lambda: fig_nand_caps(2), "F_NAND3C": lambda: fig_nand_caps(3),
     "F_ELMORE": fig_elmore, "F_NAND3E": fig_nand3_elmore, "F_FANOUT": lambda: fig_fanout(), "F_FO4": lambda: fig_fanout(fo4=True),
     "F_DPARTS": fig_d_parts, "F_LEGATES": fig_le_gates, "F_T10Q4": fig_t10q4, "F_NOR2S": fig_nor2_sized, "F_AOI": fig_aoi21,
-    "F_RINGLE": fig_ring_le, "F_NORN": fig_norn, "F_4X": fig_4x, "F_WEAKP": fig_weak_p, "F_P2": fig_p2_bars, "F_P3": fig_p3_vtc, "F_P4": fig_p4, "F_AOI22": fig_aoi22_euler, "F_P7": fig_p7, "F_P8": fig_p8, "F_RON": fig_ron, "F_FOLD": fig_fold, "F_NAND3H": fig_nand3_cases, "F_NOR3H": fig_nor3_load, "F_LDM": fig_ldm, "F_LIMITS": fig_limits, "F_PATH4": fig_path4, "F_BRANCH": fig_branch, "F_DRIVE": fig_drive, "F_PATH3B": fig_path3b, "F_STAGES": fig_stages, "F_XOR": fig_xor, "F_L35PATH": fig_l35path, "F_L35SIZE": fig_l35size, "F_CHAINS": fig_chains, "F_RHO": fig_rho, "F_L35D": fig_l35d, "F_BUBBLE": fig_bubble, "F_AOI22": fig_aoi22, "F_CPX36": fig_cpx36, "F_ASYM": fig_asym, "F_INPOS": fig_inpos, "F_SKEW": fig_skew, "F_SKEWG": fig_skewgates, "F_RATIOED": fig_ratioed, "F_PSVTC": fig_pseudovtc, "F_PSSIZE": fig_pseudosize, "F_RLOAD": fig_rload, "F_P16": fig_p16, "F_P17": lambda: fig_dn(500),
+    "F_RINGLE": fig_ring_le, "F_NORN": fig_norn, "F_4X": fig_4x, "F_WEAKP": fig_weak_p, "F_P2": fig_p2_bars, "F_P3": fig_p3_vtc, "F_P4": fig_p4, "F_AOI22": fig_aoi22_euler, "F_P7": fig_p7, "F_P8": fig_p8, "F_RON": fig_ron, "F_FOLD": fig_fold, "F_NAND3H": fig_nand3_cases, "F_NOR3H": fig_nor3_load, "F_LDM": fig_ldm, "F_LIMITS": fig_limits, "F_PATH4": fig_path4, "F_BRANCH": fig_branch, "F_DRIVE": fig_drive, "F_PATH3B": fig_path3b, "F_STAGES": fig_stages, "F_XOR": fig_xor, "F_L35PATH": fig_l35path, "F_L35SIZE": fig_l35size, "F_CHAINS": fig_chains, "F_RHO": fig_rho, "F_L35D": fig_l35d, "F_BUBBLE": fig_bubble, "F_AOI22": fig_aoi22, "F_CPX36": fig_cpx36, "F_ASYM": fig_asym, "F_INPOS": fig_inpos, "F_SKEW": fig_skew, "F_SKEWG": fig_skewgates, "F_RATIOED": fig_ratioed, "F_PSVTC": fig_pseudovtc, "F_PSSIZE": fig_pseudosize, "F_RLOAD": fig_rload, "F_P16": fig_p16, "F_P17": lambda: fig_dn(500), "V_MAP": fig_map34, "V_COST": fig_gate_cost, "V_TELE": fig_telescope, "V_AMGM": fig_amgm, "V_PIPES": fig_pipes, "V_STORY34": fig_story34, "V_EFFCMP": fig_effort_compare, "V_STORY35": fig_story35, "V_STAGEB": fig_stage_bars, "V_STYLE": fig_style_bars, "V_BUDGET": fig_budget, "V_SKEWB": fig_skew_bars, "V_LOADLINE": fig_loadline,
 }
 
 if __name__ == "__main__":
